@@ -20,6 +20,9 @@ screeps.json
 # ScreepsServer data from integration tests
 /server
 
+# Test coverage
+/coverage
+
 # Numerous always-ignore extensions
 *.diff
 *.err
