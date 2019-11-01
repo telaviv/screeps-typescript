@@ -34,9 +34,9 @@ describe("tower module", () => {
       const tower = mockInstanceOf<StructureTower>({
         attack: () => OK,
         heal: () => OK,
-        pos: mockInstanceOf<RoomPosition>({
+        pos: {
           findClosestByRange: () => null
-        }),
+        },
         repair: () => OK
       });
       runTower(tower);
