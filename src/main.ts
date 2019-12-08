@@ -2,6 +2,7 @@ import roleBuilder, { Builder } from 'roles/builder'
 import roleHarvester from 'roles/harvester'
 import roleUpgrader, { Upgrader } from 'roles/upgrader'
 import { ErrorMapper } from 'utils/ErrorMapper'
+import { runSpawn } from './spawn'
 import { runTower } from './tower'
 
 function unwrappedLoop() {
@@ -9,13 +10,20 @@ function unwrappedLoop() {
 
     Object.values(Game.rooms).forEach(room => {
         if (room.controller && room.controller.my) {
-            const towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, {
-                filter: { structureType: STRUCTURE_TOWER },
+            const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
+                filter: s => {
+                    s.structureType === STRUCTURE_TOWER ||
+                        s.structureType === STRUCTURE_SPAWN
+                },
             }) as any
 
-            towers.forEach(tower => {
-                runTower(tower)
-            })
+            for (const structure of structures) {
+                if (structure.structureType === STRUCTURE_TOWER) {
+                    runTower(structure as StructureTower)
+                } else if (structure.structureType === STRUCTURE_SPAWN) {
+                    runSpawn(structure as StructureSpawn)
+                }
+            }
         }
     })
 

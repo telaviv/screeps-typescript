@@ -6,11 +6,13 @@ import { unwrappedLoop } from './main'
 import roleBuilder from './roles/builder'
 import roleHarvester from './roles/harvester'
 import roleUpgrader from './roles/upgrader'
+import { runSpawn } from './spawn'
 import { runTower } from './tower'
 
 jest.mock('roles/builder')
 jest.mock('roles/harvester')
 jest.mock('roles/upgrader')
+jest.mock('spawn')
 jest.mock('tower')
 
 const builder = mockInstanceOf<Creep>({
@@ -37,11 +39,21 @@ const someoneElsesController = mockInstanceOf<StructureController>({
 })
 const tower1 = mockStructure(STRUCTURE_TOWER)
 const tower2 = mockStructure(STRUCTURE_TOWER)
+const spawn1 = mockStructure(STRUCTURE_SPAWN)
+const spawn2 = mockStructure(STRUCTURE_SPAWN)
 const myRoomWithTowers = mockInstanceOf<Room>({
     controller: myController,
     find: () => [tower1, tower2],
 })
 const myRoomWithoutTowers = mockInstanceOf<Room>({
+    controller: myController,
+    find: () => [],
+})
+const myRoomWithSpawns = mockInstanceOf<Room>({
+    controller: myController,
+    find: () => [spawn1, spawn2],
+})
+const myRoomWithoutSpawns = mockInstanceOf<Room>({
     controller: myController,
     find: () => [],
 })
@@ -112,5 +124,24 @@ describe('main loop', () => {
         unwrappedLoop()
         expect(runTower).toHaveBeenCalledWith(tower1)
         expect(runTower).toHaveBeenCalledWith(tower2)
+    })
+
+    it('should run every spawn in my rooms', () => {
+        mockGlobal<Game>('Game', {
+            creeps: {},
+            rooms: {
+                myRoomWithSpawns,
+                myRoomWithoutSpawns,
+                noOnesRoom,
+                someoneElsesRoom,
+            },
+            time: 1,
+        })
+        mockGlobal<Memory>('Memory', {
+            creeps: {},
+        })
+        unwrappedLoop()
+        expect(runSpawn).toHaveBeenCalledWith(spawn1)
+        expect(runSpawn).toHaveBeenCalledWith(spawn2)
     })
 })
