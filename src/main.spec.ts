@@ -41,21 +41,17 @@ const tower1 = mockStructure(STRUCTURE_TOWER)
 const tower2 = mockStructure(STRUCTURE_TOWER)
 const spawn1 = mockStructure(STRUCTURE_SPAWN)
 const spawn2 = mockStructure(STRUCTURE_SPAWN)
+const myRoomWithoutStructures = mockInstanceOf<Room>({
+    controller: myController,
+    find: () => [],
+})
 const myRoomWithTowers = mockInstanceOf<Room>({
     controller: myController,
     find: () => [tower1, tower2],
 })
-const myRoomWithoutTowers = mockInstanceOf<Room>({
-    controller: myController,
-    find: () => [],
-})
 const myRoomWithSpawns = mockInstanceOf<Room>({
     controller: myController,
     find: () => [spawn1, spawn2],
-})
-const myRoomWithoutSpawns = mockInstanceOf<Room>({
-    controller: myController,
-    find: () => [],
 })
 const someoneElsesRoom = mockInstanceOf<Room>({
     controller: someoneElsesController,
@@ -112,7 +108,7 @@ describe('main loop', () => {
             creeps: {},
             rooms: {
                 myRoomWithTowers,
-                myRoomWithoutTowers,
+                myRoomWithoutStructures,
                 noOnesRoom,
                 someoneElsesRoom,
             },
@@ -131,7 +127,7 @@ describe('main loop', () => {
             creeps: {},
             rooms: {
                 myRoomWithSpawns,
-                myRoomWithoutSpawns,
+                myRoomWithoutStructures,
                 noOnesRoom,
                 someoneElsesRoom,
             },
