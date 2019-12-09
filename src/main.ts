@@ -12,8 +12,10 @@ function unwrappedLoop() {
         if (room.controller && room.controller.my) {
             const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
                 filter: s => {
-                    s.structureType === STRUCTURE_TOWER ||
+                    return (
+                        s.structureType === STRUCTURE_TOWER ||
                         s.structureType === STRUCTURE_SPAWN
+                    )
                 },
             }) as any
 
