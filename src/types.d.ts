@@ -2,17 +2,21 @@
 
 // memory extension samples
 interface CreepMemory {
-  role: string;
+    role: string
 }
 
 interface Memory {
-  uuid: number;
-  log: any;
+    uuid: number
+    log: any
+}
+
+interface RoomMemory {
+    roadsAssigned: boolean
 }
 
 // `global` extension samples
 declare namespace NodeJS {
-  interface Global {
-    log: any;
-  }
+    interface Global {
+        log: any
+    }
 }

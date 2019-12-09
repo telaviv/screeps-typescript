@@ -10,12 +10,6 @@ repos:
     -   id: check-added-large-files
 -   repo: local
     hooks:
-    -   id: screeps-test
-        name: screeps-test
-        language: node
-        entry: npm run test
-        pass_filenames: false
-        always_run: true
     -   id: screeps-lint
         name: screeps-lint
         language: node
