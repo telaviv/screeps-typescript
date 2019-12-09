@@ -73,7 +73,7 @@ const structureCounters: { [key: string]: number } = {};
  * @param mockedProps - the additional properties you need to mock for your test
  */
 function mockStructure<T extends StructureConstant>(structureType: T, mockedProps: DeepPartial<Structure<T>> = {}): Structure<T> {
-  const count = (structureCounters[structureType] || 0) + 1;
+  const count = (structureCounters[structureType] ?? 0) + 1;
 
   structureCounters[structureType] = count;
   return mockInstanceOf<Structure<T>>({
