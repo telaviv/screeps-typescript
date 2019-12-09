@@ -15,12 +15,14 @@ describe("Upgrader role", () => {
 
   it("should upgrade the controller, when it has energy and is within range", () => {
     const creep = mockInstanceOf<Upgrader>({
-      carry: { energy: 50 },
       memory: {
         role: "upgrader",
         upgrading: true
       },
       room,
+      store: {
+        energy: 50
+      },
       upgradeController: () => OK
     });
 
@@ -31,13 +33,15 @@ describe("Upgrader role", () => {
 
   it("should move towards controller, when it has energy but is out of range", () => {
     const creep = mockInstanceOf<Upgrader>({
-      carry: { energy: 50 },
       memory: {
         role: "upgrader",
         upgrading: true
       },
       moveTo: () => OK,
       room,
+      store: {
+        energy: 50
+      },
       upgradeController: () => ERR_NOT_IN_RANGE
     });
 
@@ -49,14 +53,15 @@ describe("Upgrader role", () => {
 
   it("should harvest, when it's near a source and not full", () => {
     const creep = mockInstanceOf<Upgrader>({
-      carry: { energy: 50 },
-      carryCapacity: 100,
       harvest: () => OK,
       memory: {
         role: "upgrader",
         upgrading: false
       },
-      room
+      room,
+      store: {
+        getFreeCapacity: () => 50
+      }
     });
 
     roleUpgrader.run(creep);
@@ -66,15 +71,16 @@ describe("Upgrader role", () => {
 
   it("should move to a source, when it's not full and not near a source", () => {
     const creep = mockInstanceOf<Upgrader>({
-      carry: { energy: 0 },
-      carryCapacity: 100,
       harvest: () => ERR_NOT_IN_RANGE,
       memory: {
         role: "upgrader",
         upgrading: false
       },
       moveTo: () => OK,
-      room
+      room,
+      store: {
+        getFreeCapacity: () => 50
+      }
     });
     roleUpgrader.run(creep);
     expect(creep.memory.upgrading).toBeFalsy();
@@ -83,14 +89,15 @@ describe("Upgrader role", () => {
 
   it("should switch to upgrading when it gets full", () => {
     const creep = mockInstanceOf<Upgrader>({
-      carry: { energy: 100 },
-      carryCapacity: 100,
       memory: {
         role: "upgrader",
         upgrading: false
       },
       room,
       say: () => OK,
+      store: {
+        getFreeCapacity: () => 0
+      },
       upgradeController: () => OK
     });
     roleUpgrader.run(creep);
@@ -99,15 +106,17 @@ describe("Upgrader role", () => {
 
   it("should switch to harvesting when it gets empty", () => {
     const creep = mockInstanceOf<Upgrader>({
-      carry: { energy: 0 },
-      carryCapacity: 100,
       harvest: () => OK,
       memory: {
         role: "upgrader",
         upgrading: true
       },
       room,
-      say: () => OK
+      say: () => OK,
+      store: {
+        energy: 0,
+        getFreeCapacity: () => 50
+      }
     });
     roleUpgrader.run(creep);
     expect(creep.memory.upgrading).toBeFalsy();

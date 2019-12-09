@@ -24,10 +24,11 @@ describe("Harvester role", () => {
 
     it("should harvest, when it's near a source and not full", () => {
       const creep = mockInstanceOf<Creep>({
-        carry: { energy: 0 },
-        carryCapacity: 100,
         harvest: () => OK,
-        room
+        room,
+        store: {
+          getFreeCapacity: () => 50
+        }
       });
 
       roleHarvester.run(creep);
@@ -36,11 +37,12 @@ describe("Harvester role", () => {
 
     it("should move to a source, when it's not full and not near a source", () => {
       const creep = mockInstanceOf<Creep>({
-        carry: { energy: 0 },
-        carryCapacity: 100,
         harvest: () => ERR_NOT_IN_RANGE,
         moveTo: () => OK,
-        room
+        room,
+        store: {
+          getFreeCapacity: () => 50
+        }
       });
       roleHarvester.run(creep);
       expect(creep.moveTo).toHaveBeenCalledWith(source1, expect.anything());
@@ -48,9 +50,10 @@ describe("Harvester role", () => {
 
     it("should fill structures, when it's full and near a non-full structure", () => {
       const creep = mockInstanceOf<Creep>({
-        carry: { energy: 100 },
-        carryCapacity: 100,
         room,
+        store: {
+          getFreeCapacity: () => 0
+        },
         transfer: () => OK
       });
 
@@ -61,10 +64,11 @@ describe("Harvester role", () => {
 
     it("should move towards a non-full structure, when it's full and out of range to transfer", () => {
       const creep = mockInstanceOf<Creep>({
-        carry: { energy: 100 },
-        carryCapacity: 100,
         moveTo: () => OK,
         room,
+        store: {
+          getFreeCapacity: () => 0
+        },
         transfer: () => ERR_NOT_IN_RANGE
       });
 
