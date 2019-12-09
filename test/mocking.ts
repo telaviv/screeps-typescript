@@ -5,6 +5,7 @@ import "../test/constants";
  */
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends Array<infer U> ? Array<DeepPartial<U>> :
+                   T[P] extends Id<infer V> ? Id<V> :
                    T[P] extends (object | undefined) ? DeepPartial<T[P]> :
                    T[P];
 } & { [key: string]: any };
@@ -43,7 +44,7 @@ function mockInstanceOf<T extends object>(mockedProps: DeepPartial<T> = {}): T {
   const target: DeepPartial<T> = {};
 
   Object.entries(mockedProps).forEach(([propName, mockedValue]) => {
-    target[propName] =
+    target[propName as keyof T] =
       typeof mockedValue === "function" ? jest.fn(mockedValue)
       : typeof mockedValue === "object" ? mockInstanceOf(mockedValue)
       : mockedValue;
@@ -76,7 +77,7 @@ function mockStructure<T extends StructureConstant>(structureType: T, mockedProp
 
   structureCounters[structureType] = count;
   return mockInstanceOf<Structure<T>>({
-    id: `${structureType}${count}`,
+    id: `${structureType}${count}` as Id<Structure<T>>,
     structureType: structureType as any,
     toJSON() {
       return {

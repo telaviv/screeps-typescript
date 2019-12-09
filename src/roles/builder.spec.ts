@@ -1,10 +1,11 @@
 import { mockInstanceOf } from "../../test/mocking";
 import roleBuilder, { Builder } from "./builder";
 
-const cs1 = mockInstanceOf<ConstructionSite>({ id: "cs1" });
-const cs2 = mockInstanceOf<ConstructionSite>({ id: "cs2" });
-const source1 = mockInstanceOf<Source>({ id: "source1" });
-const source2 = mockInstanceOf<Source>({ id: "source2" });
+
+const cs1 = mockInstanceOf<ConstructionSite>({ id: "cs1" as Id<ConstructionSite> });
+const cs2 = mockInstanceOf<ConstructionSite>({ id: "cs2" as Id<ConstructionSite> });
+const source1 = mockInstanceOf<Source>({ id: "source1" as Id<Source> });
+const source2 = mockInstanceOf<Source>({ id: "source2" as Id<Source> });
 const room = mockInstanceOf<Room>({
   find: (type: FindConstant) => {
     switch (type) {

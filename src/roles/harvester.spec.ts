@@ -2,8 +2,8 @@ import { mockInstanceOf, mockStructure } from "../../test/mocking";
 import roleHarvester from "./harvester";
 
 
-const source1 = mockInstanceOf<Source>({ id: "source1" });
-const source2 = mockInstanceOf<Source>({ id: "source2" });
+const source1 = mockInstanceOf<Source>({ id: "source1" as Id<Source> });
+const source2 = mockInstanceOf<Source>({ id: "source2" as Id<Source> });
 const extension = mockStructure(STRUCTURE_EXTENSION);
 const room = mockInstanceOf<Room>({
   find: (type: FindConstant) => {

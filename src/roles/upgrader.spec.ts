@@ -1,9 +1,10 @@
 import { mockInstanceOf } from "../../test/mocking";
 import roleUpgrader, { Upgrader } from "./upgrader";
 
-const controller = mockInstanceOf<StructureController>({ id: "controller1" });
-const source1 = mockInstanceOf<Source>({ id: "source1" });
-const source2 = mockInstanceOf<Source>({ id: "source2" });
+
+const controller = mockInstanceOf<StructureController>({ id: "controller1" as Id<StructureController> });
+const source1 = mockInstanceOf<Source>({ id: "source1" as Id<Source> });
+const source2 = mockInstanceOf<Source>({ id: "source2" as Id<Source> });
 const room = mockInstanceOf<Room>({
   controller,
   find: (type: FindConstant) => type === FIND_SOURCES ? [source1, source2] : []
