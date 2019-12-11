@@ -47,7 +47,6 @@ const createWallConstructionSites = (room: Room) => {
             }
         }
     }
-    room.memory.wallsAssigned = true
 }
 
 const findRoadPath = (origin: RoomPosition, goal: RoomPosition) => {
@@ -70,19 +69,28 @@ const createRoadConstructionSites = (room: Room) => {
             }
         }
     }
-    room.memory.roadsAssigned = true
+}
+
+const assignSources = (room: Room) => {
+    const sources = room.find(FIND_SOURCES) as Source[]
+    room.memory.sources = sources.map(source => ({ id: source.id }))
 }
 
 const assignRoomFeatures = () => {
     _.each(Game.rooms, room => {
-        if (!room.memory.roadsAssigned || Game.time % 100 === 0) {
+        console.log('hoping to assign sources')
+        if (!room.memory.sources || room.memory.sources.length === 0) {
+            assignSources(room)
+        }
+
+        if (Game.time % 100 === 0) {
             createRoadConstructionSites(room)
         }
 
         if (
             room.controller &&
             room.controller.level > 1 &&
-            (!room.memory.wallsAssigned || Game.time % 100 === 50)
+            Game.time % 100 === 50
         ) {
             createWallConstructionSites(room)
         }
