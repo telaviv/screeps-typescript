@@ -9,7 +9,7 @@ function unwrappedLoop() {
   console.log(`Current game tick is ${Game.time}`);
 
   Object.values(Game.rooms).forEach(room => {
-    if (room.controller && room.controller.my) {
+    if (room.controller?.my) {
       const towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }) as any;
 
       towers.forEach(tower => {

@@ -1,10 +1,11 @@
 import { mockInstanceOf } from "../../test/mocking";
 import roleBuilder, { Builder } from "./builder";
 
-const cs1 = mockInstanceOf<ConstructionSite>({ id: "cs1" });
-const cs2 = mockInstanceOf<ConstructionSite>({ id: "cs2" });
-const source1 = mockInstanceOf<Source>({ id: "source1" });
-const source2 = mockInstanceOf<Source>({ id: "source2" });
+
+const cs1 = mockInstanceOf<ConstructionSite>({ id: "cs1" as Id<ConstructionSite> });
+const cs2 = mockInstanceOf<ConstructionSite>({ id: "cs2" as Id<ConstructionSite> });
+const source1 = mockInstanceOf<Source>({ id: "source1" as Id<Source> });
+const source2 = mockInstanceOf<Source>({ id: "source2" as Id<Source> });
 const room = mockInstanceOf<Room>({
   find: (type: FindConstant) => {
     switch (type) {
@@ -24,12 +25,14 @@ describe("Builder role", () => {
   it("should work on a construction site, when it has energy and is within range", () => {
     const creep = mockInstanceOf<Builder>({
       build: () => OK,
-      carry: { energy: 50 },
       memory: {
         building: true,
         role: "builder"
       },
-      room
+      room,
+      store: {
+        energy: 50
+      }
     });
 
     roleBuilder.run(creep);
@@ -40,13 +43,15 @@ describe("Builder role", () => {
   it("should move towards construction site, when it has energy but is out of range", () => {
     const creep = mockInstanceOf<Builder>({
       build: () => ERR_NOT_IN_RANGE,
-      carry: { energy: 50 },
       memory: {
         building: true,
         role: "builder"
       },
       moveTo: () => OK,
-      room
+      room,
+      store: {
+        energy: 50
+      }
     });
 
     roleBuilder.run(creep);
@@ -57,14 +62,15 @@ describe("Builder role", () => {
 
   it("should harvest, when it's near a source and not full", () => {
     const creep = mockInstanceOf<Builder>({
-      carry: { energy: 0 },
-      carryCapacity: 100,
       harvest: () => OK,
       memory: {
         building: false,
         role: "builder"
       },
-      room
+      room,
+      store: {
+        getFreeCapacity: () => 50
+      }
     });
 
     roleBuilder.run(creep);
@@ -74,15 +80,16 @@ describe("Builder role", () => {
 
   it("should move to a source, when it's not full and not near a source", () => {
     const creep = mockInstanceOf<Builder>({
-      carry: { energy: 0 },
-      carryCapacity: 100,
       harvest: () => ERR_NOT_IN_RANGE,
       memory: {
         building: false,
         role: "builder"
       },
       moveTo: () => OK,
-      room
+      room,
+      store: {
+        getFreeCapacity: () => 50
+      }
     });
     roleBuilder.run(creep);
     expect(creep.memory.building).toBeFalsy();
@@ -92,14 +99,15 @@ describe("Builder role", () => {
   it("should switch to building when it gets full", () => {
     const creep = mockInstanceOf<Builder>({
       build: () => OK,
-      carry: { energy: 100 },
-      carryCapacity: 100,
       memory: {
         building: false,
         role: "builder"
       },
       room,
-      say: () => OK
+      say: () => OK,
+      store: {
+        getFreeCapacity: () => 0
+      }
     });
     roleBuilder.run(creep);
     expect(creep.memory.building).toBeTruthy();
@@ -107,15 +115,17 @@ describe("Builder role", () => {
 
   it("should switch to harvesting when it gets empty", () => {
     const creep = mockInstanceOf<Builder>({
-      carry: { energy: 0 },
-      carryCapacity: 100,
       harvest: () => OK,
       memory: {
         building: true,
         role: "builder"
       },
       room,
-      say: () => OK
+      say: () => OK,
+      store: {
+        energy: 0,
+        getFreeCapacity: () => 50
+      }
     });
     roleBuilder.run(creep);
     expect(creep.memory.building).toBeFalsy();
