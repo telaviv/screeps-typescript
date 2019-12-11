@@ -36,7 +36,6 @@ Object.assign(g, {
   FIND_HOSTILE_CREEPS: 103,
   FIND_SOURCES_ACTIVE: 104,
   FIND_SOURCES: 105,
-  FIND_DROPPED_ENERGY: -106,
   FIND_DROPPED_RESOURCES: 106,
   FIND_STRUCTURES: 107,
   FIND_MY_STRUCTURES: 108,
@@ -53,6 +52,8 @@ Object.assign(g, {
   FIND_POWER_CREEPS: 119,
   FIND_MY_POWER_CREEPS: 120,
   FIND_HOSTILE_POWER_CREEPS: 121,
+  FIND_DEPOSITS: 122,
+  FIND_RUINS: 123,
 
   TOP: 1,
   TOP_RIGHT: 2,
@@ -79,6 +80,7 @@ Object.assign(g, {
   LOOK_RESOURCES: "resource",
   LOOK_SOURCES: "source",
   LOOK_MINERALS: "mineral",
+  LOOK_DEPOSITS: "deposit",
   LOOK_STRUCTURES: "structure",
   LOOK_FLAGS: "flag",
   LOOK_CONSTRUCTION_SITES: "constructionSite",
@@ -86,8 +88,9 @@ Object.assign(g, {
   LOOK_TERRAIN: "terrain",
   LOOK_TOMBSTONES: "tombstone",
   LOOK_POWER_CREEPS: "powerCreep",
+  LOOK_RUINS: "ruin",
 
-  OBSTACLE_OBJECT_TYPES: ["spawn", "creep", "powerCreep", "source", "mineral", "controller", "constructedWall", "extension", "link", "storage", "tower", "observer", "powerSpawn", "powerBank", "lab", "terminal","nuker"],
+  OBSTACLE_OBJECT_TYPES: ["spawn", "creep", "powerCreep", "source", "mineral", "deposit", "controller", "constructedWall", "extension", "link", "storage", "tower", "observer", "powerSpawn", "powerBank", "lab", "terminal", "nuker", "factory", "invaderCore"],
 
   MOVE: "move",
   WORK: "work",
@@ -121,6 +124,7 @@ Object.assign(g, {
   CARRY_CAPACITY: 50,
   HARVEST_POWER: 2,
   HARVEST_MINERAL_POWER: 1,
+  HARVEST_DEPOSIT_POWER: 1,
   REPAIR_POWER: 100,
   DISMANTLE_POWER: 50,
   BUILD_POWER: 5,
@@ -190,6 +194,8 @@ Object.assign(g, {
   STRUCTURE_TERMINAL: "terminal",
   STRUCTURE_CONTAINER: "container",
   STRUCTURE_NUKER: "nuker",
+  STRUCTURE_FACTORY: "factory",
+  STRUCTURE_INVADER_CORE: "invaderCore",
 
   CONSTRUCTION_COST: {
     "spawn": 15000,
@@ -206,7 +212,8 @@ Object.assign(g, {
     "lab": 50000,
     "terminal": 100000,
     "container": 5000,
-    "nuker": 100000
+    "nuker": 100000,
+    "factory": 100000
   },
   CONSTRUCTION_COST_ROAD_SWAMP_RATIO: 5,
   CONSTRUCTION_COST_ROAD_WALL_RATIO: 150,
@@ -227,7 +234,8 @@ Object.assign(g, {
     "terminal": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1, 7: 1, 8: 1},
     "lab": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 3, 7: 6, 8: 10},
     "container": {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5},
-    "nuker": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1}
+    "nuker": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1},
+    "factory": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1}
   },
   CONTROLLER_DOWNGRADE: {1: 20000, 2: 10000, 3: 20000, 4: 40000, 5: 80000, 6: 120000, 7: 150000, 8: 200000},
   CONTROLLER_DOWNGRADE_RESTORE: 100,
@@ -326,6 +334,10 @@ Object.assign(g, {
   DENSITY_HIGH: 3,
   DENSITY_ULTRA: 4,
 
+  DEPOSIT_EXHAUST_MULTIPLY: 0.001,
+  DEPOSIT_EXHAUST_POW: 1.2,
+  DEPOSIT_DECAY_TIME: 50000,
+
   TERMINAL_CAPACITY: 300000,
   TERMINAL_HITS: 3000,
   TERMINAL_SEND_COST: 0.1,
@@ -349,8 +361,16 @@ Object.assign(g, {
     2: 5000000
   },
 
+  FACTORY_HITS: 1000,
+  FACTORY_CAPACITY: 50000,
+
   TOMBSTONE_DECAY_PER_PART: 5,
   TOMBSTONE_DECAY_POWER_CREEP: 500,
+
+  RUIN_DECAY: 500,
+  RUIN_DECAY_STRUCTURES: {
+    'powerBank': 10
+  },
 
   PORTAL_DECAY: 30000,
 
@@ -358,6 +378,9 @@ Object.assign(g, {
   ORDER_BUY: "buy",
 
   MARKET_FEE: 0.05,
+
+  MARKET_MAX_ORDERS: 300,
+  MARKET_ORDER_LIFE_TIME: 1000*60*60*24*30,
 
   FLAGS_LIMIT: 10000,
 
@@ -374,6 +397,11 @@ Object.assign(g, {
   RESOURCE_ZYNTHIUM: "Z",
   RESOURCE_CATALYST: "X",
   RESOURCE_GHODIUM: "G",
+
+  RESOURCE_SILICON: 'silicon',
+  RESOURCE_METAL: 'metal',
+  RESOURCE_BIOMASS: 'biomass',
+  RESOURCE_MIST: 'mist',
 
   RESOURCE_HYDROXIDE: "OH",
   RESOURCE_ZYNTHIUM_KEANITE: "ZK",
@@ -413,6 +441,48 @@ Object.assign(g, {
   RESOURCE_CATALYZED_GHODIUM_ALKALIDE: "XGHO2",
 
   RESOURCE_OPS: "ops",
+
+  RESOURCE_UTRIUM_BAR: 'utrium_bar',
+  RESOURCE_LEMERGIUM_BAR: 'lemergium_bar',
+  RESOURCE_ZYNTHIUM_BAR: 'zynthium_bar',
+  RESOURCE_KEANIUM_BAR: 'keanium_bar',
+  RESOURCE_GHODIUM_MELT: 'ghodium_melt',
+  RESOURCE_OXIDANT: 'oxidant',
+  RESOURCE_REDUCTANT: 'reductant',
+  RESOURCE_PURIFIER: 'purifier',
+  RESOURCE_BATTERY: 'battery',
+
+  RESOURCE_COMPOSITE: 'composite',
+  RESOURCE_CRYSTAL: 'crystal',
+  RESOURCE_LIQUID: 'liquid',
+
+  RESOURCE_WIRE: 'wire',
+  RESOURCE_SWITCH: 'switch',
+  RESOURCE_TRANSISTOR: 'transistor',
+  RESOURCE_MICROCHIP: 'microchip',
+  RESOURCE_CIRCUIT: 'circuit',
+  RESOURCE_DEVICE: 'device',
+
+  RESOURCE_CELL: 'cell',
+  RESOURCE_PHLEGM: 'phlegm',
+  RESOURCE_TISSUE: 'tissue',
+  RESOURCE_MUSCLE: 'muscle',
+  RESOURCE_ORGANOID: 'organoid',
+  RESOURCE_ORGANISM: 'organism',
+
+  RESOURCE_ALLOY: 'alloy',
+  RESOURCE_TUBE: 'tube',
+  RESOURCE_FIXTURES: 'fixtures',
+  RESOURCE_FRAME: 'frame',
+  RESOURCE_HYDRAULICS: 'hydraulics',
+  RESOURCE_MACHINE: 'machine',
+
+  RESOURCE_CONDENSATE: 'condensate',
+  RESOURCE_CONCENTRATE: 'concentrate',
+  RESOURCE_EXTRACT: 'extract',
+  RESOURCE_SPIRIT: 'spirit',
+  RESOURCE_EMANATION: 'emanation',
+  RESOURCE_ESSENCE: 'essence',
 
   REACTIONS: {
     H: {
@@ -726,6 +796,7 @@ Object.assign(g, {
   EVENT_UPGRADE_CONTROLLER: 9,
   EVENT_EXIT: 10,
   EVENT_POWER: 11,
+  EVENT_TRANSFER: 12,
 
   EVENT_ATTACK_TYPE_MELEE: 1,
   EVENT_ATTACK_TYPE_RANGED: 2,
@@ -766,7 +837,20 @@ Object.assign(g, {
   PWR_OPERATE_POWER: 16,
   PWR_FORTIFY: 17,
   PWR_OPERATE_CONTROLLER: 18,
-  PWR_OPERATE_FACTORY: 19
+  PWR_OPERATE_FACTORY: 19,
+
+  EFFECT_INVULNERABILITY: 1001,
+  EFFECT_COLLAPSE_TIMER: 1002,
+
+  INVADER_CORE_HITS: 100000,
+  INVADER_CORE_CREEP_SPAWN_TIME: {
+    0: 0, 1: 0, 2: 6, 3: 3, 4: 2, 5: 1
+  },
+  INVADER_CORE_EXPAND_TIME: { 1: 4000, 2: 3500, 3: 3000, 4: 2500, 5: 2000 },
+  INVADER_CORE_CONTROLLER_POWER: 2,
+  INVADER_CORE_CONTROLLER_DOWNGRADE: 5000,
+  STRONGHOLD_RAMPART_HITS: { 0: 0, 1: 50000, 2: 200000, 3: 500000, 4: 1000000, 5: 2000000 },
+  STRONGHOLD_DECAY_TICKS: 75000
 });
 
 Object.assign(g, {
@@ -851,7 +935,7 @@ Object.assign(g, {
       level: [0, 2, 7, 14, 22],
       cooldown: 0,
       duration: 5,
-      range: 3,
+      range: 50,
       ops: 10,
       effect: [0.9, 0.8, 0.7, 0.6, 0.5],
     },
@@ -909,27 +993,27 @@ Object.assign(g, {
     [PWR_OPERATE_POWER]: {
       className: POWER_CLASS.OPERATOR,
       level: [10, 11, 12, 14, 22],
-      cooldown: 1000,
+      cooldown: 800,
       range: 3,
-      duration: 800,
+      duration: 1000,
       ops: 200,
       effect: [1, 2, 3, 4, 5]
     },
     [PWR_OPERATE_CONTROLLER]: {
       className: POWER_CLASS.OPERATOR,
       level: [20, 21, 22, 23, 24],
-      cooldown: 1000,
+      cooldown: 800,
       range: 3,
-      duration: 800,
+      duration: 1000,
       ops: 200,
       effect: [10, 20, 30, 40, 50]
     },
     [PWR_OPERATE_FACTORY]: {
       className: POWER_CLASS.OPERATOR,
       level: [0, 2, 7, 14, 22],
-      cooldown: 1000,
+      cooldown: 800,
       range: 3,
-      duration: 800,
+      duration: 1000,
       ops: 100
     },
   },
@@ -994,7 +1078,53 @@ Object.assign(g, {
     RESOURCE_CATALYZED_GHODIUM_ACID,
     RESOURCE_CATALYZED_GHODIUM_ALKALIDE,
 
-    RESOURCE_OPS
+    RESOURCE_OPS,
+
+    RESOURCE_SILICON,
+    RESOURCE_METAL,
+    RESOURCE_BIOMASS,
+    RESOURCE_MIST,
+
+    RESOURCE_UTRIUM_BAR,
+    RESOURCE_LEMERGIUM_BAR,
+    RESOURCE_ZYNTHIUM_BAR,
+    RESOURCE_KEANIUM_BAR,
+    RESOURCE_GHODIUM_MELT,
+    RESOURCE_OXIDANT,
+    RESOURCE_REDUCTANT,
+    RESOURCE_PURIFIER,
+    RESOURCE_BATTERY,
+    RESOURCE_COMPOSITE,
+    RESOURCE_CRYSTAL,
+    RESOURCE_LIQUID,
+
+    RESOURCE_WIRE,
+    RESOURCE_SWITCH,
+    RESOURCE_TRANSISTOR,
+    RESOURCE_MICROCHIP,
+    RESOURCE_CIRCUIT,
+    RESOURCE_DEVICE,
+
+    RESOURCE_CELL,
+    RESOURCE_PHLEGM,
+    RESOURCE_TISSUE,
+    RESOURCE_MUSCLE,
+    RESOURCE_ORGANOID,
+    RESOURCE_ORGANISM,
+
+    RESOURCE_ALLOY,
+    RESOURCE_TUBE,
+    RESOURCE_FIXTURES,
+    RESOURCE_FRAME,
+    RESOURCE_HYDRAULICS,
+    RESOURCE_MACHINE,
+
+    RESOURCE_CONDENSATE,
+    RESOURCE_CONCENTRATE,
+    RESOURCE_EXTRACT,
+    RESOURCE_SPIRIT,
+    RESOURCE_EMANATION,
+    RESOURCE_ESSENCE
   ],
   COLORS_ALL: [
     COLOR_RED,
@@ -1010,5 +1140,452 @@ Object.assign(g, {
   ],
   INTERSHARD_RESOURCES: [
     SUBSCRIPTION_TOKEN
-  ]
+  ],
+  COMMODITIES: {
+    [RESOURCE_UTRIUM_BAR]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_UTRIUM]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_UTRIUM]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_UTRIUM_BAR]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_LEMERGIUM_BAR]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_LEMERGIUM]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_LEMERGIUM]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_LEMERGIUM_BAR]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_ZYNTHIUM_BAR]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_ZYNTHIUM]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_ZYNTHIUM]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_ZYNTHIUM_BAR]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_KEANIUM_BAR]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_KEANIUM]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_KEANIUM]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_KEANIUM_BAR]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_GHODIUM_MELT]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_GHODIUM]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_GHODIUM]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_GHODIUM_MELT]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_OXIDANT]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_OXYGEN]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_OXYGEN]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_OXIDANT]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_REDUCTANT]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_HYDROGEN]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_HYDROGEN]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_REDUCTANT]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_PURIFIER]: {
+      amount: 100,
+      cooldown: 20,
+      components: {
+        [RESOURCE_CATALYST]: 500,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_CATALYST]: {
+      amount: 500,
+      cooldown: 20,
+      components: {
+        [RESOURCE_PURIFIER]: 100,
+        [RESOURCE_ENERGY]: 200
+      }
+    },
+    [RESOURCE_BATTERY]: {
+      amount: 50,
+      cooldown: 10,
+      components: {
+        [RESOURCE_ENERGY]: 600
+      }
+    },
+    [RESOURCE_ENERGY]: {
+      amount: 500,
+      cooldown: 10,
+      components: {
+        [RESOURCE_BATTERY]: 50
+      }
+    },
+    [RESOURCE_COMPOSITE]: {
+      level: 1,
+      amount: 20,
+      cooldown: 50,
+      components: {
+        [RESOURCE_UTRIUM_BAR]: 20,
+        [RESOURCE_ZYNTHIUM_BAR]: 20,
+        [RESOURCE_ENERGY]: 20
+      }
+    },
+    [RESOURCE_CRYSTAL]: {
+      level: 2,
+      amount: 6,
+      cooldown: 21,
+      components: {
+        [RESOURCE_LEMERGIUM_BAR]: 6,
+        [RESOURCE_KEANIUM_BAR]: 6,
+        [RESOURCE_PURIFIER]: 6,
+        [RESOURCE_ENERGY]: 45
+      }
+    },
+    [RESOURCE_LIQUID]: {
+      level: 3,
+      amount: 12,
+      cooldown: 60,
+      components: {
+        [RESOURCE_OXIDANT]: 12,
+        [RESOURCE_REDUCTANT]: 12,
+        [RESOURCE_GHODIUM_MELT]: 12,
+        [RESOURCE_ENERGY]: 90
+      }
+    },
+
+    [RESOURCE_WIRE]: {
+      amount: 20,
+      cooldown: 8,
+      components: {
+        [RESOURCE_UTRIUM_BAR]: 20,
+        [RESOURCE_SILICON]: 100,
+        [RESOURCE_ENERGY]: 40
+      }
+    },
+    [RESOURCE_SWITCH]: {
+      level: 1,
+      amount: 5,
+      cooldown: 70,
+      components: {
+        [RESOURCE_WIRE]: 40,
+        [RESOURCE_OXIDANT]: 95,
+        [RESOURCE_UTRIUM_BAR]: 35,
+        [RESOURCE_ENERGY]: 20
+      }
+    },
+    [RESOURCE_TRANSISTOR]: {
+      level: 2,
+      amount: 1,
+      cooldown: 59,
+      components: {
+        [RESOURCE_SWITCH]: 4,
+        [RESOURCE_WIRE]: 15,
+        [RESOURCE_REDUCTANT]: 85,
+        [RESOURCE_ENERGY]: 8
+      }
+    },
+    [RESOURCE_MICROCHIP]: {
+      level: 3,
+      amount: 1,
+      cooldown: 250,
+      components: {
+        [RESOURCE_TRANSISTOR]: 2,
+        [RESOURCE_COMPOSITE]: 50,
+        [RESOURCE_WIRE]: 117,
+        [RESOURCE_PURIFIER]: 25,
+        [RESOURCE_ENERGY]: 16
+      }
+    },
+    [RESOURCE_CIRCUIT]: {
+      level: 4,
+      amount: 1,
+      cooldown: 800,
+      components: {
+        [RESOURCE_MICROCHIP]: 1,
+        [RESOURCE_TRANSISTOR]: 5,
+        [RESOURCE_SWITCH]: 4,
+        [RESOURCE_OXIDANT]: 115,
+        [RESOURCE_ENERGY]: 32
+      }
+    },
+    [RESOURCE_DEVICE]: {
+      level: 5,
+      amount: 1,
+      cooldown: 600,
+      components: {
+        [RESOURCE_CIRCUIT]: 1,
+        [RESOURCE_MICROCHIP]: 3,
+        [RESOURCE_CRYSTAL]: 110,
+        [RESOURCE_GHODIUM_MELT]: 150,
+        [RESOURCE_ENERGY]: 64
+      }
+    },
+
+    [RESOURCE_CELL]: {
+      amount: 20,
+      cooldown: 8,
+      components: {
+        [RESOURCE_LEMERGIUM_BAR]: 20,
+        [RESOURCE_BIOMASS]: 100,
+        [RESOURCE_ENERGY]: 40
+      }
+    },
+    [RESOURCE_PHLEGM]: {
+      level: 1,
+      amount: 2,
+      cooldown: 35,
+      components: {
+        [RESOURCE_CELL]: 20,
+        [RESOURCE_OXIDANT]: 36,
+        [RESOURCE_LEMERGIUM_BAR]: 16,
+        [RESOURCE_ENERGY]: 8
+      }
+    },
+    [RESOURCE_TISSUE]: {
+      level: 2,
+      amount: 2,
+      cooldown: 164,
+      components: {
+        [RESOURCE_PHLEGM]: 10,
+        [RESOURCE_CELL]: 10,
+        [RESOURCE_REDUCTANT]: 110,
+        [RESOURCE_ENERGY]: 16
+      }
+    },
+    [RESOURCE_MUSCLE]: {
+      level: 3,
+      amount: 1,
+      cooldown: 250,
+      components: {
+        [RESOURCE_TISSUE]: 3,
+        [RESOURCE_PHLEGM]: 3,
+        [RESOURCE_ZYNTHIUM_BAR]: 50,
+        [RESOURCE_REDUCTANT]: 50,
+        [RESOURCE_ENERGY]: 16
+      }
+    },
+    [RESOURCE_ORGANOID]: {
+      level: 4,
+      amount: 1,
+      cooldown: 800,
+      components: {
+        [RESOURCE_MUSCLE]: 1,
+        [RESOURCE_TISSUE]: 5,
+        [RESOURCE_PURIFIER]: 208,
+        [RESOURCE_OXIDANT]: 256,
+        [RESOURCE_ENERGY]: 32
+      }
+    },
+    [RESOURCE_ORGANISM]: {
+      level: 5,
+      amount: 1,
+      cooldown: 600,
+      components: {
+        [RESOURCE_ORGANOID]: 1,
+        [RESOURCE_LIQUID]: 150,
+        [RESOURCE_TISSUE]: 6,
+        [RESOURCE_CELL]: 310,
+        [RESOURCE_ENERGY]: 64
+      }
+    },
+
+    [RESOURCE_ALLOY]: {
+      amount: 20,
+      cooldown: 8,
+      components: {
+        [RESOURCE_ZYNTHIUM_BAR]: 20,
+        [RESOURCE_METAL]: 100,
+        [RESOURCE_ENERGY]: 40
+      }
+    },
+    [RESOURCE_TUBE]: {
+      level: 1,
+      amount: 2,
+      cooldown: 45,
+      components: {
+        [RESOURCE_ALLOY]: 40,
+        [RESOURCE_ZYNTHIUM_BAR]: 16,
+        [RESOURCE_ENERGY]: 8
+      }
+    },
+    [RESOURCE_FIXTURES]: {
+      level: 2,
+      amount: 1,
+      cooldown: 115,
+      components: {
+        [RESOURCE_COMPOSITE]: 20,
+        [RESOURCE_ALLOY]: 41,
+        [RESOURCE_OXIDANT]: 161,
+        [RESOURCE_ENERGY]: 8
+      }
+    },
+    [RESOURCE_FRAME]: {
+      level: 3,
+      amount: 1,
+      cooldown: 125,
+      components: {
+        [RESOURCE_FIXTURES]: 2,
+        [RESOURCE_TUBE]: 4,
+        [RESOURCE_REDUCTANT]: 330,
+        [RESOURCE_ZYNTHIUM_BAR]: 31,
+        [RESOURCE_ENERGY]: 16
+      }
+    },
+    [RESOURCE_HYDRAULICS]: {
+      level: 4,
+      amount: 1,
+      cooldown: 800,
+      components: {
+        [RESOURCE_LIQUID]: 150,
+        [RESOURCE_FIXTURES]: 3,
+        [RESOURCE_TUBE]: 15,
+        [RESOURCE_PURIFIER]: 208,
+        [RESOURCE_ENERGY]: 32
+      }
+    },
+    [RESOURCE_MACHINE]: {
+      level: 5,
+      amount: 1,
+      cooldown: 600,
+      components: {
+        [RESOURCE_HYDRAULICS]: 1,
+        [RESOURCE_FRAME]: 2,
+        [RESOURCE_FIXTURES]: 3,
+        [RESOURCE_TUBE]: 12,
+        [RESOURCE_ENERGY]: 64
+      }
+    },
+
+    [RESOURCE_CONDENSATE]: {
+      amount: 20,
+      cooldown: 8,
+      components: {
+        [RESOURCE_KEANIUM_BAR]: 20,
+        [RESOURCE_MIST]: 100,
+        [RESOURCE_ENERGY]: 40
+      }
+    },
+    [RESOURCE_CONCENTRATE]: {
+      level: 1,
+      amount: 3,
+      cooldown: 41,
+      components: {
+        [RESOURCE_CONDENSATE]: 30,
+        [RESOURCE_KEANIUM_BAR]: 15,
+        [RESOURCE_REDUCTANT]: 54,
+        [RESOURCE_ENERGY]: 12
+      }
+    },
+    [RESOURCE_EXTRACT]: {
+      level: 2,
+      amount: 2,
+      cooldown: 128,
+      components: {
+        [RESOURCE_CONCENTRATE]: 10,
+        [RESOURCE_CONDENSATE]: 30,
+        [RESOURCE_OXIDANT]: 60,
+        [RESOURCE_ENERGY]: 16
+      }
+    },
+    [RESOURCE_SPIRIT]: {
+      level: 3,
+      amount: 1,
+      cooldown: 200,
+      components: {
+        [RESOURCE_EXTRACT]: 2,
+        [RESOURCE_CONCENTRATE]: 6,
+        [RESOURCE_REDUCTANT]: 90,
+        [RESOURCE_PURIFIER]: 20,
+        [RESOURCE_ENERGY]: 16
+      }
+    },
+    [RESOURCE_EMANATION]: {
+      level: 4,
+      amount: 1,
+      cooldown: 800,
+      components: {
+        [RESOURCE_SPIRIT]: 2,
+        [RESOURCE_EXTRACT]: 2,
+        [RESOURCE_CONCENTRATE]: 3,
+        [RESOURCE_KEANIUM_BAR]: 112,
+        [RESOURCE_ENERGY]: 32
+      }
+    },
+    [RESOURCE_ESSENCE]: {
+      level: 5,
+      amount: 1,
+      cooldown: 600,
+      components: {
+        [RESOURCE_EMANATION]: 1,
+        [RESOURCE_SPIRIT]: 3,
+        [RESOURCE_CRYSTAL]: 110,
+        [RESOURCE_GHODIUM_MELT]: 150,
+        [RESOURCE_ENERGY]: 64
+      }
+    },
+  }
 });
