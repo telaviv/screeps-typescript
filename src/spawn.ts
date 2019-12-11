@@ -12,7 +12,6 @@ const MINIMUM_UPGRADE_COUNT = 1
 
 function runSpawn(spawn: StructureSpawn) {
     const role = getMostNeededRole()
-    console.log('most needed role', role)
     if (role === 'builder') {
         roleBuilder.create(spawn)
     } else if (role === 'harvester') {

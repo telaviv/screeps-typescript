@@ -3,46 +3,55 @@ const isRoad = (structure: any): boolean => {
 }
 
 const createWallConstructionSites = (room: Room) => {
-    console.log('create wall construction sites')
-    const SIZE = 6
+    const SIZE = 13
+    const HALF = (SIZE - 1) / 2
 
     const spawns = room.find(FIND_MY_SPAWNS) as StructureSpawn[]
     const spawn = spawns[0]
-    const top = spawn.pos.y - SIZE
-    const bottom = spawn.pos.y + SIZE
-    const left = spawn.pos.x - SIZE
-    const right = spawn.pos.y + SIZE
+    const top = spawn.pos.y - HALF
+    const left = spawn.pos.x - HALF
     const terrain = room.getTerrain()
 
-    room.visual.rect(left, top, SIZE * 2, SIZE * 2, { fill: 'green' })
+    for (let x = left; x < left + SIZE; ++x) {
+        for (let y = top; y < top + SIZE; ++y) {
+            if (
+                Object.keys(Game.constructionSites).length ===
+                MAX_CONSTRUCTION_SITES
+            ) {
+                return
+            }
 
-    console.log('about to create walls')
-    for (let x = left; x < right; ++x) {
-        for (let y = top; y < bottom; ++y) {
             if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+                continue
+            }
+
+            if (room.lookForAt(LOOK_CONSTRUCTION_SITES, x, y).length > 0) {
                 continue
             }
 
             if (
                 !(
                     x === left ||
-                    x + 1 === right ||
+                    x + 1 === left + SIZE ||
                     y === top ||
-                    y + 1 === bottom
+                    y + 1 === top + SIZE
                 )
             ) {
                 continue
             }
 
+            let code
             if (_.some(room.lookForAt(LOOK_STRUCTURES, x, y), isRoad)) {
-                room.createConstructionSite(x, y, STRUCTURE_RAMPART)
+                code = room.createConstructionSite(x, y, STRUCTURE_RAMPART)
+                if (code !== OK) {
+                    console.log(`rampart creation failed (${x}, ${y}): ${code}`)
+                }
             }
 
-            console.log(`creating wall (${x}, ${y})`)
-            console.log(
-                'exit code: ' +
-                    room.createConstructionSite(x, y, STRUCTURE_WALL),
-            )
+            code = room.createConstructionSite(x, y, STRUCTURE_WALL)
+            if (code !== OK) {
+                console.log(`wall creation failed (${x}, ${y}): ${code}`)
+            }
         }
     }
     room.memory.wallsAssigned = true
@@ -73,12 +82,15 @@ const createRoadConstructionSites = (room: Room) => {
 
 const assignRoomFeatures = () => {
     _.each(Game.rooms, room => {
-        if (!room.memory.roadsAssigned || Game.time % 300 === 0) {
+        if (!room.memory.roadsAssigned || Game.time % 100 === 0) {
             createRoadConstructionSites(room)
         }
 
-        createWallConstructionSites(room)
-        if (!room.memory.wallsAssigned || Game.time % 350 === 0) {
+        if (
+            room.controller &&
+            room.controller.level > 1 &&
+            (!room.memory.wallsAssigned || Game.time % 100 === 50)
+        ) {
             createWallConstructionSites(room)
         }
     })
