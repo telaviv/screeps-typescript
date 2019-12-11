@@ -14,6 +14,7 @@ jest.mock('roles/harvester')
 jest.mock('roles/upgrader')
 jest.mock('spawn')
 jest.mock('tower')
+jest.mock('surveyor')
 
 const builder = mockInstanceOf<Creep>({
     memory: {

@@ -1,5 +1,8 @@
+import roleHarvester from 'roles/harvester'
 import { runSpawn } from 'spawn'
 import { mockGlobal, mockInstanceOf, mockStructure } from '../test/mocking'
+
+jest.mock('roles/harvester')
 
 describe('spawn module', () => {
     describe('runSpawn', () => {
@@ -7,15 +10,11 @@ describe('spawn module', () => {
             mockGlobal<Game>('Game', {
                 time: 1,
             })
-            const tower = mockInstanceOf<StructureSpawn>({
+            const spawn = mockInstanceOf<StructureSpawn>({
                 spawnCreep: () => OK,
             })
-            runSpawn(tower)
-            expect(tower.spawnCreep).toHaveBeenCalledWith(
-                [WORK, CARRY, MOVE],
-                'harvester:1',
-                { memory: { role: 'harvester' } },
-            )
+            runSpawn(spawn)
+            expect(roleHarvester.create).toHaveBeenCalledWith(spawn)
         })
     })
 })

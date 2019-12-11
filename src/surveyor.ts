@@ -23,7 +23,7 @@ const createRoadConstructionSites = (room: Room) => {
 
 const assignRoomFeatures = () => {
     _.each(Game.rooms, room => {
-        if (!room.memory.roadsAssigned) {
+        if (!room.memory.roadsAssigned || Game.time % 300 === 0) {
             createRoadConstructionSites(room)
         }
     })
