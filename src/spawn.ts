@@ -24,7 +24,7 @@ function runSpawn(spawn: StructureSpawn) {
 function calculateBuilderCount() {
     // TODO: this needs to be a per room thing.
     const constructionSiteCount = Object.keys(Game.constructionSites).length
-    return Math.ceil(constructionSiteCount / 10)
+    return Math.ceil(constructionSiteCount / 25)
 }
 
 function getMostNeededRole() {

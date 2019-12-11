@@ -11,6 +11,7 @@ interface Memory {
 }
 
 interface RoomMemory {
+    hasAssignedRoads: boolean
     sources: Array<{ id: string }>
 }
 

@@ -69,6 +69,7 @@ const createRoadConstructionSites = (room: Room) => {
             }
         }
     }
+    room.memory.hasAssignedRoads = true
 }
 
 const assignSources = (room: Room) => {
@@ -83,7 +84,7 @@ const assignRoomFeatures = () => {
             assignSources(room)
         }
 
-        if (Game.time % 100 === 0) {
+        if (!room.memory.hasAssignedRoads || Game.time % 100 === 0) {
             createRoadConstructionSites(room)
         }
 

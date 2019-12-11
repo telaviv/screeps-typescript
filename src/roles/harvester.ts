@@ -16,9 +16,9 @@ interface HarvesterMemory extends CreepMemory {
 const roleHarvester = {
     run(creep: Harvester) {
         if (creep.carry.energy < creep.carryCapacity) {
-            const sources = creep.room.find(FIND_SOURCES)
-            if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources[0], {
+            const source = Game.getObjectById(creep.memory.source) as Source
+            if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(source, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
             }
@@ -57,10 +57,12 @@ const roleHarvester = {
     getSourceCounts(room: Room): SourceCounts {
         const counts: SourceCounts = {}
         for (const source of room.memory.sources) {
-            if (!counts.hasOwnProperty(source.id)) {
-                counts[source.id] = 1
-            } else {
-                counts[source.id] += 1
+            counts[source.id] = 0
+        }
+        for (const creep of Object.values(Memory.creeps)) {
+            if (creep.role === 'harvester') {
+                const harvesterMemory = creep as HarvesterMemory
+                counts[harvesterMemory.source] += 1
             }
         }
         return counts
