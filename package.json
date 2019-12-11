@@ -12,7 +12,7 @@
     "push-sim": "rollup -c --environment DEST:sim",
     "test": "jest",
     "test-watch": "jest --watch",
-    "test-cov": "jest --coverage --collectCoverageFrom=src/**/*.{js,ts}",
+    "test-cov": "jest --coverage",
     "watch-main": "rollup -cw --environment DEST:main",
     "watch-pserver": "rollup -cw --environment DEST:pserver",
     "watch-sim": "rollup -cw --environment DEST:sim"
