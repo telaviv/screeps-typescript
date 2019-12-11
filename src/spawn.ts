@@ -7,11 +7,11 @@ interface RoleCounts {
 }
 
 const MINIMUM_HARVESTER_COUNT = 6
-const MINIMUM_BUILDER_COUNT = 1
 const MINIMUM_UPGRADE_COUNT = 1
 
 function runSpawn(spawn: StructureSpawn) {
     const role = getMostNeededRole()
+    console.log('most needed role:', role)
     if (role === 'builder') {
         roleBuilder.create(spawn)
     } else if (role === 'harvester') {
@@ -21,11 +21,17 @@ function runSpawn(spawn: StructureSpawn) {
     }
 }
 
+function calculateBuilderCount() {
+    // TODO: this needs to be a per room thing.
+    const constructionSiteCount = Object.keys(Game.constructionSites).length
+    return Math.ceil(constructionSiteCount / 10)
+}
+
 function getMostNeededRole() {
     const roleCounts = getRoleCounts()
     if (roleCounts.harvester < MINIMUM_HARVESTER_COUNT) {
         return 'harvester'
-    } else if (roleCounts.builder < MINIMUM_BUILDER_COUNT) {
+    } else if (roleCounts.builder < calculateBuilderCount()) {
         return 'builder'
     }
     return 'upgrader'

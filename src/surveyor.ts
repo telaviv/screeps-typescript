@@ -14,13 +14,6 @@ const createWallConstructionSites = (room: Room) => {
 
     for (let x = left; x < left + SIZE; ++x) {
         for (let y = top; y < top + SIZE; ++y) {
-            if (
-                Object.keys(Game.constructionSites).length ===
-                MAX_CONSTRUCTION_SITES
-            ) {
-                return
-            }
-
             if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
                 continue
             }
@@ -43,13 +36,13 @@ const createWallConstructionSites = (room: Room) => {
             let code
             if (_.some(room.lookForAt(LOOK_STRUCTURES, x, y), isRoad)) {
                 code = room.createConstructionSite(x, y, STRUCTURE_RAMPART)
-                if (code !== OK) {
+                if (!_.any([OK, ERR_FULL])) {
                     console.log(`rampart creation failed (${x}, ${y}): ${code}`)
                 }
             }
 
             code = room.createConstructionSite(x, y, STRUCTURE_WALL)
-            if (code !== OK) {
+            if (!_.any([OK, ERR_FULL])) {
                 console.log(`wall creation failed (${x}, ${y}): ${code}`)
             }
         }
