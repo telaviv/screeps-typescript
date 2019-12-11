@@ -12,6 +12,7 @@ interface Memory {
 
 interface RoomMemory {
     roadsAssigned: boolean
+    wallsAssigned: boolean
 }
 
 // `global` extension samples

@@ -1,5 +1,55 @@
+const isRoad = (structure: any): boolean => {
+    return structure.structureType === STRUCTURE_ROAD
+}
+
+const createWallConstructionSites = (room: Room) => {
+    console.log('create wall construction sites')
+    const SIZE = 6
+
+    const spawns = room.find(FIND_MY_SPAWNS) as StructureSpawn[]
+    const spawn = spawns[0]
+    const top = spawn.pos.y - SIZE
+    const bottom = spawn.pos.y + SIZE
+    const left = spawn.pos.x - SIZE
+    const right = spawn.pos.y + SIZE
+    const terrain = room.getTerrain()
+
+    room.visual.rect(left, top, SIZE * 2, SIZE * 2, { fill: 'green' })
+
+    console.log('about to create walls')
+    for (let x = left; x < right; ++x) {
+        for (let y = top; y < bottom; ++y) {
+            if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+                continue
+            }
+
+            if (
+                !(
+                    x === left ||
+                    x + 1 === right ||
+                    y === top ||
+                    y + 1 === bottom
+                )
+            ) {
+                continue
+            }
+
+            if (_.some(room.lookForAt(LOOK_STRUCTURES, x, y), isRoad)) {
+                room.createConstructionSite(x, y, STRUCTURE_RAMPART)
+            }
+
+            console.log(`creating wall (${x}, ${y})`)
+            console.log(
+                'exit code: ' +
+                    room.createConstructionSite(x, y, STRUCTURE_WALL),
+            )
+        }
+    }
+    room.memory.wallsAssigned = true
+}
+
 const findRoadPath = (origin: RoomPosition, goal: RoomPosition) => {
-    return PathFinder.search(origin, goal, { swampCost: 1 })
+    return PathFinder.search(origin, { pos: goal, range: 1 }, { swampCost: 1 })
 }
 
 const createRoadConstructionSites = (room: Room) => {
@@ -25,6 +75,11 @@ const assignRoomFeatures = () => {
     _.each(Game.rooms, room => {
         if (!room.memory.roadsAssigned || Game.time % 300 === 0) {
             createRoadConstructionSites(room)
+        }
+
+        createWallConstructionSites(room)
+        if (!room.memory.wallsAssigned || Game.time % 350 === 0) {
+            createWallConstructionSites(room)
         }
     })
 }
