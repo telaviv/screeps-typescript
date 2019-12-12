@@ -1,6 +1,3 @@
-// example declaration file - remove these and add your own custom typings
-
-// memory extension samples
 interface CreepMemory {
     role: string
 }
@@ -13,6 +10,7 @@ interface Memory {
 interface RoomMemory {
     hasAssignedRoads: boolean
     sources: Array<{ id: string }>
+    strategy: StrategyPhase
 }
 
 // `global` extension samples

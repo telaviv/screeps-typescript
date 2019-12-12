@@ -3,6 +3,7 @@ import roleHarvester, { Harvester } from 'roles/harvester'
 import roleUpgrader, { Upgrader } from 'roles/upgrader'
 import { ErrorMapper } from 'utils/ErrorMapper'
 import { runSpawn } from './spawn'
+import updateStrategy from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
 
@@ -10,6 +11,8 @@ function unwrappedLoop() {
     survey()
 
     Object.values(Game.rooms).forEach(room => {
+        updateStrategy(room)
+
         if (room.controller && room.controller.my) {
             const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
                 filter: s => {
