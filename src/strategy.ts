@@ -2,7 +2,7 @@ const STARTER_PHASE_HARVESTER_COUNT = 6
 
 export enum StrategyPhase {
     Starter = 'starter',
-    DropMining = 'drop mining',
+    DropMining = 'drop-mining',
 }
 
 export default function(room: Room) {

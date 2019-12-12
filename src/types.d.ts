@@ -13,6 +13,9 @@ interface RoomMemory {
     strategy: StrategyPhase
 }
 
+
+type SpawnRunner = (spawn: StructureSpawn) => void
+
 // `global` extension samples
 declare namespace NodeJS {
     interface Global {
