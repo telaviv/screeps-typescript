@@ -1,5 +1,3 @@
-import "../test/constants";
-
 /**
  * Generic type for partial implementations of interfaces.
  */
