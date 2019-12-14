@@ -1,3 +1,7 @@
+const getSpawn = (room: Room): StructureSpawn => {
+    return (room.find(FIND_MY_SPAWNS) as StructureSpawn[])[0]
+}
+
 const isRoad = (structure: any): boolean => {
     return structure.structureType === STRUCTURE_ROAD
 }
@@ -6,8 +10,7 @@ const createWallConstructionSites = (room: Room) => {
     const SIZE = 13
     const HALF = (SIZE - 1) / 2
 
-    const spawns = room.find(FIND_MY_SPAWNS) as StructureSpawn[]
-    const spawn = spawns[0]
+    const spawn = getSpawn(room)
     const top = spawn.pos.y - HALF
     const left = spawn.pos.x - HALF
     const terrain = room.getTerrain()
@@ -74,12 +77,24 @@ const createRoadConstructionSites = (room: Room) => {
 
 const assignSources = (room: Room) => {
     const sources = room.find(FIND_SOURCES) as Source[]
-    room.memory.sources = sources.map(source => ({ id: source.id }))
+    const spawn = getSpawn(room)
+
+    room.memory.sources = []
+    for (const source of sources) {
+        const path = PathFinder.search(
+            spawn.pos,
+            { pos: source.pos, range: 1 },
+            { swampCost: 1 },
+        ).path
+        room.memory.sources.push({
+            harvest: path[path.length - 1],
+            id: source.id,
+        })
+    }
 }
 
 const assignRoomFeatures = () => {
     _.each(Game.rooms, room => {
-        console.log('hoping to assign sources')
         if (!room.memory.sources || room.memory.sources.length === 0) {
             assignSources(room)
         }

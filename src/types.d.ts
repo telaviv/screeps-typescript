@@ -9,7 +9,7 @@ interface Memory {
 
 interface RoomMemory {
     hasAssignedRoads: boolean
-    sources: Array<{ id: string }>
+    sources: Array<{ id: string, harvest: RoomPosition }>
     strategy: StrategyPhase
 }
 
