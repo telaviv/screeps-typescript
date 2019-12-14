@@ -1,5 +1,5 @@
 import { mockInstanceOf, mockStructure } from "../../test/mocking";
-import roleHarvester from "./harvester";
+import roleHarvester from "./logistics";
 
 
 const source1 = mockInstanceOf<Source>({ id: "source1" });

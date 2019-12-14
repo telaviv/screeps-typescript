@@ -1,12 +1,12 @@
-import roleHarvester from 'roles/harvester'
+import roleHarvester from 'roles/logistics'
 import { runSpawn } from 'spawn'
 import { mockGlobal, mockInstanceOf, mockStructure } from '../test/mocking'
 
-jest.mock('roles/harvester')
+jest.mock('roles/logistics')
 
 describe('spawn module', () => {
     describe('runSpawn', () => {
-        it('should continously create harvesters', () => {
+        it('should continously create logisticss', () => {
             mockGlobal<Game>('Game', {
                 time: 1,
             })

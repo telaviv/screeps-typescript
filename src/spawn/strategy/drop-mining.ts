@@ -1,19 +1,19 @@
 import roleBuilder from 'roles/builder'
-import roleHarvester from 'roles/harvester'
+import roleHarvester from 'roles/logistics'
 import roleUpgrader from 'roles/upgrader'
 
 interface RoleCounts {
     [index: string]: number
 }
 
-const MINIMUM_HARVESTER_COUNT = 6
+const MINIMUM_LOGISTICS_COUNT = 6
 const MINIMUM_UPGRADE_COUNT = 1
 
 export default function runSpawn(spawn: StructureSpawn) {
     const role = getMostNeededRole()
     if (role === 'builder') {
         roleBuilder.create(spawn)
-    } else if (role === 'harvester') {
+    } else if (role === 'logistics') {
         roleHarvester.create(spawn)
     } else if (role === 'upgrader') {
         roleUpgrader.create(spawn)
@@ -28,8 +28,8 @@ function calculateBuilderCount() {
 
 function getMostNeededRole() {
     const roleCounts = getRoleCounts()
-    if (roleCounts.harvester < MINIMUM_HARVESTER_COUNT) {
-        return 'harvester'
+    if (roleCounts.logistics < MINIMUM_LOGISTICS_COUNT) {
+        return 'logistics'
     } else if (roleCounts.builder < calculateBuilderCount()) {
         return 'builder'
     }
@@ -37,7 +37,7 @@ function getMostNeededRole() {
 }
 
 function getRoleCounts(): RoleCounts {
-    const counts: RoleCounts = { harvester: 0, builder: 0, upgrader: 0 }
+    const counts: RoleCounts = { logistics: 0, builder: 0, upgrader: 0 }
     for (const creep of Object.values(Memory.creeps)) {
         counts[creep.role] += 1
     }

@@ -1,4 +1,4 @@
-import roleHarvester from 'roles/harvester'
+import roleHarvester from 'roles/logistics'
 
 export default function(spawn: StructureSpawn) {
     roleHarvester.create(spawn)

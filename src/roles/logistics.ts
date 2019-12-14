@@ -9,7 +9,7 @@ export interface Harvester extends Creep {
 }
 
 interface HarvesterMemory extends CreepMemory {
-    role: 'harvester'
+    role: 'logistics'
     source: string
 }
 
@@ -60,9 +60,9 @@ const roleHarvester = {
             counts[source.id] = 0
         }
         for (const creep of Object.values(Memory.creeps)) {
-            if (creep.role === 'harvester') {
-                const harvesterMemory = creep as HarvesterMemory
-                counts[harvesterMemory.source] += 1
+            if (creep.role === 'logistics') {
+                const logisticsMemory = creep as HarvesterMemory
+                counts[logisticsMemory.source] += 1
             }
         }
         return counts
@@ -74,7 +74,7 @@ const roleHarvester = {
     },
 
     create(spawn: StructureSpawn): number {
-        const role = 'harvester'
+        const role = 'logistics'
         return spawn.spawnCreep([WORK, CARRY, MOVE], `${role}:${Game.time}`, {
             memory: {
                 role,

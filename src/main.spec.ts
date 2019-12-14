@@ -1,16 +1,16 @@
 import 'roles/builder'
-import 'roles/harvester'
+import 'roles/logistics'
 import 'roles/upgrader'
 import { mockGlobal, mockInstanceOf, mockStructure } from '../test/mocking'
 import { unwrappedLoop } from './main'
 import roleBuilder from './roles/builder'
-import roleHarvester from './roles/harvester'
+import roleHarvester from './roles/logistics'
 import roleUpgrader from './roles/upgrader'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
 
 jest.mock('roles/builder')
-jest.mock('roles/harvester')
+jest.mock('roles/logistics')
 jest.mock('roles/upgrader')
 jest.mock('spawn')
 jest.mock('tower')
@@ -21,9 +21,9 @@ const builder = mockInstanceOf<Creep>({
         role: 'builder',
     },
 })
-const harvester = mockInstanceOf<Creep>({
+const logistics = mockInstanceOf<Creep>({
     memory: {
-        role: 'harvester',
+        role: 'logistics',
     },
 })
 const upgrader = mockInstanceOf<Creep>({
@@ -66,7 +66,7 @@ describe('main loop', () => {
         mockGlobal<Game>('Game', {
             creeps: {
                 builder,
-                harvester,
+                logistics,
                 upgrader,
             },
             rooms: {},
@@ -77,14 +77,14 @@ describe('main loop', () => {
         })
         unwrappedLoop()
         expect(roleBuilder.run).toHaveBeenCalledWith(builder)
-        expect(roleHarvester.run).toHaveBeenCalledWith(harvester)
+        expect(roleHarvester.run).toHaveBeenCalledWith(logistics)
         expect(roleUpgrader.run).toHaveBeenCalledWith(upgrader)
     })
 
     it('should clean up the memory from deceased creeps', () => {
         mockGlobal<Game>('Game', {
             creeps: {
-                stillKicking: harvester,
+                stillKicking: logistics,
             },
             rooms: {},
             time: 1,
@@ -97,11 +97,11 @@ describe('main loop', () => {
                 goner: {
                     role: 'waste',
                 },
-                stillKicking: harvester.memory,
+                stillKicking: logistics.memory,
             },
         })
         unwrappedLoop()
-        expect(Memory.creeps).toEqual({ stillKicking: harvester.memory })
+        expect(Memory.creeps).toEqual({ stillKicking: logistics.memory })
     })
 
     it('should run every tower in my rooms', () => {

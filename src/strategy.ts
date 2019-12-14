@@ -1,4 +1,4 @@
-const STARTER_PHASE_HARVESTER_COUNT = 6
+const STARTER_PHASE_LOGISTICS_COUNT = 6
 
 export enum StrategyPhase {
     Starter = 'starter',
@@ -9,7 +9,7 @@ export default function(room: Room) {
     if (!room.memory.strategy) {
         room.memory.strategy = StrategyPhase.Starter
     } else if (room.memory.strategy === StrategyPhase.Starter) {
-        if (room.find(FIND_MY_CREEPS).length >= STARTER_PHASE_HARVESTER_COUNT) {
+        if (room.find(FIND_MY_CREEPS).length >= STARTER_PHASE_LOGISTICS_COUNT) {
             room.memory.strategy = StrategyPhase.DropMining
         }
     }
