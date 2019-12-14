@@ -4,17 +4,17 @@ interface SourceCounts {
     [index: string]: number
 }
 
-export interface Harvester extends Creep {
-    memory: HarvesterMemory
+export interface Logistics extends Creep {
+    memory: LogisticsMemory
 }
 
-interface HarvesterMemory extends CreepMemory {
+interface LogisticsMemory extends CreepMemory {
     role: 'logistics'
     source: string
 }
 
-const roleHarvester = {
-    run(creep: Harvester) {
+const roleLogistics = {
+    run(creep: Logistics) {
         if (creep.carry.energy < creep.carryCapacity) {
             const source = Game.getObjectById(creep.memory.source) as Source
             if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
@@ -29,7 +29,7 @@ const roleHarvester = {
             if (targets.length > 0) {
                 if (
                     creep.transfer(targets[0], RESOURCE_ENERGY) ===
-                    ERR_NOT_IN_RANGE
+			ERR_NOT_IN_RANGE
                 ) {
                     creep.moveTo(targets[0], {
                         visualizePathStyle: { stroke: '#ffffff' },
@@ -61,7 +61,7 @@ const roleHarvester = {
         }
         for (const creep of Object.values(Memory.creeps)) {
             if (creep.role === 'logistics') {
-                const logisticsMemory = creep as HarvesterMemory
+                const logisticsMemory = creep as LogisticsMemory
                 counts[logisticsMemory.source] += 1
             }
         }
@@ -79,9 +79,9 @@ const roleHarvester = {
             memory: {
                 role,
                 source: this.getNextSource(spawn.room),
-            } as HarvesterMemory,
+            } as LogisticsMemory,
         })
     },
 }
 
-export default roleHarvester
+export default roleLogistics

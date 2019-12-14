@@ -1,5 +1,6 @@
 import roleBuilder, { Builder } from 'roles/builder'
-import roleHarvester, { Harvester } from 'roles/logistics'
+import roleHarvester, { Harvester } from 'roles/harvester'
+import roleLogistics, { Logistics } from 'roles/logistics'
 import roleUpgrader, { Upgrader } from 'roles/upgrader'
 import { ErrorMapper } from 'utils/ErrorMapper'
 import { runSpawn } from './spawn'
@@ -35,13 +36,13 @@ function unwrappedLoop() {
 
     for (const name in Game.creeps) {
         const creep = Game.creeps[name]
-        if (creep.memory.role === 'logistics') {
+        if (creep.memory.role === 'harvester') {
             roleHarvester.run(creep as Harvester)
-        }
-        if (creep.memory.role === 'upgrader') {
+        } else if (creep.memory.role === 'logistics') {
+            roleLogistics.run(creep as Logistics)
+        } else if (creep.memory.role === 'upgrader') {
             roleUpgrader.run(creep as Upgrader)
-        }
-        if (creep.memory.role === 'builder') {
+        } else if (creep.memory.role === 'builder') {
             roleBuilder.run(creep as Builder)
         }
     }

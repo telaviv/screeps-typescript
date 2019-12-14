@@ -1,5 +1,5 @@
 import { mockInstanceOf, mockStructure } from "../../test/mocking";
-import roleHarvester from "./logistics";
+import roleLogistics from "./logistics";
 
 
 const source1 = mockInstanceOf<Source>({ id: "source1" });
@@ -18,7 +18,7 @@ const room = mockInstanceOf<Room>({
   }
 });
 
-describe("Harvester role", () => {
+describe("Logistics role", () => {
 
   describe("run", () => {
 
@@ -30,7 +30,7 @@ describe("Harvester role", () => {
         room
       });
 
-      roleHarvester.run(creep);
+      roleLogistics.run(creep);
       expect(creep.harvest).toHaveBeenCalledWith(source1);
     });
 
@@ -42,7 +42,7 @@ describe("Harvester role", () => {
         moveTo: () => OK,
         room
       });
-      roleHarvester.run(creep);
+      roleLogistics.run(creep);
       expect(creep.moveTo).toHaveBeenCalledWith(source1, expect.anything());
     });
 
@@ -54,9 +54,9 @@ describe("Harvester role", () => {
         transfer: () => OK
       });
 
-      roleHarvester.run(creep);
+      roleLogistics.run(creep);
       expect(creep.transfer).toHaveBeenCalledWith(extension, RESOURCE_ENERGY);
-      expect(creep.room.find).toHaveBeenCalledWith(FIND_STRUCTURES, { filter: roleHarvester.isToBeFilled });
+      expect(creep.room.find).toHaveBeenCalledWith(FIND_STRUCTURES, { filter: roleLogistics.isToBeFilled });
     });
 
     it("should move towards a non-full structure, when it's full and out of range to transfer", () => {
@@ -68,7 +68,7 @@ describe("Harvester role", () => {
         transfer: () => ERR_NOT_IN_RANGE
       });
 
-      roleHarvester.run(creep);
+      roleLogistics.run(creep);
       expect(creep.moveTo).toHaveBeenCalledWith(extension, expect.anything());
     });
 
@@ -86,7 +86,7 @@ describe("Harvester role", () => {
           energy: 0,
           energyCapacity: 100
         });
-        expect(roleHarvester.isToBeFilled(structure)).toBeTruthy();
+        expect(roleLogistics.isToBeFilled(structure)).toBeTruthy();
       });
     });
 
@@ -100,7 +100,7 @@ describe("Harvester role", () => {
           energy: 100,
           energyCapacity: 100
         });
-        expect(roleHarvester.isToBeFilled(structure)).toBeFalsy();
+        expect(roleLogistics.isToBeFilled(structure)).toBeFalsy();
       });
     });
 
@@ -124,7 +124,7 @@ describe("Harvester role", () => {
         STRUCTURE_WALL
       ].forEach(structureType => {
         const structure = mockStructure(structureType);
-        expect(roleHarvester.isToBeFilled(structure)).toBeFalsy();
+        expect(roleLogistics.isToBeFilled(structure)).toBeFalsy();
       });
     });
 
