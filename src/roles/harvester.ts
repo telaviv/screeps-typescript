@@ -23,10 +23,19 @@ const roleHarvester = {
             throw Error(`source memory isn't real ${roomMemory.sources}`)
         }
         const source = Game.getObjectById(sourceMemory.id) as Source
+
         if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(sourceMemory.harvest, {
+            const harvest = sourceMemory.harvest
+            const err = creep.moveTo(harvest.x, harvest.y, {
                 visualizePathStyle: { stroke: '#ffaa00' },
             })
+            if (err !== OK) {
+                console.log(
+                    `couldn't move to ${JSON.stringify(
+                        sourceMemory.harvest,
+                    )}: ${err}`,
+                )
+            }
         }
     },
 
