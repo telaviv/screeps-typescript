@@ -1,4 +1,5 @@
 import { minBy } from 'utils/lodash'
+import { StrategyPhase } from 'strategy'
 
 interface SourceCounts {
     [index: string]: number
@@ -16,8 +17,42 @@ interface LogisticsMemory extends CreepMemory {
 const roleLogistics = {
     run(creep: Logistics) {
         if (creep.carry.energy < creep.carryCapacity) {
+            const roomMemory = Memory.rooms[creep.room.name]
+            const sourceMemory = roomMemory.sources.find(
+                s => s.id === creep.memory.source,
+            )
+            if (!sourceMemory) {
+                throw Error("somehow we don't have memory")
+            }
+
             const source = Game.getObjectById(creep.memory.source) as Source
-            if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+            const target = creep.pos.findClosestByRange(
+                FIND_DROPPED_RESOURCES,
+                {
+                    filter: {
+                        resourceType: RESOURCE_ENERGY,
+                    },
+                },
+            )
+
+            if (
+                roomMemory.strategy === StrategyPhase.DropMining &&
+                target !== null
+            ) {
+                if (target === null) {
+                    console.log('found no dropped resources')
+                    return
+                }
+
+                const err = creep.pickup(target)
+                if (err === ERR_NOT_IN_RANGE) {
+                    const harvest = sourceMemory.harvest
+                    creep.moveTo(harvest.x, harvest.y, {
+                        visualizePathStyle: { stroke: '#ffaa00' },
+                        range: 1,
+                    })
+                }
+            } else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(source, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
@@ -29,7 +64,7 @@ const roleLogistics = {
             if (targets.length > 0) {
                 if (
                     creep.transfer(targets[0], RESOURCE_ENERGY) ===
-			ERR_NOT_IN_RANGE
+                    ERR_NOT_IN_RANGE
                 ) {
                     creep.moveTo(targets[0], {
                         visualizePathStyle: { stroke: '#ffffff' },
