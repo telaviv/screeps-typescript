@@ -10,6 +10,7 @@
     "member-ordering": [false],
     "no-console": [false],
     "no-namespace": [true, "allow-declarations"],
+    "object-literal-sort-keys": false,
     "variable-name": [
       true,
       "ban-keywords",
