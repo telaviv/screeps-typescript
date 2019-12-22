@@ -44,11 +44,12 @@ function mockInstanceOf<T extends object>(mockedProps: DeepPartial<T> = {}): T {
   Object.entries(mockedProps).forEach(([propName, mockedValue]) => {
     target[propName as keyof T] =
       typeof mockedValue === "function" ? jest.fn(mockedValue)
+      : Array.isArray(mockedValue) ? mockedValue.map(mockInstanceOf)
       : typeof mockedValue === "object" ? mockInstanceOf(mockedValue)
       : mockedValue;
   });
   return new Proxy<T>(target as T, {
-    get(t: T, p: PropertyKey, receiver: any): any {
+    get(t: T, p: PropertyKey): any {
       if (p in target) {
         return target[p.toString()];
       } else if (!jestInternalStuff.includes(p)) {
