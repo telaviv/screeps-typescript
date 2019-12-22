@@ -92,17 +92,27 @@ function mockStructure<T extends StructureConstant>(structureType: T, mockedProp
  * Call this once before running tests that create new instances of RoomPosition.
  */
 function mockRoomPositionConstructor() {
-  const constructorMock = jest.fn((x, y, roomName) => mockInstanceOf<RoomPosition>({
-    roomName,
-    x,
-    y
-  }));
+  const constructorMock = jest.fn(mockRoomPosition);
   const g = global as any;
   g.RoomPosition = constructorMock;
 }
 
+/**
+ * Creates a mock instance of RoomPosition.
+ */
+function mockRoomPosition(x: number, y: number, roomName: string): RoomPosition {
+  return mockInstanceOf<RoomPosition>({
+    x,
+    y,
+    roomName,
+    toJSON: () => ({ x, y, roomName })
+  });
+}
+
+
 export {
   mockGlobal,
+  mockRoomPosition,
   mockRoomPositionConstructor,
   mockInstanceOf,
   mockStructure
