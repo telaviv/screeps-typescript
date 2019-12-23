@@ -1,3 +1,6 @@
+import * as util from "util";
+
+
 /**
  * Generic type for partial implementations of interfaces.
  */
@@ -8,6 +11,33 @@ type DeepPartial<T> = {
                    T[P];
 } & { [key: string]: any };
 
+/**
+ * Conditional type for all concrete implementations of Structure.
+ * Unlike Structure<T>, ConcreteStructure<T> gives you the actual concrete class that extends Structure<T>.
+ */
+type ConcreteStructure<T extends StructureConstant> =
+  T extends STRUCTURE_EXTENSION ? StructureExtension
+  : T extends STRUCTURE_RAMPART ? StructureRampart
+  : T extends STRUCTURE_ROAD ? StructureRoad
+  : T extends STRUCTURE_SPAWN ? StructureSpawn
+  : T extends STRUCTURE_LINK ? StructureLink
+  : T extends STRUCTURE_WALL ? StructureWall
+  : T extends STRUCTURE_STORAGE ? StructureStorage
+  : T extends STRUCTURE_TOWER ? StructureTower
+  : T extends STRUCTURE_OBSERVER ? StructureObserver
+  : T extends STRUCTURE_POWER_SPAWN ? StructurePowerSpawn
+  : T extends STRUCTURE_EXTRACTOR ? StructureExtractor
+  : T extends STRUCTURE_LAB ? StructureLab
+  : T extends STRUCTURE_TERMINAL ? StructureTerminal
+  : T extends STRUCTURE_CONTAINER ? StructureContainer
+  : T extends STRUCTURE_NUKER ? StructureNuker
+  : T extends STRUCTURE_FACTORY ? StructureFactory
+  : T extends STRUCTURE_KEEPER_LAIR ? StructureKeeperLair
+  : T extends STRUCTURE_CONTROLLER ? StructureController
+  : T extends STRUCTURE_POWER_BANK ? StructurePowerBank
+  : T extends STRUCTURE_PORTAL ? StructurePortal
+  : T extends STRUCTURE_INVADER_CORE ? StructureInvaderCore
+  : never;
 
 /**
  * Properties I've seen having been accessed internally by Jest's matchers and message formatters (there may be others).
@@ -27,36 +57,60 @@ const jestInternalStuff: Array<symbol | string | number> = [
  *
  * @param name - the name of the global
  * @param mockedProps - the properties you need to mock for your test
+ * @param allowUndefinedAccess - if false, accessing a property not present in mockProps, will throw an exception
  */
-function mockGlobal<T extends object>(name: string, mockedProps: DeepPartial<T> = {}) {
+function mockGlobal<T extends object>(name: string, mockedProps: DeepPartial<T> = {}, allowUndefinedAccess: boolean = false) {
   const g = global as any;
-  g[name] = mockInstanceOf<T>(mockedProps);
+  g[name] = createMock<T>(mockedProps, allowUndefinedAccess, name);
 }
 
 /**
  * Creates a mock instance of a class/interface.
  *
  * @param mockedProps - the properties you need to mock for your test
+ * @param allowUndefinedAccess - if false, accessing a property not present in mockProps, will throw an exception
  */
-function mockInstanceOf<T extends object>(mockedProps: DeepPartial<T> = {}): T {
+function mockInstanceOf<T extends object>(mockedProps: DeepPartial<T> = {}, allowUndefinedAccess: boolean = false): T {
+  return createMock(mockedProps, allowUndefinedAccess, '');
+}
+
+function createMock<T extends object>(mockedProps: DeepPartial<T>, allowUndefinedAccess: boolean, path: string): T {
   const target: DeepPartial<T> = {};
 
   Object.entries(mockedProps).forEach(([propName, mockedValue]) => {
     target[propName as keyof T] =
-      typeof mockedValue === "function" ? jest.fn(mockedValue)
-      : Array.isArray(mockedValue) ? mockedValue.map(mockInstanceOf)
-      : typeof mockedValue === "object" ? mockInstanceOf(mockedValue)
-      : mockedValue;
+      typeof mockedValue === 'function' ? jest.fn(mockedValue)
+        : Array.isArray(mockedValue) ? mockedValue.map((element, index) => createMock(element, allowUndefinedAccess, concatenatePath(path, `${propName}[${index}]`)))
+        : typeof mockedValue === 'object' && shouldMockObject(mockedValue) ? createMock(mockedValue, allowUndefinedAccess, concatenatePath(path, propName))
+        : mockedValue;
   });
   return new Proxy<T>(target as T, {
     get(t: T, p: PropertyKey): any {
       if (p in target) {
         return target[p.toString()];
-      } else if (!jestInternalStuff.includes(p)) {
-        throw new Error(`Unexpected access to property "${p.toString()}". Did you forget to mock it?`);
+      } else if (!allowUndefinedAccess && !jestInternalStuff.includes(p)) {
+        throw new Error(
+          `Unexpected access to unmocked property "${concatenatePath(path, p.toString())}".\n` +
+          'Did you forget to mock it?\n' +
+          'If you intended for it to be undefined, you can explicitly set it to undefined (recommended) or set "allowUndefinedAccess" argument to true.'
+        );
+      } else {
+        return undefined;
       }
     }
   });
+}
+
+function shouldMockObject(value: object) {
+  return (
+      value !== null
+      && Object.getPrototypeOf(value) === Object.prototype
+      && !util.types.isProxy(value)
+  );
+}
+
+function concatenatePath(parentPath: string, propName: string) {
+  return parentPath ? `${parentPath}.${propName}` : propName;
 }
 
 /**
@@ -71,12 +125,12 @@ const structureCounters: { [key: string]: number } = {};
  * @param structureType
  * @param mockedProps - the additional properties you need to mock for your test
  */
-function mockStructure<T extends StructureConstant>(structureType: T, mockedProps: DeepPartial<Structure<T>> = {}): Structure<T> {
+function mockStructure<T extends StructureConstant>(structureType: T, mockedProps: DeepPartial<ConcreteStructure<T>> = {}): ConcreteStructure<T> {
   const count = (structureCounters[structureType] ?? 0) + 1;
 
   structureCounters[structureType] = count;
-  return mockInstanceOf<Structure<T>>({
-    id: `${structureType}${count}` as Id<Structure<T>>,
+  return mockInstanceOf<ConcreteStructure<T>>({
+    id: `${structureType}${count}` as Id<ConcreteStructure<T>>,
     structureType: structureType as any,
     toJSON() {
       return {
@@ -112,7 +166,6 @@ function mockRoomPosition(x: number, y: number, roomName: string): RoomPosition 
 
 export {
   mockGlobal,
-  mockRoomPosition,
   mockRoomPositionConstructor,
   mockInstanceOf,
   mockStructure
