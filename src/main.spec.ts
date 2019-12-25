@@ -1,7 +1,4 @@
-import "roles/builder";
-import "roles/harvester";
-import "roles/upgrader";
-import { mockGlobal, mockInstanceOf, mockStructure } from "../test/mocking";
+import { mockGlobal, mockInstanceOf, mockStructure } from "screeps-jest";
 import { unwrappedLoop } from "./main";
 import roleBuilder from "./roles/builder";
 import roleHarvester from "./roles/harvester";

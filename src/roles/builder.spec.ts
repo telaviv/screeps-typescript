@@ -1,4 +1,4 @@
-import { mockInstanceOf } from "../../test/mocking";
+import { mockInstanceOf } from "screeps-jest";
 import roleBuilder, { Builder } from "./builder";
 
 

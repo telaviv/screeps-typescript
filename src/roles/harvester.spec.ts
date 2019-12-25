@@ -1,4 +1,4 @@
-import { mockInstanceOf, mockStructure } from "../../test/mocking";
+import { mockInstanceOf, mockStructure } from "screeps-jest";
 import roleHarvester from "./harvester";
 
 

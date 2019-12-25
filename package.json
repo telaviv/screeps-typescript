@@ -45,6 +45,7 @@
     "rollup-plugin-nodent": "^0.2.2",
     "rollup-plugin-screeps": "^0.1.2",
     "rollup-plugin-typescript2": "^0.16.1",
+    "screeps-jest": "eduter/screeps-jest#1.0.0",
     "ts-jest": "^24.0.2",
     "ts-node": "^7.0.1",
     "tslint": "^5.9.1",

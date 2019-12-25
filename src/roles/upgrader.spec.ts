@@ -1,4 +1,4 @@
-import { mockInstanceOf } from "../../test/mocking";
+import { mockInstanceOf } from "screeps-jest";
 import roleUpgrader, { Upgrader } from "./upgrader";
 
 

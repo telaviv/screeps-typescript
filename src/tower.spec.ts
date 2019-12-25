@@ -1,5 +1,5 @@
+import { mockInstanceOf, mockStructure } from "screeps-jest";
 import { isDamaged, runTower } from "tower";
-import { mockInstanceOf, mockStructure } from "../test/mocking";
 
 describe("tower module", () => {
 

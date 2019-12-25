@@ -11,5 +11,5 @@ module.exports = {
     "src"
   ],
   preset: "ts-jest",
-  testEnvironment: "./test/TestEnvironment.js"
+  testEnvironment: "screeps-jest"
 };
