@@ -1,12 +1,8 @@
-import 'roles/builder'
-import 'roles/logistics'
-import 'roles/upgrader'
-import { mockGlobal, mockInstanceOf, mockStructure } from '../test/mocking'
+import { mockGlobal, mockInstanceOf, mockStructure } from 'screeps-jest'
 import { unwrappedLoop } from './main'
 import roleBuilder from './roles/builder'
-import roleHarvester from './roles/logistics'
+import roleHarvester from './roles/harvester'
 import roleUpgrader from './roles/upgrader'
-import { runSpawn } from './spawn'
 import { runTower } from './tower'
 
 jest.mock('roles/builder')

@@ -1,5 +1,15 @@
 module.exports = {
-  moduleDirectories: ["node_modules", "src"],
-  preset: 'ts-jest',
-  testEnvironment: 'node'
+  collectCoverageFrom: [
+    "src/**/*.{js,ts}"
+  ],
+  coveragePathIgnorePatterns: [
+    "\.d\.ts$",
+    "src/utils/ErrorMapper.ts"
+  ],
+  moduleDirectories: [
+    "node_modules",
+    "src"
+  ],
+  preset: "ts-jest",
+  testEnvironment: "screeps-jest"
 };

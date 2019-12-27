@@ -61,7 +61,7 @@ const roleLogistics = {
         }
     },
 
-    getSourceMemory(creep: Logistics): Memory {
+    getSourceMemory(creep: Logistics) {
         const roomMemory = Memory.rooms[creep.room.name]
         const sourceMemory = roomMemory.sources.find(
             s => s.id === creep.memory.source,
