@@ -18,44 +18,10 @@ const roleLogistics = {
     run(creep: Logistics) {
         if (creep.carry.energy < creep.carryCapacity) {
             const roomMemory = Memory.rooms[creep.room.name]
-            const sourceMemory = roomMemory.sources.find(
-                s => s.id === creep.memory.source,
-            )
-            if (!sourceMemory) {
-                throw Error("somehow we don't have memory")
-            }
-
-            const source = Game.getObjectById(creep.memory.source) as Source
-            const target = creep.pos.findClosestByRange(
-                FIND_DROPPED_RESOURCES,
-                {
-                    filter: {
-                        resourceType: RESOURCE_ENERGY,
-                    },
-                },
-            )
-
-            if (
-                roomMemory.strategy === StrategyPhase.DropMining &&
-                target !== null
-            ) {
-                if (target === null) {
-                    console.log('found no dropped resources')
-                    return
-                }
-
-                const err = creep.pickup(target)
-                if (err === ERR_NOT_IN_RANGE) {
-                    const harvest = sourceMemory.harvest
-                    creep.moveTo(harvest.x, harvest.y, {
-                        visualizePathStyle: { stroke: '#ffaa00' },
-                        range: 1,
-                    })
-                }
-            } else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(source, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
+            if (roomMemory.strategy === StrategyPhase.DropMining) {
+                this.pickupEnergy(creep)
+            } else {
+                this.harvestEnergy(creep)
             }
         } else {
             const targets = creep.room.find(FIND_STRUCTURES, {
@@ -71,6 +37,48 @@ const roleLogistics = {
                     })
                 }
             }
+        }
+    },
+
+    pickupEnergy(creep: Logistics) {
+        const sourceMemory = this.getSourceMemory(creep)
+        const source = Game.getObjectById(creep.memory.source) as Source
+        const target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+            filter: {
+                resourceType: RESOURCE_ENERGY,
+            },
+        })
+
+        if (target !== null) {
+            const err = creep.pickup(target)
+            if (err === ERR_NOT_IN_RANGE) {
+                const harvest = sourceMemory.harvest
+                creep.moveTo(harvest.x, harvest.y, {
+                    range: 1,
+                    visualizePathStyle: { stroke: '#ffaa00' },
+                })
+            }
+        }
+    },
+
+    getSourceMemory(creep: Logistics): Memory {
+        const roomMemory = Memory.rooms[creep.room.name]
+        const sourceMemory = roomMemory.sources.find(
+            s => s.id === creep.memory.source,
+        )
+        if (!sourceMemory) {
+            throw Error("Somehow we don't have memory")
+        }
+
+        return sourceMemory
+    },
+
+    harvestEnergy(creep: Logistics) {
+        const source = Game.getObjectById(creep.memory.source) as Source
+        if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(source, {
+                visualizePathStyle: { stroke: '#ffaa00' },
+            })
         }
     },
 
