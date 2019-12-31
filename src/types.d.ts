@@ -2,6 +2,10 @@ interface CreepMemory {
     role: string
 }
 
+interface SourceMemory extends CreepMemory {
+    source: string
+}
+
 interface Memory {
     uuid: number
     log: any
@@ -9,10 +13,9 @@ interface Memory {
 
 interface RoomMemory {
     hasAssignedRoads: boolean
-    sources: Array<{ id: string, harvest: RoomPosition }>
+    sources: Array<{ id: string; harvest: RoomPosition }>
     strategy: StrategyPhase
 }
-
 
 type SpawnRunner = (spawn: StructureSpawn) => void
 

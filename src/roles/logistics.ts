@@ -1,17 +1,13 @@
 import { minBy } from 'utils/lodash'
+import { getSourceCounts } from 'utils'
 import { StrategyPhase } from 'strategy'
-
-interface SourceCounts {
-    [index: string]: number
-}
 
 export interface Logistics extends Creep {
     memory: LogisticsMemory
 }
 
-interface LogisticsMemory extends CreepMemory {
+interface LogisticsMemory extends SourceMemory {
     role: 'logistics'
-    source: string
 }
 
 const roleLogistics = {
@@ -97,22 +93,8 @@ const roleLogistics = {
         return false
     },
 
-    getSourceCounts(room: Room): SourceCounts {
-        const counts: SourceCounts = {}
-        for (const source of room.memory.sources) {
-            counts[source.id] = 0
-        }
-        for (const creep of Object.values(Memory.creeps)) {
-            if (creep.role === 'logistics') {
-                const logisticsMemory = creep as LogisticsMemory
-                counts[logisticsMemory.source] += 1
-            }
-        }
-        return counts
-    },
-
     getNextSource(room: Room): string {
-        const sourceCounts = this.getSourceCounts(room)
+        const sourceCounts = getSourceCounts(room)
         return minBy(Object.keys(sourceCounts), id => sourceCounts[id])
     },
 
