@@ -6,6 +6,15 @@ interface SourceMemory extends CreepMemory {
     source: string
 }
 
+interface RoomSourceMemory {
+    id: string
+    harvest: RoomPosition
+}
+
+interface SourceCreep extends Creep {
+    memory: SourceMemory
+}
+
 interface Memory {
     uuid: number
     log: any
@@ -13,7 +22,7 @@ interface Memory {
 
 interface RoomMemory {
     hasAssignedRoads: boolean
-    sources: Array<{ id: string; harvest: RoomPosition }>
+    sources: RoomSourceMemory[]
     strategy: StrategyPhase
 }
 

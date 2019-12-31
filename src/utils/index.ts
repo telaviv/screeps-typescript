@@ -23,4 +23,46 @@ function getNextSource(room: Room, role: string): string {
     return minBy(Object.keys(sourceCounts), id => sourceCounts[id])
 }
 
-export { getSourceCounts }
+function harvestEnergy(creep: SourceCreep) {
+    const source = Game.getObjectById(creep.memory.source) as Source
+    if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+        creep.moveTo(source, {
+            visualizePathStyle: { stroke: '#ffaa00' },
+        })
+    }
+}
+
+function pickupEnergy(creep: SourceCreep) {
+    const sourceMemory = getSourceMemory(creep)
+    const source = Game.getObjectById(creep.memory.source) as Source
+    const target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+        filter: {
+            resourceType: RESOURCE_ENERGY,
+        },
+    })
+
+    if (target !== null) {
+        const err = creep.pickup(target)
+        if (err === ERR_NOT_IN_RANGE) {
+            const harvest = sourceMemory.harvest
+            creep.moveTo(harvest.x, harvest.y, {
+                range: 1,
+                visualizePathStyle: { stroke: '#ffaa00' },
+            })
+        }
+    }
+}
+
+function getSourceMemory(creep: SourceCreep): RoomSourceMemory {
+    const roomMemory = Memory.rooms[creep.room.name]
+    const sourceMemory = roomMemory.sources.find(
+        s => s.id === creep.memory.source,
+    )
+    if (!sourceMemory) {
+        throw Error("Somehow we don't have memory")
+    }
+
+    return sourceMemory
+}
+
+export { getNextSource, harvestEnergy, pickupEnergy }

@@ -1,9 +1,9 @@
 import { minBy } from 'utils/lodash'
-import { getSourceCounts } from 'utils'
+import { getNextSource } from 'utils'
 
 const ROLE = 'harvester'
 
-export interface Harvester extends Creep {
+export interface Harvester extends SourceCreep {
     memory: HarvesterMemory
 }
 
@@ -37,11 +37,6 @@ const roleHarvester = {
         }
     },
 
-    getNextSource(room: Room): string {
-        const sourceCounts = getSourceCounts(room, ROLE)
-        return minBy(Object.keys(sourceCounts), id => sourceCounts[id])
-    },
-
     create(spawn: StructureSpawn): number {
         return spawn.spawnCreep(
             [WORK, WORK, MOVE, MOVE],
@@ -49,7 +44,7 @@ const roleHarvester = {
             {
                 memory: {
                     role: ROLE,
-                    source: this.getNextSource(spawn.room),
+                    source: getNextSource(spawn.room, ROLE),
                 } as HarvesterMemory,
             },
         )

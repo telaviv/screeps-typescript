@@ -1,10 +1,10 @@
 import { minBy } from 'utils/lodash'
-import { getSourceCounts } from 'utils'
+import { getNextSource, harvestEnergy, pickupEnergy } from 'utils'
 import { StrategyPhase } from 'strategy'
 
 const ROLE = 'logistics'
 
-export interface Logistics extends Creep {
+export interface Logistics extends SourceCreep {
     memory: LogisticsMemory
 }
 
@@ -17,9 +17,9 @@ const roleLogistics = {
         if (creep.carry.energy < creep.carryCapacity) {
             const roomMemory = Memory.rooms[creep.room.name]
             if (roomMemory.strategy === StrategyPhase.DropMining) {
-                this.pickupEnergy(creep)
+                pickupEnergy(creep)
             } else {
-                this.harvestEnergy(creep)
+                harvestEnergy(creep)
             }
         } else {
             const targets = creep.room.find(FIND_STRUCTURES, {
@@ -38,27 +38,6 @@ const roleLogistics = {
         }
     },
 
-    pickupEnergy(creep: Logistics) {
-        const sourceMemory = this.getSourceMemory(creep)
-        const source = Game.getObjectById(creep.memory.source) as Source
-        const target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-            filter: {
-                resourceType: RESOURCE_ENERGY,
-            },
-        })
-
-        if (target !== null) {
-            const err = creep.pickup(target)
-            if (err === ERR_NOT_IN_RANGE) {
-                const harvest = sourceMemory.harvest
-                creep.moveTo(harvest.x, harvest.y, {
-                    range: 1,
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
-            }
-        }
-    },
-
     getSourceMemory(creep: Logistics) {
         const roomMemory = Memory.rooms[creep.room.name]
         const sourceMemory = roomMemory.sources.find(
@@ -69,15 +48,6 @@ const roleLogistics = {
         }
 
         return sourceMemory
-    },
-
-    harvestEnergy(creep: Logistics) {
-        const source = Game.getObjectById(creep.memory.source) as Source
-        if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(source, {
-                visualizePathStyle: { stroke: '#ffaa00' },
-            })
-        }
     },
 
     isToBeFilled(structure: Structure): boolean {
@@ -95,16 +65,11 @@ const roleLogistics = {
         return false
     },
 
-    getNextSource(room: Room): string {
-        const sourceCounts = getSourceCounts(room, ROLE)
-        return minBy(Object.keys(sourceCounts), id => sourceCounts[id])
-    },
-
     create(spawn: StructureSpawn): number {
         return spawn.spawnCreep([WORK, CARRY, MOVE], `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
-                source: this.getNextSource(spawn.room),
+                source: getNextSource(spawn.room, ROLE),
             } as LogisticsMemory,
         })
     },
