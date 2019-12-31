@@ -38,18 +38,6 @@ const roleLogistics = {
         }
     },
 
-    getSourceMemory(creep: Logistics) {
-        const roomMemory = Memory.rooms[creep.room.name]
-        const sourceMemory = roomMemory.sources.find(
-            s => s.id === creep.memory.source,
-        )
-        if (!sourceMemory) {
-            throw Error("Somehow we don't have memory")
-        }
-
-        return sourceMemory
-    },
-
     isToBeFilled(structure: Structure): boolean {
         if (
             structure.structureType === STRUCTURE_EXTENSION ||
