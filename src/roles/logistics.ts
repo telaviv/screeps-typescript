@@ -1,6 +1,5 @@
 import { minBy } from 'utils/lodash'
-import { getNextSource, harvestEnergy, pickupEnergy } from 'utils'
-import { StrategyPhase } from 'strategy'
+import { getNextSource, getEnergy } from 'utils'
 
 const ROLE = 'logistics'
 
@@ -15,12 +14,7 @@ interface LogisticsMemory extends SourceMemory {
 const roleLogistics = {
     run(creep: Logistics) {
         if (creep.carry.energy < creep.carryCapacity) {
-            const roomMemory = Memory.rooms[creep.room.name]
-            if (roomMemory.strategy === StrategyPhase.DropMining) {
-                pickupEnergy(creep)
-            } else {
-                harvestEnergy(creep)
-            }
+            getEnergy(creep)
         } else {
             const targets = creep.room.find(FIND_STRUCTURES, {
                 filter: this.isToBeFilled,

@@ -1,11 +1,15 @@
-export interface Builder extends Creep {
+import { getNextSource } from 'utils'
+
+export interface Builder extends SourceCreep {
     memory: BuilderMemory
 }
 
-interface BuilderMemory extends CreepMemory {
+interface BuilderMemory extends SourceMemory {
     building: boolean
     role: 'builder'
 }
+
+const ROLE = 'builder'
 
 const roleBuilder = {
     run(creep: Builder) {
@@ -41,9 +45,11 @@ const roleBuilder = {
     },
 
     create(spawn: StructureSpawn): number {
-        const role = 'builder'
-        return spawn.spawnCreep([WORK, CARRY, MOVE], `${role}:${Game.time}`, {
-            memory: { role },
+        return spawn.spawnCreep([WORK, CARRY, MOVE], `${ROLE}:${Game.time}`, {
+            memory: {
+                role: ROLE,
+                source: getNextSource(spawn.room, ROLE),
+            } as BuilderMemory,
         })
     },
 }

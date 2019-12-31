@@ -1,4 +1,5 @@
 import { minBy } from 'utils/lodash'
+import { StrategyPhase } from 'strategy'
 
 interface SourceCounts {
     [index: string]: number
@@ -18,7 +19,7 @@ function getSourceCounts(room: Room, role: string): SourceCounts {
     return counts
 }
 
-function getNextSource(room: Room, role: string): string {
+export function getNextSource(room: Room, role: string): string {
     const sourceCounts = getSourceCounts(room, role)
     return minBy(Object.keys(sourceCounts), id => sourceCounts[id])
 }
@@ -65,4 +66,11 @@ function getSourceMemory(creep: SourceCreep): RoomSourceMemory {
     return sourceMemory
 }
 
-export { getNextSource, harvestEnergy, pickupEnergy }
+export function getEnergy(creep: SourceCreep) {
+    const roomMemory = Memory.rooms[creep.room.name]
+    if (roomMemory.strategy === StrategyPhase.DropMining) {
+        pickupEnergy(creep)
+    } else {
+        harvestEnergy(creep)
+    }
+}
