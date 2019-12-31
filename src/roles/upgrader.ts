@@ -1,8 +1,12 @@
-export interface Upgrader extends Creep {
+import { getNextSource, getEnergy } from 'utils'
+
+const ROLE = 'upgrader'
+
+export interface Upgrader extends SourceCreep {
     memory: UpgraderMemory
 }
 
-interface UpgraderMemory extends CreepMemory {
+interface UpgraderMemory extends SourceMemory {
     role: 'upgrader'
     upgrading: boolean
 }
@@ -30,19 +34,16 @@ const roleUpgrader = {
                 }
             }
         } else {
-            const sources = creep.room.find(FIND_SOURCES)
-            if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources[0], {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
-            }
+            getEnergy(creep)
         }
     },
 
     create(spawn: StructureSpawn): number {
-        const role = 'upgrader'
-        return spawn.spawnCreep([WORK, CARRY, MOVE], `${role}:${Game.time}`, {
-            memory: { role },
+        return spawn.spawnCreep([WORK, CARRY, MOVE], `${ROLE}:${Game.time}`, {
+            memory: {
+                role: ROLE,
+                source: getNextSource(spawn.room, ROLE),
+            } as UpgraderMemory,
         })
     },
 }

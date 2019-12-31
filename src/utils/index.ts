@@ -41,16 +41,18 @@ function pickupEnergy(creep: SourceCreep) {
             resourceType: RESOURCE_ENERGY,
         },
     })
+    if (target === null) {
+        harvestEnergy(creep)
+        return
+    }
 
-    if (target !== null) {
-        const err = creep.pickup(target)
-        if (err === ERR_NOT_IN_RANGE) {
-            const harvest = sourceMemory.harvest
-            creep.moveTo(harvest.x, harvest.y, {
-                range: 1,
-                visualizePathStyle: { stroke: '#ffaa00' },
-            })
-        }
+    const err = creep.pickup(target)
+    if (err === ERR_NOT_IN_RANGE) {
+        const harvest = sourceMemory.harvest
+        creep.moveTo(harvest.x, harvest.y, {
+            range: 1,
+            visualizePathStyle: { stroke: '#ffaa00' },
+        })
     }
 }
 
