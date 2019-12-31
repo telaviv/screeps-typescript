@@ -2,6 +2,8 @@ import { minBy } from 'utils/lodash'
 import { getSourceCounts } from 'utils'
 import { StrategyPhase } from 'strategy'
 
+const ROLE = 'logistics'
+
 export interface Logistics extends Creep {
     memory: LogisticsMemory
 }
@@ -94,15 +96,14 @@ const roleLogistics = {
     },
 
     getNextSource(room: Room): string {
-        const sourceCounts = getSourceCounts(room)
+        const sourceCounts = getSourceCounts(room, ROLE)
         return minBy(Object.keys(sourceCounts), id => sourceCounts[id])
     },
 
     create(spawn: StructureSpawn): number {
-        const role = 'logistics'
-        return spawn.spawnCreep([WORK, CARRY, MOVE], `${role}:${Game.time}`, {
+        return spawn.spawnCreep([WORK, CARRY, MOVE], `${ROLE}:${Game.time}`, {
             memory: {
-                role,
+                role: ROLE,
                 source: this.getNextSource(spawn.room),
             } as LogisticsMemory,
         })
