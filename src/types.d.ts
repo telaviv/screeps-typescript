@@ -22,9 +22,12 @@ interface Memory {
 
 interface RoomMemory {
     hasAssignedRoads: boolean
+    roadPositions: RoomPositionSet
     sources: RoomSourceMemory[]
     strategy: StrategyPhase
 }
+
+type RoomPositionSet = RoomPosition[]
 
 type SpawnRunner = (spawn: StructureSpawn) => void
 
