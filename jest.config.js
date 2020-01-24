@@ -7,7 +7,8 @@ module.exports = {
 
   // An array of regexp pattern strings used to skip coverage collection
   coveragePathIgnorePatterns: [
-    "\.d\.ts$",
+    "/dist/",
+    "\\.d\\.ts$",
     "src/utils/ErrorMapper.ts"
   ],
 
