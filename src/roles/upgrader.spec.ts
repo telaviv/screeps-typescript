@@ -1,28 +1,26 @@
-import { mockInstanceOf, mockStructure } from "screeps-jest";
-import roleUpgrader, { Upgrader } from "./upgrader";
+import { mockInstanceOf, mockStructure } from 'screeps-jest';
+import roleUpgrader, { Upgrader } from './upgrader';
 
 
 const controller = mockStructure(STRUCTURE_CONTROLLER);
-const source1 = mockInstanceOf<Source>({ id: "source1" as Id<Source> });
-const source2 = mockInstanceOf<Source>({ id: "source2" as Id<Source> });
+const source1 = mockInstanceOf<Source>({ id: 'source1' as Id<Source> });
+const source2 = mockInstanceOf<Source>({ id: 'source2' as Id<Source> });
 const room = mockInstanceOf<Room>({
   controller,
-  find: (type: FindConstant) => type === FIND_SOURCES ? [source1, source2] : []
+  find: (type: FindConstant) => (type === FIND_SOURCES ? [source1, source2] : [])
 });
 
 
-describe("Upgrader role", () => {
+describe('Upgrader role', () => {
 
-  it("should upgrade the controller, when it has energy and is within range", () => {
+  it('should upgrade the controller, when it has energy and is within range', () => {
     const creep = mockInstanceOf<Upgrader>({
       memory: {
-        role: "upgrader",
+        role: 'upgrader',
         upgrading: true
       },
       room,
-      store: {
-        energy: 50
-      },
+      store: { energy: 50 },
       upgradeController: () => OK
     });
 
@@ -31,17 +29,15 @@ describe("Upgrader role", () => {
     expect(creep.upgradeController).toHaveBeenCalledWith(controller);
   });
 
-  it("should move towards controller, when it has energy but is out of range", () => {
+  it('should move towards controller, when it has energy but is out of range', () => {
     const creep = mockInstanceOf<Upgrader>({
       memory: {
-        role: "upgrader",
+        role: 'upgrader',
         upgrading: true
       },
       moveTo: () => OK,
       room,
-      store: {
-        energy: 50
-      },
+      store: { energy: 50 },
       upgradeController: () => ERR_NOT_IN_RANGE
     });
 
@@ -55,13 +51,11 @@ describe("Upgrader role", () => {
     const creep = mockInstanceOf<Upgrader>({
       harvest: () => OK,
       memory: {
-        role: "upgrader",
+        role: 'upgrader',
         upgrading: false
       },
       room,
-      store: {
-        getFreeCapacity: () => 50
-      }
+      store: { getFreeCapacity: () => 50 }
     });
 
     roleUpgrader.run(creep);
@@ -73,42 +67,38 @@ describe("Upgrader role", () => {
     const creep = mockInstanceOf<Upgrader>({
       harvest: () => ERR_NOT_IN_RANGE,
       memory: {
-        role: "upgrader",
+        role: 'upgrader',
         upgrading: false
       },
       moveTo: () => OK,
       room,
-      store: {
-        getFreeCapacity: () => 50
-      }
+      store: { getFreeCapacity: () => 50 }
     });
     roleUpgrader.run(creep);
     expect(creep.memory.upgrading).toBeFalsy();
     expect(creep.moveTo).toHaveBeenCalledWith(source1, expect.anything());
   });
 
-  it("should switch to upgrading when it gets full", () => {
+  it('should switch to upgrading when it gets full', () => {
     const creep = mockInstanceOf<Upgrader>({
       memory: {
-        role: "upgrader",
+        role: 'upgrader',
         upgrading: false
       },
       room,
       say: () => OK,
-      store: {
-        getFreeCapacity: () => 0
-      },
+      store: { getFreeCapacity: () => 0 },
       upgradeController: () => OK
     });
     roleUpgrader.run(creep);
     expect(creep.memory.upgrading).toBeTruthy();
   });
 
-  it("should switch to harvesting when it gets empty", () => {
+  it('should switch to harvesting when it gets empty', () => {
     const creep = mockInstanceOf<Upgrader>({
       harvest: () => OK,
       memory: {
-        role: "upgrader",
+        role: 'upgrader',
         upgrading: true
       },
       room,

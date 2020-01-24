@@ -1,8 +1,8 @@
-import roleBuilder, { Builder } from "roles/builder";
-import roleHarvester from "roles/harvester";
-import roleUpgrader, { Upgrader } from "roles/upgrader";
-import { ErrorMapper } from "utils/ErrorMapper";
-import { runTower } from "./tower";
+import roleBuilder, { Builder } from 'roles/builder';
+import roleHarvester from 'roles/harvester';
+import roleUpgrader, { Upgrader } from 'roles/upgrader';
+import ErrorMapper from 'utils/ErrorMapper';
+import { runTower } from './tower';
 
 
 function unwrappedLoop() {
@@ -10,7 +10,7 @@ function unwrappedLoop() {
 
   Object.values(Game.rooms).forEach(room => {
     if (room.controller?.my) {
-      const towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }) as any;
+      const towers = room.find<StructureTower>(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
 
       towers.forEach(tower => {
         runTower(tower);
@@ -18,25 +18,22 @@ function unwrappedLoop() {
     }
   });
 
-  for (const name in Game.creeps) {
-    const creep = Game.creeps[name];
-    if (creep.memory.role === "harvester") {
+  Object.values(Game.creeps).forEach(creep => {
+    if (creep.memory.role === 'harvester') {
       roleHarvester.run(creep);
     }
-    if (creep.memory.role === "upgrader") {
+    if (creep.memory.role === 'upgrader') {
       roleUpgrader.run(creep as Upgrader);
     }
-    if (creep.memory.role === "builder") {
+    if (creep.memory.role === 'builder') {
       roleBuilder.run(creep as Builder);
     }
-  }
+  });
 
   // Automatically delete memory of missing creeps
-  for (const name in Memory.creeps) {
-    if (!(name in Game.creeps)) {
-      delete Memory.creeps[name];
-    }
-  }
+  Object.keys(Memory.creeps)
+    .filter(name => !(name in Game.creeps))
+    .forEach(name => delete Memory.creeps[name]);
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
