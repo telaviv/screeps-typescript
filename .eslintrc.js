@@ -19,13 +19,17 @@ module.exports = {
     'import/no-unresolved': ['off'],
     'linebreak-style': ['warn', 'windows'],
     'max-len': ['error', { 'code': 120 }],
+    'no-console': 'off',
+    'no-param-reassign': ['error', { 'props': false }],
     'no-plusplus': 'off',
     'object-curly-newline': ['error', { 'multiline': true }],
     'padded-blocks': ['error', {
       'blocks': 'never',
       'classes': 'always',
       'switches': 'never'
-    }]
+    }],
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/no-use-before-define': 'off'
   },
   overrides: [
     {
