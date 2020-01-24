@@ -1,9 +1,9 @@
-import { mockInstanceOf, mockStructure } from "screeps-jest";
-import roleHarvester from "./harvester";
+import { mockInstanceOf, mockStructure } from 'screeps-jest';
+import roleHarvester from './harvester';
 
 
-const source1 = mockInstanceOf<Source>({ id: "source1" as Id<Source> });
-const source2 = mockInstanceOf<Source>({ id: "source2" as Id<Source> });
+const source1 = mockInstanceOf<Source>({ id: 'source1' as Id<Source> });
+const source2 = mockInstanceOf<Source>({ id: 'source2' as Id<Source> });
 const extension = mockStructure(STRUCTURE_EXTENSION);
 const room = mockInstanceOf<Room>({
   find: (type: FindConstant) => {
@@ -18,17 +18,15 @@ const room = mockInstanceOf<Room>({
   }
 });
 
-describe("Harvester role", () => {
+describe('Harvester role', () => {
 
-  describe("run", () => {
+  describe('run', () => {
 
     it("should harvest, when it's near a source and not full", () => {
       const creep = mockInstanceOf<Creep>({
         harvest: () => OK,
         room,
-        store: {
-          getFreeCapacity: () => 50
-        }
+        store: { getFreeCapacity: () => 50 }
       });
 
       roleHarvester.run(creep);
@@ -40,9 +38,7 @@ describe("Harvester role", () => {
         harvest: () => ERR_NOT_IN_RANGE,
         moveTo: () => OK,
         room,
-        store: {
-          getFreeCapacity: () => 50
-        }
+        store: { getFreeCapacity: () => 50 }
       });
       roleHarvester.run(creep);
       expect(creep.moveTo).toHaveBeenCalledWith(source1, expect.anything());
@@ -51,24 +47,21 @@ describe("Harvester role", () => {
     it("should fill structures, when it's full and near a non-full structure", () => {
       const creep = mockInstanceOf<Creep>({
         room,
-        store: {
-          getFreeCapacity: () => 0
-        },
+        store: { getFreeCapacity: () => 0 },
         transfer: () => OK
       });
 
       roleHarvester.run(creep);
       expect(creep.transfer).toHaveBeenCalledWith(extension, RESOURCE_ENERGY);
-      expect(creep.room.find).toHaveBeenCalledWith(FIND_STRUCTURES, { filter: roleHarvester.isToBeFilled });
+      // doesn't actually guarantee that the filter function is roleHarvester.isToBeFilled, as it should
+      expect(creep.room.find).toHaveBeenCalledWith(FIND_STRUCTURES, { filter: expect.any(Function) });
     });
 
     it("should move towards a non-full structure, when it's full and out of range to transfer", () => {
       const creep = mockInstanceOf<Creep>({
         moveTo: () => OK,
         room,
-        store: {
-          getFreeCapacity: () => 0
-        },
+        store: { getFreeCapacity: () => 0 },
         transfer: () => ERR_NOT_IN_RANGE
       });
 
@@ -78,9 +71,9 @@ describe("Harvester role", () => {
 
   });
 
-  describe("isToBeFilled", () => {
+  describe('isToBeFilled', () => {
 
-    it("should accept extension, spawns and towers that are not full", () => {
+    it('should accept extension, spawns and towers that are not full', () => {
       [
         STRUCTURE_EXTENSION,
         STRUCTURE_SPAWN,
@@ -94,7 +87,7 @@ describe("Harvester role", () => {
       });
     });
 
-    it("should reject extension, spawns and towers that are already full", () => {
+    it('should reject extension, spawns and towers that are already full', () => {
       [
         STRUCTURE_EXTENSION,
         STRUCTURE_SPAWN,
@@ -108,7 +101,7 @@ describe("Harvester role", () => {
       });
     });
 
-    it("should reject any other structure type", () => {
+    it('should reject any other structure type', () => {
       [
         STRUCTURE_CONTAINER,
         STRUCTURE_CONTROLLER,

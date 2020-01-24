@@ -7,12 +7,11 @@ interface CreepMemory {
 
 interface Memory {
   uuid: number;
-  log: any;
 }
 
 // `global` extension samples
 declare namespace NodeJS {
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
   interface Global {
-    log: any;
   }
 }

@@ -1,28 +1,24 @@
-import { mockInstanceOf, mockStructure } from "screeps-jest";
-import { isDamaged, runTower } from "tower";
+import { mockInstanceOf, mockStructure } from 'screeps-jest';
+import { isDamaged, runTower } from 'tower';
 
-describe("tower module", () => {
+describe('tower module', () => {
 
-  describe("runTower", () => {
+  describe('runTower', () => {
 
-    it("should attack the nearest hostile creep, if there is one in the room", () => {
+    it('should attack the nearest hostile creep, if there is one in the room', () => {
       const hostileCreep = mockInstanceOf<Creep>();
       const tower = mockStructure(STRUCTURE_TOWER, {
         attack: () => OK,
-        pos: {
-          findClosestByRange: (type: FindConstant) => type === FIND_HOSTILE_CREEPS ? hostileCreep : null
-        }
+        pos: { findClosestByRange: (type: FindConstant) => (type === FIND_HOSTILE_CREEPS ? hostileCreep : null) }
       });
       runTower(tower);
       expect(tower.attack).toHaveBeenCalledWith(hostileCreep);
     });
 
-    it("should repair the nearest damaged structure, if there is one in the room", () => {
+    it('should repair the nearest damaged structure, if there is one in the room', () => {
       const damagedStructure = mockStructure(STRUCTURE_EXTENSION);
       const tower = mockStructure(STRUCTURE_TOWER, {
-        pos: {
-          findClosestByRange: (type: FindConstant) => type === FIND_STRUCTURES ? damagedStructure : null
-        },
+        pos: { findClosestByRange: (type: FindConstant) => (type === FIND_STRUCTURES ? damagedStructure : null) },
         repair: () => OK
       });
       runTower(tower);
@@ -30,13 +26,11 @@ describe("tower module", () => {
       expect(tower.repair).toHaveBeenCalledWith(damagedStructure);
     });
 
-    it("should not do anything, otherwise", () => {
+    it('should not do anything, otherwise', () => {
       const tower = mockStructure(STRUCTURE_TOWER, {
         attack: () => OK,
         heal: () => OK,
-        pos: {
-          findClosestByRange: () => null
-        },
+        pos: { findClosestByRange: () => null },
         repair: () => OK
       });
       runTower(tower);
@@ -47,9 +41,9 @@ describe("tower module", () => {
 
   });
 
-  describe("isDamaged", () => {
+  describe('isDamaged', () => {
 
-    it("should return false if the structure has full health", () => {
+    it('should return false if the structure has full health', () => {
       const structure = mockStructure(STRUCTURE_SPAWN, {
         hits: 5000,
         hitsMax: 5000
