@@ -1,10 +1,13 @@
-import { mockInstanceOf, mockStructure } from 'screeps-jest'
-import roleLogistics from './logistics'
+import { mockGlobal, mockInstanceOf, mockStructure } from 'screeps-jest'
+import { StrategyPhase } from 'strategy'
+import roleLogistics, { Logistics } from './logistics'
 
+const ROOM_NAME = 'A1'
 const source1 = mockInstanceOf<Source>({ id: 'source1' as Id<Source> })
 const source2 = mockInstanceOf<Source>({ id: 'source2' as Id<Source> })
 const extension = mockStructure(STRUCTURE_EXTENSION)
 const room = mockInstanceOf<Room>({
+    name: ROOM_NAME,
     find: (type: FindConstant) => {
         switch (type) {
             case FIND_SOURCES:
@@ -20,40 +23,37 @@ const room = mockInstanceOf<Room>({
 describe('Logistics role', () => {
     describe('run', () => {
         it("should harvest, when it's near a source and not full", () => {
-            const creep = mockInstanceOf<Creep>({
+            const creep = mockInstanceOf<Logistics>({
                 harvest: () => OK,
                 room,
-                store: {
-                    getFreeCapacity: () => 50,
-                },
+                source: source1.id,
+                carry: { energy: 0 },
+                carryCapacity: 100,
+                memory: { source: source1.id },
+                pos: { findClosestByRange: () => null },
+                pickup: () => {},
             })
+
+            const roomMemory = mockInstanceOf<RoomMemory>({
+                strategy: StrategyPhase.DropMining,
+                sources: [{ id: source1.id }],
+            })
+            mockGlobal<Memory>('Memory', {
+                creeps: {},
+                rooms: { [ROOM_NAME]: roomMemory },
+            })
+            mockGlobal<Game>('Game', { getObjectById: () => source1 })
 
             roleLogistics.run(creep)
             expect(creep.harvest).toHaveBeenCalledWith(source1)
         })
 
-        it("should move to a source, when it's not full and not near a source", () => {
-            const creep = mockInstanceOf<Creep>({
-                harvest: () => ERR_NOT_IN_RANGE,
-                moveTo: () => OK,
-                room,
-                store: {
-                    getFreeCapacity: () => 50,
-                },
-            })
-            roleLogistics.run(creep)
-            expect(creep.moveTo).toHaveBeenCalledWith(
-                source1,
-                expect.anything(),
-            )
-        })
-
         it("should fill structures, when it's full and near a non-full structure", () => {
-            const creep = mockInstanceOf<Creep>({
+            const creep = mockInstanceOf<Logistics>({
                 room,
-                store: {
-                    getFreeCapacity: () => 0,
-                },
+                carry: { energy: 100 },
+                carryCapacity: 100,
+                source: 'drop-mining',
                 transfer: () => OK,
             })
 
@@ -65,23 +65,6 @@ describe('Logistics role', () => {
             expect(creep.room.find).toHaveBeenCalledWith(FIND_STRUCTURES, {
                 filter: roleLogistics.isToBeFilled,
             })
-        })
-
-        it("should move towards a non-full structure, when it's full and out of range to transfer", () => {
-            const creep = mockInstanceOf<Creep>({
-                moveTo: () => OK,
-                room,
-                store: {
-                    getFreeCapacity: () => 0,
-                },
-                transfer: () => ERR_NOT_IN_RANGE,
-            })
-
-            roleLogistics.run(creep)
-            expect(creep.moveTo).toHaveBeenCalledWith(
-                extension,
-                expect.anything(),
-            )
         })
     })
 

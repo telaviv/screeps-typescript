@@ -2,7 +2,7 @@ import roleBuilder, { Builder } from 'roles/builder'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleLogistics, { Logistics } from 'roles/logistics'
 import roleUpgrader, { Upgrader } from 'roles/upgrader'
-import { ErrorMapper } from 'utils/ErrorMapper'
+import ErrorMapper from 'utils/ErrorMapper'
 import { runSpawn } from './spawn'
 import updateStrategy from './strategy'
 import survey from './surveyor'
@@ -22,7 +22,7 @@ function unwrappedLoop() {
                         s.structureType === STRUCTURE_SPAWN
                     )
                 },
-            }) as any
+            })
 
             for (const structure of structures) {
                 if (structure.structureType === STRUCTURE_TOWER) {
@@ -34,7 +34,7 @@ function unwrappedLoop() {
         }
     })
 
-    for (const name in Game.creeps) {
+    for (const name of Object.keys(Game.creeps)) {
         const creep = Game.creeps[name]
         if (creep.memory.role === 'harvester') {
             roleHarvester.run(creep as Harvester)

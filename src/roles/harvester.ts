@@ -1,4 +1,3 @@
-import { minBy } from 'utils/lodash'
 import { getNextSource } from 'utils'
 
 const ROLE = 'harvester'

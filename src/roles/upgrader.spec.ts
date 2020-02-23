@@ -12,7 +12,7 @@ const room = mockInstanceOf<Room>({
         type === FIND_SOURCES ? [source1, source2] : [],
 })
 
-describe('Upgrader role', () => {
+describe.skip('Upgrader role', () => {
     it('should upgrade the controller, when it has energy and is within range', () => {
         const creep = mockInstanceOf<Upgrader>({
             memory: {

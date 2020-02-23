@@ -1,10 +1,10 @@
 import * as PositionSet from 'utils/roomPositionSet'
 
 const getSpawn = (room: Room): StructureSpawn => {
-    return (room.find(FIND_MY_SPAWNS) as StructureSpawn[])[0]
+    return room.find(FIND_MY_SPAWNS)[0]
 }
 
-const isRoad = (structure: any): boolean => {
+const isRoad = (structure: Structure): boolean => {
     return structure.structureType === STRUCTURE_ROAD
 }
 
@@ -61,8 +61,8 @@ const findRoadPath = (origin: RoomPosition, goal: RoomPosition) => {
 const createRoadConstructionSites = (room: Room) => {
     const roadPositions: RoomPositionSet = []
     let moveCenters: RoomObject[] = []
-    const spawns = room.find(FIND_MY_SPAWNS) as StructureSpawn[]
-    const sources = room.find(FIND_SOURCES) as Source[]
+    const spawns = room.find(FIND_MY_SPAWNS)
+    const sources = room.find(FIND_SOURCES)
     moveCenters.push(room.controller as RoomObject)
     moveCenters = moveCenters.concat(spawns)
     moveCenters = moveCenters.concat(sources)
@@ -81,7 +81,7 @@ const createRoadConstructionSites = (room: Room) => {
 }
 
 const assignSources = (room: Room) => {
-    const sources = room.find(FIND_SOURCES) as Source[]
+    const sources = room.find(FIND_SOURCES)
     const spawn = getSpawn(room)
 
     room.memory.sources = []

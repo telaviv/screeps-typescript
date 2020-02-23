@@ -35,7 +35,6 @@ function harvestEnergy(creep: SourceCreep) {
 
 function pickupEnergy(creep: SourceCreep) {
     const sourceMemory = getSourceMemory(creep)
-    const source = Game.getObjectById(creep.memory.source) as Source
     const target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
         filter: {
             resourceType: RESOURCE_ENERGY,
@@ -48,7 +47,7 @@ function pickupEnergy(creep: SourceCreep) {
 
     const err = creep.pickup(target)
     if (err === ERR_NOT_IN_RANGE) {
-        const harvest = sourceMemory.harvest
+        const { harvest } = sourceMemory
         creep.moveTo(harvest.x, harvest.y, {
             range: 1,
             visualizePathStyle: { stroke: '#ffaa00' },

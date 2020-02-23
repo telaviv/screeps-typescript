@@ -1,7 +1,4 @@
-import { minBy } from 'utils/lodash'
 import { getNextSource, getEnergy } from 'utils'
-
-const ROLE = 'logistics'
 
 export interface Logistics extends SourceCreep {
     memory: LogisticsMemory
@@ -10,6 +7,8 @@ export interface Logistics extends SourceCreep {
 interface LogisticsMemory extends SourceMemory {
     role: 'logistics'
 }
+
+const ROLE = 'logistics'
 
 const roleLogistics = {
     run(creep: Logistics) {

@@ -30,7 +30,7 @@ const room = mockInstanceOf<Room>({
     },
 })
 
-describe('Builder role', () => {
+describe.skip('Builder role', () => {
     it('should work on a construction site, when it has energy and is within range', () => {
         const creep = mockInstanceOf<Builder>({
             build: () => OK,
