@@ -18,6 +18,7 @@ module.exports = {
         'import/prefer-default-export': ['off'],
         'implicit-arrow-linebreak': 'off',
         'linebreak-style': ['warn', 'unix'],
+        'lines-between-class-members': 'off',
         'max-len': ['error', { code: 120 }],
         'no-extra-semi': 'off',
         'no-console': 'off',
