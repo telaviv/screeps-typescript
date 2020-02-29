@@ -1,13 +1,18 @@
 export default class DroppedEnergy {
     memory: DroppedEnergyMemory
-    energy: number
 
     constructor(room: string, sourceIndex: number) {
         this.memory = Memory.rooms[room].sources[sourceIndex].dropSpot
-        this.energy = 0
     }
 
     availableEnergy(): number {
-        return this.energy
+        const pos = this.memory.pos
+        const room = Game.rooms[pos.roomName]
+        const resources = room.lookForAt(LOOK_ENERGY, pos)
+        if (resources.length === 0) {
+            return 0
+        }
+
+        return resources[0].amount
     }
 }

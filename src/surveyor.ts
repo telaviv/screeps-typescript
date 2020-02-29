@@ -94,6 +94,10 @@ const assignSources = (room: Room) => {
         room.memory.sources.push({
             harvest: path[path.length - 1],
             id: source.id,
+            dropSpot: {
+                pos: path[path.length - 1],
+                requests: [],
+            },
         })
     }
 }
