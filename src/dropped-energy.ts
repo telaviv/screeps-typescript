@@ -16,6 +16,10 @@ export default class DroppedEnergy {
         return requestAmount
     }
 
+    private removeRequest(creepName: string) {
+        this.requests.splice(this.requests.indexOf(creepName), 1)
+    }
+
     availableEnergy(): number {
         const room = Game.rooms[this.pos.roomName]
         const resources = room.lookForAt(LOOK_ENERGY, this.pos)
@@ -40,6 +44,14 @@ export default class DroppedEnergy {
     }
 
     completeRequest(creep: Creep) {
-        this.requests.splice(this.requests.indexOf(creep.name), 1)
+        this.removeRequest(creep.name)
+    }
+
+    cleanup() {
+        for (const creepName of this.requests) {
+            if (!Game.creeps.hasOwnProperty(creepName)) {
+                this.removeRequest(creepName)
+            }
+        }
     }
 }

@@ -25,6 +25,7 @@ module.exports = {
         'no-confusing-arrow': 'off',
         'no-continue': 'off',
         'no-param-reassign': ['error', { props: false }],
+        'no-prototype-builtins': 'off',
         'no-plusplus': 'off',
         'no-restricted-syntax': ['off'],
         'object-curly-newline': ['off'],

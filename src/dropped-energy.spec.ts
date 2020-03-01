@@ -77,16 +77,17 @@ const patchMemory = () => {
 }
 
 describe('dropped-energy module', () => {
+    beforeEach(() => {
+        patchMemory()
+    })
     describe('DroppedEnergy', () => {
         describe('#availableEnergy', () => {
             it('equals 0 when no energy is provided', () => {
-                patchMemory()
                 const droppedEnergy = new DroppedEnergy(ROOM_NAME, 0)
                 expect(droppedEnergy.availableEnergy()).toEqual(0)
             })
 
             it('equals the energy amount when energy is provided', () => {
-                patchMemory()
                 const room = Game.rooms[ROOM_NAME] as MockRoom
                 room.addEnergy(0, 0, 50)
 
@@ -96,7 +97,6 @@ describe('dropped-energy module', () => {
             })
 
             it('is subtracted from the request amount', () => {
-                patchMemory()
                 const room = Game.rooms[ROOM_NAME] as MockRoom
                 room.addEnergy(0, 0, 1000)
                 const creep1 = createCreep([CARRY])
@@ -119,7 +119,6 @@ describe('dropped-energy module', () => {
             })
 
             it('is modified by complete requests', () => {
-                patchMemory()
                 const room = Game.rooms[ROOM_NAME] as MockRoom
                 room.addEnergy(0, 0, 1000)
                 const creep1 = createCreep([CARRY])
@@ -144,6 +143,31 @@ describe('dropped-energy module', () => {
                 droppedEnergy.completeRequest(creep2)
 
                 expect(droppedEnergy.availableEnergy()).toEqual(1000)
+            })
+
+            it('is modified by cleanup', () => {
+                const room = Game.rooms[ROOM_NAME] as MockRoom
+                room.addEnergy(0, 0, 1000)
+                const creep1 = createCreep([CARRY])
+                const creep2 = createCreep([CARRY, CARRY])
+                Game.creeps[creep1.name] = creep1
+                Game.creeps[creep2.name] = creep2
+
+                const droppedEnergy = new DroppedEnergy(ROOM_NAME, 0)
+                droppedEnergy.request(creep1)
+                droppedEnergy.request(creep2)
+
+                expect(droppedEnergy.availableEnergy()).toEqual(
+                    1000 - 3 * CARRY_CAPACITY,
+                )
+
+                delete Game.creeps[creep1.name]
+
+                droppedEnergy.cleanup()
+
+                expect(droppedEnergy.availableEnergy()).toEqual(
+                    1000 - 2 * CARRY_CAPACITY,
+                )
             })
         })
     })
