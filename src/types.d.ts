@@ -45,3 +45,8 @@ declare namespace NodeJS {
         log: any
     }
 }
+
+// Testing
+interface MockRoom extends Room {
+    addEnergy(x: number, y: number, amount: number): void
+}

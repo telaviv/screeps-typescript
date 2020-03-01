@@ -14,6 +14,7 @@ module.exports = {
     rules: {
         'arrow-parens': ['error', 'as-needed'],
         'arrow-body-style': ['off'],
+        'import/no-extraneous-dependencies': 'off',
         'import/no-unresolved': ['off'],
         'import/prefer-default-export': ['off'],
         'implicit-arrow-linebreak': 'off',

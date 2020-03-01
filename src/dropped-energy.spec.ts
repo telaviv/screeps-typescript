@@ -1,84 +1,13 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
 
-import { v4 as uuidv4 } from 'uuid'
-import { mockGlobal, mockInstanceOf } from 'screeps-jest'
-
 import DroppedEnergy from 'dropped-energy'
-import { StrategyPhase } from 'strategy'
 
-const ROOM_NAME = 'test'
-
-interface MockRoom extends Room {
-    addEnergy(x: number, y: number, amount: number): void
-}
-
-const createRoomArray = () => {
-    const roomArray: number[][] = []
-    for (let y = 0; y < 50; ++y) {
-        roomArray.push([])
-        for (let x = 0; x < 50; ++x) {
-            roomArray[y].push(0)
-        }
-    }
-    return roomArray
-}
-
-const createMockRoom = (pos: RoomPosition) => {
-    const roomArray = createRoomArray()
-    return mockInstanceOf<Room>({
-        pos,
-        addEnergy: (x: number, y: number, amount: number) => {
-            roomArray[x][y] += amount
-        },
-        lookForAt: (_: any, npos: RoomPosition) => [
-            { amount: roomArray[npos.x][npos.y] },
-        ],
-    })
-}
-
-const createCreep = (parts: BodyPartConstant[]) => {
-    const id = uuidv4() as Id<Creep>
-    return mockInstanceOf<Creep>({
-        id,
-        name: `creep:${id}`,
-        store: {
-            getCapacity: () => {
-                return parts.reduce(
-                    (acc, val) => (val === CARRY ? acc + CARRY_CAPACITY : acc),
-                    0,
-                )
-            },
-        },
-    })
-}
-
-const patchMemory = () => {
-    const roomPosition = new RoomPosition(0, 0, ROOM_NAME)
-    const droppedEnergyMemory = mockInstanceOf<DroppedEnergyMemory>({
-        pos: roomPosition,
-        requests: [],
-    })
-    const sourceMemory = mockInstanceOf<RoomSourceMemory>({
-        dropSpot: droppedEnergyMemory,
-    })
-    const roomMemory = mockInstanceOf<RoomMemory>({
-        strategy: StrategyPhase.DropMining,
-        sources: [sourceMemory],
-    })
-
-    mockGlobal<Memory>('Memory', {
-        rooms: { [ROOM_NAME]: roomMemory },
-    })
-
-    mockGlobal<Game>('Game', {
-        creeps: {},
-        rooms: { [ROOM_NAME]: createMockRoom(roomPosition) },
-    })
-}
+import { bootstrapGlobals, ROOM_NAME } from 'testing/bootstrap'
+import createCreep from 'testing/mocks/creep'
 
 describe('dropped-energy module', () => {
     beforeEach(() => {
-        patchMemory()
+        bootstrapGlobals()
     })
     describe('DroppedEnergy', () => {
         describe('#availableEnergy', () => {
