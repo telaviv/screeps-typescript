@@ -16,3 +16,15 @@ repos:
         entry: npm run lint
         pass_filenames: false
         always_run: true
+    -   id: screeps-build
+        name: screeps-build
+        language: node
+        entry: npm run build
+        pass_filenames: false
+        always_run: true
+    -   id: screeps-test
+        name: screeps-test
+        language: node
+        entry: npm run test
+        pass_filenames: false
+        always_run: true
