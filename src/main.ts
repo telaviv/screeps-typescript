@@ -7,11 +7,17 @@ import { runSpawn } from './spawn'
 import updateStrategy from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
+import DroppedEnergy from './dropped-energy'
 
 function unwrappedLoop() {
     survey()
 
     Object.values(Game.rooms).forEach(room => {
+        for (let i = 0; i < room.memory.sources.length; ++i) {
+            const droppedEnergy = new DroppedEnergy(room.name, i)
+            droppedEnergy.cleanup()
+        }
+
         updateStrategy(room)
 
         if (room.controller && room.controller.my) {

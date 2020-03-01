@@ -17,8 +17,13 @@ const createRoomArray = () => {
     return roomArray
 }
 
-const createMockRoom = (pos: RoomPosition) => {
+const createMockRoom = (pos: RoomPosition, memory?: RoomMemory) => {
     const roomArray = createRoomArray()
+    const roomMemory =
+        memory ||
+        mockInstanceOf<RoomMemory>({
+            strategy: StrategyPhase.DropMining,
+        })
     return mockInstanceOf<Room>({
         pos,
         addEnergy: (x: number, y: number, amount: number) => {
@@ -28,9 +33,8 @@ const createMockRoom = (pos: RoomPosition) => {
         lookForAt: (_: any, npos: RoomPosition) => [
             { amount: roomArray[npos.x][npos.y] },
         ],
-        memory: mockInstanceOf<RoomMemory>({
-            strategy: StrategyPhase.DropMining,
-        }),
+        memory: roomMemory,
+        name: ROOM_NAME,
         controller: mockInstanceOf<StructureController>({ my: true }),
     })
 }
@@ -56,6 +60,6 @@ export const bootstrapGlobals = () => {
 
     mockGlobal<Game>('Game', {
         creeps: {},
-        rooms: { [ROOM_NAME]: createMockRoom(roomPosition) },
+        rooms: { [ROOM_NAME]: createMockRoom(roomPosition, roomMemory) },
     })
 }
