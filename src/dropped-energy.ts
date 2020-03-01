@@ -8,7 +8,7 @@ export default class DroppedEnergy {
         this.requests = memory.requests
     }
 
-    calculateRequestAmount(): number {
+    private calculateRequestAmount(): number {
         let requestAmount = 0
         for (const creepName of this.requests) {
             requestAmount += Game.creeps[creepName].store.getCapacity()
@@ -37,5 +37,9 @@ export default class DroppedEnergy {
         }
 
         this.requests.push(creep.name)
+    }
+
+    completeRequest(creep: Creep) {
+        this.requests.splice(this.requests.indexOf(creep.name), 1)
     }
 }
