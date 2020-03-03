@@ -5,7 +5,7 @@ interface CreepMemory {
 }
 
 interface SourceMemory extends CreepMemory {
-    source: string
+    source: Id<Source>
 }
 
 interface RoomSourceMemory {

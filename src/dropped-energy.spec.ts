@@ -2,7 +2,8 @@
 
 import DroppedEnergy from 'dropped-energy'
 
-import { bootstrapGlobals, ROOM_NAME } from 'testing/bootstrap'
+import { bootstrapGlobals } from 'testing/bootstrap'
+import { ROOM_NAME } from 'testing/constants'
 import createCreep from 'testing/mocks/creep'
 
 describe('dropped-energy module', () => {

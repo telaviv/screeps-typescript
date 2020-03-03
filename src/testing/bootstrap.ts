@@ -1,10 +1,10 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
 
 import { mockGlobal, mockInstanceOf } from 'screeps-jest'
+import { v4 as uuidv4 } from 'uuid'
 
 import { StrategyPhase } from 'strategy'
-
-export const ROOM_NAME = 'test'
+import { ROOM_NAME } from './constants'
 
 const createRoomArray = () => {
     const roomArray: number[][] = []
@@ -46,6 +46,7 @@ export const bootstrapGlobals = () => {
         requests: [],
     })
     const sourceMemory = mockInstanceOf<RoomSourceMemory>({
+        id: uuidv4() as Id<Source>,
         dropSpot: droppedEnergyMemory,
     })
     const roomMemory = mockInstanceOf<RoomMemory>({
