@@ -9,7 +9,7 @@ export default (parts: BodyPartConstant[]) => {
     const source = room.sources[0]
     return mockInstanceOf<SourceCreep>({
         id,
-        name: `creep:${id}`,
+        name,
         store: {
             getCapacity: () => {
                 return parts.reduce(
@@ -18,7 +18,7 @@ export default (parts: BodyPartConstant[]) => {
                 )
             },
         },
-        room: { name: 'test' },
+        room: { name: ROOM_NAME },
         memory: { source: source.id as Id<Source> },
         pos: new RoomPosition(0, 0, ROOM_NAME),
     })

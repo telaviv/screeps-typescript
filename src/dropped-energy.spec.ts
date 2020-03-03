@@ -7,21 +7,21 @@ import { ROOM_NAME } from 'testing/constants'
 import createCreep from 'testing/mocks/creep'
 
 describe('dropped-energy module', () => {
+    let droppedEnergy: DroppedEnergy
     beforeEach(() => {
         bootstrapGlobals()
+        const memory = Memory.rooms[ROOM_NAME].sources[0].dropSpot
+        droppedEnergy = new DroppedEnergy(memory)
     })
     describe('DroppedEnergy', () => {
         describe('#availableEnergy', () => {
             it('equals 0 when no energy is provided', () => {
-                const droppedEnergy = new DroppedEnergy(ROOM_NAME, 0)
                 expect(droppedEnergy.availableEnergy()).toEqual(0)
             })
 
             it('equals the energy amount when energy is provided', () => {
                 const room = Game.rooms[ROOM_NAME] as MockRoom
                 room.addEnergy(0, 0, 50)
-
-                const droppedEnergy = new DroppedEnergy(ROOM_NAME, 0)
 
                 expect(droppedEnergy.availableEnergy()).toEqual(50)
             })
@@ -34,7 +34,6 @@ describe('dropped-energy module', () => {
                 Game.creeps[creep1.name] = creep1
                 Game.creeps[creep2.name] = creep2
 
-                const droppedEnergy = new DroppedEnergy(ROOM_NAME, 0)
                 droppedEnergy.request(creep1)
 
                 expect(droppedEnergy.availableEnergy()).toEqual(
@@ -56,7 +55,6 @@ describe('dropped-energy module', () => {
                 Game.creeps[creep1.name] = creep1
                 Game.creeps[creep2.name] = creep2
 
-                const droppedEnergy = new DroppedEnergy(ROOM_NAME, 0)
                 droppedEnergy.request(creep1)
                 droppedEnergy.request(creep2)
 
@@ -83,7 +81,6 @@ describe('dropped-energy module', () => {
                 Game.creeps[creep1.name] = creep1
                 Game.creeps[creep2.name] = creep2
 
-                const droppedEnergy = new DroppedEnergy(ROOM_NAME, 0)
                 droppedEnergy.request(creep1)
                 droppedEnergy.request(creep2)
 

@@ -2,8 +2,7 @@ export default class DroppedEnergy {
     pos: RoomPosition
     requests: string[]
 
-    constructor(room: string, sourceIndex: number) {
-        const memory = Memory.rooms[room].sources[sourceIndex].dropSpot
+    constructor(memory: DroppedEnergyMemory) {
         this.pos = memory.pos
         this.requests = memory.requests
     }
