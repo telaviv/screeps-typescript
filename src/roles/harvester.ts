@@ -1,4 +1,4 @@
-import { getNextSource } from 'utils'
+import { getNextSource } from 'utils/energy-harvesting'
 
 const ROLE = 'harvester'
 

@@ -1,4 +1,4 @@
-import { getNextSource, getEnergy } from 'utils'
+import { getNextSource, getEnergy } from 'utils/energy-harvesting'
 
 export interface Logistics extends SourceCreep {
     memory: LogisticsMemory
