@@ -22,15 +22,13 @@ const roleHarvester = {
         const source = Game.getObjectById(sourceMemory.id) as Source
 
         if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-            const harvest = sourceMemory.harvest
-            const err = creep.moveTo(harvest.x, harvest.y, {
+            const harvestPos = sourceMemory.dropSpot.pos
+            const err = creep.moveTo(harvestPos.x, harvestPos.y, {
                 visualizePathStyle: { stroke: '#ffaa00' },
             })
             if (err !== OK) {
                 console.log(
-                    `couldn't move to ${JSON.stringify(
-                        sourceMemory.harvest,
-                    )}: ${err}`,
+                    `couldn't move to ${JSON.stringify(harvestPos)}: ${err}`,
                 )
             }
         }

@@ -4,7 +4,7 @@ import DroppedEnergy from 'dropped-energy'
 
 import { bootstrapGlobals } from 'testing/bootstrap'
 import { ROOM_NAME } from 'testing/constants'
-import createCreep from 'testing/mocks/creep'
+import { createCreep } from 'testing/mocks/creep'
 
 describe('dropped-energy module', () => {
     let droppedEnergy: DroppedEnergy
@@ -29,8 +29,8 @@ describe('dropped-energy module', () => {
             it('is subtracted from the request amount', () => {
                 const room = Game.rooms[ROOM_NAME] as MockRoom
                 room.addEnergy(0, 0, 1000)
-                const creep1 = createCreep([CARRY])
-                const creep2 = createCreep([CARRY, CARRY])
+                const creep1 = createCreep<Creep>([CARRY])
+                const creep2 = createCreep<Creep>([CARRY, CARRY])
                 Game.creeps[creep1.name] = creep1
                 Game.creeps[creep2.name] = creep2
 
@@ -50,8 +50,8 @@ describe('dropped-energy module', () => {
             it('is modified by complete requests', () => {
                 const room = Game.rooms[ROOM_NAME] as MockRoom
                 room.addEnergy(0, 0, 1000)
-                const creep1 = createCreep([CARRY])
-                const creep2 = createCreep([CARRY, CARRY])
+                const creep1 = createCreep<Creep>([CARRY])
+                const creep2 = createCreep<Creep>([CARRY, CARRY])
                 Game.creeps[creep1.name] = creep1
                 Game.creeps[creep2.name] = creep2
 
@@ -76,8 +76,8 @@ describe('dropped-energy module', () => {
             it('is modified by cleanup', () => {
                 const room = Game.rooms[ROOM_NAME] as MockRoom
                 room.addEnergy(0, 0, 1000)
-                const creep1 = createCreep([CARRY])
-                const creep2 = createCreep([CARRY, CARRY])
+                const creep1 = createCreep<Creep>([CARRY])
+                const creep2 = createCreep<Creep>([CARRY, CARRY])
                 Game.creeps[creep1.name] = creep1
                 Game.creeps[creep2.name] = creep2
 

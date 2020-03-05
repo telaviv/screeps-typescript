@@ -1,70 +1,43 @@
-import { mockGlobal, mockInstanceOf, mockStructure } from 'screeps-jest'
-import { StrategyPhase } from 'strategy'
+import { mockStructure } from 'screeps-jest'
+
+import { bootstrapGlobals } from 'testing/bootstrap'
+import { createCreep } from 'testing/mocks/creep'
+import { ROOM_NAME as TEST_ROOM } from 'testing/constants'
 import roleLogistics, { Logistics } from './logistics'
 
-const ROOM_NAME = 'A1'
-const source1 = mockInstanceOf<Source>({ id: 'source1' as Id<Source> })
-const source2 = mockInstanceOf<Source>({ id: 'source2' as Id<Source> })
 const extension = mockStructure(STRUCTURE_EXTENSION)
-const room = mockInstanceOf<Room>({
-    name: ROOM_NAME,
-    find: (type: FindConstant) => {
-        switch (type) {
-            case FIND_SOURCES:
-                return [source1, source2]
-            case FIND_STRUCTURES:
-                return [extension]
-            default:
-                return []
-        }
-    },
-})
 
 describe('Logistics role', () => {
     describe('run', () => {
+        beforeEach(() => {
+            bootstrapGlobals()
+        })
         it("should harvest, when it's near a source and not full", () => {
-            const creep = mockInstanceOf<Logistics>({
-                harvest: () => OK,
-                room,
-                source: source1.id,
-                carry: { energy: 0 },
-                carryCapacity: 100,
-                memory: { source: source1.id },
-                pos: { findClosestByRange: () => null },
-                pickup: () => {},
-            })
+            const source = Memory.rooms[TEST_ROOM].sources[0]
+            const creep = createCreep<Logistics>([CARRY])
+            const harvestMock = jest.fn()
 
-            const roomMemory = mockInstanceOf<RoomMemory>({
-                strategy: StrategyPhase.DropMining,
-                sources: [{ id: source1.id }],
-            })
-            mockGlobal<Memory>('Memory', {
-                creeps: {},
-                rooms: { [ROOM_NAME]: roomMemory },
-            })
-            mockGlobal<Game>('Game', { getObjectById: () => source1 })
-
+            creep.room.find = () => []
+            creep.harvest = harvestMock
             roleLogistics.run(creep)
-            expect(creep.harvest).toHaveBeenCalledWith(source1)
+            expect(harvestMock.mock.calls[0][0].id).toEqual(source.id)
         })
 
         it("should fill structures, when it's full and near a non-full structure", () => {
-            const creep = mockInstanceOf<Logistics>({
-                room,
-                carry: { energy: 100 },
-                carryCapacity: 100,
-                source: 'drop-mining',
-                transfer: () => OK,
-            })
+            const creep = createCreep<Logistics>([CARRY])
+            const transferMock = jest.fn()
+
+            creep.room.find = () => [extension]
+            creep.store.getFreeCapacity = () => 0
+            creep.transfer = transferMock
+            creep.harvest = jest.fn()
+            roleLogistics.run(creep)
 
             roleLogistics.run(creep)
             expect(creep.transfer).toHaveBeenCalledWith(
                 extension,
                 RESOURCE_ENERGY,
             )
-            expect(creep.room.find).toHaveBeenCalledWith(FIND_STRUCTURES, {
-                filter: roleLogistics.isToBeFilled,
-            })
         })
     })
 

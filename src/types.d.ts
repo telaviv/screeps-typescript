@@ -10,7 +10,6 @@ interface SourceMemory extends CreepMemory {
 
 interface RoomSourceMemory {
     id: string
-    harvest: RoomPosition
     dropSpot: DroppedEnergyMemory
 }
 

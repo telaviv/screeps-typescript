@@ -1,5 +1,6 @@
 import { minBy } from 'utils/lodash'
 import { StrategyPhase } from 'strategy'
+import DroppedEnergy from 'dropped-energy'
 
 interface SourceCounts {
     [index: string]: number
@@ -35,23 +36,23 @@ function harvestEnergy(creep: SourceCreep) {
 
 function pickupEnergy(creep: SourceCreep) {
     const sourceMemory = getSourceMemory(creep)
-    const target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-        filter: {
-            resourceType: RESOURCE_ENERGY,
-        },
-    })
-    if (target === null) {
+    const droppedEnergy = new DroppedEnergy(sourceMemory.dropSpot)
+    if (!droppedEnergy.canPickup(creep)) {
         harvestEnergy(creep)
         return
     }
 
-    const err = creep.pickup(target)
+    const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
+
+    const err = creep.pickup(target[0])
     if (err === ERR_NOT_IN_RANGE) {
-        const { harvest } = sourceMemory
-        creep.moveTo(harvest.x, harvest.y, {
+        const harvestPos = sourceMemory.dropSpot.pos
+        creep.moveTo(harvestPos.x, harvestPos.y, {
             range: 1,
             visualizePathStyle: { stroke: '#ffaa00' },
         })
+    } else if (err === OK) {
+        droppedEnergy.completeRequest(creep)
     }
 }
 

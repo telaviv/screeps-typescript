@@ -92,7 +92,6 @@ const assignSources = (room: Room) => {
             { swampCost: 1 },
         ).path
         room.memory.sources.push({
-            harvest: path[path.length - 1],
             id: source.id,
             dropSpot: {
                 pos: path[path.length - 1],

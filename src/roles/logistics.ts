@@ -12,7 +12,7 @@ const ROLE = 'logistics'
 
 const roleLogistics = {
     run(creep: Logistics) {
-        if (creep.carry.energy < creep.carryCapacity) {
+        if (creep.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
             getEnergy(creep)
         } else {
             const targets = creep.room.find(FIND_STRUCTURES, {
