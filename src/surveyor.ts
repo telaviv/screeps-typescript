@@ -99,41 +99,43 @@ const createSurvey = (room: Room) => {
         for (const j of range(i, moveCenters.length)) {
             const path = findRoadPath(moveCenters[i].pos, moveCenters[j].pos)
             PositionSet.merge(path.path, roadPositions)
-            for (const pos of path.path) {
-                room.createConstructionSite(pos, STRUCTURE_ROAD)
-            }
         }
     }
 
     room.memory.survey = { roads: roadPositions }
 }
 
+const visualizeRoom = (room: Room) => {
+    const roads = room.memory.survey.roads
+
+    for (const road of roads) {
+        room.visual.circle(road)
+    }
+}
+
 const assignRoomFeatures = () => {
     each(Game.rooms, room => {
-        if (!room.memory.survey) {
-            createSurvey(room)
-        }
-
         if (!room.memory.sources || room.memory.sources.length === 0) {
             assignSources(room)
         }
 
-        if (!room.memory.hasAssignedRoads || Game.time % 100 === 0) {
-            createRoadConstructionSites(room)
+        if (!room.memory.survey) {
+            createSurvey(room)
         }
+    })
+}
 
-        if (
-            room.controller &&
-            room.controller.level > 1 &&
-            Game.time % 100 === 50
-        ) {
-            createWallConstructionSites(room)
+const drawSurvey = () => {
+    each(Game.rooms, room => {
+        if (room.memory.survey) {
+            visualizeRoom(room)
         }
     })
 }
 
 const survey = () => {
     assignRoomFeatures()
+    drawSurvey()
 }
 
 export default survey
