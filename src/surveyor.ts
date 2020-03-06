@@ -86,8 +86,34 @@ const assignSources = (room: Room) => {
     }
 }
 
+const createSurvey = (room: Room) => {
+    const roadPositions: RoomPositionSet = []
+    let moveCenters: RoomObject[] = []
+    const spawns = room.find(FIND_MY_SPAWNS)
+    const sources = room.find(FIND_SOURCES)
+    moveCenters.push(room.controller as RoomObject)
+    moveCenters = moveCenters.concat(spawns)
+    moveCenters = moveCenters.concat(sources)
+
+    for (const i of range(0, moveCenters.length - 1)) {
+        for (const j of range(i, moveCenters.length)) {
+            const path = findRoadPath(moveCenters[i].pos, moveCenters[j].pos)
+            PositionSet.merge(path.path, roadPositions)
+            for (const pos of path.path) {
+                room.createConstructionSite(pos, STRUCTURE_ROAD)
+            }
+        }
+    }
+
+    room.memory.survey = { roads: roadPositions }
+}
+
 const assignRoomFeatures = () => {
     each(Game.rooms, room => {
+        if (!room.memory.survey) {
+            createSurvey(room)
+        }
+
         if (!room.memory.sources || room.memory.sources.length === 0) {
             assignSources(room)
         }

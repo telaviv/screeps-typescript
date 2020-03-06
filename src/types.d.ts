@@ -27,11 +27,16 @@ interface Memory {
     log: any
 }
 
+interface SurveyMemory {
+    roads: RoomPositionSet
+}
+
 interface RoomMemory {
     hasAssignedRoads: boolean
     roadPositions: RoomPositionSet
     sources: RoomSourceMemory[]
     strategy: StrategyPhase
+    survey: SurveyMemory
 }
 
 type RoomPositionSet = RoomPosition[]
