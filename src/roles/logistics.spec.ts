@@ -1,7 +1,7 @@
 import { mockStructure } from 'screeps-jest'
 
 import { bootstrapGlobals } from 'testing/bootstrap'
-import { createCreep } from 'testing/mocks/creep'
+import { createSourceCreep } from 'testing/mocks/creep'
 import { ROOM_NAME as TEST_ROOM } from 'testing/constants'
 import roleLogistics, { Logistics } from './logistics'
 
@@ -14,7 +14,7 @@ describe('Logistics role', () => {
         })
         it("should harvest, when it's near a source and not full", () => {
             const source = Memory.rooms[TEST_ROOM].sources[0]
-            const creep = createCreep<Logistics>([CARRY])
+            const creep = createSourceCreep<Logistics>([CARRY])
             const harvestMock = jest.fn()
 
             creep.room.find = () => []
@@ -24,7 +24,7 @@ describe('Logistics role', () => {
         })
 
         it("should fill structures, when it's full and near a non-full structure", () => {
-            const creep = createCreep<Logistics>([CARRY])
+            const creep = createSourceCreep<Logistics>([CARRY])
             const transferMock = jest.fn()
 
             creep.room.find = () => [extension]

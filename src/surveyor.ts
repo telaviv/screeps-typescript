@@ -1,11 +1,9 @@
 import * as PositionSet from 'utils/roomPositionSet'
+import range from 'lodash/range'
+import each from 'lodash/each'
 
 const getSpawn = (room: Room): StructureSpawn => {
     return room.find(FIND_MY_SPAWNS)[0]
-}
-
-const isRoad = (structure: Structure): boolean => {
-    return structure.structureType === STRUCTURE_ROAD
 }
 
 const createWallConstructionSites = (room: Room) => {
@@ -37,19 +35,6 @@ const createWallConstructionSites = (room: Room) => {
             ) {
                 continue
             }
-
-            let code
-            if (_.some(room.lookForAt(LOOK_STRUCTURES, x, y), isRoad)) {
-                code = room.createConstructionSite(x, y, STRUCTURE_RAMPART)
-                if (!_.any([OK, ERR_FULL])) {
-                    console.log(`rampart creation failed (${x}, ${y}): ${code}`)
-                }
-            }
-
-            code = room.createConstructionSite(x, y, STRUCTURE_WALL)
-            if (!_.any([OK, ERR_FULL])) {
-                console.log(`wall creation failed (${x}, ${y}): ${code}`)
-            }
         }
     }
 }
@@ -67,8 +52,8 @@ const createRoadConstructionSites = (room: Room) => {
     moveCenters = moveCenters.concat(spawns)
     moveCenters = moveCenters.concat(sources)
 
-    for (const i of _.range(0, moveCenters.length - 1)) {
-        for (const j of _.range(i, moveCenters.length)) {
+    for (const i of range(0, moveCenters.length - 1)) {
+        for (const j of range(i, moveCenters.length)) {
             const path = findRoadPath(moveCenters[i].pos, moveCenters[j].pos)
             PositionSet.merge(path.path, roadPositions)
             for (const pos of path.path) {
@@ -102,7 +87,7 @@ const assignSources = (room: Room) => {
 }
 
 const assignRoomFeatures = () => {
-    _.each(Game.rooms, room => {
+    each(Game.rooms, room => {
         if (!room.memory.sources || room.memory.sources.length === 0) {
             assignSources(room)
         }

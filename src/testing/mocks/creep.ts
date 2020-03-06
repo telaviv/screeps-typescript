@@ -5,8 +5,6 @@ import { ROOM_NAME } from '../constants'
 export function createCreep<T extends Creep>(parts: BodyPartConstant[]): T {
     const id = uuidv4() as Id<T>
     const name = `creep:${id}`
-    const room = Memory.rooms[ROOM_NAME]
-    const source = room.sources[0]
     const getCapacity = (): number => {
         return parts.reduce(
             (acc, val) => (val === CARRY ? acc + CARRY_CAPACITY : acc),
@@ -18,7 +16,17 @@ export function createCreep<T extends Creep>(parts: BodyPartConstant[]): T {
         name,
         store: { getCapacity, getFreeCapacity: getCapacity },
         room: { name: ROOM_NAME },
-        memory: { source: source.id as Id<Source> },
+        memory: {},
         pos: new RoomPosition(0, 0, ROOM_NAME),
     }) as T
+}
+
+export function createSourceCreep<T extends SourceCreep>(
+    parts: BodyPartConstant[],
+): T {
+    const room = Memory.rooms[ROOM_NAME]
+    const source = room.sources[0]
+    const creep = createCreep<T>(parts)
+    creep.memory.source = source.id as Id<Source>
+    return creep
 }

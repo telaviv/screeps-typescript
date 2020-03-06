@@ -1,5 +1,6 @@
 /* eslint-disable global-require, no-cond-assign, no-prototype-builtins, no-underscore-dangle */
 import { SourceMapConsumer } from 'source-map'
+import escape from 'lodash/escape'
 
 export default class ErrorMapper {
     // Cache consumer
@@ -76,13 +77,13 @@ export default class ErrorMapper {
                         const message =
                             "Source maps don't work in the simulator - displaying original error"
                         console.log(
-                            `<span style='color:red'>${message}<br>${_.escape(
+                            `<span style='color:red'>${message}<br>${escape(
                                 e.stack,
                             )}</span>`,
                         )
                     } else {
                         console.log(
-                            `<span style='color:red'>${_.escape(
+                            `<span style='color:red'>${escape(
                                 this.sourceMappedStackTrace(e),
                             )}</span>`,
                         )
