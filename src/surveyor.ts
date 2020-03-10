@@ -1,3 +1,5 @@
+/* eslint @typescript-eslint/no-unused-vars: ['off'] */
+
 import * as PositionSet from 'utils/roomPositionSet'
 import range from 'lodash/range'
 import each from 'lodash/each'
@@ -6,7 +8,7 @@ const getSpawn = (room: Room): StructureSpawn => {
     return room.find(FIND_MY_SPAWNS)[0]
 }
 
-const createWallConstructionSites = (room: Room) => {
+function createWallConstructionSites(room: Room) {
     const SIZE = 13
     const HALF = (SIZE - 1) / 2
 
@@ -43,7 +45,7 @@ const findRoadPath = (origin: RoomPosition, goal: RoomPosition) => {
     return PathFinder.search(origin, { pos: goal, range: 1 }, { swampCost: 1 })
 }
 
-const createRoadConstructionSites = (room: Room) => {
+function createRoadConstructionSites(room: Room) {
     const roadPositions: RoomPositionSet = []
     let moveCenters: RoomObject[] = []
     const spawns = room.find(FIND_MY_SPAWNS)
