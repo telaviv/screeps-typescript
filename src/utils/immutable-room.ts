@@ -6,12 +6,17 @@ const ImmutableRoomItemRecord = Record({
     x: 0,
     y: 0,
     terrain: 0,
-    structure: null,
+    structures: [],
+    obstacle: null,
 })
 
 type RoomGrid = List<List<ImmutableRoomItem>>
 
-export class ImmutableRoomItem extends ImmutableRoomItemRecord {}
+export class ImmutableRoomItem extends ImmutableRoomItemRecord {
+    isObstacle(): boolean {
+        return !!this.obstacle && this.terrain !== TERRAIN_MASK_WALL
+    }
+}
 
 export class ImmutableRoom implements ValueObject {
     private readonly grid: RoomGrid
@@ -42,6 +47,11 @@ export class ImmutableRoom implements ValueObject {
 
     set(x: number, y: number, item: ImmutableRoomItem): ImmutableRoom {
         return new ImmutableRoom(this.grid.setIn([x, y], item))
+    }
+
+    setTerrain(x: number, y: number, terrain: number): ImmutableRoom {
+        const roomItem = this.get(x, y)
+        return this.set(x, y, roomItem.set('terrain', terrain))
     }
 
     getClosestNeighbors = function*(
@@ -86,4 +96,18 @@ export class ImmutableRoom implements ValueObject {
             ny += dy
         }
     }
+}
+
+export function fromRoom(room: Room): ImmutableRoom {
+    let immutableRoom = new ImmutableRoom()
+    const terrain = room.getTerrain()
+    for (let x = 0; x < 50; ++x) {
+        for (let y = 0; y < 50; ++y) {
+            const terrainItem = terrain.get(x, y)
+            if (terrainItem !== 0) {
+                immutableRoom = immutableRoom.setTerrain(x, y, terrainItem)
+            }
+        }
+    }
+    return immutableRoom
 }

@@ -1,4 +1,5 @@
-import { ImmutableRoom, ImmutableRoomItem } from './immutable-room'
+import { mockInstanceOf } from 'screeps-jest'
+import { ImmutableRoom, ImmutableRoomItem, fromRoom } from './immutable-room'
 
 describe('immutable-room module', () => {
     describe('ImmutableRoom', () => {
@@ -32,6 +33,32 @@ describe('immutable-room module', () => {
                     expect(roomItem.y).toEqual(y)
                 }
             })
+        })
+    })
+
+    describe('fromRoom', () => {
+        it('tracks terrain correctly', () => {
+            const terrain = mockInstanceOf<RoomTerrain>({
+                get: (x: number, y: number) => {
+                    if (x === 3 && y === 2) {
+                        return TERRAIN_MASK_WALL
+                    }
+                    return 0
+                },
+            })
+            const room = mockInstanceOf<Room>({ getTerrain: () => terrain })
+            const immutableRoom = fromRoom(room)
+
+            for (let x = 0; x < 50; ++x) {
+                for (let y = 0; y < 50; ++y) {
+                    const itemTerrain = immutableRoom.get(x, y).terrain
+                    if (x === 3 && y === 2) {
+                        expect(itemTerrain).toEqual(TERRAIN_MASK_WALL)
+                    } else {
+                        expect(itemTerrain).toEqual(0)
+                    }
+                }
+            }
         })
     })
 })
