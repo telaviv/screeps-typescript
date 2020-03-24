@@ -2,17 +2,34 @@ import { fromJS, ValueObject, List, Record } from 'immutable'
 import times from 'lodash/times'
 import range from 'lodash/range'
 
+type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
+
+interface IImmutableRoomItem {
+    x: number
+    y: number
+    terrain: number
+    structures: Structure[]
+    obstacle: Obstacle
+}
+
 const ImmutableRoomItemRecord = Record({
     x: 0,
     y: 0,
     terrain: 0,
-    structures: [],
-    obstacle: null,
+    structures: [] as Structure[],
+    obstacle: '',
 })
 
 type RoomGrid = List<List<ImmutableRoomItem>>
 
-export class ImmutableRoomItem extends ImmutableRoomItemRecord {
+export class ImmutableRoomItem extends ImmutableRoomItemRecord
+    implements IImmutableRoomItem {
+    readonly x!: number
+    readonly y!: number
+    readonly terrain!: number
+    readonly structures!: Structure[]
+    readonly obstacle!: Obstacle
+
     isObstacle(): boolean {
         return !!this.obstacle && this.terrain !== TERRAIN_MASK_WALL
     }
@@ -33,6 +50,7 @@ export class ImmutableRoom implements ValueObject {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     equals(other: any): boolean {
         return this.grid.equals(other)
     }
@@ -52,6 +70,11 @@ export class ImmutableRoom implements ValueObject {
     setTerrain(x: number, y: number, terrain: number): ImmutableRoom {
         const roomItem = this.get(x, y)
         return this.set(x, y, roomItem.set('terrain', terrain))
+    }
+
+    setObstacle(x: number, y: number, obstacle: Obstacle): ImmutableRoom {
+        const roomItem = this.get(x, y)
+        return this.set(x, y, roomItem.set('obstacle', obstacle))
     }
 
     getClosestNeighbors = function*(
@@ -77,6 +100,7 @@ export class ImmutableRoom implements ValueObject {
         let ny = 0
         let dx = 0
         let dy = -1
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for (const _ of range(2500)) {
             const px = x + nx
             const py = y + ny
@@ -109,5 +133,13 @@ export function fromRoom(room: Room): ImmutableRoom {
             }
         }
     }
+
+    const sources = room.find(FIND_SOURCES)
+
+    for (const source of sources) {
+        const pos = source.pos
+        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
+    }
+
     return immutableRoom
 }

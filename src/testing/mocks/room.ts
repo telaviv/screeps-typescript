@@ -27,7 +27,7 @@ export const createMockRoom = (pos: RoomPosition, memory?: RoomMemory) => {
             roomArray[x][y] += amount
         },
         find: () => [],
-        lookForAt: (_: any, npos: RoomPosition) => [
+        lookForAt: (_: number, npos: RoomPosition) => [
             { amount: roomArray[npos.x][npos.y] },
         ],
         memory: roomMemory,

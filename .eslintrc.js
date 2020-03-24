@@ -39,6 +39,7 @@ module.exports = {
         'prefer-destructuring': 'off',
         'space-before-function-paren': 'off',
         'operator-linebreak': ['off'],
+        '@typescript-eslint/interface-name-prefix': 'off',
         '@typescript-eslint/explicit-function-return-type': 'off',
         '@typescript-eslint/no-use-before-define': 'off',
         '@typescript-eslint/semi': ['warn', 'never'],

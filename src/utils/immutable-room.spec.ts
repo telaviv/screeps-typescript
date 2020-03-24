@@ -46,19 +46,39 @@ describe('immutable-room module', () => {
                     return 0
                 },
             })
-            const room = mockInstanceOf<Room>({ getTerrain: () => terrain })
+            const room = mockInstanceOf<Room>({
+                getTerrain: () => terrain,
+                find: () => [],
+            })
             const immutableRoom = fromRoom(room)
 
-            for (let x = 0; x < 50; ++x) {
-                for (let y = 0; y < 50; ++y) {
-                    const itemTerrain = immutableRoom.get(x, y).terrain
-                    if (x === 3 && y === 2) {
-                        expect(itemTerrain).toEqual(TERRAIN_MASK_WALL)
-                    } else {
-                        expect(itemTerrain).toEqual(0)
-                    }
-                }
-            }
+            let itemTerrain = immutableRoom.get(0, 0).terrain
+            expect(itemTerrain).toEqual(0)
+
+            itemTerrain = immutableRoom.get(3, 2).terrain
+            expect(itemTerrain).toEqual(TERRAIN_MASK_WALL)
+        })
+
+        it('considers sources obstacles', () => {
+            const terrain = mockInstanceOf<RoomTerrain>({
+                get: () => 0,
+            })
+
+            const source = mockInstanceOf<Source>({
+                pos: new RoomPosition(3, 2, 'sim'),
+            })
+            const room = mockInstanceOf<Room>({
+                find: () => [source],
+                getTerrain: () => terrain,
+            })
+
+            const immutableRoom = fromRoom(room)
+
+            let itemTerrain = immutableRoom.get(0, 0)
+            expect(itemTerrain.obstacle).toEqual('')
+
+            itemTerrain = immutableRoom.get(3, 2)
+            expect(itemTerrain.obstacle).toEqual('source')
         })
     })
 })
