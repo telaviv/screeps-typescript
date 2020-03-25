@@ -1,6 +1,18 @@
 import { mockInstanceOf } from 'screeps-jest'
 import { ImmutableRoom, ImmutableRoomItem, fromRoom } from './immutable-room'
 
+function createRoom() {
+    const terrain = mockInstanceOf<RoomTerrain>({
+        get: () => 0,
+    })
+
+    return mockInstanceOf<Room>({
+        controller: undefined,
+        find: () => [],
+        getTerrain: () => terrain,
+    })
+}
+
 describe('immutable-room module', () => {
     describe('ImmutableRoom', () => {
         describe('#spiral()', () => {
@@ -61,20 +73,13 @@ describe('immutable-room module', () => {
         })
 
         it('considers sources obstacles', () => {
-            const terrain = mockInstanceOf<RoomTerrain>({
-                get: () => 0,
-            })
-
+            const room = createRoom()
             const source = mockInstanceOf<Source>({
                 pos: new RoomPosition(3, 2, 'sim'),
             })
-            const room = mockInstanceOf<Room>({
-                controller: undefined,
-                find: (type: FindConstant) => {
-                    return type === FIND_SOURCES ? [source] : []
-                },
-                getTerrain: () => terrain,
-            })
+            room.find = (type: FindConstant) => {
+                return type === FIND_SOURCES ? [source] : []
+            }
 
             const immutableRoom = fromRoom(room)
 
@@ -86,20 +91,13 @@ describe('immutable-room module', () => {
         })
 
         it('considers spawns obstacles', () => {
-            const terrain = mockInstanceOf<RoomTerrain>({
-                get: () => 0,
-            })
-
-            const source = mockInstanceOf<StructureSpawn>({
+            const room = createRoom()
+            const spawn = mockInstanceOf<StructureSpawn>({
                 pos: new RoomPosition(3, 2, 'sim'),
             })
-            const room = mockInstanceOf<Room>({
-                controller: undefined,
-                find: (type: FindConstant) => {
-                    return type === FIND_MY_SPAWNS ? [source] : []
-                },
-                getTerrain: () => terrain,
-            })
+            room.find = (type: FindConstant) => {
+                return type === FIND_MY_SPAWNS ? [spawn] : []
+            }
 
             const immutableRoom = fromRoom(room)
 
@@ -111,18 +109,11 @@ describe('immutable-room module', () => {
         })
 
         it('considers controllers obstacles', () => {
-            const terrain = mockInstanceOf<RoomTerrain>({
-                get: () => 0,
-            })
-
+            const room = createRoom()
             const controller = mockInstanceOf<StructureController>({
                 pos: new RoomPosition(3, 2, 'sim'),
             })
-            const room = mockInstanceOf<Room>({
-                controller,
-                find: () => [],
-                getTerrain: () => terrain,
-            })
+            room.controller = controller
 
             const immutableRoom = fromRoom(room)
 
