@@ -100,7 +100,6 @@ describe('immutable-room module', () => {
                 },
                 getTerrain: () => terrain,
             })
-            room.controller = undefined
 
             const immutableRoom = fromRoom(room)
 
@@ -109,6 +108,29 @@ describe('immutable-room module', () => {
 
             itemTerrain = immutableRoom.get(3, 2)
             expect(itemTerrain.obstacle).toEqual('spawn')
+        })
+
+        it('considers controllers obstacles', () => {
+            const terrain = mockInstanceOf<RoomTerrain>({
+                get: () => 0,
+            })
+
+            const controller = mockInstanceOf<StructureController>({
+                pos: new RoomPosition(3, 2, 'sim'),
+            })
+            const room = mockInstanceOf<Room>({
+                controller,
+                find: () => [],
+                getTerrain: () => terrain,
+            })
+
+            const immutableRoom = fromRoom(room)
+
+            let itemTerrain = immutableRoom.get(0, 0)
+            expect(itemTerrain.obstacle).toEqual('')
+
+            itemTerrain = immutableRoom.get(3, 2)
+            expect(itemTerrain.obstacle).toEqual('controller')
         })
     })
 })
