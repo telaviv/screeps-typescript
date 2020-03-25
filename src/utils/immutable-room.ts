@@ -1,6 +1,7 @@
-import { fromJS, ValueObject, List, Record } from 'immutable'
+import { fromJS, ValueObject, List, Map, Record } from 'immutable'
 import times from 'lodash/times'
 import range from 'lodash/range'
+import includes from 'lodash/includes'
 
 type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
 
@@ -37,8 +38,9 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
 
 export class ImmutableRoom implements ValueObject {
     private readonly grid: RoomGrid
+    readonly name: string
 
-    constructor(grid?: RoomGrid) {
+    constructor(name: string, grid?: RoomGrid) {
         if (grid) {
             this.grid = grid
         } else {
@@ -48,6 +50,7 @@ export class ImmutableRoom implements ValueObject {
                 ),
             )
         }
+        this.name = name
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,7 +59,7 @@ export class ImmutableRoom implements ValueObject {
     }
 
     hashCode(): number {
-        return this.grid.hashCode()
+        return Map({ name: this.name, grid: this.grid }).hashCode()
     }
 
     get(x: number, y: number): ImmutableRoomItem {
@@ -64,7 +67,7 @@ export class ImmutableRoom implements ValueObject {
     }
 
     set(x: number, y: number, item: ImmutableRoomItem): ImmutableRoom {
-        return new ImmutableRoom(this.grid.setIn([x, y], item))
+        return new ImmutableRoom(this.name, this.grid.setIn([x, y], item))
     }
 
     setTerrain(x: number, y: number, terrain: number): ImmutableRoom {
@@ -120,10 +123,33 @@ export class ImmutableRoom implements ValueObject {
             ny += dy
         }
     }
+
+    nextExtensionPos(): RoomPosition {
+        let xAcc = 0
+        let yAcc = 0
+        let count = 0
+        for (const x of range(50)) {
+            for (const y of range(50)) {
+                if (
+                    includes(
+                        ['spawn', 'source', 'controller'],
+                        this.get(x, y).obstacle,
+                    )
+                ) {
+                    xAcc += x
+                    yAcc += y
+                    count++
+                }
+            }
+        }
+        const nx = Math.floor(xAcc / count)
+        const ny = Math.floor(yAcc / count)
+        return RoomPosition(nx, ny, this.name)
+    }
 }
 
 export function fromRoom(room: Room): ImmutableRoom {
-    let immutableRoom = new ImmutableRoom()
+    let immutableRoom = new ImmutableRoom(room.name)
     const terrain = room.getTerrain()
     for (let x = 0; x < 50; ++x) {
         for (let y = 0; y < 50; ++y) {

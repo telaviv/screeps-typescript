@@ -7,6 +7,7 @@ function createRoom() {
     })
 
     return mockInstanceOf<Room>({
+        name: 'test',
         controller: undefined,
         find: () => [],
         getTerrain: () => terrain,
@@ -36,7 +37,7 @@ describe('immutable-room module', () => {
                     [21, 24],
                     [20, 24],
                 ]
-                const room = new ImmutableRoom()
+                const room = new ImmutableRoom('test')
                 const iter: Iterator<ImmutableRoomItem> = room.spiral(22, 22)
 
                 for (const [x, y] of expectations) {
@@ -59,6 +60,7 @@ describe('immutable-room module', () => {
                 },
             })
             const room = mockInstanceOf<Room>({
+                name: 'test',
                 controller: undefined,
                 getTerrain: () => terrain,
                 find: () => [],
@@ -122,6 +124,28 @@ describe('immutable-room module', () => {
 
             itemTerrain = immutableRoom.get(3, 2)
             expect(itemTerrain.obstacle).toEqual('controller')
+        })
+    })
+
+    describe('nextExtensionPos', () => {
+        it('picks a spot in the center of relevant buildings', () => {
+            const room = createRoom()
+            const controller = mockInstanceOf<StructureController>({
+                pos: new RoomPosition(0, 0, 'sim'),
+            })
+            room.controller = controller
+            const spawn = mockInstanceOf<StructureSpawn>({
+                pos: new RoomPosition(2, 2, 'sim'),
+            })
+            room.find = (type: FindConstant) => {
+                return type === FIND_MY_SPAWNS ? [spawn] : []
+            }
+
+            const immutableRoom = fromRoom(room)
+            const pos = immutableRoom.nextExtensionPos()
+
+            expect(pos.x).toEqual(1)
+            expect(pos.y).toEqual(1)
         })
     })
 })
