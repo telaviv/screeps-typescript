@@ -134,11 +134,26 @@ export function fromRoom(room: Room): ImmutableRoom {
         }
     }
 
+    const controller = room.controller
     const sources = room.find(FIND_SOURCES)
+    const spawns = room.find(FIND_MY_SPAWNS)
+
+    if (controller) {
+        immutableRoom = immutableRoom.setObstacle(
+            controller.pos.x,
+            controller.pos.y,
+            'controller',
+        )
+    }
 
     for (const source of sources) {
         const pos = source.pos
         immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
+    }
+
+    for (const source of spawns) {
+        const pos = source.pos
+        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'spawn')
     }
 
     return immutableRoom

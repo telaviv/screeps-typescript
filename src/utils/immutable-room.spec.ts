@@ -47,6 +47,7 @@ describe('immutable-room module', () => {
                 },
             })
             const room = mockInstanceOf<Room>({
+                controller: undefined,
                 getTerrain: () => terrain,
                 find: () => [],
             })
@@ -68,7 +69,10 @@ describe('immutable-room module', () => {
                 pos: new RoomPosition(3, 2, 'sim'),
             })
             const room = mockInstanceOf<Room>({
-                find: () => [source],
+                controller: undefined,
+                find: (type: FindConstant) => {
+                    return type === FIND_SOURCES ? [source] : []
+                },
                 getTerrain: () => terrain,
             })
 
@@ -79,6 +83,32 @@ describe('immutable-room module', () => {
 
             itemTerrain = immutableRoom.get(3, 2)
             expect(itemTerrain.obstacle).toEqual('source')
+        })
+
+        it('considers spawns obstacles', () => {
+            const terrain = mockInstanceOf<RoomTerrain>({
+                get: () => 0,
+            })
+
+            const source = mockInstanceOf<StructureSpawn>({
+                pos: new RoomPosition(3, 2, 'sim'),
+            })
+            const room = mockInstanceOf<Room>({
+                controller: undefined,
+                find: (type: FindConstant) => {
+                    return type === FIND_MY_SPAWNS ? [source] : []
+                },
+                getTerrain: () => terrain,
+            })
+            room.controller = undefined
+
+            const immutableRoom = fromRoom(room)
+
+            let itemTerrain = immutableRoom.get(0, 0)
+            expect(itemTerrain.obstacle).toEqual('')
+
+            itemTerrain = immutableRoom.get(3, 2)
+            expect(itemTerrain.obstacle).toEqual('spawn')
         })
     })
 })
