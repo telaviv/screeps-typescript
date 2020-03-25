@@ -129,19 +129,10 @@ describe('immutable-room module', () => {
 
     describe('nextExtensionPos', () => {
         it('picks a spot in the center of relevant buildings', () => {
-            const room = createRoom()
-            const controller = mockInstanceOf<StructureController>({
-                pos: new RoomPosition(0, 0, 'sim'),
-            })
-            room.controller = controller
-            const spawn = mockInstanceOf<StructureSpawn>({
-                pos: new RoomPosition(2, 2, 'sim'),
-            })
-            room.find = (type: FindConstant) => {
-                return type === FIND_MY_SPAWNS ? [spawn] : []
-            }
+            let immutableRoom = new ImmutableRoom('test')
+            immutableRoom = immutableRoom.setObstacle(0, 0, 'controller')
+            immutableRoom = immutableRoom.setObstacle(2, 2, 'spawn')
 
-            const immutableRoom = fromRoom(room)
             const pos = immutableRoom.nextExtensionPos()
 
             expect(pos.x).toEqual(1)
