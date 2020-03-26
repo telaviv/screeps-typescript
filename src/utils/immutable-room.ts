@@ -32,7 +32,7 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
     readonly obstacle!: Obstacle | ''
 
     isObstacle(): boolean {
-        return !!this.obstacle && this.terrain !== TERRAIN_MASK_WALL
+        return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
     }
 }
 
@@ -94,6 +94,26 @@ export class ImmutableRoom implements ValueObject {
         }
     }
 
+    getCardinalNeighbors = function*(
+        this: ImmutableRoom,
+        x: number,
+        y: number,
+    ): Generator<ImmutableRoomItem, void, unknown> {
+        const deltas = [
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+        ]
+        for (const [dx, dy] of deltas) {
+            const nx = x + dx
+            const ny = y + dy
+            if (nx >= 0 && nx < 50 && ny >= 0 && ny < 50) {
+                yield this.get(nx, ny)
+            }
+        }
+    }
+
     spiral = function*(
         this: ImmutableRoom,
         x: number,
@@ -127,7 +147,7 @@ export class ImmutableRoom implements ValueObject {
     nextExtensionPos(): RoomPosition {
         const centroid = this.findCentroid()
         for (const roomItem of this.spiral(centroid.x, centroid.y)) {
-            if (ImmutableRoom.canPlaceExtension(roomItem)) {
+            if (this.canPlaceExtension(roomItem)) {
                 return new RoomPosition(roomItem.x, roomItem.y, this.name)
             }
         }
@@ -157,10 +177,17 @@ export class ImmutableRoom implements ValueObject {
         return new RoomPosition(nx, ny, this.name)
     }
 
-    private static canPlaceExtension(roomItem: ImmutableRoomItem): boolean {
-        return (
-            roomItem.obstacle === '' && roomItem.terrain !== TERRAIN_MASK_WALL
-        )
+    private canPlaceExtension(roomItem: ImmutableRoomItem): boolean {
+        if (roomItem.isObstacle()) {
+            return false
+        }
+
+        for (const ri of this.getCardinalNeighbors(roomItem.x, roomItem.y)) {
+            if (ri.isObstacle()) {
+                return false
+            }
+        }
+        return true
     }
 }
 

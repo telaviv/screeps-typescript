@@ -147,8 +147,8 @@ describe('immutable-room module', () => {
 
             const pos = immutableRoom.nextExtensionPos()
 
-            expect(pos.x).toEqual(2)
-            expect(pos.y).toEqual(1)
+            expect(pos.x).toEqual(0)
+            expect(pos.y).toEqual(2)
         })
 
         it('picks a nearby spot if the terrain is a wall', () => {
@@ -159,8 +159,20 @@ describe('immutable-room module', () => {
 
             const pos = immutableRoom.nextExtensionPos()
 
-            expect(pos.x).toEqual(2)
-            expect(pos.y).toEqual(1)
+            expect(pos.x).toEqual(0)
+            expect(pos.y).toEqual(2)
+        })
+
+        it("can't have cardinal obstacle neighbors", () => {
+            let immutableRoom = new ImmutableRoom('test')
+            immutableRoom = immutableRoom.setObstacle(0, 0, 'controller')
+            immutableRoom = immutableRoom.setObstacle(2, 2, 'spawn')
+            immutableRoom = immutableRoom.setTerrain(1, 0, TERRAIN_MASK_WALL)
+
+            const pos = immutableRoom.nextExtensionPos()
+
+            expect(pos.x).toEqual(0)
+            expect(pos.y).toEqual(2)
         })
     })
 })
