@@ -138,5 +138,29 @@ describe('immutable-room module', () => {
             expect(pos.x).toEqual(1)
             expect(pos.y).toEqual(1)
         })
+
+        it("picks a nearby spot if there's an obstacle there", () => {
+            let immutableRoom = new ImmutableRoom('test')
+            immutableRoom = immutableRoom.setObstacle(0, 0, 'controller')
+            immutableRoom = immutableRoom.setObstacle(1, 1, 'constructedWall')
+            immutableRoom = immutableRoom.setObstacle(2, 2, 'spawn')
+
+            const pos = immutableRoom.nextExtensionPos()
+
+            expect(pos.x).toEqual(2)
+            expect(pos.y).toEqual(1)
+        })
+
+        it('picks a nearby spot if the terrain is a wall', () => {
+            let immutableRoom = new ImmutableRoom('test')
+            immutableRoom = immutableRoom.setObstacle(0, 0, 'controller')
+            immutableRoom = immutableRoom.setObstacle(2, 2, 'spawn')
+            immutableRoom = immutableRoom.setTerrain(1, 1, TERRAIN_MASK_WALL)
+
+            const pos = immutableRoom.nextExtensionPos()
+
+            expect(pos.x).toEqual(2)
+            expect(pos.y).toEqual(1)
+        })
     })
 })

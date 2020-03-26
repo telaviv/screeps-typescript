@@ -10,7 +10,7 @@ interface IImmutableRoomItem {
     y: number
     terrain: number
     structures: Structure[]
-    obstacle: Obstacle
+    obstacle: Obstacle | ''
 }
 
 const ImmutableRoomItemRecord = Record({
@@ -29,7 +29,7 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
     readonly y!: number
     readonly terrain!: number
     readonly structures!: Structure[]
-    readonly obstacle!: Obstacle
+    readonly obstacle!: Obstacle | ''
 
     isObstacle(): boolean {
         return !!this.obstacle && this.terrain !== TERRAIN_MASK_WALL
@@ -98,7 +98,7 @@ export class ImmutableRoom implements ValueObject {
         this: ImmutableRoom,
         x: number,
         y: number,
-    ): Iterator<ImmutableRoomItem> {
+    ): Generator<ImmutableRoomItem, void, unknown> {
         let nx = 0
         let ny = 0
         let dx = 0
@@ -125,6 +125,16 @@ export class ImmutableRoom implements ValueObject {
     }
 
     nextExtensionPos(): RoomPosition {
+        const centroid = this.findCentroid()
+        for (const roomItem of this.spiral(centroid.x, centroid.y)) {
+            if (ImmutableRoom.canPlaceExtension(roomItem)) {
+                return new RoomPosition(roomItem.x, roomItem.y, this.name)
+            }
+        }
+        throw new Error('No eligible extension spot.')
+    }
+
+    private findCentroid(): RoomPosition {
         let xAcc = 0
         let yAcc = 0
         let count = 0
@@ -144,7 +154,13 @@ export class ImmutableRoom implements ValueObject {
         }
         const nx = Math.floor(xAcc / count)
         const ny = Math.floor(yAcc / count)
-        return RoomPosition(nx, ny, this.name)
+        return new RoomPosition(nx, ny, this.name)
+    }
+
+    private static canPlaceExtension(roomItem: ImmutableRoomItem): boolean {
+        return (
+            roomItem.obstacle === '' && roomItem.terrain !== TERRAIN_MASK_WALL
+        )
     }
 }
 
