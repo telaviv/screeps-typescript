@@ -19,7 +19,7 @@ export const createMockRoom = (pos: RoomPosition, memory?: RoomMemory) => {
     const roomMemory =
         memory ||
         mockInstanceOf<RoomMemory>({
-            strategy: StrategyPhase.DropMining,
+            strategy: StrategyPhase.RCL_0,
         })
     return mockInstanceOf<Room>({
         pos,
@@ -32,6 +32,6 @@ export const createMockRoom = (pos: RoomPosition, memory?: RoomMemory) => {
         ],
         memory: roomMemory,
         name: ROOM_NAME,
-        controller: mockInstanceOf<StructureController>({ my: true }),
+        controller: mockInstanceOf<StructureController>({ my: true, level: 0 }),
     })
 }

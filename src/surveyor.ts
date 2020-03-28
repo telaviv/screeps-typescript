@@ -8,65 +8,6 @@ const getSpawn = (room: Room): StructureSpawn => {
     return room.find(FIND_MY_SPAWNS)[0]
 }
 
-function createWallConstructionSites(room: Room) {
-    const SIZE = 13
-    const HALF = (SIZE - 1) / 2
-
-    const spawn = getSpawn(room)
-    const top = spawn.pos.y - HALF
-    const left = spawn.pos.x - HALF
-    const terrain = room.getTerrain()
-
-    for (let x = left; x < left + SIZE; ++x) {
-        for (let y = top; y < top + SIZE; ++y) {
-            if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
-                continue
-            }
-
-            if (room.lookForAt(LOOK_CONSTRUCTION_SITES, x, y).length > 0) {
-                continue
-            }
-
-            if (
-                !(
-                    x === left ||
-                    x + 1 === left + SIZE ||
-                    y === top ||
-                    y + 1 === top + SIZE
-                )
-            ) {
-                continue
-            }
-        }
-    }
-}
-
-const findRoadPath = (origin: RoomPosition, goal: RoomPosition) => {
-    return PathFinder.search(origin, { pos: goal, range: 1 }, { swampCost: 1 })
-}
-
-function createRoadConstructionSites(room: Room) {
-    const roadPositions: RoomPositionSet = []
-    let moveCenters: RoomObject[] = []
-    const spawns = room.find(FIND_MY_SPAWNS)
-    const sources = room.find(FIND_SOURCES)
-    moveCenters.push(room.controller as RoomObject)
-    moveCenters = moveCenters.concat(spawns)
-    moveCenters = moveCenters.concat(sources)
-
-    for (const i of range(0, moveCenters.length - 1)) {
-        for (const j of range(i, moveCenters.length)) {
-            const path = findRoadPath(moveCenters[i].pos, moveCenters[j].pos)
-            PositionSet.merge(path.path, roadPositions)
-            for (const pos of path.path) {
-                room.createConstructionSite(pos, STRUCTURE_ROAD)
-            }
-        }
-    }
-    room.memory.roadPositions = roadPositions
-    room.memory.hasAssignedRoads = true
-}
-
 const assignSources = (room: Room) => {
     const sources = room.find(FIND_SOURCES)
     const spawn = getSpawn(room)
@@ -88,56 +29,16 @@ const assignSources = (room: Room) => {
     }
 }
 
-const createSurvey = (room: Room) => {
-    const roadPositions: RoomPositionSet = []
-    let moveCenters: RoomObject[] = []
-    const spawns = room.find(FIND_MY_SPAWNS)
-    const sources = room.find(FIND_SOURCES)
-    moveCenters.push(room.controller as RoomObject)
-    moveCenters = moveCenters.concat(spawns)
-    moveCenters = moveCenters.concat(sources)
-
-    for (const i of range(0, moveCenters.length - 1)) {
-        for (const j of range(i, moveCenters.length)) {
-            const path = findRoadPath(moveCenters[i].pos, moveCenters[j].pos)
-            PositionSet.merge(path.path, roadPositions)
-        }
-    }
-
-    room.memory.survey = { roads: roadPositions }
-}
-
-const visualizeRoom = (room: Room) => {
-    const roads = room.memory.survey.roads
-
-    for (const road of roads) {
-        room.visual.circle(road)
-    }
-}
-
 const assignRoomFeatures = () => {
     each(Game.rooms, room => {
         if (!room.memory.sources || room.memory.sources.length === 0) {
             assignSources(room)
-        }
-
-        if (!room.memory.survey) {
-            createSurvey(room)
-        }
-    })
-}
-
-const drawSurvey = () => {
-    each(Game.rooms, room => {
-        if (room.memory.survey) {
-            visualizeRoom(room)
         }
     })
 }
 
 const survey = () => {
     assignRoomFeatures()
-    drawSurvey()
 }
 
 export default survey

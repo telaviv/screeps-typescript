@@ -3,7 +3,11 @@ export default class DroppedEnergy {
     requests: string[]
 
     constructor(memory: DroppedEnergyMemory) {
-        this.pos = memory.pos
+        this.pos = new RoomPosition(
+            memory.pos.x,
+            memory.pos.y,
+            memory.pos.roomName,
+        )
         this.requests = memory.requests
     }
 

@@ -1,4 +1,10 @@
-import { getNextSource, getEnergy } from 'utils/energy-harvesting'
+import {
+    getNextSource,
+    getEnergy,
+    hasNoEnergy,
+    isFullOfEnergy,
+} from 'utils/energy-harvesting'
+import BuildManager from 'build-manager'
 
 export interface Builder extends SourceCreep {
     memory: BuilderMemory
@@ -13,14 +19,11 @@ const ROLE = 'builder'
 
 const roleBuilder = {
     run(creep: Builder) {
-        if (
-            creep.memory.building &&
-            creep.store.getCapacity() === creep.store.getFreeCapacity()
-        ) {
+        if (creep.memory.building && hasNoEnergy(creep)) {
             creep.memory.building = false
             creep.say('🔄 harvest')
         }
-        if (!creep.memory.building && creep.store.getFreeCapacity() === 0) {
+        if (!creep.memory.building && isFullOfEnergy(creep)) {
             creep.memory.building = true
             creep.say('🚧 build')
         }
@@ -33,6 +36,9 @@ const roleBuilder = {
                         visualizePathStyle: { stroke: '#ffffff' },
                     })
                 }
+            } else if (isFullOfEnergy(creep)) {
+                const buildManager = new BuildManager(creep.room)
+                buildManager.createConstructionSite()
             }
         } else {
             getEnergy(creep)
@@ -40,12 +46,16 @@ const roleBuilder = {
     },
 
     create(spawn: StructureSpawn): number {
-        return spawn.spawnCreep([WORK, CARRY, MOVE], `${ROLE}:${Game.time}`, {
-            memory: {
-                role: ROLE,
-                source: getNextSource(spawn.room, ROLE),
-            } as BuilderMemory,
-        })
+        return spawn.spawnCreep(
+            [WORK, CARRY, MOVE, MOVE],
+            `${ROLE}:${Game.time}`,
+            {
+                memory: {
+                    role: ROLE,
+                    source: getNextSource(spawn.room, ROLE),
+                } as BuilderMemory,
+            },
+        )
     },
 }
 

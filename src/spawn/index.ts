@@ -1,10 +1,12 @@
 import { StrategyPhase } from 'strategy'
-import dropMining from './strategy/drop-mining'
-import starter from './strategy/starter'
+import RCL_0 from './strategy/rcl-0'
+import RCL_2 from './strategy/rcl-2'
 
 const SPAWN_STRATEGIES: { [k: string]: SpawnRunner } = {
-    [StrategyPhase.DropMining]: dropMining,
-    [StrategyPhase.Starter]: starter,
+    [StrategyPhase.RCL_0]: RCL_0,
+    [StrategyPhase.RCL_1]: RCL_0,
+    [StrategyPhase.RCL_2]: RCL_2,
+    [StrategyPhase.RCL_3]: RCL_2,
 }
 
 function runSpawn(spawn: StructureSpawn) {

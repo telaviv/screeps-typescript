@@ -1,5 +1,4 @@
 import { minBy } from 'utils/lodash'
-import { StrategyPhase } from 'strategy'
 import DroppedEnergy from 'dropped-energy'
 
 interface SourceCounts {
@@ -11,9 +10,10 @@ function getSourceCounts(room: Room, role: string): SourceCounts {
     for (const source of room.memory.sources) {
         counts[source.id] = 0
     }
-    for (const creep of Object.values(Memory.creeps)) {
-        if (creep.role === role) {
-            const harvesterMemory = creep as SourceMemory
+    for (const [creepName, creepMemory] of Object.entries(Memory.creeps)) {
+        const creep = Game.creeps[creepName]
+        if (creepMemory.role === role && creep.room.name === room.name) {
+            const harvesterMemory = creepMemory as SourceMemory
             counts[harvesterMemory.source] += 1
         }
     }
@@ -37,12 +37,15 @@ function harvestEnergy(creep: SourceCreep) {
 function pickupEnergy(creep: SourceCreep) {
     const sourceMemory = getSourceMemory(creep)
     const droppedEnergy = new DroppedEnergy(sourceMemory.dropSpot)
-    if (!droppedEnergy.canPickup(creep)) {
+    const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
+
+    if (
+        target.length === 0 ||
+        target[0].amount < creep.store.getFreeCapacity(RESOURCE_ENERGY)
+    ) {
         harvestEnergy(creep)
         return
     }
-
-    const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
 
     const err = creep.pickup(target[0])
     if (err === ERR_NOT_IN_RANGE) {
@@ -54,6 +57,14 @@ function pickupEnergy(creep: SourceCreep) {
     } else if (err === OK) {
         droppedEnergy.completeRequest(creep)
     }
+}
+
+export function isFullOfEnergy(creep: Creep) {
+    return creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0
+}
+
+export function hasNoEnergy(creep: Creep) {
+    return creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0
 }
 
 function getSourceMemory(creep: SourceCreep): RoomSourceMemory {
@@ -69,10 +80,5 @@ function getSourceMemory(creep: SourceCreep): RoomSourceMemory {
 }
 
 export function getEnergy(creep: SourceCreep) {
-    const roomMemory = Memory.rooms[creep.room.name]
-    if (roomMemory.strategy === StrategyPhase.DropMining) {
-        pickupEnergy(creep)
-    } else {
-        harvestEnergy(creep)
-    }
+    pickupEnergy(creep)
 }

@@ -47,12 +47,16 @@ const roleLogistics = {
     },
 
     create(spawn: StructureSpawn): number {
-        return spawn.spawnCreep([WORK, CARRY, MOVE], `${ROLE}:${Game.time}`, {
-            memory: {
-                role: ROLE,
-                source: getNextSource(spawn.room, ROLE),
-            } as LogisticsMemory,
-        })
+        return spawn.spawnCreep(
+            [WORK, CARRY, MOVE, MOVE],
+            `${ROLE}:${Game.time}`,
+            {
+                memory: {
+                    role: ROLE,
+                    source: getNextSource(spawn.room, ROLE),
+                } as LogisticsMemory,
+            },
+        )
     },
 }
 

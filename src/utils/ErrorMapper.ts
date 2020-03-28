@@ -82,11 +82,12 @@ export default class ErrorMapper {
                             )}</span>`,
                         )
                     } else {
-                        console.log(
-                            `<span style='color:red'>${escape(
-                                this.sourceMappedStackTrace(e),
-                            )}</span>`,
-                        )
+                        const errorString = `<span style='color:red'>${escape(
+                            this.sourceMappedStackTrace(e),
+                        )}</span>`
+
+                        console.log(errorString)
+                        Game.notify(errorString, 1)
                     }
                 } else {
                     // can't handle it

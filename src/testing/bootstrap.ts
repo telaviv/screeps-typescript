@@ -9,7 +9,12 @@ import { createMockRoom } from './mocks/room'
 
 export const bootstrapGlobals = () => {
     const sourceId = uuidv4() as Id<Source>
-    const roomPosition = new RoomPosition(0, 0, ROOM_NAME)
+    const roomPosition = mockInstanceOf<RoomPosition>({
+        x: 0,
+        y: 0,
+        roomName: ROOM_NAME,
+        lookFor: () => [],
+    })
     const droppedEnergyMemory = mockInstanceOf<DroppedEnergyMemory>({
         pos: roomPosition,
         requests: [],
@@ -19,7 +24,7 @@ export const bootstrapGlobals = () => {
         dropSpot: droppedEnergyMemory,
     })
     const roomMemory = mockInstanceOf<RoomMemory>({
-        strategy: StrategyPhase.DropMining,
+        strategy: StrategyPhase.RCL_0,
         sources: [sourceMemory],
     })
 

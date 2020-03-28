@@ -10,6 +10,13 @@ import { runTower } from './tower'
 import DroppedEnergy from './dropped-energy'
 
 function unwrappedLoop() {
+    // Automatically delete memory of missing creeps
+    for (const name in Memory.creeps) {
+        if (!(name in Game.creeps)) {
+            delete Memory.creeps[name]
+        }
+    }
+
     survey()
 
     Object.values(Game.rooms).forEach(room => {
@@ -50,13 +57,6 @@ function unwrappedLoop() {
             roleUpgrader.run(creep as Upgrader)
         } else if (creep.memory.role === 'builder') {
             roleBuilder.run(creep as Builder)
-        }
-    }
-
-    // Automatically delete memory of missing creeps
-    for (const name in Memory.creeps) {
-        if (!(name in Game.creeps)) {
-            delete Memory.creeps[name]
         }
     }
 }

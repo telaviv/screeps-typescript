@@ -12,17 +12,6 @@ describe('Logistics role', () => {
         beforeEach(() => {
             bootstrapGlobals()
         })
-        it("should harvest, when it's near a source and not full", () => {
-            const source = Memory.rooms[TEST_ROOM].sources[0]
-            const creep = createSourceCreep<Logistics>([CARRY])
-            const harvestMock = jest.fn()
-
-            creep.room.find = () => []
-            creep.harvest = harvestMock
-            roleLogistics.run(creep)
-            expect(harvestMock.mock.calls[0][0].id).toEqual(source.id)
-        })
-
         it("should fill structures, when it's full and near a non-full structure", () => {
             const creep = createSourceCreep<Logistics>([CARRY])
             const transferMock = jest.fn()

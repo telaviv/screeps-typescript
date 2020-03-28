@@ -15,7 +15,7 @@ export function createCreep<T extends Creep>(parts: BodyPartConstant[]): T {
         id,
         name,
         store: { getCapacity, getFreeCapacity: getCapacity },
-        room: { name: ROOM_NAME },
+        room: Game.rooms[ROOM_NAME],
         memory: {},
         pos: new RoomPosition(0, 0, ROOM_NAME),
     }) as T

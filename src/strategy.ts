@@ -1,16 +1,21 @@
-const STARTER_PHASE_LOGISTICS_COUNT = 6
-
 export enum StrategyPhase {
-    Starter = 'starter',
-    DropMining = 'drop-mining',
+    RCL_0 = 'rcl-0',
+    RCL_1 = 'rcl-1',
+    RCL_2 = 'rcl-2',
+    RCL_3 = 'rcl-3',
 }
 
+const RCL_TO_STRATEGY = [
+    StrategyPhase.RCL_0,
+    StrategyPhase.RCL_1,
+    StrategyPhase.RCL_2,
+    StrategyPhase.RCL_3,
+]
+
 export default function(room: Room) {
-    if (!room.memory.strategy) {
-        room.memory.strategy = StrategyPhase.Starter
-    } else if (room.memory.strategy === StrategyPhase.Starter) {
-        if (room.find(FIND_MY_CREEPS).length >= STARTER_PHASE_LOGISTICS_COUNT) {
-            room.memory.strategy = StrategyPhase.DropMining
-        }
+    if (!room.controller) {
+        room.memory.strategy = StrategyPhase.RCL_0
+    } else {
+        room.memory.strategy = RCL_TO_STRATEGY[room.controller.level]
     }
 }
