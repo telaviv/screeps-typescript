@@ -222,9 +222,18 @@ export function fromRoom(room: Room): ImmutableRoom {
         }
     }
 
+    interface StructureMap {
+        [index: string]: Obstacle
+    }
+
+    const STRUCTURE_INFO: StructureMap = {
+        [STRUCTURE_EXTENSION]: 'extension',
+        [STRUCTURE_SPAWN]: 'spawn',
+    }
+
     const controller = room.controller
+    const structures = room.find(FIND_STRUCTURES)
     const sources = room.find(FIND_SOURCES)
-    const spawns = room.find(FIND_MY_SPAWNS)
     const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
 
     if (controller) {
@@ -235,14 +244,20 @@ export function fromRoom(room: Room): ImmutableRoom {
         )
     }
 
+    for (const structure of structures) {
+        if (includes(Object.keys(STRUCTURE_INFO), structure.structureType)) {
+            const pos = structure.pos
+            immutableRoom = immutableRoom.setObstacle(
+                pos.x,
+                pos.y,
+                STRUCTURE_INFO[structure.structureType],
+            )
+        }
+    }
+
     for (const source of sources) {
         const pos = source.pos
         immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
-    }
-
-    for (const source of spawns) {
-        const pos = source.pos
-        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'spawn')
     }
 
     for (const constructionSite of constructionSites) {

@@ -1,6 +1,8 @@
 import { getNextSource, getEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
 
+import roleBuilder from './builder'
+
 export interface Logistics extends SourceCreep {
     memory: LogisticsMemory
 }
@@ -29,7 +31,7 @@ const roleLogistics = {
                     })
                 }
             } else {
-                creep.say('no 🎯')
+                roleBuilder.run(creep)
             }
         }
     }, 'runLogistics'),

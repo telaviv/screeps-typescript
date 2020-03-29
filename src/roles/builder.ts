@@ -7,6 +7,8 @@ import {
 import { wrap } from 'utils/profiling'
 import BuildManager from 'build-manager'
 
+import roleUpgrader from './upgrader'
+
 export interface Builder extends SourceCreep {
     memory: BuilderMemory
 }
@@ -39,7 +41,12 @@ const roleBuilder = {
                 }
             } else if (isFullOfEnergy(creep)) {
                 const buildManager = new BuildManager(creep.room)
-                buildManager.createConstructionSite()
+                const succeeded = buildManager.createConstructionSite()
+                if (succeeded) {
+                    roleBuilder.run(creep)
+                } else {
+                    roleUpgrader.run(creep)
+                }
             }
         } else {
             getEnergy(creep)

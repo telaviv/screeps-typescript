@@ -95,10 +95,11 @@ describe('immutable-room module', () => {
         it('considers spawns obstacles', () => {
             const room = createRoom()
             const spawn = mockInstanceOf<StructureSpawn>({
+                structureType: STRUCTURE_SPAWN,
                 pos: new RoomPosition(3, 2, 'sim'),
             })
             room.find = (type: FindConstant) => {
-                return type === FIND_MY_SPAWNS ? [spawn] : []
+                return type === FIND_STRUCTURES ? [spawn] : []
             }
 
             const immutableRoom = fromRoom(room)
