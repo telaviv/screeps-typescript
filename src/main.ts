@@ -3,11 +3,15 @@ import roleHarvester, { Harvester } from 'roles/harvester'
 import roleLogistics, { Logistics } from 'roles/logistics'
 import roleUpgrader, { Upgrader } from 'roles/upgrader'
 import ErrorMapper from 'utils/ErrorMapper'
+import * as Profiler from 'utils/profiling'
+
 import { runSpawn } from './spawn'
 import updateStrategy from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
 import DroppedEnergy from './dropped-energy'
+
+global.Profiler = Profiler
 
 function unwrappedLoop() {
     // Automatically delete memory of missing creeps

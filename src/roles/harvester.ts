@@ -1,4 +1,5 @@
 import { getNextSource } from 'utils/energy-harvesting'
+import { wrap } from 'utils/profiling'
 
 const ROLE = 'harvester'
 
@@ -11,7 +12,7 @@ interface HarvesterMemory extends SourceMemory {
 }
 
 const roleHarvester = {
-    run(creep: Harvester) {
+    run: wrap((creep: Harvester) => {
         const roomMemory = Memory.rooms[creep.room.name]
         const sourceMemory = roomMemory.sources.find(
             s => s.id === creep.memory.source,
@@ -32,7 +33,7 @@ const roleHarvester = {
                 )
             }
         }
-    },
+    }, 'runHarvester'),
 
     create(spawn: StructureSpawn): number {
         return spawn.spawnCreep(

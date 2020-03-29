@@ -2,7 +2,6 @@ import { mockStructure } from 'screeps-jest'
 
 import { bootstrapGlobals } from 'testing/bootstrap'
 import { createSourceCreep } from 'testing/mocks/creep'
-import { ROOM_NAME as TEST_ROOM } from 'testing/constants'
 import roleLogistics, { Logistics } from './logistics'
 
 const extension = mockStructure(STRUCTURE_EXTENSION)

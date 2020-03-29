@@ -27,6 +27,8 @@ const roleLogistics = {
                         visualizePathStyle: { stroke: '#ffffff' },
                     })
                 }
+            } else {
+                creep.say('no 🎯')
             }
         }
     },

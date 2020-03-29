@@ -22,9 +22,20 @@ interface SourceCreep extends Creep {
     memory: SourceMemory
 }
 
+interface ProfilerData {
+    [key: string]: { total: number; calls: number }
+}
+
+interface ProfilerMemory {
+    recording: boolean
+    data: ProfilerData
+    start?: number
+}
+
 interface Memory {
     uuid: number
     log: any
+    profiler: ProfilerMemory
 }
 
 interface SurveyMemory {
@@ -46,6 +57,7 @@ type SpawnRunner = (spawn: StructureSpawn) => void
 // `global` extension samples
 declare namespace NodeJS {
     interface Global {
+        Profiler: any
         log: any
     }
 }
