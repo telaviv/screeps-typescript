@@ -1,4 +1,5 @@
 import { getNextSource, getEnergy } from 'utils/energy-harvesting'
+import { wrap } from 'utils/profiling'
 
 export interface Logistics extends SourceCreep {
     memory: LogisticsMemory
@@ -11,12 +12,12 @@ interface LogisticsMemory extends SourceMemory {
 const ROLE = 'logistics'
 
 const roleLogistics = {
-    run(creep: Logistics) {
+    run: wrap((creep: Logistics) => {
         if (creep.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
             getEnergy(creep)
         } else {
             const targets = creep.room.find(FIND_STRUCTURES, {
-                filter: this.isToBeFilled,
+                filter: roleLogistics.isToBeFilled,
             })
             if (targets.length > 0) {
                 if (
@@ -31,7 +32,7 @@ const roleLogistics = {
                 creep.say('no 🎯')
             }
         }
-    },
+    }, 'runLogistics'),
 
     isToBeFilled(structure: Structure): boolean {
         if (

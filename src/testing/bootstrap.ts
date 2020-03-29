@@ -29,11 +29,13 @@ export const bootstrapGlobals = () => {
     })
 
     mockGlobal<Memory>('Memory', {
+        profiler: { recording: false },
         rooms: { [ROOM_NAME]: roomMemory },
         creeps: {},
     })
 
     mockGlobal<Game>('Game', {
+        cpu: { getUsed: () => 0 },
         creeps: {},
         rooms: { [ROOM_NAME]: createMockRoom(roomPosition, roomMemory) },
         getObjectById: () => mockInstanceOf<Source>({ id: sourceId }),

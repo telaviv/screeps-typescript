@@ -1,4 +1,5 @@
 import { getNextSource, getEnergy } from 'utils/energy-harvesting'
+import { wrap } from 'utils/profiling'
 
 const ROLE = 'upgrader'
 
@@ -12,7 +13,7 @@ interface UpgraderMemory extends SourceMemory {
 }
 
 const roleUpgrader = {
-    run(creep: Upgrader) {
+    run: wrap((creep: Upgrader) => {
         if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.upgrading = false
             creep.say('🔄 harvest')
@@ -36,7 +37,7 @@ const roleUpgrader = {
         } else {
             getEnergy(creep)
         }
-    },
+    }, 'runUpgrader'),
 
     create(spawn: StructureSpawn): number {
         return spawn.spawnCreep(

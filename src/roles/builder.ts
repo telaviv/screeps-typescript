@@ -4,6 +4,7 @@ import {
     hasNoEnergy,
     isFullOfEnergy,
 } from 'utils/energy-harvesting'
+import { wrap } from 'utils/profiling'
 import BuildManager from 'build-manager'
 
 export interface Builder extends SourceCreep {
@@ -18,7 +19,7 @@ interface BuilderMemory extends SourceMemory {
 const ROLE = 'builder'
 
 const roleBuilder = {
-    run(creep: Builder) {
+    run: wrap((creep: Builder) => {
         if (creep.memory.building && hasNoEnergy(creep)) {
             creep.memory.building = false
             creep.say('🔄 harvest')
@@ -43,7 +44,7 @@ const roleBuilder = {
         } else {
             getEnergy(creep)
         }
-    },
+    }, 'runBuilder'),
 
     create(spawn: StructureSpawn): number {
         return spawn.spawnCreep(
