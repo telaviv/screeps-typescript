@@ -163,6 +163,18 @@ describe('immutable-room module', () => {
             expect(pos.y).toEqual(2)
         })
 
+        it("picks a nearby spot if the there's a construction site", () => {
+            let immutableRoom = new ImmutableRoom('test')
+            immutableRoom = immutableRoom.setObstacle(0, 0, 'controller')
+            immutableRoom = immutableRoom.setObstacle(2, 2, 'spawn')
+            immutableRoom = immutableRoom.setConstructionSite(1, 1, true)
+
+            const pos = immutableRoom.nextExtensionPos()
+
+            expect(pos.x).toEqual(0)
+            expect(pos.y).toEqual(2)
+        })
+
         it("can't have cardinal obstacle neighbors", () => {
             let immutableRoom = new ImmutableRoom('test')
             immutableRoom = immutableRoom.setObstacle(0, 0, 'controller')

@@ -11,6 +11,7 @@ interface IImmutableRoomItem {
     terrain: number
     structures: Structure[]
     obstacle: Obstacle | ''
+    hasConstructionSite: boolean
 }
 
 const ImmutableRoomItemRecord = Record({
@@ -19,6 +20,7 @@ const ImmutableRoomItemRecord = Record({
     terrain: 0,
     structures: [] as Structure[],
     obstacle: '',
+    hasConstructionSite: false,
 })
 
 type RoomGrid = List<List<ImmutableRoomItem>>
@@ -33,6 +35,10 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
 
     isObstacle(): boolean {
         return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
+    }
+
+    canBuild(): boolean {
+        return !(this.isObstacle() || this.hasConstructionSite)
     }
 }
 
@@ -78,6 +84,19 @@ export class ImmutableRoom implements ValueObject {
     setObstacle(x: number, y: number, obstacle: Obstacle): ImmutableRoom {
         const roomItem = this.get(x, y)
         return this.set(x, y, roomItem.set('obstacle', obstacle))
+    }
+
+    setConstructionSite(
+        x: number,
+        y: number,
+        hasConstructionSite: boolean,
+    ): ImmutableRoom {
+        const roomItem = this.get(x, y)
+        return this.set(
+            x,
+            y,
+            roomItem.set('hasConstructionSite', hasConstructionSite),
+        )
     }
 
     getClosestNeighbors = function*(
@@ -178,12 +197,12 @@ export class ImmutableRoom implements ValueObject {
     }
 
     private canPlaceExtension(roomItem: ImmutableRoomItem): boolean {
-        if (roomItem.isObstacle()) {
+        if (!roomItem.canBuild()) {
             return false
         }
 
         for (const ri of this.getCardinalNeighbors(roomItem.x, roomItem.y)) {
-            if (ri.isObstacle()) {
+            if (!ri.canBuild()) {
                 return false
             }
         }
@@ -206,6 +225,7 @@ export function fromRoom(room: Room): ImmutableRoom {
     const controller = room.controller
     const sources = room.find(FIND_SOURCES)
     const spawns = room.find(FIND_MY_SPAWNS)
+    const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
 
     if (controller) {
         immutableRoom = immutableRoom.setObstacle(
@@ -223,6 +243,11 @@ export function fromRoom(room: Room): ImmutableRoom {
     for (const source of spawns) {
         const pos = source.pos
         immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'spawn')
+    }
+
+    for (const constructionSite of constructionSites) {
+        const pos = constructionSite.pos
+        immutableRoom = immutableRoom.setConstructionSite(pos.x, pos.y, true)
     }
 
     return immutableRoom
