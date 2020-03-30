@@ -1,5 +1,7 @@
 import { mockInstanceOf } from 'screeps-jest'
 import { v4 as uuidv4 } from 'uuid'
+import { Logistics, TASK_COLLECTING, TASK_HAULING } from 'roles/logistics'
+
 import { ROOM_NAME } from '../constants'
 
 export function createCreep<T extends Creep>(parts: BodyPartConstant[]): T {
@@ -14,7 +16,11 @@ export function createCreep<T extends Creep>(parts: BodyPartConstant[]): T {
     return mockInstanceOf<Creep>({
         id,
         name,
-        store: { getCapacity, getFreeCapacity: getCapacity },
+        store: {
+            getCapacity,
+            getFreeCapacity: getCapacity,
+            getUsedCapacity: () => 0,
+        },
         room: Game.rooms[ROOM_NAME],
         memory: {},
         pos: new RoomPosition(0, 0, ROOM_NAME),
@@ -28,5 +34,12 @@ export function createSourceCreep<T extends SourceCreep>(
     const source = room.sources[0]
     const creep = createCreep<T>(parts)
     creep.memory.source = source.id as Id<Source>
+    return creep
+}
+
+export function createLogisticsCreep(parts: BodyPartConstant[]): Logistics {
+    const creep = createSourceCreep<Logistics>(parts)
+    creep.memory.currentTask = TASK_COLLECTING
+    creep.memory.preference = TASK_HAULING
     return creep
 }

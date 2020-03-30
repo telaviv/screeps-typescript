@@ -1,4 +1,7 @@
+import { fromJS } from 'immutable'
+
 export default class DroppedEnergy {
+    static cache = new Map<number, DroppedEnergy>()
     pos: RoomPosition
     requests: string[]
 
@@ -9,6 +12,16 @@ export default class DroppedEnergy {
             memory.pos.roomName,
         )
         this.requests = memory.requests
+    }
+
+    static get(memory: DroppedEnergyMemory): DroppedEnergy {
+        const hash = fromJS(memory).hash()
+        if (DroppedEnergy.cache.has(hash)) {
+            return DroppedEnergy.cache.get(hash) as DroppedEnergy
+        }
+        const droppedEnergy = new DroppedEnergy(memory)
+        DroppedEnergy.cache.set(hash, droppedEnergy)
+        return droppedEnergy
     }
 
     private calculateRequestAmount(): number {

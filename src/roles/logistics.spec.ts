@@ -1,8 +1,11 @@
 import { mockStructure } from 'screeps-jest'
 
 import { bootstrapGlobals } from 'testing/bootstrap'
-import { createSourceCreep } from 'testing/mocks/creep'
-import roleLogistics, { Logistics } from './logistics'
+import { createLogisticsCreep } from 'testing/mocks/creep'
+
+import roleLogistics, { TASK_HAULING } from './logistics'
+
+jest.mock('utils/energy-harvesting')
 
 const extension = mockStructure(STRUCTURE_EXTENSION)
 
@@ -12,8 +15,9 @@ describe('Logistics role', () => {
             bootstrapGlobals()
         })
         it("should fill structures, when it's full and near a non-full structure", () => {
-            const creep = createSourceCreep<Logistics>([CARRY])
+            const creep = createLogisticsCreep([CARRY])
             const transferMock = jest.fn()
+            creep.memory.currentTask = TASK_HAULING
 
             creep.room.find = () => [extension]
             creep.store.getFreeCapacity = () => 0
@@ -29,7 +33,7 @@ describe('Logistics role', () => {
         })
     })
 
-    describe('isToBeFilled', () => {
+    describe('needsEnergy', () => {
         it('should accept extension, spawns and towers that are not full', () => {
             ;[STRUCTURE_EXTENSION, STRUCTURE_SPAWN, STRUCTURE_TOWER].forEach(
                 structureType => {
@@ -37,7 +41,7 @@ describe('Logistics role', () => {
                         energy: 0,
                         energyCapacity: 100,
                     })
-                    expect(roleLogistics.isToBeFilled(structure)).toBeTruthy()
+                    expect(roleLogistics.needsEnergy(structure)).toBeTruthy()
                 },
             )
         })
@@ -49,7 +53,7 @@ describe('Logistics role', () => {
                         energy: 100,
                         energyCapacity: 100,
                     })
-                    expect(roleLogistics.isToBeFilled(structure)).toBeFalsy()
+                    expect(roleLogistics.needsEnergy(structure)).toBeFalsy()
                 },
             )
         })
@@ -74,7 +78,7 @@ describe('Logistics role', () => {
                 STRUCTURE_WALL,
             ].forEach(structureType => {
                 const structure = mockStructure(structureType)
-                expect(roleLogistics.isToBeFilled(structure)).toBeFalsy()
+                expect(roleLogistics.needsEnergy(structure)).toBeFalsy()
             })
         })
     })

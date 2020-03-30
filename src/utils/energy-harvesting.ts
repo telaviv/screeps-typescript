@@ -36,7 +36,7 @@ function harvestEnergy(creep: SourceCreep) {
 
 function pickupEnergy(creep: SourceCreep) {
     const sourceMemory = getSourceMemory(creep)
-    const droppedEnergy = new DroppedEnergy(sourceMemory.dropSpot)
+    const droppedEnergy = DroppedEnergy.get(sourceMemory.dropSpot)
     const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
 
     if (
