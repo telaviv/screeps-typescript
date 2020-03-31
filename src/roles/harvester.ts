@@ -37,7 +37,7 @@ const roleHarvester = {
 
     create(spawn: StructureSpawn): number {
         return spawn.spawnCreep(
-            [WORK, WORK, MOVE, MOVE],
+            calculateParts(spawn.room.energyCapacityAvailable),
             `${ROLE}:${Game.time}`,
             {
                 memory: {
@@ -47,6 +47,17 @@ const roleHarvester = {
             },
         )
     },
+}
+
+export function calculateParts(capacity: number): BodyPartConstant[] {
+    let capacityLeft = capacity
+    let parts: BodyPartConstant[] = []
+    const chunkCost = BODYPART_COST[WORK] + BODYPART_COST[MOVE]
+    while (capacityLeft >= chunkCost) {
+        parts = parts.concat([WORK, MOVE])
+        capacityLeft -= chunkCost
+    }
+    return parts
 }
 
 export default roleHarvester

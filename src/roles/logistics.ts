@@ -70,7 +70,7 @@ const roleLogistics = {
             if (buildManager.createConstructionSite()) {
                 roleLogistics.run(creep)
             } else {
-                creep.say('???')
+                roleLogistics.switchTask(creep)
             }
         }
     },

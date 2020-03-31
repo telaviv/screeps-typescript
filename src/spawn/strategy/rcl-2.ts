@@ -7,9 +7,7 @@ import roleLogistics, {
     TASK_BUILDING,
     TASK_UPGRADING,
 } from 'roles/logistics'
-import roleUpgrader from 'roles/upgrader'
 import roleHarvester from 'roles/harvester'
-import roleBuilder from 'roles/builder'
 
 const HAULERS_PER_SOURCE = 3
 const UPGRADERS_PER_SOURCE = 1
