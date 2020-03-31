@@ -135,7 +135,7 @@ const roleLogistics = {
         preference: DeliveryTask = TASK_HAULING,
     ): number {
         return spawn.spawnCreep(
-            [WORK, CARRY, MOVE, MOVE],
+            calculateParts(spawn.room.energyCapacityAvailable),
             `${ROLE}:${preference}:${Game.time}`,
             {
                 memory: {
@@ -147,6 +147,18 @@ const roleLogistics = {
             },
         )
     },
+}
+
+export function calculateParts(capacity: number): BodyPartConstant[] {
+    let capacityLeft = capacity
+    let parts: BodyPartConstant[] = []
+    const chunkCost =
+        BODYPART_COST[WORK] + BODYPART_COST[CARRY] + 2 * BODYPART_COST[MOVE]
+    while (capacityLeft >= chunkCost) {
+        parts = parts.concat([WORK, MOVE, CARRY, MOVE])
+        capacityLeft -= chunkCost
+    }
+    return parts
 }
 
 export default roleLogistics
