@@ -24,6 +24,7 @@ export const bootstrapGlobals = () => {
         dropSpot: droppedEnergyMemory,
     })
     const roomMemory = mockInstanceOf<RoomMemory>({
+        controller: { level: 2 },
         strategy: StrategyPhase.RCL_0,
         sources: [sourceMemory],
     })

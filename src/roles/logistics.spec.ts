@@ -1,38 +1,8 @@
 import { mockStructure } from 'screeps-jest'
 
-import { bootstrapGlobals } from 'testing/bootstrap'
-import { createLogisticsCreep } from 'testing/mocks/creep'
-
-import roleLogistics, { TASK_HAULING } from './logistics'
-
-jest.mock('utils/energy-harvesting')
-
-const extension = mockStructure(STRUCTURE_EXTENSION)
+import roleLogistics from './logistics'
 
 describe('Logistics role', () => {
-    describe('run', () => {
-        beforeEach(() => {
-            bootstrapGlobals()
-        })
-        it("should fill structures, when it's full and near a non-full structure", () => {
-            const creep = createLogisticsCreep([CARRY])
-            const transferMock = jest.fn()
-            creep.memory.currentTask = TASK_HAULING
-
-            creep.room.find = () => [extension]
-            creep.store.getFreeCapacity = () => 0
-            creep.transfer = transferMock
-            creep.harvest = jest.fn()
-            roleLogistics.run(creep)
-
-            roleLogistics.run(creep)
-            expect(creep.transfer).toHaveBeenCalledWith(
-                extension,
-                RESOURCE_ENERGY,
-            )
-        })
-    })
-
     describe('needsEnergy', () => {
         it('should accept extension, spawns and towers that are not full', () => {
             ;[STRUCTURE_EXTENSION, STRUCTURE_SPAWN, STRUCTURE_TOWER].forEach(

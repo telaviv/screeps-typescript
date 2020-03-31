@@ -1,3 +1,4 @@
+import { getBuildManager } from 'build-manager'
 import {
     getNextSource,
     getEnergy,
@@ -5,13 +6,17 @@ import {
     hasNoEnergy,
 } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
-
-import roleBuilder from './builder'
+import { getConstructionSites, isAtExtensionCap } from 'utils/room'
 
 export const TASK_HAULING = 'hauling'
+export const TASK_BUILDING = 'building'
+export const TASK_UPGRADING = 'upgrading'
 export const TASK_COLLECTING = 'collecting'
 
-type DeliveryTask = typeof TASK_HAULING
+export type DeliveryTask =
+    | typeof TASK_HAULING
+    | typeof TASK_BUILDING
+    | typeof TASK_UPGRADING
 type Task = DeliveryTask | typeof TASK_COLLECTING
 
 export interface Logistics extends SourceCreep {
@@ -35,6 +40,10 @@ const roleLogistics = {
             getEnergy(creep)
         } else if (currentTask === TASK_HAULING) {
             roleLogistics.haulEnergy(creep)
+        } else if (currentTask === TASK_BUILDING) {
+            roleLogistics.build(creep)
+        } else if (currentTask === TASK_UPGRADING) {
+            roleLogistics.upgrade(creep)
         }
     }, 'runLogistics'),
 
@@ -45,6 +54,38 @@ const roleLogistics = {
             memory.currentTask = memory.preference
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
             memory.currentTask = TASK_COLLECTING
+        }
+    },
+
+    build(creep: Logistics) {
+        const targets = getConstructionSites(creep.room)
+        if (targets.length) {
+            if (creep.build(targets[0]) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(targets[0], {
+                    visualizePathStyle: { stroke: '#ffffff' },
+                })
+            }
+        } else if (isFullOfEnergy(creep)) {
+            const buildManager = getBuildManager(creep.room)
+            if (buildManager.createConstructionSite()) {
+                roleLogistics.run(creep)
+            } else {
+                creep.say('???')
+            }
+        }
+    },
+
+    upgrade(creep: Logistics) {
+        if (!creep.room.controller) {
+            creep.say('???')
+            return
+        }
+        if (
+            creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE
+        ) {
+            creep.moveTo(creep.room.controller, {
+                visualizePathStyle: { stroke: '#ffffff' },
+            })
         }
     },
 
@@ -61,8 +102,19 @@ const roleLogistics = {
                 })
             }
         } else {
-            roleBuilder.run(creep)
+            roleLogistics.switchTask(creep)
         }
+    },
+
+    switchTask(creep: Logistics) {
+        console.log('switching tasks', creep.name)
+        if (!isAtExtensionCap(creep.room)) {
+            creep.memory.currentTask = TASK_BUILDING
+        } else {
+            creep.memory.currentTask = TASK_UPGRADING
+        }
+        console.log('switched to', creep.name, creep.memory.currentTask)
+        roleLogistics.run(creep)
     },
 
     needsEnergy(structure: Structure): boolean {
@@ -80,15 +132,18 @@ const roleLogistics = {
         return false
     },
 
-    create(spawn: StructureSpawn): number {
+    create(
+        spawn: StructureSpawn,
+        preference: DeliveryTask = TASK_HAULING,
+    ): number {
         return spawn.spawnCreep(
             [WORK, CARRY, MOVE, MOVE],
-            `${ROLE}:${Game.time}`,
+            `${ROLE}:${preference}:${Game.time}`,
             {
                 memory: {
                     role: ROLE,
                     source: getNextSource(spawn.room, ROLE),
-                    preference: TASK_HAULING,
+                    preference,
                     currentTask: TASK_COLLECTING,
                 } as LogisticsMemory,
             },

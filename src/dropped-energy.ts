@@ -1,4 +1,4 @@
-import { fromJS } from 'immutable'
+import { fromJS, hash } from 'immutable'
 
 export default class DroppedEnergy {
     static cache = new Map<number, DroppedEnergy>()
@@ -15,12 +15,12 @@ export default class DroppedEnergy {
     }
 
     static get(memory: DroppedEnergyMemory): DroppedEnergy {
-        const hash = fromJS(memory).hash()
-        if (DroppedEnergy.cache.has(hash)) {
-            return DroppedEnergy.cache.get(hash) as DroppedEnergy
+        const hashed = hash(fromJS(memory))
+        if (DroppedEnergy.cache.has(hashed)) {
+            return DroppedEnergy.cache.get(hashed) as DroppedEnergy
         }
         const droppedEnergy = new DroppedEnergy(memory)
-        DroppedEnergy.cache.set(hash, droppedEnergy)
+        DroppedEnergy.cache.set(hashed, droppedEnergy)
         return droppedEnergy
     }
 
