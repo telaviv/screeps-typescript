@@ -107,13 +107,11 @@ const roleLogistics = {
     },
 
     switchTask(creep: Logistics) {
-        console.log('switching tasks', creep.name)
         if (!isAtExtensionCap(creep.room)) {
             creep.memory.currentTask = TASK_BUILDING
         } else {
             creep.memory.currentTask = TASK_UPGRADING
         }
-        console.log('switched to', creep.name, creep.memory.currentTask)
         roleLogistics.run(creep)
     },
 
