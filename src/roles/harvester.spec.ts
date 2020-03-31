@@ -6,8 +6,6 @@ import { calculateParts } from './harvester'
 describe('calculateParts()', () => {
     it('produces the correct amount of parts', () => {
         const checks = [
-            { capacity: 200, work: 1, move: 1 },
-            { capacity: 250, work: 1, move: 1 },
             { capacity: 300, work: 2, move: 2 },
             { capacity: 350, work: 2, move: 2 },
             { capacity: 400, work: 2, move: 2 },
@@ -22,5 +20,13 @@ describe('calculateParts()', () => {
             expect(works.length).toEqual(work)
             expect(moves.length).toEqual(move)
         }
+    })
+
+    it('maxes out at 5 works', () => {
+        const parts = calculateParts(1000000)
+        const works = filter(parts, p => p === WORK)
+        const moves = filter(parts, p => p === MOVE)
+        expect(works.length).toEqual(5)
+        expect(moves.length).toEqual(5)
     })
 })

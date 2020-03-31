@@ -50,9 +50,9 @@ const roleHarvester = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    let capacityLeft = capacity
-    let parts: BodyPartConstant[] = []
     const chunkCost = BODYPART_COST[WORK] + BODYPART_COST[MOVE]
+    let capacityLeft = Math.min(capacity, 5 * chunkCost)
+    let parts: BodyPartConstant[] = []
     while (capacityLeft >= chunkCost) {
         parts = parts.concat([WORK, MOVE])
         capacityLeft -= chunkCost
