@@ -1,17 +1,17 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
 
-import DroppedEnergy from 'dropped-energy'
-
 import { bootstrapGlobals } from 'testing/bootstrap'
 import { ROOM_NAME } from 'testing/constants'
 import { createCreep } from 'testing/mocks/creep'
+
+import DroppedEnergy from './dropped-energy-manager'
 
 describe('dropped-energy module', () => {
     let droppedEnergy: DroppedEnergy
     beforeEach(() => {
         bootstrapGlobals()
         const memory = Memory.rooms[ROOM_NAME].sources[0].dropSpot
-        droppedEnergy = new DroppedEnergy(memory)
+        droppedEnergy = DroppedEnergy.create(memory)
     })
     describe('DroppedEnergy', () => {
         describe('#availableEnergy', () => {

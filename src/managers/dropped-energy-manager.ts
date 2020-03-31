@@ -1,26 +1,30 @@
 import { fromJS, hash } from 'immutable'
 
-export default class DroppedEnergy {
-    static cache = new Map<number, DroppedEnergy>()
+export default class DroppedEnergyManager {
+    static cache = new Map<number, DroppedEnergyManager>()
     pos: RoomPosition
     requests: string[]
 
-    constructor(memory: DroppedEnergyMemory) {
-        this.pos = new RoomPosition(
-            memory.pos.x,
-            memory.pos.y,
-            memory.pos.roomName,
-        )
-        this.requests = memory.requests
+    constructor(pos: RoomPosition, requests: string[]) {
+        this.pos = pos
+        this.requests = requests
     }
 
-    static get(memory: DroppedEnergyMemory): DroppedEnergy {
+    static create(memory: DroppedEnergyMemory): DroppedEnergyManager {
+        const { x, y, roomName } = memory.pos
+        const pos = new RoomPosition(x, y, roomName)
+        return new DroppedEnergyManager(pos, memory.requests)
+    }
+
+    static get(memory: DroppedEnergyMemory): DroppedEnergyManager {
         const hashed = hash(fromJS(memory))
-        if (DroppedEnergy.cache.has(hashed)) {
-            return DroppedEnergy.cache.get(hashed) as DroppedEnergy
+        if (DroppedEnergyManager.cache.has(hashed)) {
+            return DroppedEnergyManager.cache.get(
+                hashed,
+            ) as DroppedEnergyManager
         }
-        const droppedEnergy = new DroppedEnergy(memory)
-        DroppedEnergy.cache.set(hashed, droppedEnergy)
+        const droppedEnergy = DroppedEnergyManager.create(memory)
+        DroppedEnergyManager.cache.set(hashed, droppedEnergy)
         return droppedEnergy
     }
 

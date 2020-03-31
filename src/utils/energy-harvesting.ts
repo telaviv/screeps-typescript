@@ -1,5 +1,5 @@
 import { minBy } from 'utils/lodash'
-import DroppedEnergy from 'dropped-energy'
+import DroppedEnergyManager from 'managers/dropped-energy-manager'
 
 interface SourceCounts {
     [index: string]: number
@@ -36,7 +36,7 @@ function harvestEnergy(creep: SourceCreep) {
 
 function pickupEnergy(creep: SourceCreep) {
     const sourceMemory = getSourceMemory(creep)
-    const droppedEnergy = DroppedEnergy.get(sourceMemory.dropSpot)
+    const droppedEnergy = DroppedEnergyManager.get(sourceMemory.dropSpot)
     const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
 
     if (

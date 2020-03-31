@@ -4,12 +4,12 @@ import roleLogistics, { Logistics } from 'roles/logistics'
 import roleUpgrader, { Upgrader } from 'roles/upgrader'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
+import DroppedEnergyManager from 'managers/dropped-energy-manager'
 
 import { runSpawn } from './spawn'
 import updateStrategy from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
-import DroppedEnergy from './dropped-energy'
 
 global.Profiler = Profiler
 
@@ -25,7 +25,7 @@ function unwrappedLoop() {
 
     Object.values(Game.rooms).forEach(room => {
         for (const source of room.memory.sources) {
-            const droppedEnergy = new DroppedEnergy(source.dropSpot)
+            const droppedEnergy = DroppedEnergyManager.get(source.dropSpot)
             droppedEnergy.cleanup()
         }
 
