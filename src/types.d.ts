@@ -43,7 +43,6 @@ interface SurveyMemory {
 }
 
 interface RoomMemory {
-    hasAssignedRoads: boolean
     roadPositions: RoomPositionSet
     sources: RoomSourceMemory[]
     strategy: StrategyPhase
