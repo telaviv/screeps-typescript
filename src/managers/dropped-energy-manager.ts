@@ -17,15 +17,7 @@ export default class DroppedEnergyManager {
     }
 
     static get(memory: DroppedEnergyMemory): DroppedEnergyManager {
-        const hashed = hash(fromJS(memory))
-        if (DroppedEnergyManager.cache.has(hashed)) {
-            return DroppedEnergyManager.cache.get(
-                hashed,
-            ) as DroppedEnergyManager
-        }
-        const droppedEnergy = DroppedEnergyManager.create(memory)
-        DroppedEnergyManager.cache.set(hashed, droppedEnergy)
-        return droppedEnergy
+        return DroppedEnergyManager.create(memory)
     }
 
     private calculateRequestAmount(): number {
