@@ -1,7 +1,5 @@
-import roleBuilder, { Builder } from 'roles/builder'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleLogistics, { Logistics } from 'roles/logistics'
-import roleUpgrader, { Upgrader } from 'roles/upgrader'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
@@ -57,10 +55,6 @@ function unwrappedLoop() {
             roleHarvester.run(creep as Harvester)
         } else if (creep.memory.role === 'logistics') {
             roleLogistics.run(creep as Logistics)
-        } else if (creep.memory.role === 'upgrader') {
-            roleUpgrader.run(creep as Upgrader)
-        } else if (creep.memory.role === 'builder') {
-            roleBuilder.run(creep as Builder)
         }
     }
 }
