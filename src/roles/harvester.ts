@@ -1,4 +1,3 @@
-import { getNextSource } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'harvester'
@@ -35,14 +34,14 @@ const roleHarvester = {
         }
     }, 'runHarvester'),
 
-    create(spawn: StructureSpawn): number {
+    create(spawn: StructureSpawn, source: Id<Source>): number {
         return spawn.spawnCreep(
             calculateParts(spawn.room.energyCapacityAvailable),
             `${ROLE}:${Game.time}`,
             {
                 memory: {
                     role: ROLE,
-                    source: getNextSource(spawn.room, ROLE),
+                    source,
                 } as HarvesterMemory,
             },
         )

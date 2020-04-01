@@ -6,6 +6,7 @@ import roleLogistics, {
     TASK_HAULING,
     TASK_UPGRADING,
 } from 'roles/logistics'
+import EnergyManager from 'managers/energy-manager'
 
 const HAULERS_PER_SOURCE = 3
 const UPGRADERS_PER_SOURCE = 3
@@ -26,11 +27,13 @@ export default function(spawn: StructureSpawn) {
     const room = spawn.room
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
+    const energyManager = EnergyManager.get(spawn.room)
+    const sourceId = energyManager.forceSourceAssignment('logistics')
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
     const upgraders = getLogisticsCreeps(TASK_UPGRADING, room)
     if (haulers.length < HAULERS_PER_SOURCE * sourceCount) {
-        roleLogistics.create(spawn, TASK_HAULING)
+        roleLogistics.create(spawn, sourceId, TASK_HAULING)
     } else if (upgraders.length < UPGRADERS_PER_SOURCE * sourceCount) {
-        roleLogistics.create(spawn, TASK_UPGRADING)
+        roleLogistics.create(spawn, sourceId, TASK_UPGRADING)
     }
 }

@@ -8,6 +8,7 @@ import roleLogistics, {
     TASK_UPGRADING,
 } from 'roles/logistics'
 import roleHarvester from 'roles/harvester'
+import EnergyManager from 'managers/energy-manager'
 
 const HAULERS_PER_SOURCE = 3
 const UPGRADERS_PER_SOURCE = 1
@@ -46,22 +47,27 @@ export default function(spawn: StructureSpawn) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
     const harvesters = getCreeps('harvester', room)
+    const energyManager = EnergyManager.get(spawn.room)
+    const logisticsSource = energyManager.forceSourceAssignment('logistics')
+    const harvesterSource = energyManager.forceSourceAssignment('harvester')
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
     const upgraders = getLogisticsCreeps(TASK_UPGRADING, room)
     const builders = getLogisticsCreeps(TASK_BUILDING, room)
     if (harvesters.length < HARVESTERS_PER_SOURCE * sourceCount) {
-        roleHarvester.create(spawn)
+        roleHarvester.create(spawn, harvesterSource)
     } else if (haulers.length < HAULERS_PER_SOURCE * sourceCount) {
-        roleLogistics.create(spawn, TASK_HAULING)
+        roleLogistics.create(spawn, logisticsSource, TASK_HAULING)
     } else if (builders.length < BUILDERS_PER_SOURCE * sourceCount) {
-        roleLogistics.create(spawn, TASK_BUILDING)
+        roleLogistics.create(spawn, logisticsSource, TASK_BUILDING)
     } else if (upgraders.length < UPGRADERS_PER_SOURCE * sourceCount) {
-        roleLogistics.create(spawn, TASK_UPGRADING)
+        roleLogistics.create(spawn, logisticsSource, TASK_UPGRADING)
     }
 }
 
 function createRescueCreeps(spawn: StructureSpawn) {
-    roleLogistics.create(spawn, TASK_HAULING, true)
+    const energyManager = EnergyManager.get(spawn.room)
+    const sourceId = energyManager.forceSourceAssignment('logistics')
+    roleLogistics.create(spawn, sourceId, TASK_HAULING, true)
 }
 
 function updateRescueStatus(room: Room) {

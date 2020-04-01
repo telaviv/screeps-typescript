@@ -1,29 +1,4 @@
-import { minBy } from 'utils/lodash'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
-
-interface SourceCounts {
-    [index: string]: number
-}
-
-function getSourceCounts(room: Room, role: string): SourceCounts {
-    const counts: SourceCounts = {}
-    for (const source of room.memory.sources) {
-        counts[source.id] = 0
-    }
-    for (const [creepName, creepMemory] of Object.entries(Memory.creeps)) {
-        const creep = Game.creeps[creepName]
-        if (creepMemory.role === role && creep.room.name === room.name) {
-            const harvesterMemory = creepMemory as SourceMemory
-            counts[harvesterMemory.source] += 1
-        }
-    }
-    return counts
-}
-
-export function getNextSource(room: Room, role: string): string {
-    const sourceCounts = getSourceCounts(room, role)
-    return minBy(Object.keys(sourceCounts), id => sourceCounts[id])
-}
 
 function harvestEnergy(creep: SourceCreep) {
     const source = Game.getObjectById(creep.memory.source) as Source

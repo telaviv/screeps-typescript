@@ -50,6 +50,12 @@ interface RoomMemory {
     collapsed: boolean
 }
 
+interface CreepBlueprint {
+    parts: BodyPartConstant[]
+    name: string
+    memory: CreepMemory
+}
+
 type RoomPositionSet = RoomPosition[]
 
 type SpawnRunner = (spawn: StructureSpawn) => void

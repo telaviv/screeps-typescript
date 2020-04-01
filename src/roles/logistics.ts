@@ -1,10 +1,5 @@
 import { getBuildManager } from 'build-manager'
-import {
-    getNextSource,
-    getEnergy,
-    isFullOfEnergy,
-    hasNoEnergy,
-} from 'utils/energy-harvesting'
+import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
 import { getConstructionSites, isAtExtensionCap } from 'utils/room'
 
@@ -132,6 +127,7 @@ const roleLogistics = {
 
     create(
         spawn: StructureSpawn,
+        source: Id<Source>,
         preference: DeliveryTask = TASK_HAULING,
         rescue = false,
     ): number {
@@ -142,7 +138,7 @@ const roleLogistics = {
             {
                 memory: {
                     role: ROLE,
-                    source: getNextSource(spawn.room, ROLE),
+                    source,
                     preference,
                     currentTask: TASK_COLLECTING,
                 } as LogisticsMemory,

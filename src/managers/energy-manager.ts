@@ -1,7 +1,10 @@
 import maxBy from 'lodash/maxBy'
+import minBy from 'lodash/minBy'
 import { LogisticsMemory, TASK_HAULING } from 'roles/logistics'
 
 import SourceManager from './source-manager'
+
+type SourceCounts = Map<Id<Source>, number>
 
 export default class EnergyManager {
     static readonly cache = new Map<string, EnergyManager>()
@@ -59,5 +62,27 @@ export default class EnergyManager {
         }).length
 
         return haulerCount >= this.sources.length
+    }
+
+    forceSourceAssignment(role: string): Id<Source> {
+        const sourceCounts = this.getSourceCounts(role)
+        return minBy(Array.from(sourceCounts.keys()), id =>
+            // eslint-disable-next-line @typescript-eslint/indent
+            sourceCounts.get(id),
+        ) as Id<Source>
+    }
+
+    private getSourceCounts(role: string): SourceCounts {
+        const counts: SourceCounts = new Map<Id<Source>, number>()
+        for (const source of this.sources) {
+            let count = 0
+            for (const creep of source.creeps) {
+                if (creep.memory.role === role) {
+                    count++
+                }
+            }
+            counts.set(source.id, count)
+        }
+        return counts
     }
 }
