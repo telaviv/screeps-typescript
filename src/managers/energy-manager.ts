@@ -7,7 +7,6 @@ import SourceManager from './source-manager'
 type SourceCounts = Map<Id<Source>, number>
 
 export default class EnergyManager {
-    static readonly cache = new Map<string, EnergyManager>()
     readonly sources: SourceManager[]
 
     constructor(sources: SourceManager[]) {
@@ -23,28 +22,7 @@ export default class EnergyManager {
     }
 
     static get(room: Room): EnergyManager {
-        const name = room.name
-        if (EnergyManager.cache.has(name)) {
-            return EnergyManager.cache.get(name) as EnergyManager
-        }
-        const energyManager = EnergyManager.create(room.memory)
-        EnergyManager.cache.set(name, energyManager)
-        return energyManager
-    }
-
-    findSourceAssignment(carryCapacity: number): Id<Source> | null {
-        if (this.sources.length === 0) {
-            return null
-        }
-
-        const source: SourceManager = maxBy(this.sources, s =>
-            s.droppedEnergy.availableEnergy(),
-        ) as SourceManager
-
-        if (source.droppedEnergy.availableEnergy() >= 2 * carryCapacity) {
-            return source.id
-        }
-        return null
+        return EnergyManager.create(room.memory)
     }
 
     hasEnoughHaulers(): boolean {
@@ -70,6 +48,21 @@ export default class EnergyManager {
             // eslint-disable-next-line @typescript-eslint/indent
             sourceCounts.get(id),
         ) as Id<Source>
+    }
+
+    findLogisticsAssignment(carryCapacity: number): Id<Source> | null {
+        if (this.sources.length === 0) {
+            return null
+        }
+
+        const source: SourceManager = maxBy(this.sources, s =>
+            s.droppedEnergy.availableEnergy(),
+        ) as SourceManager
+
+        if (source.droppedEnergy.availableEnergy() >= 2 * carryCapacity) {
+            return source.id
+        }
+        return null
     }
 
     private getSourceCounts(role: string): SourceCounts {

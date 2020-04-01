@@ -1,3 +1,4 @@
+import filter from 'lodash/filter'
 import { getBuildManager } from 'build-manager'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
@@ -123,6 +124,12 @@ const roleLogistics = {
             return s.energy < s.energyCapacity
         }
         return false
+    },
+
+    requestedCarryCapacity(spawn: StructureSpawn) {
+        const parts = calculateParts(spawn.room.energyCapacityAvailable)
+        const carrys = filter(parts, p => p === CARRY)
+        return carrys.length * 50
     },
 
     create(

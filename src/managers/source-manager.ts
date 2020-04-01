@@ -3,7 +3,6 @@ import filter from 'lodash/filter'
 import DroppedEnergyManager from './dropped-energy-manager'
 
 export default class SourceManager {
-    static cache = new Map<string, SourceManager>()
     readonly id: Id<Source>
     readonly creeps: SourceCreep[]
     readonly droppedEnergy: DroppedEnergyManager
@@ -31,12 +30,6 @@ export default class SourceManager {
     }
 
     static get(memory: RoomSourceMemory): SourceManager {
-        const id = memory.id
-        if (SourceManager.cache.has(id)) {
-            return SourceManager.cache.get(id) as SourceManager
-        }
-        const sourceManager = SourceManager.create(memory)
-        SourceManager.cache.set(id, sourceManager)
-        return sourceManager
+        return SourceManager.create(memory)
     }
 }
