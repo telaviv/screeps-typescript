@@ -23,7 +23,7 @@ export interface Logistics extends SourceCreep {
     memory: LogisticsMemory
 }
 
-interface LogisticsMemory extends SourceMemory {
+export interface LogisticsMemory extends SourceMemory {
     role: 'logistics'
     preference: DeliveryTask
     currentTask: Task
@@ -133,9 +133,11 @@ const roleLogistics = {
     create(
         spawn: StructureSpawn,
         preference: DeliveryTask = TASK_HAULING,
+        rescue = false,
     ): number {
+        const capacity = rescue ? 300 : spawn.room.energyCapacityAvailable
         return spawn.spawnCreep(
-            calculateParts(spawn.room.energyCapacityAvailable),
+            calculateParts(capacity),
             `${ROLE}:${preference}:${Game.time}`,
             {
                 memory: {

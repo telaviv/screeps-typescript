@@ -47,6 +47,7 @@ interface RoomMemory {
     sources: RoomSourceMemory[]
     strategy: StrategyPhase
     survey: SurveyMemory
+    collapsed: boolean
 }
 
 type RoomPositionSet = RoomPosition[]

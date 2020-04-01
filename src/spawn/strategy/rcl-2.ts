@@ -36,6 +36,12 @@ function getLogisticsCreeps(task: DeliveryTask, room: Room) {
 }
 
 export default function(spawn: StructureSpawn) {
+    updateRescueStatus(spawn.room)
+
+    if (spawn.room.memory.collapsed) {
+        createRescueCreeps(spawn)
+        return
+    }
     const room = spawn.room
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
@@ -51,5 +57,20 @@ export default function(spawn: StructureSpawn) {
         roleLogistics.create(spawn, TASK_BUILDING)
     } else if (upgraders.length < UPGRADERS_PER_SOURCE * sourceCount) {
         roleLogistics.create(spawn, TASK_UPGRADING)
+    }
+}
+
+function createRescueCreeps(spawn: StructureSpawn) {
+    roleLogistics.create(spawn, TASK_HAULING, true)
+}
+
+function updateRescueStatus(room: Room) {
+    const roomMemory = room.memory
+    const sourceCount = roomMemory.sources.length
+    const haulers = getLogisticsCreeps(TASK_HAULING, room)
+    if (room.memory.collapsed && haulers.length > 3 * sourceCount) {
+        room.memory.collapsed = false
+    } else if (!room.memory.collapsed && haulers.length < sourceCount) {
+        room.memory.collapsed = true
     }
 }

@@ -1,16 +1,33 @@
-export default class SourceManager {
-    readonly droppedEnergy: DroppedEnergy
-    readonly id: Source<Id>
-    static cache = new Map<number, SourceManager>()
+import filter from 'lodash/filter'
 
-    constructor(droppedEnergy: DroppedEnergy, id: Source<Id>) {
+import DroppedEnergyManager from './dropped-energy-manager'
+
+export default class SourceManager {
+    static cache = new Map<string, SourceManager>()
+    readonly id: Id<Source>
+    readonly creeps: SourceCreep[]
+    readonly droppedEnergy: DroppedEnergyManager
+
+    constructor(
+        id: Id<Source>,
+        creeps: SourceCreep[],
+        droppedEnergy: DroppedEnergyManager,
+    ) {
         this.droppedEnergy = droppedEnergy
+        this.creeps = creeps
         this.id = id
     }
 
     static create(memory: RoomSourceMemory) {
-        const droppedEnergy = DroppedEnergy.get(memory.dropSpot)
-        return new SourceManager(droppedEnergy, memory.id as Id<Source>)
+        const droppedEnergy = DroppedEnergyManager.get(memory.dropSpot)
+        const creeps = filter(Game.creeps, creep => {
+            if (!creep.memory.hasOwnProperty('source')) {
+                return false
+            }
+            const sourceMemory = creep.memory as SourceMemory
+            return sourceMemory.source === memory.id
+        }) as SourceCreep[]
+        return new SourceManager(memory.id as Id<Source>, creeps, droppedEnergy)
     }
 
     static get(memory: RoomSourceMemory): SourceManager {

@@ -39,6 +39,7 @@ export function createSourceCreep<T extends SourceCreep>(
 
 export function createLogisticsCreep(parts: BodyPartConstant[]): Logistics {
     const creep = createSourceCreep<Logistics>(parts)
+    creep.memory.role = 'logistics'
     creep.memory.currentTask = TASK_COLLECTING
     creep.memory.preference = TASK_HAULING
     return creep
