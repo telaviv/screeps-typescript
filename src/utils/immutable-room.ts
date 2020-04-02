@@ -12,6 +12,7 @@ interface IImmutableRoomItem {
     structures: Structure[]
     obstacle: Obstacle | ''
     hasConstructionSite: boolean
+    hasRoad: boolean
 }
 
 const ImmutableRoomItemRecord = Record({
@@ -21,6 +22,7 @@ const ImmutableRoomItemRecord = Record({
     structures: [] as Structure[],
     obstacle: '',
     hasConstructionSite: false,
+    hasRoad: false,
 })
 
 type RoomGrid = List<List<ImmutableRoomItem>>
@@ -84,6 +86,11 @@ export class ImmutableRoom implements ValueObject {
     setObstacle(x: number, y: number, obstacle: Obstacle): ImmutableRoom {
         const roomItem = this.get(x, y)
         return this.set(x, y, roomItem.set('obstacle', obstacle))
+    }
+
+    setHasRoad(x: number, y: number, hasRoad: boolean): ImmutableRoom {
+        const roomItem = this.get(x, y)
+        return this.set(x, y, roomItem.set('hasRoad', hasRoad))
     }
 
     setConstructionSite(
@@ -210,7 +217,26 @@ export class ImmutableRoom implements ValueObject {
     }
 }
 
-export function fromRoom(room: Room): ImmutableRoom {
+interface RoomCache {
+    [roomName: string]: ImmutableRoom
+}
+interface TimeCache {
+    [time: number]: RoomCache
+}
+let cache: TimeCache = {}
+
+export function fromRoom(room: Room, useCache = true): ImmutableRoom {
+    if (useCache) {
+        if (cache.hasOwnProperty(Game.time)) {
+            const timeCache = cache[Game.time]
+            if (timeCache.hasOwnProperty(room.name)) {
+                return timeCache[room.name]
+            }
+        } else if (!cache.hasOwnProperty(Game.time)) {
+            cache = {}
+            cache[Game.time] = {} as RoomCache
+        }
+    }
     let immutableRoom = new ImmutableRoom(room.name)
     const terrain = room.getTerrain()
     for (let x = 0; x < 50; ++x) {
@@ -252,6 +278,9 @@ export function fromRoom(room: Room): ImmutableRoom {
                 pos.y,
                 STRUCTURE_INFO[structure.structureType],
             )
+        } else if (structure.structureType === STRUCTURE_ROAD) {
+            const pos = structure.pos
+            immutableRoom = immutableRoom.setHasRoad(pos.x, pos.y, true)
         }
     }
 
@@ -265,5 +294,13 @@ export function fromRoom(room: Room): ImmutableRoom {
         immutableRoom = immutableRoom.setConstructionSite(pos.x, pos.y, true)
     }
 
+    if (useCache) {
+        updateCache(room, immutableRoom)
+    }
+
     return immutableRoom
+}
+
+export function updateCache(room: Room, immutableRoom: ImmutableRoom) {
+    cache[Game.time][room.name] = immutableRoom
 }

@@ -1,5 +1,3 @@
-import { fromJS, hash } from 'immutable'
-
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()
     pos: RoomPosition

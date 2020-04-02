@@ -1,4 +1,5 @@
 import { mockInstanceOf } from 'screeps-jest'
+import { bootstrapGlobals } from 'testing/bootstrap'
 import { ImmutableRoom, ImmutableRoomItem, fromRoom } from './immutable-room'
 
 function createRoom() {
@@ -50,6 +51,9 @@ describe('immutable-room module', () => {
     })
 
     describe('fromRoom', () => {
+        beforeEach(() => {
+            bootstrapGlobals()
+        })
         it('tracks terrain correctly', () => {
             const terrain = mockInstanceOf<RoomTerrain>({
                 get: (x: number, y: number) => {
@@ -65,7 +69,7 @@ describe('immutable-room module', () => {
                 getTerrain: () => terrain,
                 find: () => [],
             })
-            const immutableRoom = fromRoom(room)
+            const immutableRoom = fromRoom(room, false)
 
             let itemTerrain = immutableRoom.get(0, 0).terrain
             expect(itemTerrain).toEqual(0)
@@ -83,7 +87,7 @@ describe('immutable-room module', () => {
                 return type === FIND_SOURCES ? [source] : []
             }
 
-            const immutableRoom = fromRoom(room)
+            const immutableRoom = fromRoom(room, false)
 
             let itemTerrain = immutableRoom.get(0, 0)
             expect(itemTerrain.obstacle).toEqual('')
@@ -102,7 +106,7 @@ describe('immutable-room module', () => {
                 return type === FIND_STRUCTURES ? [spawn] : []
             }
 
-            const immutableRoom = fromRoom(room)
+            const immutableRoom = fromRoom(room, false)
 
             let itemTerrain = immutableRoom.get(0, 0)
             expect(itemTerrain.obstacle).toEqual('')
@@ -118,7 +122,7 @@ describe('immutable-room module', () => {
             })
             room.controller = controller
 
-            const immutableRoom = fromRoom(room)
+            const immutableRoom = fromRoom(room, false)
 
             let itemTerrain = immutableRoom.get(0, 0)
             expect(itemTerrain.obstacle).toEqual('')

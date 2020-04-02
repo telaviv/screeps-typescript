@@ -64,7 +64,7 @@ const roleLogistics = {
         } else if (isFullOfEnergy(creep)) {
             const buildManager = getBuildManager(creep.room)
             if (buildManager.createConstructionSite()) {
-                roleLogistics.run(creep)
+                // wait till next cycle to figure it out
             } else {
                 roleLogistics.switchTask(creep)
             }

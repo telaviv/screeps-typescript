@@ -37,6 +37,7 @@ export const bootstrapGlobals = () => {
 
     mockGlobal<Game>('Game', {
         cpu: { getUsed: () => 0 },
+        time: 42,
         creeps: {},
         rooms: { [ROOM_NAME]: createMockRoom(roomPosition, roomMemory) },
         getObjectById: () => mockInstanceOf<Source>({ id: sourceId }),

@@ -23,20 +23,16 @@ const roleHarvester = {
 
         if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
             const harvestPos = sourceMemory.dropSpot.pos
-            const err = creep.moveTo(harvestPos.x, harvestPos.y, {
+            creep.moveTo(harvestPos.x, harvestPos.y, {
                 visualizePathStyle: { stroke: '#ffaa00' },
             })
-            if (err !== OK) {
-                console.log(
-                    `couldn't move to ${JSON.stringify(harvestPos)}: ${err}`,
-                )
-            }
         }
     }, 'runHarvester'),
 
     create(spawn: StructureSpawn, source: Id<Source>): number {
+        const capacity = spawn.room.energyCapacityAvailable
         return spawn.spawnCreep(
-            calculateParts(spawn.room.energyCapacityAvailable),
+            calculateParts(capacity),
             `${ROLE}:${Game.time}`,
             {
                 memory: {

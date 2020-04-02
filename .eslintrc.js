@@ -33,6 +33,7 @@ module.exports = {
         'no-prototype-builtins': 'off',
         'no-plusplus': 'off',
         'no-restricted-syntax': ['off'],
+        'no-underscore-dangle': 'off',
         'object-curly-newline': ['off'],
         'linebreak-style': ['error', 'unix'],
         'padded-blocks': ['off'],

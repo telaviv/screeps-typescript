@@ -74,16 +74,31 @@ export default function(spawn: StructureSpawn) {
 }
 
 function createRescueCreeps(spawn: StructureSpawn) {
+    const room = spawn.room
+    const roomMemory = room.memory
+    const sourceCount = roomMemory.sources.length
     const energyManager = EnergyManager.get(spawn.room)
-    const sourceId = energyManager.forceSourceAssignment('logistics')
-    roleLogistics.create(spawn, sourceId, TASK_HAULING, true)
+    const logisticsSource = energyManager.forceSourceAssignment('logistics')
+    const harvesterSource = energyManager.forceSourceAssignment('harvester')
+    const harvesters = getCreeps('harvester', room)
+    const haulers = getLogisticsCreeps(TASK_HAULING, room)
+    if (haulers.length < sourceCount) {
+        roleLogistics.create(spawn, logisticsSource, TASK_HAULING, true)
+    } else if (harvesters.length < sourceCount) {
+        roleHarvester.create(spawn, harvesterSource)
+    }
 }
 
 function updateRescueStatus(room: Room) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
-    if (room.memory.collapsed && haulers.length > 3 * sourceCount) {
+    const harvesters = getCreeps('harvester', room)
+    if (
+        room.memory.collapsed &&
+        haulers.length >= sourceCount &&
+        harvesters.length >= sourceCount
+    ) {
         room.memory.collapsed = false
     } else if (!room.memory.collapsed && haulers.length < sourceCount) {
         room.memory.collapsed = true
