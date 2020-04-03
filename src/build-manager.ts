@@ -41,6 +41,10 @@ export default class BuildManager {
             return false
         }
 
+        if (this.hasAConstructionSite()) {
+            return false
+        }
+
         if (this.canBuildExtension()) {
             return this.buildNextExtension()
         }
@@ -50,6 +54,10 @@ export default class BuildManager {
         }
 
         return false
+    }
+
+    private hasAConstructionSite() {
+        return this.room.find(FIND_CONSTRUCTION_SITES).length > 0
     }
 
     private canBuildSwampRoad() {
