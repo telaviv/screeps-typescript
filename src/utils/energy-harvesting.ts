@@ -1,4 +1,5 @@
-import DroppedEnergyManager from 'managers/dropped-energy-manager'
+import SourceManager from 'managers/source-manager'
+import { fromRoom } from 'utils/immutable-room'
 
 function harvestEnergy(creep: SourceCreep) {
     const source = Game.getObjectById(creep.memory.source) as Source
@@ -11,17 +12,22 @@ function harvestEnergy(creep: SourceCreep) {
 
 function pickupEnergy(creep: SourceCreep) {
     const sourceMemory = getSourceMemory(creep)
-    const droppedEnergy = DroppedEnergyManager.get(sourceMemory.dropSpot)
-    const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
+    const sourceManager = SourceManager.get(sourceMemory)
+    const droppedEnergy = sourceManager.droppedEnergy
 
-    if (
-        target.length === 0 ||
-        target[0].amount < creep.store.getFreeCapacity(RESOURCE_ENERGY)
-    ) {
+    if (!sourceManager.hasStaticHarvester()) {
         harvestEnergy(creep)
         return
     }
+    if (
+        droppedEnergy.availableEnergy() <
+        creep.store.getFreeCapacity(RESOURCE_ENERGY)
+    ) {
+        creep.suicide()
+        return
+    }
 
+    const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
     const err = creep.pickup(target[0])
     if (err === ERR_NOT_IN_RANGE) {
         const harvestPos = sourceMemory.dropSpot.pos
@@ -32,6 +38,15 @@ function pickupEnergy(creep: SourceCreep) {
     } else if (err === OK) {
         droppedEnergy.completeRequest(creep)
     }
+}
+
+function wander(creep: Creep) {
+    const iroom = fromRoom(creep.room)
+    const pos = iroom.getRandomWalkablePosition(creep.pos.x, creep.pos.y)
+    if (pos) {
+        creep.moveTo(pos)
+    }
+    creep.say('🤔')
 }
 
 export function isFullOfEnergy(creep: Creep) {

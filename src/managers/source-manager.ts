@@ -32,4 +32,11 @@ export default class SourceManager {
     static get(memory: RoomSourceMemory): SourceManager {
         return SourceManager.create(memory)
     }
+
+    hasStaticHarvester(): boolean {
+        const filtered = this.creeps.filter(
+            creep => creep.memory.role === 'harvester',
+        )
+        return filtered.length > 0
+    }
 }

@@ -2,6 +2,7 @@ import { fromJS, ValueObject, List, Map, Record } from 'immutable'
 import times from 'lodash/times'
 import range from 'lodash/range'
 import includes from 'lodash/includes'
+import random from 'lodash/random'
 
 type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
 
@@ -34,6 +35,7 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
     readonly terrain!: number
     readonly structures!: Structure[]
     readonly obstacle!: Obstacle | ''
+    readonly hasRoad!: boolean
 
     isObstacle(): boolean {
         return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
@@ -106,18 +108,27 @@ export class ImmutableRoom implements ValueObject {
         )
     }
 
-    getClosestNeighbors = function*(
-        this: ImmutableRoom,
-        x: number,
-        y: number,
-    ): Iterator<ImmutableRoomItem> {
+    getRandomWalkablePosition(x: number, y: number): RoomPosition | null {
+        const neighbors = this.getClosestNeighbors(x, y)
+        const walkableNeighbors = neighbors.filter(pos => !pos.isObstacle())
+        if (walkableNeighbors.length === 0) {
+            return null
+        }
+        const index = random(walkableNeighbors.length - 1)
+        const roomItem = walkableNeighbors[index]
+        return new RoomPosition(roomItem.x, roomItem.y, this.name)
+    }
+
+    getClosestNeighbors(x: number, y: number): ImmutableRoomItem[] {
+        const neighbors = []
         for (let nx = Math.max(0, x - 1); nx < Math.min(50, x + 1); ++nx) {
             for (let ny = Math.max(0, y - 1); ny < Math.min(50, y + 1); ++ny) {
                 if (x !== nx && y !== ny) {
-                    yield this.get(nx, ny)
+                    neighbors.push(this.get(nx, ny))
                 }
             }
         }
+        return neighbors
     }
 
     getCardinalNeighbors = function*(
