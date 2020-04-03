@@ -1,7 +1,11 @@
 import { OrderedSet, Record as IRecord } from 'immutable'
 import { fromRoom, updateCache } from 'utils/immutable-room'
 
-import { EXTENSION_COUNTS, getExtensions } from 'utils/room'
+import {
+    isAtExtensionCap,
+    isAtTowerCap,
+    getConstructionSites,
+} from 'utils/room'
 
 interface IImutableRoomItem {
     x: number
@@ -53,14 +57,22 @@ export default class BuildManager {
             return this.buildSwampRoad()
         }
 
+        if (this.canBuildTower()) {
+            return this.buildNextTower()
+        }
+
         return false
     }
 
     private hasAConstructionSite() {
-        return this.room.find(FIND_CONSTRUCTION_SITES).length > 0
+        return getConstructionSites(this.room).length > 0
     }
 
-    private canBuildSwampRoad() {
+    private canBuildTower(): boolean {
+        return !isAtTowerCap(this.room)
+    }
+
+    private canBuildSwampRoad(): boolean {
         return this.findSwampRoad() !== undefined
     }
 
@@ -130,12 +142,15 @@ export default class BuildManager {
     }
 
     private canBuildExtension() {
-        if (!this.room.controller) {
-            return false
-        }
-        const controllerLevel = this.room.controller.level
-        const extensions = getExtensions(this.room)
-        return EXTENSION_COUNTS[controllerLevel] > extensions.length
+        return !isAtExtensionCap(this.room)
+    }
+
+    private buildNextTower(): boolean {
+        const iroom = fromRoom(this.room)
+        const pos = iroom.nextTowerPos()
+        const ret = this.room.createConstructionSite(pos, STRUCTURE_TOWER)
+        updateCache(this.room, iroom.setConstructionSite(pos.x, pos.y, true))
+        return ret === OK
     }
 
     private buildNextExtension(): boolean {

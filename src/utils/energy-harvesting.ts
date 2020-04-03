@@ -1,7 +1,7 @@
 import SourceManager from 'managers/source-manager'
 import { fromRoom } from 'utils/immutable-room'
 
-const SUICIDE_TIME = 400
+const SUICIDE_TIME = 200
 
 function harvestEnergy(creep: SourceCreep) {
     const source = Game.getObjectById(creep.memory.source) as Source

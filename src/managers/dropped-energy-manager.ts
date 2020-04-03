@@ -54,6 +54,7 @@ export default class DroppedEnergyManager {
         return capacity <= this.availableEnergy()
     }
 
+    // we need to request an amount as well. Screeps want partial pickups
     request(creep: Creep) {
         if (includes(this.requests, creep.name)) {
             return true

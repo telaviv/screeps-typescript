@@ -6,14 +6,16 @@ import roleLogistics, {
     TASK_HAULING,
     TASK_BUILDING,
     TASK_UPGRADING,
+    TASK_REPAIRING,
 } from 'roles/logistics'
 import roleHarvester from 'roles/harvester'
 import EnergyManager from 'managers/energy-manager'
 
-const HAULERS_PER_SOURCE = 3
+const HAULERS_PER_SOURCE = 2
 const UPGRADERS_PER_SOURCE = 1
 const HARVESTERS_PER_SOURCE = 1
-const BUILDERS_PER_SOURCE = 3
+const BUILDERS_PER_SOURCE = 1
+const REPAIRERS_PER_SOURCE = 1
 
 function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), creepName => {
@@ -52,6 +54,7 @@ export default function(spawn: StructureSpawn) {
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
     const upgraders = getLogisticsCreeps(TASK_UPGRADING, room)
     const builders = getLogisticsCreeps(TASK_BUILDING, room)
+    const repairers = getLogisticsCreeps(TASK_REPAIRING, room)
     if (harvesters.length < HARVESTERS_PER_SOURCE * sourceCount) {
         roleHarvester.create(spawn, harvesterSource)
     }
@@ -68,6 +71,8 @@ export default function(spawn: StructureSpawn) {
         roleLogistics.create(spawn, assignment, TASK_BUILDING)
     } else if (upgraders.length < UPGRADERS_PER_SOURCE * sourceCount) {
         roleLogistics.create(spawn, assignment, TASK_UPGRADING)
+    } else if (repairers.length < REPAIRERS_PER_SOURCE * sourceCount) {
+        roleLogistics.create(spawn, assignment, TASK_REPAIRING)
     } else {
         roleLogistics.create(spawn, assignment, TASK_HAULING)
     }
@@ -82,6 +87,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
     const harvesters = getCreeps('harvester', room)
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
+
     if (haulers.length < sourceCount) {
         roleLogistics.create(spawn, logisticsSource, TASK_HAULING, true)
     } else if (harvesters.length < sourceCount) {

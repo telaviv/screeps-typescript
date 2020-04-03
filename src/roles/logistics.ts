@@ -2,17 +2,23 @@ import filter from 'lodash/filter'
 import { getBuildManager } from 'build-manager'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
-import { getConstructionSites, isAtExtensionCap } from 'utils/room'
+import {
+    getConstructionSites,
+    isAtExtensionCap,
+    findWeakestStructure,
+} from 'utils/room'
 
 export const TASK_HAULING = 'hauling'
 export const TASK_BUILDING = 'building'
 export const TASK_UPGRADING = 'upgrading'
+export const TASK_REPAIRING = 'repairing'
 export const TASK_COLLECTING = 'collecting'
 
 export type DeliveryTask =
     | typeof TASK_HAULING
     | typeof TASK_BUILDING
     | typeof TASK_UPGRADING
+    | typeof TASK_REPAIRING
 type Task = DeliveryTask | typeof TASK_COLLECTING
 
 export interface Logistics extends SourceCreep {
@@ -40,6 +46,8 @@ const roleLogistics = {
             roleLogistics.build(creep)
         } else if (currentTask === TASK_UPGRADING) {
             roleLogistics.upgrade(creep)
+        } else if (currentTask === TASK_REPAIRING) {
+            roleLogistics.repair(creep)
         }
     }, 'runLogistics'),
 
@@ -69,6 +77,20 @@ const roleLogistics = {
             } else {
                 roleLogistics.switchTask(creep)
             }
+        }
+    },
+
+    repair(creep: Logistics) {
+        const structure = findWeakestStructure(creep.room)
+        if (structure === null) {
+            roleLogistics.switchTask(creep)
+            return
+        }
+
+        if (creep.repair(structure) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(structure.pos, {
+                visualizePathStyle: { stroke: '#ffffff' },
+            })
         }
     },
 

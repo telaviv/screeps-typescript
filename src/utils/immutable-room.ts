@@ -191,6 +191,10 @@ export class ImmutableRoom implements ValueObject {
         throw new Error('No eligible extension spot.')
     }
 
+    nextTowerPos(): RoomPosition {
+        return this.nextExtensionPos()
+    }
+
     private findCentroid(): RoomPosition {
         let xAcc = 0
         let yAcc = 0
