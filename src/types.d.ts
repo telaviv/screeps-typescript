@@ -6,6 +6,7 @@ interface CreepMemory {
 
 interface SourceMemory extends CreepMemory {
     source: Id<Source>
+    waitTime: number
 }
 
 interface RoomSourceMemory {
@@ -15,7 +16,7 @@ interface RoomSourceMemory {
 
 interface DroppedEnergyMemory {
     pos: RoomPosition
-    requests: Id<Creep>[]
+    requests: string[]
 }
 
 interface SourceCreep extends Creep {

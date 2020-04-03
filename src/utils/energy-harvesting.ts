@@ -1,6 +1,8 @@
 import SourceManager from 'managers/source-manager'
 import { fromRoom } from 'utils/immutable-room'
 
+const SUICIDE_TIME = 400
+
 function harvestEnergy(creep: SourceCreep) {
     const source = Game.getObjectById(creep.memory.source) as Source
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
@@ -19,14 +21,27 @@ function pickupEnergy(creep: SourceCreep) {
         harvestEnergy(creep)
         return
     }
-    if (
-        droppedEnergy.availableEnergy() <
-        creep.store.getFreeCapacity(RESOURCE_ENERGY)
-    ) {
-        creep.suicide()
+
+    if (!droppedEnergy.request(creep)) {
+        creep.memory.waitTime += 1
+        creep.say('😴')
+        if (creep.memory.waitTime >= SUICIDE_TIME) {
+            creep.suicide()
+        }
         return
     }
 
+    const err = rawPickupEnergy(creep)
+
+    if (err === OK) {
+        droppedEnergy.completeRequest(creep)
+    }
+}
+
+function rawPickupEnergy(creep: SourceCreep) {
+    const sourceMemory = getSourceMemory(creep)
+    const sourceManager = SourceManager.get(sourceMemory)
+    const droppedEnergy = sourceManager.droppedEnergy
     const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
     const err = creep.pickup(target[0])
     if (err === ERR_NOT_IN_RANGE) {
@@ -35,9 +50,8 @@ function pickupEnergy(creep: SourceCreep) {
             range: 1,
             visualizePathStyle: { stroke: '#ffaa00' },
         })
-    } else if (err === OK) {
-        droppedEnergy.completeRequest(creep)
     }
+    return err
 }
 
 function wander(creep: Creep) {

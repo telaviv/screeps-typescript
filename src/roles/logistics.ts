@@ -50,6 +50,7 @@ const roleLogistics = {
             memory.currentTask = memory.preference
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
             memory.currentTask = TASK_COLLECTING
+            memory.waitTime = 0
         }
     },
 
@@ -148,6 +149,7 @@ const roleLogistics = {
                     source,
                     preference,
                     currentTask: TASK_COLLECTING,
+                    waitTime: 0,
                 } as LogisticsMemory,
             },
         )

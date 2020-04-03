@@ -1,17 +1,25 @@
+import includes from 'lodash/includes'
+
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()
     pos: RoomPosition
     requests: string[]
+    memory: DroppedEnergyMemory
 
-    constructor(pos: RoomPosition, requests: string[]) {
+    constructor(
+        pos: RoomPosition,
+        requests: string[],
+        memory: DroppedEnergyMemory,
+    ) {
         this.pos = pos
         this.requests = requests
+        this.memory = memory
     }
 
     static create(memory: DroppedEnergyMemory): DroppedEnergyManager {
         const { x, y, roomName } = memory.pos
         const pos = new RoomPosition(x, y, roomName)
-        return new DroppedEnergyManager(pos, memory.requests)
+        return new DroppedEnergyManager(pos, memory.requests, memory)
     }
 
     static get(memory: DroppedEnergyMemory): DroppedEnergyManager {
@@ -28,6 +36,7 @@ export default class DroppedEnergyManager {
 
     private removeRequest(creepName: string) {
         this.requests.splice(this.requests.indexOf(creepName), 1)
+        this.persistMemory()
     }
 
     availableEnergy(): number {
@@ -46,11 +55,17 @@ export default class DroppedEnergyManager {
     }
 
     request(creep: Creep) {
+        if (includes(this.requests, creep.name)) {
+            return true
+        }
+
         if (!this.canPickup(creep)) {
-            return
+            return false
         }
 
         this.requests.push(creep.name)
+        this.persistMemory()
+        return true
     }
 
     completeRequest(creep: Creep) {
@@ -60,8 +75,18 @@ export default class DroppedEnergyManager {
     cleanup() {
         for (const creepName of this.requests) {
             if (!Game.creeps.hasOwnProperty(creepName)) {
+                console.log('removing request')
                 this.removeRequest(creepName)
             }
         }
+    }
+
+    private persistMemory() {
+        this.memory.requests = this.requests
+        console.log(
+            'persisted',
+            JSON.stringify(this.pos),
+            JSON.stringify(this.memory.requests),
+        )
     }
 }
