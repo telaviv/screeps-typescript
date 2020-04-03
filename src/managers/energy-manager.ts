@@ -59,7 +59,7 @@ export default class EnergyManager {
             s.droppedEnergy.availableEnergy(),
         ) as SourceManager
 
-        if (source.droppedEnergy.availableEnergy() >= 2 * carryCapacity) {
+        if (source.droppedEnergy.availableEnergy() >= 3 * carryCapacity) {
             return source.id
         }
         return null
