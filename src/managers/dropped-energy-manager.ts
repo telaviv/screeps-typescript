@@ -1,5 +1,4 @@
 import includes from 'lodash/includes'
-import some from 'lodash/some'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()
@@ -55,9 +54,13 @@ export default class DroppedEnergyManager {
         return capacity <= this.availableEnergy()
     }
 
+    hasRequest(creep: Creep) {
+        return includes(this.requests, creep.name)
+    }
+
     // we need to request an amount as well. Screeps want partial pickups
     request(creep: Creep) {
-        if (includes(this.requests, creep.name)) {
+        if (this.hasRequest(creep)) {
             return true
         }
 
@@ -89,6 +92,7 @@ export default class DroppedEnergyManager {
             'persisted',
             JSON.stringify(this.pos),
             JSON.stringify(this.memory.requests),
+            this.availableEnergy(),
         )
     }
 }

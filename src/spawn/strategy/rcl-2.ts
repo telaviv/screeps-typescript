@@ -61,7 +61,7 @@ export default function(spawn: StructureSpawn) {
     }
 
     const request = roleLogistics.requestedCarryCapacity(spawn)
-    const assignment = energyManager.findLogisticsAssignment(request)
+    const assignment = energyManager.findLogisticsAssignment(request * 3)
     if (assignment === null) {
         return
     }

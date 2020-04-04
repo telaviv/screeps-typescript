@@ -23,29 +23,51 @@ function pickupEnergy(creep: SourceCreep) {
         return
     }
 
-    const capacity = freeEnergyCapacity(creep)
-    const energyManager = EnergyManager.get(creep.room)
-    const assignment = energyManager.findLogisticsAssignment(capacity)
-
-    if (assignment === null) {
-        creep.memory.waitTime += 1
-        creep.say('😴')
-        if (creep.memory.waitTime >= SUICIDE_TIME) {
-            creep.suicide()
-        }
+    if (!requestSourceEnergy(creep)) {
         return
     }
-    const oldSource = creep.memory.source
-    if (oldSource !== assignment) {
-        console.log('creep-switch', creep.name, oldSource, assignment)
-    }
 
-    creep.memory.source = assignment
     const err = rawPickupEnergy(creep)
 
     if (err === OK) {
         droppedEnergy.completeRequest(creep)
     }
+}
+
+function requestSourceEnergy(creep: SourceCreep): boolean {
+    const originalSourceMemory = getSourceMemory(creep)
+    const originalSourceManager = SourceManager.get(originalSourceMemory)
+    const originalDroppedEnergy = originalSourceManager.droppedEnergy
+
+    if (originalDroppedEnergy.hasRequest(creep)) {
+        return true
+    }
+
+    const capacity = freeEnergyCapacity(creep)
+    const energyManager = EnergyManager.get(creep.room)
+    const source = energyManager.findLogisticsAssignment(capacity)
+    if (source === null) {
+        creep.memory.waitTime += 1
+        creep.say('😴')
+        if (creep.memory.waitTime >= SUICIDE_TIME) {
+            creep.suicide()
+        }
+        return false
+    }
+    const oldSource = creep.memory.source
+    if (oldSource !== source) {
+        console.log('creep-switch', creep.name, oldSource, source)
+    }
+
+    const sourceMemory = getSourceMemory(creep)
+    const sourceManager = SourceManager.get(sourceMemory)
+    const droppedEnergy = sourceManager.droppedEnergy
+
+    creep.memory.source = source
+    if (!droppedEnergy.request(creep)) {
+        throw new Error(`this should be impossible ${creep.name}`)
+    }
+    return true
 }
 
 function rawPickupEnergy(creep: SourceCreep) {
@@ -64,7 +86,7 @@ function rawPickupEnergy(creep: SourceCreep) {
     return err
 }
 
-function wander(creep: Creep) {
+export function wander(creep: Creep) {
     const iroom = fromRoom(creep.room)
     const pos = iroom.getRandomWalkablePosition(creep.pos.x, creep.pos.y)
     if (pos) {
