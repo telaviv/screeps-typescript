@@ -1,4 +1,5 @@
 import includes from 'lodash/includes'
+import some from 'lodash/some'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()

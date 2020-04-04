@@ -1,4 +1,5 @@
 import filter from 'lodash/filter'
+import some from 'lodash/some'
 
 import DroppedEnergyManager from './dropped-energy-manager'
 
@@ -34,9 +35,14 @@ export default class SourceManager {
     }
 
     hasStaticHarvester(): boolean {
-        const filtered = this.creeps.filter(
+        const harvesters = this.creeps.filter(
             creep => creep.memory.role === 'harvester',
         )
-        return filtered.length > 0
+        return some(
+            harvesters,
+            harvester =>
+                harvester.pos.x === this.droppedEnergy.pos.x &&
+                harvester.pos.y === this.droppedEnergy.pos.y,
+        )
     }
 }

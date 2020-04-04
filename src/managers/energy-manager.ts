@@ -1,6 +1,6 @@
 import maxBy from 'lodash/maxBy'
 import minBy from 'lodash/minBy'
-import { LogisticsMemory, TASK_HAULING } from 'roles/logistics'
+import { LogisticsMemory, TASK_HAULING } from 'roles/logistics-constants'
 
 import SourceManager from './source-manager'
 

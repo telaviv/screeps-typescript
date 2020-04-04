@@ -1,3 +1,4 @@
+import EnergyManager from 'managers/energy-manager'
 import SourceManager from 'managers/source-manager'
 import { fromRoom } from 'utils/immutable-room'
 
@@ -22,7 +23,11 @@ function pickupEnergy(creep: SourceCreep) {
         return
     }
 
-    if (!droppedEnergy.request(creep)) {
+    const capacity = freeEnergyCapacity(creep)
+    const energyManager = EnergyManager.get(creep.room)
+    const assignment = energyManager.findLogisticsAssignment(capacity)
+
+    if (assignment === null) {
         creep.memory.waitTime += 1
         creep.say('😴')
         if (creep.memory.waitTime >= SUICIDE_TIME) {
@@ -30,7 +35,12 @@ function pickupEnergy(creep: SourceCreep) {
         }
         return
     }
+    const oldSource = creep.memory.source
+    if (oldSource !== assignment) {
+        console.log('creep-switch', creep.name, oldSource, assignment)
+    }
 
+    creep.memory.source = assignment
     const err = rawPickupEnergy(creep)
 
     if (err === OK) {
@@ -69,6 +79,10 @@ export function isFullOfEnergy(creep: Creep) {
 
 export function hasNoEnergy(creep: Creep) {
     return creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0
+}
+
+export function freeEnergyCapacity(creep: Creep) {
+    return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
 
 function getSourceMemory(creep: SourceCreep): RoomSourceMemory {

@@ -1,5 +1,6 @@
 import roleHarvester, { Harvester } from 'roles/harvester'
-import roleLogistics, { Logistics } from 'roles/logistics'
+import roleLogistics from 'roles/logistics'
+import { Logistics } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'

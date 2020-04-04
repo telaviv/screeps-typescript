@@ -1,13 +1,14 @@
 import filter from 'lodash/filter'
 
-import roleLogistics, {
+import roleLogistics from 'roles/logistics'
+import {
     Logistics,
     DeliveryTask,
     TASK_HAULING,
     TASK_BUILDING,
     TASK_UPGRADING,
     TASK_REPAIRING,
-} from 'roles/logistics'
+} from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
 import EnergyManager from 'managers/energy-manager'
 
