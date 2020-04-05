@@ -1,5 +1,5 @@
 import filter from 'lodash/filter'
-import { getBuildManager } from 'build-manager'
+import { getBuildManager } from 'managers/build-manager'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
 import {
