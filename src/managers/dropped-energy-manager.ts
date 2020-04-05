@@ -1,4 +1,5 @@
 import includes from 'lodash/includes'
+import { freeEnergyCapacity } from 'utils/creep'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()
@@ -50,7 +51,7 @@ export default class DroppedEnergyManager {
     }
 
     canPickup(creep: Creep) {
-        const capacity = creep.store.getCapacity()
+        const capacity = freeEnergyCapacity(creep)
         return capacity <= this.availableEnergy()
     }
 
@@ -80,7 +81,6 @@ export default class DroppedEnergyManager {
     cleanup() {
         for (const creepName of this.requests) {
             if (!Game.creeps.hasOwnProperty(creepName)) {
-                console.log('removing request')
                 this.removeRequest(creepName)
             }
         }
@@ -88,11 +88,5 @@ export default class DroppedEnergyManager {
 
     private persistMemory() {
         this.memory.requests = this.requests
-        console.log(
-            'persisted',
-            JSON.stringify(this.pos),
-            JSON.stringify(this.memory.requests),
-            this.availableEnergy(),
-        )
     }
 }

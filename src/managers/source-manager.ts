@@ -34,6 +34,17 @@ export default class SourceManager {
         return SourceManager.create(memory)
     }
 
+    static getById(sourceId: Id<Source>): SourceManager {
+        const source = Game.getObjectById(sourceId) as Source
+        const sourceMemory = source.room.memory.sources.find(
+            s => s.id === sourceId,
+        )
+        if (!sourceMemory) {
+            throw Error(`not a real source ${sourceId}`)
+        }
+        return SourceManager.get(sourceMemory)
+    }
+
     hasStaticHarvester(): boolean {
         const harvesters = this.creeps.filter(
             creep => creep.memory.role === 'harvester',

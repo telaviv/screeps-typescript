@@ -1,5 +1,6 @@
 import EnergyManager from 'managers/energy-manager'
 import SourceManager from 'managers/source-manager'
+import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import { fromRoom } from 'utils/immutable-room'
 
 const SUICIDE_TIME = 200
@@ -14,8 +15,7 @@ function harvestEnergy(creep: SourceCreep) {
 }
 
 function pickupEnergy(creep: SourceCreep) {
-    const sourceMemory = getSourceMemory(creep)
-    const sourceManager = SourceManager.get(sourceMemory)
+    const sourceManager = getSourceManager(creep)
     const droppedEnergy = sourceManager.droppedEnergy
 
     if (!sourceManager.hasStaticHarvester()) {
@@ -35,10 +35,9 @@ function pickupEnergy(creep: SourceCreep) {
 }
 
 function requestSourceEnergy(creep: SourceCreep): boolean {
-    const originalSourceMemory = getSourceMemory(creep)
-    const originalSourceManager = SourceManager.get(originalSourceMemory)
-    const originalDroppedEnergy = originalSourceManager.droppedEnergy
+    const originalDroppedEnergy = getDropSpotManager(creep)
 
+    // this happens when a creep gets lost and forgets they have a request.
     if (originalDroppedEnergy.hasRequest(creep)) {
         return true
     }
@@ -54,15 +53,8 @@ function requestSourceEnergy(creep: SourceCreep): boolean {
         }
         return false
     }
-    const oldSource = creep.memory.source
-    if (oldSource !== source) {
-        console.log('creep-switch', creep.name, oldSource, source)
-    }
 
-    const sourceMemory = getSourceMemory(creep)
-    const sourceManager = SourceManager.get(sourceMemory)
-    const droppedEnergy = sourceManager.droppedEnergy
-
+    const droppedEnergy = SourceManager.getById(source).droppedEnergy
     creep.memory.source = source
     if (!droppedEnergy.request(creep)) {
         throw new Error(`this should be impossible ${creep.name}`)
@@ -71,14 +63,11 @@ function requestSourceEnergy(creep: SourceCreep): boolean {
 }
 
 function rawPickupEnergy(creep: SourceCreep) {
-    const sourceMemory = getSourceMemory(creep)
-    const sourceManager = SourceManager.get(sourceMemory)
-    const droppedEnergy = sourceManager.droppedEnergy
+    const droppedEnergy = getDropSpotManager(creep)
     const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
     const err = creep.pickup(target[0])
     if (err === ERR_NOT_IN_RANGE) {
-        const harvestPos = sourceMemory.dropSpot.pos
-        creep.moveTo(harvestPos.x, harvestPos.y, {
+        creep.moveTo(droppedEnergy.pos.x, droppedEnergy.pos.y, {
             range: 1,
             visualizePathStyle: { stroke: '#ffaa00' },
         })
@@ -107,16 +96,12 @@ export function freeEnergyCapacity(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
 
-function getSourceMemory(creep: SourceCreep): RoomSourceMemory {
-    const roomMemory = Memory.rooms[creep.room.name]
-    const sourceMemory = roomMemory.sources.find(
-        s => s.id === creep.memory.source,
-    )
-    if (!sourceMemory) {
-        throw Error("Somehow we don't have memory")
-    }
+function getSourceManager(creep: SourceCreep): SourceManager {
+    return SourceManager.getById(creep.memory.source)
+}
 
-    return sourceMemory
+function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
+    return getSourceManager(creep).droppedEnergy
 }
 
 export function getEnergy(creep: SourceCreep) {

@@ -1,7 +1,9 @@
+import every from 'lodash/every'
 import { OrderedSet, Record as IRecord } from 'immutable'
 import { fromRoom, updateCache } from 'utils/immutable-room'
-
 import {
+    getDropSpots,
+    hasContainerAtPosition,
     isAtExtensionCap,
     isAtTowerCap,
     getConstructionSites,
@@ -61,6 +63,41 @@ export default class BuildManager {
             return this.buildNextTower()
         }
 
+        if (this.canBuildContainer()) {
+            console.log('can build container')
+            return this.buildNextContainer()
+        }
+
+        return false
+    }
+
+    private canBuildContainer() {
+        const dropSpots = getDropSpots(this.room)
+        return every(dropSpots, dropSpot =>
+            hasContainerAtPosition(this.room, dropSpot.pos),
+        )
+    }
+
+    private buildNextContainer() {
+        const dropSpots = getDropSpots(this.room)
+        for (const dropSpot of dropSpots) {
+            if (!hasContainerAtPosition(this.room, dropSpot.pos)) {
+                const iroom = fromRoom(this.room)
+                const pos = dropSpot.pos
+                const ret = this.room.createConstructionSite(
+                    pos,
+                    STRUCTURE_CONTAINER,
+                )
+
+                console.log('created container at', JSON.stringify(pos), ret)
+
+                updateCache(
+                    this.room,
+                    iroom.setConstructionSite(pos.x, pos.y, true),
+                )
+                return ret === OK
+            }
+        }
         return false
     }
 
