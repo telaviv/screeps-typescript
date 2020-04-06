@@ -1,5 +1,6 @@
 import includes from 'lodash/includes'
 import { freeEnergyCapacity } from 'utils/creep'
+import { hasContainerAtPosition, getContainerAtPosition } from 'utils/room'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()
@@ -27,6 +28,10 @@ export default class DroppedEnergyManager {
         return DroppedEnergyManager.create(memory)
     }
 
+    get room(): Room {
+        return Game.rooms[this.pos.roomName]
+    }
+
     private calculateRequestAmount(): number {
         let requestAmount = 0
         for (const creepName of this.requests) {
@@ -41,13 +46,30 @@ export default class DroppedEnergyManager {
     }
 
     availableEnergy(): number {
-        const room = Game.rooms[this.pos.roomName]
-        const resources = room.lookForAt(LOOK_ENERGY, this.pos)
+        const currentEnergy = this.calculateStoredEnergy()
+        return currentEnergy - this.calculateRequestAmount()
+    }
+
+    private calculateStoredEnergy(): number {
+        if (this.hasContainer()) {
+            const container = this.getContainer() as StructureContainer
+            const energy = container.store.getUsedCapacity(RESOURCE_ENERGY)
+            console.log('returning container energy', energy)
+            return energy
+        }
+        const resources = this.room.lookForAt(LOOK_ENERGY, this.pos)
         if (resources.length === 0) {
             return 0
         }
-        const currentEnergy = resources[0].amount
-        return currentEnergy - this.calculateRequestAmount()
+        return resources[0].amount
+    }
+
+    hasContainer(): boolean {
+        return hasContainerAtPosition(this.room, this.pos)
+    }
+
+    getContainer(): StructureContainer | null {
+        return getContainerAtPosition(this.room, this.pos)
     }
 
     canPickup(creep: Creep) {

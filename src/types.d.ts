@@ -49,6 +49,7 @@ interface RoomMemory {
     strategy: StrategyPhase
     survey: SurveyMemory
     collapsed: boolean
+    constructing: boolean
 }
 
 interface CreepBlueprint {

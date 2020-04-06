@@ -23,6 +23,8 @@ function unwrappedLoop() {
     survey()
 
     Object.values(Game.rooms).forEach(room => {
+        room.memory.constructing = false
+
         for (const source of room.memory.sources) {
             const droppedEnergy = DroppedEnergyManager.get(source.dropSpot)
             droppedEnergy.cleanup()

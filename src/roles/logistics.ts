@@ -19,10 +19,20 @@ import {
 } from './logistics-constants'
 
 const ROLE = 'logistics'
+const SUICIDE_TIME = 200
+const SLEEP_SAY_TIME = 50
 
 const roleLogistics = {
     run: wrap((creep: Logistics) => {
         roleLogistics.updateMemory(creep)
+        if (creep.memory.waitTime > SLEEP_SAY_TIME) {
+            creep.say('😴')
+        }
+
+        if (creep.memory.waitTime > SUICIDE_TIME) {
+            creep.suicide()
+        }
+
         const currentTask = creep.memory.currentTask
 
         if (currentTask === TASK_COLLECTING) {
@@ -43,6 +53,7 @@ const roleLogistics = {
         const currentTask = memory.currentTask
         if (currentTask === TASK_COLLECTING && isFullOfEnergy(creep)) {
             memory.currentTask = memory.preference
+            memory.waitTime = 0
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
             memory.currentTask = TASK_COLLECTING
             memory.waitTime = 0
@@ -64,6 +75,8 @@ const roleLogistics = {
             } else {
                 roleLogistics.switchTask(creep)
             }
+        } else {
+            creep.memory.currentTask = TASK_COLLECTING
         }
     },
 

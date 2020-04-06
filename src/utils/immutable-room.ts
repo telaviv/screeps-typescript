@@ -111,6 +111,12 @@ export class ImmutableRoom implements ValueObject {
     getRandomWalkablePosition(x: number, y: number): RoomPosition | null {
         const neighbors = this.getClosestNeighbors(x, y)
         const walkableNeighbors = neighbors.filter(pos => !pos.isObstacle())
+        console.log(
+            'walkable neighbors',
+            x,
+            y,
+            JSON.stringify(walkableNeighbors),
+        )
         if (walkableNeighbors.length === 0) {
             return null
         }

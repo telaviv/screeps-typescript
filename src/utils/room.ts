@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/brace-style */
+
 import minBy from 'lodash/minBy'
 import filter from 'lodash/filter'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import EnergyManager from 'managers/energy-manager'
+import { fromRoom, updateCache } from 'utils/immutable-room'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
@@ -44,10 +47,21 @@ export function getConstructionSites(room: Room): ConstructionSite[] {
     return room.find(FIND_CONSTRUCTION_SITES)
 }
 
-export function hasContainerAtPosition(room: Room, pos: RoomPosition) {
-    return filter(room.lookForAt(LOOK_STRUCTURES, pos), {
+export function hasContainerAtPosition(room: Room, pos: RoomPosition): boolean {
+    return getContainerAtPosition(room, pos) !== null
+}
+
+export function getContainerAtPosition(
+    room: Room,
+    pos: RoomPosition,
+): StructureContainer | null {
+    const containers = filter(room.lookForAt(LOOK_STRUCTURES, pos), {
         structureType: STRUCTURE_CONTAINER,
     })
+    if (containers.length === 0) {
+        return null
+    }
+    return containers[0] as StructureContainer
 }
 
 export function findWeakestStructure(room: Room): Structure | null {
@@ -66,6 +80,49 @@ export function findWeakestStructure(room: Room): Structure | null {
     return minBy(weakRoads, 'hits') as Structure
 }
 
-export function getDropSpots(room: Room): DroppedEnergyManager[] {
-    return EnergyManager.get(room).sources.map(source => source.droppedEnergy)
+export function hasConstructionSite(room: Room): boolean {
+    if (room.memory.constructing) {
+        return true
+    }
+    return getConstructionSites(room).length > 0
+}
+
+export function makeConstructionSite(
+    pos: RoomPosition,
+    type: BuildableStructureConstant,
+): ScreepsReturnCode {
+    const room = Game.rooms[pos.roomName]
+    const iroom = fromRoom(room)
+    const ret = room.createConstructionSite(pos, type)
+    if (ret === OK) {
+        updateCache(room, iroom.setConstructionSite(pos.x, pos.y, true))
+        room.memory.constructing = true
+    }
+    return ret
+}
+
+export enum RoomType {
+    ROOM = 'room',
+    HIGHWAY = 'highway',
+    CENTER = 'center',
+    SOURCE_KEEPER = 'source-keeper',
+}
+
+export const getRoomType = (roomName: string): RoomType => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [EW, NS] = roomName.match(/\d+/g) as any
+    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+    if (EW % 10 === 0 || NS % 10 === 0) {
+        return RoomType.HIGHWAY
+    } // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+
+    if (EW % 5 === 0 && NS % 5 === 0) {
+        return RoomType.CENTER
+    }
+    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+    if (Math.abs(5 - (EW % 10)) <= 1 && Math.abs(5 - (NS % 10)) <= 1) {
+        return RoomType.SOURCE_KEEPER
+    }
+
+    return RoomType.ROOM
 }

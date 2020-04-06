@@ -3,34 +3,15 @@ import SourceManager from 'managers/source-manager'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import { fromRoom } from 'utils/immutable-room'
 
-const SUICIDE_TIME = 200
-
 function harvestEnergy(creep: SourceCreep) {
     const source = Game.getObjectById(creep.memory.source) as Source
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+        creep.memory.waitTime += 1
         creep.moveTo(source, {
             visualizePathStyle: { stroke: '#ffaa00' },
         })
-    }
-}
-
-function pickupEnergy(creep: SourceCreep) {
-    const sourceManager = getSourceManager(creep)
-    const droppedEnergy = sourceManager.droppedEnergy
-
-    if (!sourceManager.hasStaticHarvester()) {
-        harvestEnergy(creep)
-        return
-    }
-
-    if (!requestSourceEnergy(creep)) {
-        return
-    }
-
-    const err = rawPickupEnergy(creep)
-
-    if (err === OK) {
-        droppedEnergy.completeRequest(creep)
+    } else {
+        creep.memory.waitTime = 0
     }
 }
 
@@ -47,10 +28,6 @@ function requestSourceEnergy(creep: SourceCreep): boolean {
     const source = energyManager.findLogisticsAssignment(capacity)
     if (source === null) {
         creep.memory.waitTime += 1
-        creep.say('😴')
-        if (creep.memory.waitTime >= SUICIDE_TIME) {
-            creep.suicide()
-        }
         return false
     }
 
@@ -62,7 +39,7 @@ function requestSourceEnergy(creep: SourceCreep): boolean {
     return true
 }
 
-function rawPickupEnergy(creep: SourceCreep) {
+function pickupEnergy(creep: SourceCreep) {
     const droppedEnergy = getDropSpotManager(creep)
     const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
     const err = creep.pickup(target[0])
@@ -73,6 +50,34 @@ function rawPickupEnergy(creep: SourceCreep) {
         })
     }
     return err
+}
+
+function withdrawEnergy(creep: SourceCreep) {
+    const droppedEnergy = getDropSpotManager(creep)
+    const container = getDropContainer(creep)
+
+    if (container === null) {
+        console.log(
+            'dropped-energy-container',
+            JSON.stringify(droppedEnergy.getContainer()),
+        )
+        throw new Error('this should never be called without a container')
+    }
+
+    const err = creep.withdraw(container, RESOURCE_ENERGY)
+    if (err === ERR_NOT_IN_RANGE) {
+        creep.moveTo(droppedEnergy.pos.x, droppedEnergy.pos.y, {
+            range: 1,
+            visualizePathStyle: { stroke: '#ffaa00' },
+        })
+    }
+    return err
+}
+
+export function getDropContainer(
+    creep: SourceCreep,
+): StructureContainer | null {
+    return getDropSpotManager(creep).getContainer()
 }
 
 export function wander(creep: Creep) {
@@ -105,5 +110,25 @@ function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
 }
 
 export function getEnergy(creep: SourceCreep) {
-    pickupEnergy(creep)
+    let sourceManager = getSourceManager(creep)
+    if (!sourceManager.hasStaticHarvester()) {
+        harvestEnergy(creep)
+    }
+
+    if (!requestSourceEnergy(creep)) {
+        return
+    }
+
+    let err
+    sourceManager = getSourceManager(creep)
+    if (sourceManager.isContainerMining()) {
+        err = withdrawEnergy(creep)
+        console.log(creep, creep.name, 'attempted transfer', err)
+    } else {
+        err = pickupEnergy(creep)
+    }
+
+    if (err === OK) {
+        sourceManager.droppedEnergy.completeRequest(creep)
+    }
 }

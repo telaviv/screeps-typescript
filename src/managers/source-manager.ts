@@ -56,4 +56,8 @@ export default class SourceManager {
                 harvester.pos.y === this.droppedEnergy.pos.y,
         )
     }
+
+    isContainerMining(): boolean {
+        return this.droppedEnergy.getContainer() !== null
+    }
 }
