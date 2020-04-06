@@ -57,10 +57,6 @@ function withdrawEnergy(creep: SourceCreep) {
     const container = getDropContainer(creep)
 
     if (container === null) {
-        console.log(
-            'dropped-energy-container',
-            JSON.stringify(droppedEnergy.getContainer()),
-        )
         throw new Error('this should never be called without a container')
     }
 
@@ -123,7 +119,6 @@ export function getEnergy(creep: SourceCreep) {
     sourceManager = getSourceManager(creep)
     if (sourceManager.isContainerMining()) {
         err = withdrawEnergy(creep)
-        console.log(creep, creep.name, 'attempted transfer', err)
     } else {
         err = pickupEnergy(creep)
     }
