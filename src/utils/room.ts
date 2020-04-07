@@ -2,8 +2,6 @@
 
 import minBy from 'lodash/minBy'
 import filter from 'lodash/filter'
-import DroppedEnergyManager from 'managers/dropped-energy-manager'
-import EnergyManager from 'managers/energy-manager'
 import { fromRoom, updateCache } from 'utils/immutable-room'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]

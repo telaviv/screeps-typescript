@@ -1,4 +1,5 @@
 import every from 'lodash/every'
+import includes from 'lodash/includes'
 import { OrderedSet, Record as IRecord } from 'immutable'
 import { fromRoom } from 'utils/immutable-room'
 import {
@@ -6,6 +7,7 @@ import {
     isAtExtensionCap,
     isAtTowerCap,
     hasConstructionSite,
+    getConstructionSites,
     makeConstructionSite,
 } from 'utils/room'
 import { getDropSpots } from 'utils/managers'
@@ -69,6 +71,34 @@ export default class BuildManager {
         }
 
         return false
+    }
+
+    canBuildImportant(): boolean {
+        return (
+            this.hasImportantConstructionSite() ||
+            this.canBuildExtension() ||
+            this.canBuildSwampRoad() ||
+            this.canBuildTower() ||
+            this.canBuildContainer()
+        )
+    }
+
+    private hasImportantConstructionSite(): boolean {
+        const sites = getConstructionSites(this.room)
+        if (sites.length === 0) {
+            return false
+        }
+        const site = sites[0]
+        if (site.structureType === STRUCTURE_ROAD) {
+            return (
+                this.room.getTerrain().get(site.pos.x, site.pos.y) ===
+                TERRAIN_MASK_SWAMP
+            )
+        }
+        return !includes(
+            [STRUCTURE_WALL, STRUCTURE_RAMPART],
+            site.structureType,
+        )
     }
 
     private canBuildContainer() {

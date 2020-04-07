@@ -53,9 +53,7 @@ export default class DroppedEnergyManager {
     private calculateStoredEnergy(): number {
         if (this.hasContainer()) {
             const container = this.getContainer() as StructureContainer
-            const energy = container.store.getUsedCapacity(RESOURCE_ENERGY)
-            console.log('returning container energy', energy)
-            return energy
+            return container.store.getUsedCapacity(RESOURCE_ENERGY)
         }
         const resources = this.room.lookForAt(LOOK_ENERGY, this.pos)
         if (resources.length === 0) {

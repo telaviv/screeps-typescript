@@ -1,4 +1,5 @@
 import filter from 'lodash/filter'
+import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
@@ -8,6 +9,7 @@ import {
     findWeakestStructure,
 } from 'utils/room'
 import {
+    PREFERENCE_WORKER,
     TASK_HAULING,
     TASK_BUILDING,
     TASK_UPGRADING,
@@ -51,12 +53,37 @@ const roleLogistics = {
     updateMemory(creep: Logistics) {
         const memory = creep.memory
         const currentTask = memory.currentTask
+
         if (currentTask === TASK_COLLECTING && isFullOfEnergy(creep)) {
-            memory.currentTask = memory.preference
-            memory.waitTime = 0
+            if (memory.preference === PREFERENCE_WORKER) {
+                roleLogistics.calculateWorkerPreference(creep)
+                console.log(
+                    'creep',
+                    creep.name,
+                    'switching to',
+                    memory.currentTask,
+                )
+            } else {
+                memory.currentTask = memory.preference
+            }
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
             memory.currentTask = TASK_COLLECTING
-            memory.waitTime = 0
+        }
+        memory.waitTime = 0
+    },
+
+    calculateWorkerPreference(creep: Logistics) {
+        const memory = creep.memory
+        const energySinkManager = EnergySinkManager.get()
+        const buildManager = getBuildManager(creep.room)
+        if (!energySinkManager.transfersAreFull(creep.room)) {
+            memory.currentTask = TASK_HAULING
+        } else if (buildManager.canBuildImportant()) {
+            memory.currentTask = TASK_BUILDING
+        } else if (energySinkManager.canRepairNonWalls(creep.room)) {
+            memory.currentTask = TASK_REPAIRING
+        } else {
+            memory.currentTask = TASK_UPGRADING
         }
     },
 
@@ -66,6 +93,7 @@ const roleLogistics = {
             if (creep.build(targets[0]) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(targets[0], {
                     visualizePathStyle: { stroke: '#ffffff' },
+                    range: 3,
                 })
             }
         } else if (isFullOfEnergy(creep)) {
@@ -104,6 +132,7 @@ const roleLogistics = {
         ) {
             creep.moveTo(creep.room.controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
+                range: 3,
             })
         }
     },

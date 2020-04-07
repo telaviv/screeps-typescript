@@ -33,10 +33,18 @@ interface ProfilerMemory {
     start?: number
 }
 
+interface CreepTaskMemory {
+    type: string
+    name: string
+    timestamp: number
+    data: any
+}
+
 interface Memory {
     uuid: number
     log: any
     profiler: ProfilerMemory
+    tasks: CreepTaskMemory[]
 }
 
 interface SurveyMemory {
@@ -50,12 +58,6 @@ interface RoomMemory {
     survey: SurveyMemory
     collapsed: boolean
     constructing: boolean
-}
-
-interface CreepBlueprint {
-    parts: BodyPartConstant[]
-    name: string
-    memory: CreepMemory
 }
 
 type RoomPositionSet = RoomPosition[]
