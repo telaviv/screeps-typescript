@@ -18,6 +18,7 @@ import {
     DeliveryTask,
     Logistics,
     LogisticsMemory,
+    LogisticsPreference,
 } from './logistics-constants'
 
 const ROLE = 'logistics'
@@ -56,13 +57,7 @@ const roleLogistics = {
 
         if (currentTask === TASK_COLLECTING && isFullOfEnergy(creep)) {
             if (memory.preference === PREFERENCE_WORKER) {
-                roleLogistics.calculateWorkerPreference(creep)
-                console.log(
-                    'creep',
-                    creep.name,
-                    'switching to',
-                    memory.currentTask,
-                )
+                roleLogistics.assignWorkerPreference(creep)
             } else {
                 memory.currentTask = memory.preference
             }
@@ -72,18 +67,21 @@ const roleLogistics = {
         memory.waitTime = 0
     },
 
-    calculateWorkerPreference(creep: Logistics) {
+    assignWorkerPreference(creep: Logistics) {
         const memory = creep.memory
-        const energySinkManager = EnergySinkManager.get()
         const buildManager = getBuildManager(creep.room)
-        if (!energySinkManager.transfersAreFull(creep.room)) {
+        if (!EnergySinkManager.transfersAreFull(creep.room)) {
             memory.currentTask = TASK_HAULING
+            creep.say('🚚')
         } else if (buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING
-        } else if (energySinkManager.canRepairNonWalls(creep.room)) {
+            creep.say('🏗️')
+        } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
             memory.currentTask = TASK_REPAIRING
+            creep.say('🛠️')
         } else {
             memory.currentTask = TASK_UPGRADING
+            creep.say('🌃')
         }
     },
 
@@ -160,7 +158,6 @@ const roleLogistics = {
         } else {
             creep.memory.currentTask = TASK_UPGRADING
         }
-        roleLogistics.run(creep)
     },
 
     needsEnergy(structure: Structure): boolean {
@@ -187,7 +184,7 @@ const roleLogistics = {
     create(
         spawn: StructureSpawn,
         source: Id<Source>,
-        preference: DeliveryTask = TASK_HAULING,
+        preference: LogisticsPreference = TASK_HAULING,
         rescue = false,
     ): number {
         const capacity = rescue ? 300 : spawn.room.energyCapacityAvailable

@@ -3,6 +3,7 @@ import roleLogistics from 'roles/logistics'
 import { Logistics } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
+import assignGlobals from 'utils/globals'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
 
 import { runSpawn } from './spawn'
@@ -11,6 +12,7 @@ import survey from './surveyor'
 import { runTower } from './tower'
 
 global.Profiler = Profiler
+assignGlobals()
 
 function unwrappedLoop() {
     // Automatically delete memory of missing creeps

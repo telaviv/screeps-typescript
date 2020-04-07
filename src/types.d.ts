@@ -69,6 +69,7 @@ declare namespace NodeJS {
     interface Global {
         Profiler: any
         log: any
+        killAllCreeps: any
     }
 }
 
