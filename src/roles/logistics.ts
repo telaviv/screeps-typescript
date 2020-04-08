@@ -28,6 +28,7 @@ const SLEEP_SAY_TIME = 50
 const roleLogistics = {
     run: wrap((creep: Logistics) => {
         roleLogistics.updateMemory(creep)
+        roleLogistics.say(creep)
         if (creep.memory.waitTime > SLEEP_SAY_TIME) {
             creep.say('😴')
         }
@@ -72,17 +73,33 @@ const roleLogistics = {
         const buildManager = getBuildManager(creep.room)
         if (!EnergySinkManager.transfersAreFull(creep.room)) {
             memory.currentTask = TASK_HAULING
-            creep.say('🚚')
         } else if (buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING
-            creep.say('🏗️')
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
             memory.currentTask = TASK_REPAIRING
-            creep.say('🛠️')
         } else {
             memory.currentTask = TASK_UPGRADING
-            creep.say('🌃')
         }
+    },
+
+    say(creep: Logistics) {
+        let sayString = ''
+        const memory = creep.memory
+        if (memory.currentTask === TASK_HAULING) {
+            sayString = '🚚'
+        } else if (memory.currentTask === TASK_BUILDING) {
+            sayString = '🏗️'
+        } else if (memory.currentTask === TASK_REPAIRING) {
+            sayString = '🛠️'
+        } else if (memory.currentTask === TASK_UPGRADING) {
+            sayString = '🌃'
+        } else if (memory.currentTask === TASK_COLLECTING) {
+            sayString = '⚡'
+        }
+        if (memory.preference === PREFERENCE_WORKER) {
+            sayString = `👷 ${sayString}`
+        }
+        creep.say(sayString)
     },
 
     build(creep: Logistics) {
