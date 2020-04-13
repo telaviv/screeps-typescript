@@ -61,10 +61,11 @@ const roleLogistics = {
             } else {
                 memory.currentTask = memory.preference
             }
+            memory.waitTime = 0
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
             memory.currentTask = TASK_COLLECTING
+            memory.waitTime = 0
         }
-        memory.waitTime = 0
     },
 
     assignWorkerPreference(creep: Logistics) {
@@ -154,20 +155,17 @@ const roleLogistics = {
     haulEnergy(creep: Logistics) {
         const energySinkManager = EnergySinkManager.get()
         const target = energySinkManager.makeTransferRequest(creep)
-        console.log('transfer request', target)
         if (target === null) {
             roleLogistics.switchTask(creep)
             return
         }
 
         const err = creep.transfer(target, RESOURCE_ENERGY)
-        console.log('transfer err is', err)
         if (err === ERR_NOT_IN_RANGE) {
             creep.moveTo(target, {
                 visualizePathStyle: { stroke: '#ffffff' },
             })
         } else if (err === OK) {
-            console.log('completing transfer request', creep.name)
             energySinkManager.completeTransferRequest(creep)
         }
     },
