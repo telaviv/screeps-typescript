@@ -3,6 +3,7 @@
 import minBy from 'lodash/minBy'
 import filter from 'lodash/filter'
 import { fromRoom, updateCache } from 'utils/immutable-room'
+import * as Logger from 'utils/logger'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
@@ -101,6 +102,8 @@ export function makeConstructionSite(
     if (ret === OK) {
         updateCache(room, iroom.setConstructionSite(pos.x, pos.y, true))
         room.memory.constructing = true
+    } else {
+        Logger.warning('construction:failed', type, pos, ret)
     }
     return ret
 }

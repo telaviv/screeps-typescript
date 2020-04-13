@@ -276,6 +276,7 @@ export function fromRoom(room: Room, useCache = true): ImmutableRoom {
     const STRUCTURE_INFO: StructureMap = {
         [STRUCTURE_EXTENSION]: 'extension',
         [STRUCTURE_SPAWN]: 'spawn',
+        [STRUCTURE_TOWER]: 'tower',
     }
 
     const controller = room.controller
