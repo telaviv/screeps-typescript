@@ -15,7 +15,6 @@ import {
     TASK_UPGRADING,
     TASK_REPAIRING,
     TASK_COLLECTING,
-    DeliveryTask,
     Logistics,
     LogisticsMemory,
     LogisticsPreference,

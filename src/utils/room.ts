@@ -35,6 +35,12 @@ export function getTowers(room: Room): StructureTower[] {
     }) as StructureTower[]
 }
 
+export function getSpawns(room: Room): StructureSpawn[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_SPAWN },
+    }) as StructureSpawn[]
+}
+
 export function getContainers(room: Room): StructureContainer[] {
     return room.find(FIND_STRUCTURES, {
         filter: { structureType: STRUCTURE_CONTAINER },

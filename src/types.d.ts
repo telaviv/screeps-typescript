@@ -33,18 +33,11 @@ interface ProfilerMemory {
     start?: number
 }
 
-interface CreepTaskMemory {
-    type: string
-    name: string
-    timestamp: number
-    data: any
-}
-
 interface Memory {
     uuid: number
     log: any
     profiler: ProfilerMemory
-    tasks: CreepTaskMemory[]
+    tasks: Task<any>[]
 }
 
 interface SurveyMemory {
@@ -58,6 +51,11 @@ interface RoomMemory {
     survey: SurveyMemory
     collapsed: boolean
     constructing: boolean
+}
+
+interface Task<T> {
+    readonly type: T
+    readonly timestamp: number
 }
 
 type RoomPositionSet = RoomPosition[]

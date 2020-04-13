@@ -4,12 +4,10 @@ import roleLogistics from 'roles/logistics'
 import {
     Logistics,
     LogisticsPreference,
-    DeliveryTask,
     PREFERENCE_WORKER,
     TASK_HAULING,
     TASK_BUILDING,
     TASK_UPGRADING,
-    TASK_REPAIRING,
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
 import EnergyManager from 'managers/energy-manager'
@@ -56,7 +54,6 @@ export default function(spawn: StructureSpawn) {
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
     const upgraders = getLogisticsCreeps(TASK_UPGRADING, room)
     const builders = getLogisticsCreeps(TASK_BUILDING, room)
-    const repairers = getLogisticsCreeps(TASK_REPAIRING, room)
     const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
     if (harvesters.length < HARVESTERS_PER_SOURCE * sourceCount) {
         roleHarvester.create(spawn, harvesterSource)
