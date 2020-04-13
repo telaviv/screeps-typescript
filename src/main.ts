@@ -5,6 +5,7 @@ import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
+import EnergySinkManager from 'managers/energy-sink-manager'
 
 import { runSpawn } from './spawn'
 import updateStrategy from './strategy'
@@ -26,6 +27,7 @@ function unwrappedLoop() {
         }
     }
 
+    EnergySinkManager.get().cleanup()
     survey()
 
     Object.values(Game.rooms).forEach(room => {

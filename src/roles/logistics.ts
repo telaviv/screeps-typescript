@@ -154,14 +154,21 @@ const roleLogistics = {
     haulEnergy(creep: Logistics) {
         const energySinkManager = EnergySinkManager.get()
         const target = energySinkManager.makeTransferRequest(creep)
+        console.log('transfer request', target)
         if (target === null) {
             roleLogistics.switchTask(creep)
             return
         }
-        if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+
+        const err = creep.transfer(target, RESOURCE_ENERGY)
+        console.log('transfer err is', err)
+        if (err === ERR_NOT_IN_RANGE) {
             creep.moveTo(target, {
                 visualizePathStyle: { stroke: '#ffffff' },
             })
+        } else if (err === OK) {
+            console.log('completing transfer request', creep.name)
+            energySinkManager.completeTransferRequest(creep)
         }
     },
 

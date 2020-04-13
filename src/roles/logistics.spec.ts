@@ -1,9 +1,8 @@
 /* eslint no-loop-func: "off" */
 
 import filter from 'lodash/filter'
-import { mockStructure } from 'screeps-jest'
 
-import roleLogistics, { calculateParts } from './logistics'
+import { calculateParts } from './logistics'
 
 describe('calculateParts()', () => {
     it('produces the correct amount of parts', () => {

@@ -42,7 +42,7 @@ export default class EnergySinkManager {
             return null
         }
 
-        const currentRequest = this.getCurrentRequest(creep)
+        const currentRequest = this.getCurrentTransferRequest(creep)
         if (currentRequest !== null) {
             return EnergySinkManager.structureFromTask(currentRequest)
         }
@@ -71,6 +71,52 @@ export default class EnergySinkManager {
         }
 
         return null
+    }
+
+    completeTransferRequest(creep: Logistics) {
+        const index = this.tasks.findIndex(task =>
+            EnergySinkManager.isCreepTransferTask(task, creep),
+        )
+        if (index === -1) {
+            throw new Error(
+                `couldn't complete transfer request for ${creep.name}`,
+            )
+        }
+        return this.tasks.splice(index, 1)
+    }
+
+    cleanup() {
+        const index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
+        while (index !== -1) {
+            this.tasks.splice(index, 1)
+            this.tasks.findIndex(EnergySinkManager.needsCleanup)
+        }
+    }
+
+    private static isCreepTransferTask(task: Task<any>, creep: Creep) {
+        if (task.type !== 'transfer') {
+            return false
+        }
+
+        const transferTask = (task as unknown) as TransferTask
+        return transferTask.creep === creep.name
+    }
+
+    private static needsCleanup(task: Task<any>): boolean {
+        if (task.type !== 'transfer') {
+            return false
+        }
+
+        const transferTask = (task as unknown) as TransferTask
+        if (!(transferTask.creep in Game.creeps)) {
+            return true
+        }
+
+        if (Game.getObjectById(transferTask.structureId) === null) {
+            return true
+        }
+
+        return false
     }
 
     private makeRequest(creep: Logistics, structure: AnyStoreStructure) {
@@ -102,14 +148,10 @@ export default class EnergySinkManager {
         })
     }
 
-    private getCurrentRequest(creep: Creep): TransferTask | null {
-        const tasks = this.tasks.filter(task => {
-            if (task.type !== 'transfer') {
-                return false
-            }
-            const transferTask = (task as unknown) as TransferTask
-            return transferTask.creep === creep.name
-        })
+    private getCurrentTransferRequest(creep: Creep): TransferTask | null {
+        const tasks = this.tasks.filter(task =>
+            EnergySinkManager.isCreepTransferTask(task, creep),
+        )
         if (tasks.length > 1) {
             throw new Error(`creep ${creep.name} has ${tasks.length} requests`)
         }
