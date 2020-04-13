@@ -31,16 +31,14 @@ const roleHarvester = {
 
     create(spawn: StructureSpawn, source: Id<Source>): number {
         const capacity = spawn.room.energyCapacityAvailable
-        return spawn.spawnCreep(
-            calculateParts(capacity),
-            `${ROLE}:${Game.time}`,
-            {
-                memory: {
-                    role: ROLE,
-                    source,
-                } as HarvesterMemory,
-            },
-        )
+        const parts = calculateParts(capacity)
+        const err = spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
+            memory: {
+                role: ROLE,
+                source,
+            } as HarvesterMemory,
+        })
+        return err
     },
 }
 

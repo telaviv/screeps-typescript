@@ -1,9 +1,11 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
 
+import filter from 'lodash/filter'
 import includes from 'lodash/includes'
 import { Logistics } from 'roles/logistics-constants'
 import { TransferTask } from 'tasks'
 import { currentEnergyHeld } from 'utils/creep'
+import * as Logger from 'utils/logger'
 import { getExtensions, getTowers, getSpawns } from 'utils/room'
 import { TransferStructure } from 'tasks/transfer'
 
@@ -36,6 +38,12 @@ export default class EnergySinkManager {
         return targets.length > 0
     }
 
+    get transferTasks(): TransferTask[] {
+        return filter(this.tasks, { type: 'transfer' }).map(task => {
+            return (task as unknown) as TransferTask
+        })
+    }
+
     makeTransferRequest(creep: Logistics): AnyStoreStructure | null {
         const energy = currentEnergyHeld(creep)
         if (energy === 0) {
@@ -56,17 +64,17 @@ export default class EnergySinkManager {
             return EnergySinkManager.structureFromTask(request)
         }
 
-        const towers = EnergySinkManager.fillableTowers(creep.room)
-        if (towers.length > 0) {
-            const tower = creep.pos.findClosestByRange(towers) as StructureTower
-            const request = this.makeRequest(creep, tower)
-            return EnergySinkManager.structureFromTask(request)
-        }
-
         const spawns = EnergySinkManager.fillableSpawns(creep.room)
         if (spawns.length > 0) {
             const spawn = creep.pos.findClosestByRange(spawns) as StructureSpawn
             const request = this.makeRequest(creep, spawn)
+            return EnergySinkManager.structureFromTask(request)
+        }
+
+        const towers = EnergySinkManager.fillableTowers(creep.room)
+        if (towers.length > 0) {
+            const tower = creep.pos.findClosestByRange(towers) as StructureTower
+            const request = this.makeRequest(creep, tower)
             return EnergySinkManager.structureFromTask(request)
         }
 
@@ -82,13 +90,29 @@ export default class EnergySinkManager {
                 `couldn't complete transfer request for ${creep.name}`,
             )
         }
-        return this.tasks.splice(index, 1)
+        const task = this.tasks.splice(index, 1)
+        const transferTask = (task[0] as unknown) as TransferTask
+        const structure = EnergySinkManager.structureFromTask(transferTask)
+        Logger.info(
+            'transfer:complete',
+            transferTask.creep,
+            structure.structureType,
+            transferTask.amount,
+        )
     }
 
     cleanup() {
         let index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
         while (index !== -1) {
-            this.tasks.splice(index, 1)
+            const task = this.tasks.splice(index, 1)
+            const transferTask = (task[0] as unknown) as TransferTask
+            const structure = EnergySinkManager.structureFromTask(transferTask)
+            Logger.info(
+                'task:transfer:cleanup',
+                transferTask.creep,
+                structure.structureType,
+                transferTask.amount,
+            )
             index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
         }
     }
@@ -99,7 +123,8 @@ export default class EnergySinkManager {
         }
 
         const transferTask = (task as unknown) as TransferTask
-        return transferTask.creep === creep.name
+        const val = transferTask.creep === creep.name
+        return val
     }
 
     private static needsCleanup(task: Task<any>): boolean {
@@ -116,10 +141,9 @@ export default class EnergySinkManager {
             return true
         }
 
-        const capacity = TransferStructure.get(
-            transferTask.structureId,
-        ).remainingCapacity()
-        if (capacity <= 0) {
+        const structure = EnergySinkManager.structureFromTask(transferTask)
+        const capacity = structure.store.getFreeCapacity()
+        if (capacity === 0) {
             return true
         }
 
@@ -129,6 +153,13 @@ export default class EnergySinkManager {
     private makeRequest(creep: Logistics, structure: AnyStoreStructure) {
         const transferStructure = TransferStructure.get(structure.id)
         const task = transferStructure.makeRequest(creep)
+        Logger.info(
+            'transfer:create',
+            creep.name,
+            structure.structureType,
+            structure.id,
+            task.amount,
+        )
         this.tasks.push(task)
         return task
     }

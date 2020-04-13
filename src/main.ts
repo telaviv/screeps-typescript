@@ -27,7 +27,8 @@ function unwrappedLoop() {
         }
     }
 
-    EnergySinkManager.get().cleanup()
+    const energySinkManager = EnergySinkManager.get()
+    energySinkManager.cleanup()
     survey()
 
     Object.values(Game.rooms).forEach(room => {
