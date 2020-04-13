@@ -86,10 +86,10 @@ export default class EnergySinkManager {
     }
 
     cleanup() {
-        const index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
+        let index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
         while (index !== -1) {
             this.tasks.splice(index, 1)
-            this.tasks.findIndex(EnergySinkManager.needsCleanup)
+            index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
         }
     }
 
@@ -113,6 +113,13 @@ export default class EnergySinkManager {
         }
 
         if (Game.getObjectById(transferTask.structureId) === null) {
+            return true
+        }
+
+        const capacity = TransferStructure.get(
+            transferTask.structureId,
+        ).remainingCapacity()
+        if (capacity <= 0) {
             return true
         }
 

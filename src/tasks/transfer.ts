@@ -42,7 +42,7 @@ export class TransferStructure {
         resource: ResourceConstant = RESOURCE_ENERGY,
     ): TransferTask {
         const creepEnergyAvailable = currentEnergyHeld(creep)
-        if (creepEnergyAvailable === 0) {
+        if (creepEnergyAvailable <= 0) {
             throw new Error(`creep ${creep.name} was trying to make request`)
         }
         const structureCapacity = this.remainingCapacity(resource)

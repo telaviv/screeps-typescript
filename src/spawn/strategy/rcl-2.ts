@@ -102,15 +102,15 @@ function createRescueCreeps(spawn: StructureSpawn) {
 function updateRescueStatus(room: Room) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
-    const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
+    const logistics = getCreeps('logistics', room)
     const harvesters = getCreeps('harvester', room)
     if (
         room.memory.collapsed &&
-        workers.length >= sourceCount &&
+        logistics.length >= sourceCount &&
         harvesters.length >= sourceCount
     ) {
         room.memory.collapsed = false
-    } else if (!room.memory.collapsed && workers.length < sourceCount) {
+    } else if (!room.memory.collapsed && logistics.length < sourceCount) {
         room.memory.collapsed = true
     }
 }

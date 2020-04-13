@@ -24,6 +24,23 @@ const ROLE = 'logistics'
 const SUICIDE_TIME = 200
 const SLEEP_SAY_TIME = 50
 
+const TASK_EMOJIS = {
+    [TASK_HAULING]: '🚚',
+    [TASK_BUILDING]: '🏗️',
+    [TASK_REPAIRING]: '🛠️',
+    [TASK_COLLECTING]: '⚡',
+    [TASK_UPGRADING]: '🌃',
+}
+
+const PREFERENCE_EMOJIS = {
+    [TASK_HAULING]: '🚚',
+    [TASK_BUILDING]: '🏗️',
+    [TASK_REPAIRING]: '🛠️',
+    [TASK_COLLECTING]: '⚡',
+    [TASK_UPGRADING]: '🌃',
+    [PREFERENCE_WORKER]: '👷',
+}
+
 const roleLogistics = {
     run: wrap((creep: Logistics) => {
         roleLogistics.updateMemory(creep)
@@ -83,23 +100,10 @@ const roleLogistics = {
     },
 
     say(creep: Logistics) {
-        let sayString = ''
         const memory = creep.memory
-        if (memory.currentTask === TASK_HAULING) {
-            sayString = '🚚'
-        } else if (memory.currentTask === TASK_BUILDING) {
-            sayString = '🏗️'
-        } else if (memory.currentTask === TASK_REPAIRING) {
-            sayString = '🛠️'
-        } else if (memory.currentTask === TASK_UPGRADING) {
-            sayString = '🌃'
-        } else if (memory.currentTask === TASK_COLLECTING) {
-            sayString = '⚡'
-        }
-        if (memory.preference === PREFERENCE_WORKER) {
-            sayString = `👷 ${sayString}`
-        }
-        creep.say(sayString)
+        const preference = PREFERENCE_EMOJIS[memory.preference]
+        const currentTask = TASK_EMOJIS[memory.currentTask]
+        creep.say(`${preference} ${currentTask}`)
     },
 
     build(creep: Logistics) {
