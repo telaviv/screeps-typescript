@@ -48,7 +48,7 @@ describe('tower module', () => {
 
     describe('isDamaged', () => {
         it('should return false if the structure has full health', () => {
-            const structure = mockStructure(STRUCTURE_SPAWN, {
+            const structure = mockStructure(STRUCTURE_ROAD, {
                 hits: 5000,
                 hitsMax: 5000,
             })
@@ -56,7 +56,7 @@ describe('tower module', () => {
         })
 
         it("should return true if the structure doesn't have full health", () => {
-            const structure = mockStructure(STRUCTURE_SPAWN, {
+            const structure = mockStructure(STRUCTURE_ROAD, {
                 hits: 3000,
                 hitsMax: 5000,
             })
