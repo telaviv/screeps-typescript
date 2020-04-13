@@ -14,6 +14,10 @@ import { runTower } from './tower'
 global.Profiler = Profiler
 assignGlobals()
 
+if (!Memory.tasks) {
+    Memory.tasks = []
+}
+
 function unwrappedLoop() {
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

@@ -152,19 +152,16 @@ const roleLogistics = {
     },
 
     haulEnergy(creep: Logistics) {
-        const targets = creep.room.find(FIND_STRUCTURES, {
-            filter: roleLogistics.needsEnergy,
-        })
-        if (targets.length > 0) {
-            if (
-                creep.transfer(targets[0], RESOURCE_ENERGY) === ERR_NOT_IN_RANGE
-            ) {
-                creep.moveTo(targets[0], {
-                    visualizePathStyle: { stroke: '#ffffff' },
-                })
-            }
-        } else {
+        const energySinkManager = EnergySinkManager.get()
+        const target = energySinkManager.makeTransferRequest(creep)
+        if (target === null) {
             roleLogistics.switchTask(creep)
+            return
+        }
+        if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(target, {
+                visualizePathStyle: { stroke: '#ffffff' },
+            })
         }
     },
 
@@ -174,21 +171,6 @@ const roleLogistics = {
         } else {
             creep.memory.currentTask = TASK_UPGRADING
         }
-    },
-
-    needsEnergy(structure: Structure): boolean {
-        if (
-            structure.structureType === STRUCTURE_EXTENSION ||
-            structure.structureType === STRUCTURE_SPAWN ||
-            structure.structureType === STRUCTURE_TOWER
-        ) {
-            const s = structure as
-                | StructureExtension
-                | StructureSpawn
-                | StructureTower
-            return s.energy < s.energyCapacity
-        }
-        return false
     },
 
     requestedCarryCapacity(spawn: StructureSpawn) {
