@@ -90,10 +90,10 @@ export default class BuildManager {
         }
         const site = sites[0]
         if (site.structureType === STRUCTURE_ROAD) {
-            return (
+            const result =
                 this.room.getTerrain().get(site.pos.x, site.pos.y) ===
                 TERRAIN_MASK_SWAMP
-            )
+            return result
         }
         return !includes(
             [STRUCTURE_WALL, STRUCTURE_RAMPART],

@@ -157,7 +157,6 @@ export default class EnergySinkManager {
             'transfer:create',
             creep.name,
             structure.structureType,
-            structure.id,
             task.amount,
         )
         this.tasks.push(task)

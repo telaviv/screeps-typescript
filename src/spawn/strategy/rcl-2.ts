@@ -71,8 +71,6 @@ export default function(spawn: StructureSpawn) {
         roleLogistics.create(spawn, assignment, TASK_HAULING)
     } else if (workers.length < 1) {
         roleLogistics.create(spawn, assignment, PREFERENCE_WORKER)
-    } else if (haulers.length < HAULERS_PER_SOURCE * sourceCount) {
-        roleLogistics.create(spawn, assignment, TASK_HAULING)
     } else if (upgraders.length < UPGRADERS_COUNT) {
         roleLogistics.create(spawn, assignment, TASK_UPGRADING)
     } else if (builders.length < BUILDERS_COUNT) {
