@@ -107,12 +107,14 @@ export default class EnergySinkManager {
             const task = this.tasks.splice(index, 1)
             const transferTask = (task[0] as unknown) as TransferTask
             const structure = EnergySinkManager.structureFromTask(transferTask)
-            Logger.info(
-                'transfer:cleanup',
-                transferTask.creep,
-                structure.structureType,
-                transferTask.amount,
-            )
+            if (structure.structureType !== STRUCTURE_SPAWN) {
+                Logger.warning(
+                    'transfer:cleanup',
+                    transferTask.creep,
+                    structure.structureType,
+                    transferTask.amount,
+                )
+            }
             index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
         }
     }

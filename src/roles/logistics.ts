@@ -180,6 +180,8 @@ const roleLogistics = {
     switchTask(creep: Logistics) {
         if (!isAtExtensionCap(creep.room)) {
             creep.memory.currentTask = TASK_BUILDING
+        } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
+            creep.memory.currentTask = TASK_REPAIRING
         } else {
             creep.memory.currentTask = TASK_UPGRADING
         }
