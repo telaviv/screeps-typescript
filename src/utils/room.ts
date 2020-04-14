@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/brace-style */
 
 import minBy from 'lodash/minBy'
+import includes from 'lodash/includes'
 import filter from 'lodash/filter'
 import { fromRoom, updateCache } from 'utils/immutable-room'
 import * as Logger from 'utils/logger'
@@ -69,20 +70,20 @@ export function getContainerAtPosition(
     return containers[0] as StructureContainer
 }
 
-export function findWeakestStructure(room: Room): Structure | null {
-    const roads = room.find(FIND_MY_STRUCTURES, {
-        filter: { structuretype: STRUCTURE_ROAD },
-    }) as Structure[]
+export function findWeakStructure(room: Room): Structure | null {
+    const weakened = room.find<Structure>(FIND_STRUCTURES, {
+        filter: structure =>
+            !includes(
+                [STRUCTURE_ROAD, STRUCTURE_WALL, STRUCTURE_RAMPART],
+                structure.structureType,
+            ) && structure.hits < structure.hitsMax,
+    })
 
-    const weakRoads: Structure[] = roads.filter(
-        road => road.hits !== road.hitsMax,
-    )
-
-    if (weakRoads.length === 0) {
+    if (weakened.length === 0) {
         return null
     }
 
-    return minBy(weakRoads, 'hits') as Structure
+    return minBy(weakened, 'id') as Structure
 }
 
 export function hasConstructionSite(room: Room): boolean {

@@ -6,7 +6,7 @@ import { wrap } from 'utils/profiling'
 import {
     getConstructionSites,
     isAtExtensionCap,
-    findWeakestStructure,
+    findWeakStructure,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import {
@@ -129,16 +129,19 @@ const roleLogistics = {
     },
 
     repair(creep: Logistics) {
-        const structure = findWeakestStructure(creep.room)
+        const structure = findWeakStructure(creep.room)
         if (structure === null) {
             roleLogistics.switchTask(creep)
             return
         }
 
-        if (creep.repair(structure) === ERR_NOT_IN_RANGE) {
+        const err = creep.repair(structure)
+        if (err === ERR_NOT_IN_RANGE) {
             creep.moveTo(structure.pos, {
                 visualizePathStyle: { stroke: '#ffffff' },
             })
+        } else if (err !== OK) {
+            Logger.warning('logistics:repair:failure', creep.name, err)
         }
     },
 
