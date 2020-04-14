@@ -8,6 +8,7 @@ import {
     isAtExtensionCap,
     findWeakestStructure,
 } from 'utils/room'
+import * as Logger from 'utils/logger'
 import {
     PREFERENCE_WORKER,
     TASK_HAULING,
@@ -171,6 +172,8 @@ const roleLogistics = {
             })
         } else if (err === OK) {
             energySinkManager.completeTransferRequest(creep)
+        } else {
+            Logger.warning('logistics:haul:failure', creep.name, err)
         }
     },
 

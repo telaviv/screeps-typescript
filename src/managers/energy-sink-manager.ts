@@ -108,7 +108,7 @@ export default class EnergySinkManager {
             const transferTask = (task[0] as unknown) as TransferTask
             const structure = EnergySinkManager.structureFromTask(transferTask)
             Logger.info(
-                'task:transfer:cleanup',
+                'transfer:cleanup',
                 transferTask.creep,
                 structure.structureType,
                 transferTask.amount,
@@ -142,7 +142,7 @@ export default class EnergySinkManager {
         }
 
         const structure = EnergySinkManager.structureFromTask(transferTask)
-        const capacity = structure.store.getFreeCapacity()
+        const capacity = structure.store.getFreeCapacity(RESOURCE_ENERGY)
         if (capacity === 0) {
             return true
         }
