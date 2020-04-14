@@ -221,9 +221,11 @@ export default class EnergySinkManager {
             structure.structureType === STRUCTURE_SPAWN ||
             structure.structureType === STRUCTURE_TOWER
         ) {
-            const storeStructure = structure as AnyStoreStructure
-            const transferStructure = TransferStructure.get(storeStructure.id)
-            return transferStructure.remainingCapacity(RESOURCE_ENERGY) > 0
+            const s = structure as
+                | StructureExtension
+                | StructureSpawn
+                | StructureTower
+            return s.energy < s.energyCapacity
         }
         return false
     }
