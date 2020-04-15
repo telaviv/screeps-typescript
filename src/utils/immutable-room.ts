@@ -277,6 +277,7 @@ export function fromRoom(room: Room, useCache = true): ImmutableRoom {
         [STRUCTURE_EXTENSION]: 'extension',
         [STRUCTURE_SPAWN]: 'spawn',
         [STRUCTURE_TOWER]: 'tower',
+        [STRUCTURE_WALL]: 'constructedWall',
     }
 
     const controller = room.controller
