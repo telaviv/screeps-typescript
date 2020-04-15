@@ -1,4 +1,5 @@
 import { wrap } from 'utils/profiling'
+import * as Logger from 'utils/logger'
 
 const ROLE = 'harvester'
 
@@ -20,9 +21,17 @@ const roleHarvester = {
             throw Error(`source memory isn't real ${roomMemory.sources}`)
         }
         const source = Game.getObjectById(sourceMemory.id) as Source
-
-        if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-            const harvestPos = sourceMemory.dropSpot.pos
+        const harvestPos = sourceMemory.dropSpot.pos
+        if (creep.pos.x === harvestPos.x && creep.pos.y === harvestPos.y) {
+            const err = creep.harvest(source)
+            if (err !== OK) {
+                Logger.warning(
+                    'harvester:harvest:failure',
+                    creep.name,
+                    "couldn't harvest",
+                )
+            }
+        } else {
             creep.moveTo(harvestPos.x, harvestPos.y, {
                 visualizePathStyle: { stroke: '#ffaa00' },
             })

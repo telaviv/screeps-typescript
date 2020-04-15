@@ -16,7 +16,7 @@ function runTower(tower: StructureTower) {
 
 function isDamaged(structure: Structure): boolean {
     return (
-        structure.hits < structure.hitsMax &&
+        structure.hitsMax - structure.hits > 50 &&
         structure.structureType === STRUCTURE_ROAD
     )
 }

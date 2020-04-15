@@ -214,7 +214,11 @@ export default class EnergySinkManager {
         ) {
             return false
         }
-        return structure.hits < structure.hitsMax
+        const hitsDifference = structure.hitsMax - structure.hits
+        if (structure.structureType === STRUCTURE_TOWER) {
+            return hitsDifference >= 50
+        }
+        return hitsDifference >= 0
     }
 
     private static needsEnergy(structure: Structure): boolean {
