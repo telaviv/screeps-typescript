@@ -3,11 +3,7 @@ import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
-import {
-    getConstructionSites,
-    isAtExtensionCap,
-    findWeakStructure,
-} from 'utils/room'
+import { getConstructionSites, isAtExtensionCap } from 'utils/room'
 import * as Logger from 'utils/logger'
 import {
     PREFERENCE_WORKER,
@@ -129,7 +125,7 @@ const roleLogistics = {
     },
 
     repair(creep: Logistics) {
-        const structure = findWeakStructure(creep.room)
+        const structure = EnergySinkManager.findRepairTarget(creep)
         if (structure === null) {
             roleLogistics.switchTask(creep)
             return
@@ -181,13 +177,31 @@ const roleLogistics = {
     },
 
     switchTask(creep: Logistics) {
+        let task = creep.memory.currentTask
         if (!isAtExtensionCap(creep.room)) {
-            creep.memory.currentTask = TASK_BUILDING
+            task = TASK_BUILDING
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
-            creep.memory.currentTask = TASK_REPAIRING
+            task = TASK_REPAIRING
         } else {
-            creep.memory.currentTask = TASK_UPGRADING
+            task = TASK_UPGRADING
         }
+        Logger.info(
+            'logistics:switch-task',
+            'switching',
+            creep.name,
+            creep.memory.currentTask,
+            'to',
+            task,
+        )
+        if (creep.memory.currentTask === task) {
+            Logger.warning(
+                'logistics:switch-task:failure',
+                creep.name,
+                "couldn't switch from",
+                task,
+            )
+        }
+        creep.memory.currentTask = task
     },
 
     requestedCarryCapacity(spawn: StructureSpawn) {

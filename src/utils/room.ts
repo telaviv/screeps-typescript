@@ -70,22 +70,6 @@ export function getContainerAtPosition(
     return containers[0] as StructureContainer
 }
 
-export function findWeakStructure(room: Room): Structure | null {
-    const weakened = room.find<Structure>(FIND_STRUCTURES, {
-        filter: structure =>
-            !includes(
-                [STRUCTURE_ROAD, STRUCTURE_WALL, STRUCTURE_RAMPART],
-                structure.structureType,
-            ) && structure.hits < structure.hitsMax,
-    })
-
-    if (weakened.length === 0) {
-        return null
-    }
-
-    return minBy(weakened, 'id') as Structure
-}
-
 export function hasConstructionSite(room: Room): boolean {
     if (room.memory.constructing) {
         return true

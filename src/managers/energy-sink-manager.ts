@@ -38,6 +38,16 @@ export default class EnergySinkManager {
         return targets.length > 0
     }
 
+    static findRepairTarget(creep: Logistics): Structure | null {
+        const targets = creep.room.find(FIND_STRUCTURES, {
+            filter: EnergySinkManager.isRepairableNonWall,
+        })
+        if (targets.length === 0) {
+            return null
+        }
+        return creep.pos.findClosestByRange(targets) as Structure
+    }
+
     get transferTasks(): TransferTask[] {
         return filter(this.tasks, { type: 'transfer' }).map(task => {
             return (task as unknown) as TransferTask
@@ -208,7 +218,7 @@ export default class EnergySinkManager {
     private static isRepairableNonWall(structure: Structure): boolean {
         if (
             includes(
-                [STRUCTURE_RAMPART, STRUCTURE_WALL],
+                [STRUCTURE_RAMPART, STRUCTURE_WALL, STRUCTURE_ROAD],
                 structure.structureType,
             )
         ) {
@@ -218,7 +228,7 @@ export default class EnergySinkManager {
         if (structure.structureType === STRUCTURE_TOWER) {
             return hitsDifference >= 50
         }
-        return hitsDifference >= 0
+        return hitsDifference > 0
     }
 
     private static needsEnergy(structure: Structure): boolean {
