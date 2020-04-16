@@ -38,6 +38,7 @@ interface Memory {
     log: any
     profiler: ProfilerMemory
     tasks: Task<any>[]
+    logLevel: string
 }
 
 interface SurveyMemory {
@@ -68,6 +69,7 @@ declare namespace NodeJS {
         Profiler: any
         log: any
         killAllCreeps: any
+        setLogLevel: any
     }
 }
 
