@@ -1,7 +1,6 @@
 Features
 ----------------------------
 
-[ ] - Wall Repairer
 [ ] - No Builders if unneeded
 [ ] - Snapshot System
    [ ] - Don't put obstacles inside of ramparts
@@ -16,6 +15,7 @@ Features
 [ ] - Safe Mode Usage
 [ ] - Mineral Extraction
 
+[x] - Wall Repairer
 
 Optimizations
 ----------------------------

@@ -88,6 +88,7 @@ const roleLogistics = {
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
             memory.currentTask = TASK_COLLECTING
             memory.waitTime = 0
+            delete memory.currentTarget
         }
     },
 
@@ -133,6 +134,43 @@ const roleLogistics = {
         }
     },
 
+    repairWalls(creep: Logistics) {
+        let structure = null
+        if (creep.memory.currentTarget) {
+            structure = Game.getObjectById<Structure>(
+                creep.memory.currentTarget,
+            )
+            if (structure === null) {
+                Logger.warning(
+                    'repair:target:failure',
+                    creep.name,
+                    creep.memory.currentTarget,
+                )
+            }
+        }
+
+        if (structure === null) {
+            structure = getWeakestWall(creep.room)
+        }
+
+        if (structure === null) {
+            roleLogistics.switchTask(creep)
+            return
+        }
+
+        creep.memory.currentTarget = structure.id
+
+        const err = creep.repair(structure)
+        if (err === ERR_NOT_IN_RANGE) {
+            creep.moveTo(structure.pos, {
+                visualizePathStyle: { stroke: '#ffffff' },
+                range: 3,
+            })
+        } else if (err !== OK) {
+            Logger.warning('logistics:repair-wall:failure', creep.name, err)
+        }
+    },
+
     repair(creep: Logistics) {
         const structure = EnergySinkManager.findRepairTarget(creep)
         if (structure === null) {
@@ -144,26 +182,10 @@ const roleLogistics = {
         if (err === ERR_NOT_IN_RANGE) {
             creep.moveTo(structure.pos, {
                 visualizePathStyle: { stroke: '#ffffff' },
+                range: 3,
             })
         } else if (err !== OK) {
             Logger.warning('logistics:repair:failure', creep.name, err)
-        }
-    },
-
-    repairWalls(creep: Logistics) {
-        const structure = getWeakestWall(creep.room)
-        if (structure === null) {
-            roleLogistics.switchTask(creep)
-            return
-        }
-
-        const err = creep.repair(structure)
-        if (err === ERR_NOT_IN_RANGE) {
-            creep.moveTo(structure.pos, {
-                visualizePathStyle: { stroke: '#ffffff' },
-            })
-        } else if (err !== OK) {
-            Logger.warning('logistics:repair-wall:failure', creep.name, err)
         }
     },
 

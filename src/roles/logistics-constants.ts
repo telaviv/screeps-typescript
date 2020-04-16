@@ -23,4 +23,5 @@ export interface LogisticsMemory extends SourceMemory {
     role: 'logistics'
     preference: LogisticsPreference
     currentTask: Task
+    currentTarget: Id<Structure> | undefined
 }
