@@ -182,7 +182,10 @@ export default class EnergySinkManager {
 
     private static fillableTowers(room: Room): AnyStoreStructure[] {
         const towers = getTowers(room)
-        return EnergySinkManager.filterFillableStructures(towers)
+        return towers.filter(structure => {
+            const transfer = TransferStructure.get(structure.id)
+            return transfer.remainingCapacity(RESOURCE_ENERGY) >= CARRY_CAPACITY
+        })
     }
 
     private static fillableSpawns(room: Room): AnyStoreStructure[] {
@@ -226,7 +229,8 @@ export default class EnergySinkManager {
         }
         const hitsDifference = structure.hitsMax - structure.hits
         if (structure.structureType === STRUCTURE_TOWER) {
-            return hitsDifference >= 50
+            // [FIX] - dedupe this
+            return hitsDifference >= CARRY_CAPACITY
         }
         return hitsDifference > 0
     }
