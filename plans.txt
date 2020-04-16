@@ -1,5 +1,10 @@
+Features
+----------------------------
+
 [ ] - Wall Repairer
+[ ] - No Builders if unneeded
 [ ] - Snapshot System
+   [ ] - Don't put obstacles inside of ramparts
 [ ] - Private Server
 [ ] - Room Planner v1
    [ ] - Drop Spots
@@ -8,4 +13,12 @@
    [ ] - Storage
    [ ] - Roads
    [ ] - Extension
+[ ] - Safe Mode Usage
 [ ] - Mineral Extraction
+
+
+Optimizations
+----------------------------
+[ ] - Pickups from closest
+[ ] - Partial Pickups
+[ ] - Harvester Self Repair

@@ -3,7 +3,11 @@ import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
-import { getConstructionSites, isAtExtensionCap } from 'utils/room'
+import {
+    getConstructionSites,
+    isAtExtensionCap,
+    getWeakestWall,
+} from 'utils/room'
 import * as Logger from 'utils/logger'
 import {
     PREFERENCE_WORKER,
@@ -12,6 +16,7 @@ import {
     TASK_UPGRADING,
     TASK_REPAIRING,
     TASK_COLLECTING,
+    TASK_WALL_REPAIRS,
     Logistics,
     LogisticsMemory,
     LogisticsPreference,
@@ -27,6 +32,7 @@ const TASK_EMOJIS = {
     [TASK_REPAIRING]: '🛠️',
     [TASK_COLLECTING]: '⚡',
     [TASK_UPGRADING]: '🌃',
+    [TASK_WALL_REPAIRS]: '🧱',
 }
 
 const PREFERENCE_EMOJIS = {
@@ -35,6 +41,7 @@ const PREFERENCE_EMOJIS = {
     [TASK_REPAIRING]: '🛠️',
     [TASK_COLLECTING]: '⚡',
     [TASK_UPGRADING]: '🌃',
+    [TASK_WALL_REPAIRS]: '🧱',
     [PREFERENCE_WORKER]: '👷',
 }
 
@@ -62,6 +69,8 @@ const roleLogistics = {
             roleLogistics.upgrade(creep)
         } else if (currentTask === TASK_REPAIRING) {
             roleLogistics.repair(creep)
+        } else if (currentTask === TASK_WALL_REPAIRS) {
+            roleLogistics.repairWalls(creep)
         }
     }, 'runLogistics'),
 
@@ -141,6 +150,23 @@ const roleLogistics = {
         }
     },
 
+    repairWalls(creep: Logistics) {
+        const structure = getWeakestWall(creep.room)
+        if (structure === null) {
+            roleLogistics.switchTask(creep)
+            return
+        }
+
+        const err = creep.repair(structure)
+        if (err === ERR_NOT_IN_RANGE) {
+            creep.moveTo(structure.pos, {
+                visualizePathStyle: { stroke: '#ffffff' },
+            })
+        } else if (err !== OK) {
+            Logger.warning('logistics:repair-wall:failure', creep.name, err)
+        }
+    },
+
     upgrade(creep: Logistics) {
         if (!creep.room.controller) {
             creep.say('???')
@@ -187,11 +213,8 @@ const roleLogistics = {
         }
         Logger.info(
             'logistics:switch-task',
-            'switching',
             creep.name,
-            creep.memory.currentTask,
-            'to',
-            task,
+            `${creep.memory.currentTask}->${task}`,
         )
         if (creep.memory.currentTask === task) {
             Logger.warning(

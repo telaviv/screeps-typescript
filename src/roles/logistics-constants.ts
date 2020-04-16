@@ -2,6 +2,7 @@ export const TASK_HAULING = 'hauling'
 export const TASK_BUILDING = 'building'
 export const TASK_UPGRADING = 'upgrading'
 export const TASK_REPAIRING = 'repairing'
+export const TASK_WALL_REPAIRS = 'wall-repairs'
 export const TASK_COLLECTING = 'collecting'
 export const PREFERENCE_WORKER = 'worker'
 
@@ -10,6 +11,7 @@ export type DeliveryTask =
     | typeof TASK_BUILDING
     | typeof TASK_UPGRADING
     | typeof TASK_REPAIRING
+    | typeof TASK_WALL_REPAIRS
 type Task = DeliveryTask | typeof TASK_COLLECTING
 export type LogisticsPreference = DeliveryTask | typeof PREFERENCE_WORKER
 

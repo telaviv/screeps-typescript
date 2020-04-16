@@ -9,6 +9,7 @@ import {
     hasConstructionSite,
     getConstructionSites,
     makeConstructionSite,
+    getWeakestWall,
 } from 'utils/room'
 import { getDropSpots } from 'utils/managers'
 

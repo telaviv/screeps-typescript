@@ -49,6 +49,27 @@ export function getContainers(room: Room): StructureContainer[] {
     }) as StructureContainer[]
 }
 
+export function getWeakestWall(room: Room): Structure | null {
+    const walls = room.find<Structure>(FIND_STRUCTURES, {
+        filter: isWeakWall,
+    })
+    if (walls.length === 0) {
+        return null
+    }
+    return minBy(walls, 'hits') as Structure
+}
+
+function isWeakWall(structure: Structure): boolean {
+    const MAX_WALL_REPAIR = 1000000
+
+    return (
+        includes(
+            [STRUCTURE_RAMPART, STRUCTURE_WALL],
+            structure.structureType,
+        ) && structure.hits < Math.min(structure.hitsMax, MAX_WALL_REPAIR)
+    )
+}
+
 export function getConstructionSites(room: Room): ConstructionSite[] {
     return room.find(FIND_CONSTRUCTION_SITES)
 }

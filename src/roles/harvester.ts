@@ -29,6 +29,7 @@ const roleHarvester = {
                     'harvester:harvest:failure',
                     creep.name,
                     "couldn't harvest",
+                    err,
                 )
             }
         } else {
