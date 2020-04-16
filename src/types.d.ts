@@ -57,6 +57,7 @@ interface RoomMemory {
 interface Task<T> {
     readonly type: T
     readonly timestamp: number
+    complete: boolean
 }
 
 type RoomPositionSet = RoomPosition[]

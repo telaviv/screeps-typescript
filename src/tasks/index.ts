@@ -4,4 +4,5 @@ export interface TransferTask extends Task<'transfer'> {
     structureId: Id<AnyStoreStructure>
     amount: number
     resourceType: ResourceConstant
+    complete: boolean
 }

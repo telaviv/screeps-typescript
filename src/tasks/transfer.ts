@@ -57,6 +57,7 @@ export class TransferStructure {
             amount: amountToTransfer,
             timestamp: Game.time,
             resourceType: resource,
+            complete: false,
         }
         this.tasks.push(task)
         return task

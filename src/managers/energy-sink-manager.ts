@@ -100,14 +100,17 @@ export default class EnergySinkManager {
                 `couldn't complete transfer request for ${creep.name}`,
             )
         }
-        const task = this.tasks.splice(index, 1)
-        const transferTask = (task[0] as unknown) as TransferTask
+        const task = this.tasks[index]
+        task.complete = true
+        const transferTask = (task as unknown) as TransferTask
         const structure = EnergySinkManager.structureFromTask(transferTask)
         Logger.info(
             'transfer:complete',
             transferTask.creep,
             structure.structureType,
             transferTask.amount,
+            transferTask.structureId,
+            structure.store.getFreeCapacity(RESOURCE_ENERGY),
         )
     }
 
@@ -145,6 +148,10 @@ export default class EnergySinkManager {
             return true
         }
 
+        if (transferTask.complete) {
+            return true
+        }
+
         const structure = EnergySinkManager.structureFromTask(transferTask)
         const capacity = structure.store.getFreeCapacity(RESOURCE_ENERGY)
         if (capacity === 0) {
@@ -154,6 +161,8 @@ export default class EnergySinkManager {
                     transferTask.creep,
                     structure.structureType,
                     transferTask.amount,
+                    transferTask.structureId,
+                    structure.store.getFreeCapacity(RESOURCE_ENERGY),
                 )
             }
             return true
@@ -170,6 +179,8 @@ export default class EnergySinkManager {
             creep.name,
             structure.structureType,
             task.amount,
+            task.structureId,
+            structure.store.getFreeCapacity(RESOURCE_ENERGY),
         )
         this.tasks.push(task)
         return task

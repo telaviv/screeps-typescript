@@ -153,7 +153,7 @@ const roleLogistics = {
             structure = getWeakestWall(creep.room)
         }
 
-        if (structure === null) {
+        if (structure === null || structure.hits === structure.hitsMax) {
             roleLogistics.switchTask(creep)
             return
         }
