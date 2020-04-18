@@ -1,4 +1,5 @@
 import { setLogLevel } from 'utils/logger'
+import { saveSnapshot } from 'snapshot'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach(creep => {
@@ -14,4 +15,5 @@ export default function assignGlobals() {
         Memory.logLevel = 'warning'
     }
     global.setLogLevel = setLogLevel
+    global.saveSnapshot = saveSnapshot
 }

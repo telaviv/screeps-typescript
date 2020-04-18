@@ -13,7 +13,6 @@ import {
 import roleHarvester from 'roles/harvester'
 import EnergyManager from 'managers/energy-manager'
 
-const HAULERS_PER_SOURCE = 1
 const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1

@@ -33,6 +33,9 @@ function unwrappedLoop() {
 
     Object.values(Game.rooms).forEach(room => {
         room.memory.constructing = false
+        if (!room.memory.snapshot) {
+            room.memory.snapshot = []
+        }
 
         for (const source of room.memory.sources) {
             const droppedEnergy = DroppedEnergyManager.get(source.dropSpot)

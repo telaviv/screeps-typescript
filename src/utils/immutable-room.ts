@@ -26,8 +26,6 @@ const ImmutableRoomItemRecord = Record({
     hasRoad: false,
 })
 
-type RoomGrid = List<List<ImmutableRoomItem>>
-
 export class ImmutableRoomItem extends ImmutableRoomItemRecord
     implements IImmutableRoomItem {
     readonly x!: number
@@ -45,6 +43,8 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
         return !(this.isObstacle() || this.hasConstructionSite)
     }
 }
+
+type RoomGrid = List<List<ImmutableRoomItem>>
 
 export class ImmutableRoom implements ValueObject {
     private readonly grid: RoomGrid

@@ -117,9 +117,7 @@ export default class EnergySinkManager {
     cleanup() {
         let index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
         while (index !== -1) {
-            const task = this.tasks.splice(index, 1)
-            const transferTask = (task[0] as unknown) as TransferTask
-            const structure = EnergySinkManager.structureFromTask(transferTask)
+            this.tasks.splice(index, 1)
             index = this.tasks.findIndex(EnergySinkManager.needsCleanup)
         }
     }

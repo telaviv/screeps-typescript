@@ -22,9 +22,3 @@ repos:
         entry: npm run build
         pass_filenames: false
         always_run: true
-    -   id: screeps-test
-        name: screeps-test
-        language: node
-        entry: npm run test
-        pass_filenames: false
-        always_run: true

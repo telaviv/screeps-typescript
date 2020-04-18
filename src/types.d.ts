@@ -45,6 +45,11 @@ interface SurveyMemory {
     roads: RoomPositionSet
 }
 
+type RoomSnapshotMemory = Array<{
+    pos: FlatRoomPosition
+    structureType: StructureConstant
+}>
+
 interface RoomMemory {
     roadPositions: RoomPositionSet
     sources: RoomSourceMemory[]
@@ -52,6 +57,7 @@ interface RoomMemory {
     survey: SurveyMemory
     collapsed: boolean
     constructing: boolean
+    snapshot: RoomSnapshotMemory
 }
 
 interface Task<T> {
@@ -71,6 +77,7 @@ declare namespace NodeJS {
         log: any
         killAllCreeps: any
         setLogLevel: any
+        saveSnapshot: any
     }
 }
 
