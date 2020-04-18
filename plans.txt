@@ -1,9 +1,15 @@
 Features
 ----------------------------
 
-[ ] - No Builders if unneeded
+[ ] - Workers can wall repair really weak walls
+[ ] - Logistics become workers when preference doesn't work.
 [ ] - Snapshot System
-   [ ] - Don't put obstacles inside of ramparts
+   [x] - Save snapshot
+   [ ] - Build from snapshot before generating iroom
+   [ ] - Replace obstacles if one exists.
+   [ ] - Include construction sites
+   [ ] - Allow Flags in snapshot system.
+   [ ] - Visualize snapshots
 [ ] - Private Server
 [ ] - Room Planner v1
    [ ] - Drop Spots
@@ -22,3 +28,8 @@ Optimizations
 [ ] - Pickups from closest
 [ ] - Partial Pickups
 [ ] - Harvester Self Repair
+[ ] - No Builders if unneeded
+
+Nice To Have
+----------------------------
+[ ] - Color code Logger
