@@ -27,7 +27,7 @@ export default class RoomSnapshot {
         return Game.rooms[this.roomName]
     }
 
-    findUnbuiltStructurePosition(
+    getStructurePos(
         testStructureType: BuildableStructureConstant,
         filter?: (pos: RoomPosition) => boolean,
     ): RoomPosition | null {

@@ -149,7 +149,7 @@ export default class BuildManager {
 
     private findSwampRoad(): RoomPosition | undefined {
         const iroom = fromRoom(this.room)
-        const cachedPos = this.snapshot.findUnbuiltStructurePosition(
+        const cachedPos = this.snapshot.getStructurePos(
             STRUCTURE_ROAD,
             pos => iroom.get(pos.x, pos.y).terrain === TERRAIN_MASK_SWAMP,
         )
@@ -224,8 +224,15 @@ export default class BuildManager {
     }
 
     private buildNextExtension(): boolean {
-        const iroom = fromRoom(this.room)
-        const pos = iroom.nextExtensionPos()
+        let pos = this.snapshot.getStructurePos(STRUCTURE_EXTENSION)
+
+        if (pos !== null) {
+            Logger.info('build-manager:buildNextExtension:cached', pos)
+        } else {
+            const iroom = fromRoom(this.room)
+            pos = iroom.nextExtensionPos()
+        }
+
         return makeConstructionSite(pos, STRUCTURE_EXTENSION) === OK
     }
 }
