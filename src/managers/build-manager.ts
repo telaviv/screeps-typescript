@@ -218,8 +218,15 @@ export default class BuildManager {
     }
 
     private buildNextTower(): boolean {
-        const iroom = fromRoom(this.room)
-        const pos = iroom.nextTowerPos()
+        let pos = this.snapshot.getStructurePos(STRUCTURE_TOWER)
+
+        if (pos !== null) {
+            Logger.info('build-manager:buildNextTower:cached', pos)
+        } else {
+            const iroom = fromRoom(this.room)
+            pos = iroom.nextTowerPos()
+        }
+
         return makeConstructionSite(pos, STRUCTURE_TOWER) === OK
     }
 
