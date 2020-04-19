@@ -78,6 +78,7 @@ declare namespace NodeJS {
         killAllCreeps: any
         setLogLevel: any
         saveSnapshot: any
+        claimRoom: any
     }
 }
 

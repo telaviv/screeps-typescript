@@ -1,5 +1,6 @@
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleLogistics from 'roles/logistics'
+import roleClaimer, { Claimer } from 'roles/claim'
 import { Logistics } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
@@ -70,6 +71,8 @@ function unwrappedLoop() {
             roleHarvester.run(creep as Harvester)
         } else if (creep.memory.role === 'logistics') {
             roleLogistics.run(creep as Logistics)
+        } else if (creep.memory.role === 'claimer') {
+            roleClaimer.run(creep as Claimer)
         }
     }
 }

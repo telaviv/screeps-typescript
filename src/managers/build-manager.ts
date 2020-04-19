@@ -120,12 +120,20 @@ export default class BuildManager {
     }
 
     private buildNextContainer(): boolean {
-        const dropSpots = getDropSpots(this.room)
-        for (const dropSpot of dropSpots) {
-            if (!hasContainerAtPosition(this.room, dropSpot.pos)) {
-                const pos = dropSpot.pos
-                return makeConstructionSite(pos, STRUCTURE_CONTAINER) === OK
+        let pos = this.snapshot.getStructurePos(STRUCTURE_CONTAINER)
+
+        if (pos !== null) {
+            Logger.info('build-manager:buildNextContainer:cached', pos)
+        } else {
+            const dropSpots = getDropSpots(this.room)
+            for (const dropSpot of dropSpots) {
+                if (!hasContainerAtPosition(this.room, dropSpot.pos)) {
+                    pos = dropSpot.pos
+                }
             }
+        }
+        if (pos !== null) {
+            return makeConstructionSite(pos, STRUCTURE_CONTAINER) === OK
         }
         return false
     }

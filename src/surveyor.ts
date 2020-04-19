@@ -11,6 +11,9 @@ const getSpawn = (room: Room): StructureSpawn => {
 const assignSources = (room: Room) => {
     const sources = room.find(FIND_SOURCES)
     const spawn = getSpawn(room)
+    if (!spawn) {
+        return
+    }
 
     room.memory.sources = []
     for (const source of sources) {
