@@ -10,7 +10,9 @@ import {
     getConstructionSites,
     makeConstructionSite,
 } from 'utils/room'
+import * as Logger from 'utils/logger'
 import { getDropSpots } from 'utils/managers'
+import RoomSnapshot from 'snapshot'
 
 interface IImutableRoomItem {
     x: number
@@ -28,10 +30,12 @@ export default class BuildManager {
     static cache = new Map<string, BuildManager>()
     room: Room
     _roads: Roads | null
+    _snapshot: RoomSnapshot | null
 
     constructor(room: Room) {
         this.room = room
         this._roads = null
+        this._snapshot = null
     }
 
     static get(room: Room): BuildManager {
@@ -43,6 +47,13 @@ export default class BuildManager {
             this.updateRoadCache()
         }
         return this._roads as Roads
+    }
+
+    get snapshot() {
+        if (this._snapshot === null) {
+            this._snapshot = RoomSnapshot.create(this.room)
+        }
+        return this._snapshot
     }
 
     createConstructionSite(): boolean {
@@ -138,6 +149,16 @@ export default class BuildManager {
 
     private findSwampRoad(): RoomPosition | undefined {
         const iroom = fromRoom(this.room)
+        const cachedPos = this.snapshot.findUnbuiltStructurePosition(
+            STRUCTURE_ROAD,
+            pos => iroom.get(pos.x, pos.y).terrain === TERRAIN_MASK_SWAMP,
+        )
+
+        if (cachedPos !== null) {
+            Logger.info('build-manager:findSwampRoad:cached', cachedPos)
+            return cachedPos
+        }
+
         const pos = this.roads.find(value => {
             const roomItem = iroom.get(value.x, value.y)
             return (

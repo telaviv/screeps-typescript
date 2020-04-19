@@ -14,7 +14,7 @@ const FlatRoomPositionRecord = Record<FlatRoomPosition>({
 
 type ImmutableSnapshot = Map<RecordOf<FlatRoomPosition>, Set<StructureConstant>>
 
-class RoomSnapshot {
+export default class RoomSnapshot {
     readonly roomName: string
     snapshot: ImmutableSnapshot
 
@@ -25,6 +25,32 @@ class RoomSnapshot {
 
     get room(): Room {
         return Game.rooms[this.roomName]
+    }
+
+    findUnbuiltStructurePosition(
+        testStructureType: BuildableStructureConstant,
+        filter?: (pos: RoomPosition) => boolean,
+    ): RoomPosition | null {
+        for (const [pos, structureTypes] of this.snapshot) {
+            for (const structureType of structureTypes) {
+                if (structureType === testStructureType) {
+                    const roomPosition = new RoomPosition(
+                        pos.x,
+                        pos.y,
+                        pos.roomName,
+                    )
+                    const lookStructures = roomPosition.lookFor(LOOK_STRUCTURES)
+                    const hasStructure = lookStructures.some(
+                        ls => ls.structureType === structureType,
+                    )
+
+                    if (!hasStructure && (!filter || filter(roomPosition))) {
+                        return roomPosition
+                    }
+                }
+            }
+        }
+        return null
     }
 
     addStructure(structureType: StructureConstant, pos: FlatRoomPosition) {
