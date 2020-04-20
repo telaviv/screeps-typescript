@@ -33,12 +33,17 @@ interface ProfilerMemory {
     start?: number
 }
 
+interface StatsMemory {
+    [key: string]: number
+}
+
 interface Memory {
     uuid: number
     log: any
     profiler: ProfilerMemory
     tasks: Task<any>[]
     logLevel: string
+    stats: StatsMemory
 }
 
 interface SurveyMemory {

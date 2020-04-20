@@ -5,6 +5,7 @@ import { Logistics } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
+import { recordRoomStats } from 'utils/stats'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import EnergySinkManager from 'managers/energy-sink-manager'
 
@@ -46,6 +47,8 @@ function unwrappedLoop() {
         updateStrategy(room)
 
         if (room.controller && room.controller.my) {
+            recordRoomStats(room)
+
             const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
                 filter: s => {
                     return (
