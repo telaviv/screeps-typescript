@@ -9,11 +9,37 @@ export function recordRoomStats(room: Room) {
         `${prefix}.energyCapacityAvailable`,
         room.energyCapacityAvailable,
     )
-    if (room.controller) {
-        recordStatistic(
-            `${prefix}.controllerProgress`,
-            room.controller.progress,
-        )
+    if (!room.controller) {
+        return
+    }
+
+    recordStatistic(`${prefix}.controllerProgress`, room.controller.progress)
+    recordStatistic(
+        `${prefix}.controllerProgressTotal`,
+        room.controller.progressTotal,
+    )
+}
+
+export function recordGameStats() {
+    recordStatistic('Game.cpu.limit', Game.cpu.limit)
+    recordStatistic('Game.cpu.tickLimit', Game.cpu.tickLimit)
+    recordStatistic('Game.cpu.bucket', Game.cpu.bucket)
+    recordStatistic('Game.cpu.used', Game.cpu.getUsed())
+
+    recordStatistic('Game.gcl.level', Game.gcl.level)
+    recordStatistic('Game.gcl.progress', Game.gcl.progress)
+    recordStatistic('Game.gcl.progressTotal', Game.gcl.progressTotal)
+
+    recordStatistic('Game.gpl.level', Game.gpl.level)
+    recordStatistic('Game.gpl.progress', Game.gpl.progress)
+    recordStatistic('Game.gpl.progressTotal', Game.gpl.progressTotal)
+
+    if (!Game.cpu.getHeapStatistics) {
+        return
+    }
+
+    for (const [k, v] of Object.entries(Game.cpu.getHeapStatistics())) {
+        recordStatistic(`Game.heap.${k}`, v)
     }
 }
 

@@ -5,7 +5,7 @@ import { Logistics } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
-import { recordRoomStats } from 'utils/stats'
+import { recordRoomStats, recordGameStats } from 'utils/stats'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import EnergySinkManager from 'managers/energy-sink-manager'
 
@@ -78,6 +78,7 @@ function unwrappedLoop() {
             roleClaimer.run(creep as Claimer)
         }
     }
+    recordGameStats()
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
