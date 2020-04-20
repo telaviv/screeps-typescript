@@ -139,3 +139,30 @@ export const getRoomType = (roomName: string): RoomType => {
 
     return RoomType.ROOM
 }
+
+function findSpawnlessRooms() {
+    return Object.values(Game.rooms).filter(room => {
+        if (!(room.controller && room.controller.my)) {
+            return false
+        }
+
+        const spawns = room.find(FIND_MY_SPAWNS)
+        return spawns.length === 0
+    })
+}
+
+export function findLongDistanceBuild(home: string): ConstructionSite | null {
+    for (const room of findSpawnlessRooms()) {
+        if (room.name !== home) {
+            const constructionSites = room.find(FIND_MY_CONSTRUCTION_SITES)
+            if (constructionSites.length > 0) {
+                return constructionSites[0]
+            }
+        }
+    }
+    return null
+}
+
+export function needsLongDistanceBuild(home: string): boolean {
+    return findLongDistanceBuild(home) !== null
+}

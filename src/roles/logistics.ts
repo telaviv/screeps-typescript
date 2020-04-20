@@ -7,6 +7,8 @@ import {
     getConstructionSites,
     isAtExtensionCap,
     getWeakestWall,
+    findLongDistanceBuild,
+    needsLongDistanceBuild,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import {
@@ -17,6 +19,7 @@ import {
     TASK_REPAIRING,
     TASK_COLLECTING,
     TASK_WALL_REPAIRS,
+    TASK_LONG_DISTANCE_BUILD,
     Logistics,
     LogisticsMemory,
     LogisticsPreference,
@@ -32,6 +35,7 @@ const TASK_EMOJIS = {
     [TASK_REPAIRING]: '🛠️',
     [TASK_COLLECTING]: '⚡',
     [TASK_UPGRADING]: '🌃',
+    [TASK_LONG_DISTANCE_BUILD]: '🚄',
     [TASK_WALL_REPAIRS]: '🧱',
 }
 
@@ -42,11 +46,16 @@ const PREFERENCE_EMOJIS = {
     [TASK_COLLECTING]: '⚡',
     [TASK_UPGRADING]: '🌃',
     [TASK_WALL_REPAIRS]: '🧱',
+    [TASK_LONG_DISTANCE_BUILD]: '🚄',
     [PREFERENCE_WORKER]: '👷',
 }
 
 const roleLogistics = {
     run: wrap((creep: Logistics) => {
+        if (!creep.memory.home) {
+            creep.memory.home = creep.room.name
+        }
+
         roleLogistics.updateMemory(creep)
         roleLogistics.say(creep)
         if (creep.memory.waitTime > SLEEP_SAY_TIME) {
@@ -63,6 +72,8 @@ const roleLogistics = {
             getEnergy(creep)
         } else if (currentTask === TASK_HAULING) {
             roleLogistics.haulEnergy(creep)
+        } else if (currentTask === TASK_LONG_DISTANCE_BUILD) {
+            roleLogistics.longDistanceBuild(creep)
         } else if (currentTask === TASK_BUILDING) {
             roleLogistics.build(creep)
         } else if (currentTask === TASK_UPGRADING) {
@@ -97,6 +108,8 @@ const roleLogistics = {
         const buildManager = getBuildManager(creep.room)
         if (!EnergySinkManager.transfersAreFull(creep.room)) {
             memory.currentTask = TASK_HAULING
+        } else if (needsLongDistanceBuild(creep.memory.home)) {
+            memory.currentTask = TASK_LONG_DISTANCE_BUILD
         } else if (buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
@@ -131,6 +144,22 @@ const roleLogistics = {
             }
         } else {
             creep.memory.currentTask = TASK_COLLECTING
+        }
+    },
+
+    longDistanceBuild(creep: Logistics) {
+        const site = findLongDistanceBuild(creep.memory.home)
+        if (site === null) {
+            roleLogistics.switchTask(creep)
+            return
+        }
+
+        const err = creep.build(site)
+        if (err === ERR_NOT_IN_RANGE) {
+            creep.moveTo(site, {
+                visualizePathStyle: { stroke: '#ffffff' },
+                range: 3,
+            })
         }
     },
 
@@ -226,7 +255,9 @@ const roleLogistics = {
 
     switchTask(creep: Logistics) {
         let task = creep.memory.currentTask
-        if (!isAtExtensionCap(creep.room)) {
+        if (needsLongDistanceBuild(creep.memory.home)) {
+            task = TASK_LONG_DISTANCE_BUILD
+        } else if (!isAtExtensionCap(creep.room)) {
             task = TASK_BUILDING
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
             task = TASK_REPAIRING
@@ -261,13 +292,16 @@ const roleLogistics = {
         preference: LogisticsPreference = TASK_HAULING,
         rescue = false,
     ): number {
-        const capacity = rescue ? 300 : spawn.room.energyCapacityAvailable
+        const capacity = rescue
+            ? Math.max(300, spawn.room.energyAvailable)
+            : spawn.room.energyCapacityAvailable
         return spawn.spawnCreep(
             calculateParts(capacity),
             `${ROLE}:${preference}:${Game.time}`,
             {
                 memory: {
                     role: ROLE,
+                    home: spawn.room.name,
                     source,
                     preference,
                     currentTask: TASK_COLLECTING,

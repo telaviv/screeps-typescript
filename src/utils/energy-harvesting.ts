@@ -1,6 +1,9 @@
 import EnergyManager from 'managers/energy-manager'
 import SourceManager from 'managers/source-manager'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
+import { Logistics } from 'roles/logistics-constants'
+import * as Logger from 'utils/logger'
+
 import { fromRoom } from 'utils/immutable-room'
 
 function harvestEnergy(creep: SourceCreep) {
@@ -105,7 +108,20 @@ function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
     return getSourceManager(creep).droppedEnergy
 }
 
-export function getEnergy(creep: SourceCreep) {
+export function getEnergy(creep: Logistics) {
+    Logger.debug('getEnergy:start', creep.name)
+    if (creep.room.name !== creep.memory.home) {
+        Logger.debug('getEnergy:start:far-from-home', creep.name)
+        const target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE)
+        if (target) {
+            Logger.debug('getEnergy:start:far-from-home:active', creep.name)
+            if (creep.harvest(target) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(target)
+            }
+        }
+    }
+    Logger.debug('getEnergy:start:close-to-home', creep.name)
+
     let sourceManager = getSourceManager(creep)
     if (!sourceManager.hasStaticHarvester()) {
         harvestEnergy(creep)
