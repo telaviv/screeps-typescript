@@ -109,18 +109,14 @@ function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
 }
 
 export function getEnergy(creep: Logistics) {
-    Logger.debug('getEnergy:start', creep.name)
     if (creep.room.name !== creep.memory.home) {
-        Logger.debug('getEnergy:start:far-from-home', creep.name)
         const target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE)
         if (target) {
-            Logger.debug('getEnergy:start:far-from-home:active', creep.name)
             if (creep.harvest(target) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target)
             }
         }
     }
-    Logger.debug('getEnergy:start:close-to-home', creep.name)
 
     let sourceManager = getSourceManager(creep)
     if (!sourceManager.hasStaticHarvester()) {

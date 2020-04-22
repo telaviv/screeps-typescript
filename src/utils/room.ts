@@ -74,7 +74,7 @@ function isFragileWall(structure: Structure): boolean {
         includes(
             [STRUCTURE_RAMPART, STRUCTURE_WALL],
             structure.structureType,
-        ) && structure.hits < Math.min(structure.hitsMax, FRAGILE_WALL_HITS)
+        ) && structure.hits < FRAGILE_WALL_HITS
     )
 }
 
