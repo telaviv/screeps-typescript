@@ -1,7 +1,7 @@
 Features
 ----------------------------
 
-[ ] - Workers can wall repair really weak walls
+[x] - Workers can wall repair really weak walls
 [ ] - Logistics become workers when preference doesn't work.
 [ ] - Snapshot System
    [x] - Save snapshot

@@ -6,6 +6,7 @@ import { wrap } from 'utils/profiling'
 import {
     getConstructionSites,
     isAtExtensionCap,
+    hasFragileWall,
     getWeakestWall,
     findLongDistanceBuild,
     needsLongDistanceBuild,
@@ -110,6 +111,8 @@ const roleLogistics = {
             memory.currentTask = TASK_HAULING
         } else if (needsLongDistanceBuild(creep.memory.home)) {
             memory.currentTask = TASK_LONG_DISTANCE_BUILD
+        } else if (hasFragileWall(creep.room)) {
+            memory.currentTask = TASK_WALL_REPAIRS
         } else if (buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {

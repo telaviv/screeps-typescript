@@ -9,6 +9,9 @@ import * as Logger from 'utils/logger'
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
 
+const FRAGILE_WALL_HITS = 1000000
+const STRONG_WALL_HITS = 100000
+
 export function isAtExtensionCap(room: Room): boolean {
     if (!room.controller) {
         return true
@@ -49,6 +52,13 @@ export function getContainers(room: Room): StructureContainer[] {
     }) as StructureContainer[]
 }
 
+export function hasFragileWall(room: Room): boolean {
+    const walls = room.find<Structure>(FIND_STRUCTURES, {
+        filter: isFragileWall,
+    })
+    return walls.length > 0
+}
+
 export function getWeakestWall(room: Room): Structure | null {
     const walls = room.find<Structure>(FIND_STRUCTURES, {
         filter: isWeakWall,
@@ -59,14 +69,21 @@ export function getWeakestWall(room: Room): Structure | null {
     return minBy(walls, 'hits') as Structure
 }
 
-function isWeakWall(structure: Structure): boolean {
-    const MAX_WALL_REPAIR = 1000000
-
+function isFragileWall(structure: Structure): boolean {
     return (
         includes(
             [STRUCTURE_RAMPART, STRUCTURE_WALL],
             structure.structureType,
-        ) && structure.hits < Math.min(structure.hitsMax, MAX_WALL_REPAIR)
+        ) && structure.hits < Math.min(structure.hitsMax, FRAGILE_WALL_HITS)
+    )
+}
+
+function isWeakWall(structure: Structure): boolean {
+    return (
+        includes(
+            [STRUCTURE_RAMPART, STRUCTURE_WALL],
+            structure.structureType,
+        ) && structure.hits < Math.min(structure.hitsMax, STRONG_WALL_HITS)
     )
 }
 
