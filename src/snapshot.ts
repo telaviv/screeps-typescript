@@ -1,4 +1,5 @@
 import { Map, Record, RecordOf, Set } from 'immutable'
+import { getConstructionFlags, STRUCTURE_COLORS } from 'utils/flags'
 
 interface FlatRoomPosition {
     x: number
@@ -69,9 +70,20 @@ export default class RoomSnapshot {
     }
 
     loadFromRoom() {
+        this.loadFromFlags()
         const structures = this.room.find(FIND_STRUCTURES)
         for (const structure of structures) {
             this.addStructure(structure.structureType, structure.pos)
+        }
+    }
+
+    loadFromFlags() {
+        for (const flag of getConstructionFlags(this.room)) {
+            const structureType = STRUCTURE_COLORS.get(
+                flag.color,
+            ) as BuildableStructureConstant
+            this.addStructure(structureType, flag.pos)
+            flag.remove()
         }
     }
 

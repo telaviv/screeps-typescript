@@ -44,7 +44,7 @@ module.exports = {
         '@typescript-eslint/explicit-function-return-type': 'off',
         '@typescript-eslint/no-use-before-define': 'off',
         '@typescript-eslint/semi': ['warn', 'never'],
-        '@typescript-eslint/indent': ['error', 4],
+        '@typescript-eslint/indent': 'off',
         '@typescript-eslint/unbound-method': 'off',
         '@typescript-eslint/member-delimiter-style': [
             'error',

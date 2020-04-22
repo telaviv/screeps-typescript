@@ -2,13 +2,13 @@ Features
 ----------------------------
 
 [x] - Workers can wall repair really weak walls
-[ ] - Logistics become workers when preference doesn't work.
+[-] - Logistics become workers when preference doesn't work.
 [ ] - Snapshot System
    [x] - Save snapshot
    [ ] - Build from snapshot before generating iroom
    [ ] - Replace obstacles if one exists.
    [ ] - Include construction sites
-   [ ] - Allow Flags in snapshot system.
+   [x] - Allow Flags in snapshot system.
    [ ] - Visualize snapshots
 [ ] - Private Server
 [ ] - Room Planner v1

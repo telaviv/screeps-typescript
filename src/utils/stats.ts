@@ -35,7 +35,8 @@ export function recordGameStats() {
     recordStatistic('Game.gpl.progress', Game.gpl.progress)
     recordStatistic('Game.gpl.progressTotal', Game.gpl.progressTotal)
 
-    if (!Game.cpu.getHeapStatistics) {
+    // the 2nd check is for sim
+    if (!Game.cpu.getHeapStatistics || !Game.cpu.getHeapStatistics()) {
         return
     }
 

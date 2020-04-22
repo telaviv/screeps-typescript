@@ -2,7 +2,6 @@ import EnergyManager from 'managers/energy-manager'
 import SourceManager from 'managers/source-manager'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import { Logistics } from 'roles/logistics-constants'
-import * as Logger from 'utils/logger'
 
 import { fromRoom } from 'utils/immutable-room'
 
