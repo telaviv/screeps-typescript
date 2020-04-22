@@ -13,11 +13,12 @@ export function recordRoomStats(room: Room) {
         return
     }
 
-    recordStatistic(`${prefix}.controllerProgress`, room.controller.progress)
+    recordStatistic(`${prefix}.controller.progress`, room.controller.progress)
     recordStatistic(
-        `${prefix}.controllerProgressTotal`,
+        `${prefix}.controller.progressTotal`,
         room.controller.progressTotal,
     )
+    recordStatistic(`${prefix}.controller.level`, room.controller.level)
 }
 
 export function recordGameStats() {
