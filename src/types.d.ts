@@ -63,6 +63,7 @@ interface RoomMemory {
     collapsed: boolean
     constructing: boolean
     snapshot: RoomSnapshotMemory
+    visuals: { snapshot: boolean }
 }
 
 interface Task<T> {
@@ -84,6 +85,8 @@ declare namespace NodeJS {
         setLogLevel: any
         saveSnapshot: any
         claimRoom: any
+        visualizeRoom: any
+        assignGlobals: any
     }
 }
 

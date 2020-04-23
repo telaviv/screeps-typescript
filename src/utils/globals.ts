@@ -1,6 +1,7 @@
 import * as Logger from 'utils/logger'
 import { saveSnapshot } from 'snapshot'
 import roleClaimer from 'roles/claim'
+import { visualizeRoom } from 'room-visualizer'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach(creep => {
@@ -27,4 +28,6 @@ export default function assignGlobals() {
     global.setLogLevel = Logger.setLogLevel
     global.saveSnapshot = saveSnapshot
     global.claimRoom = claimRoom
+    global.visualizeRoom = visualizeRoom
+    global.assignGlobals = assignGlobals
 }

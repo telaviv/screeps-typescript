@@ -1,8 +1,10 @@
+import RoomVisualizer from 'room-visualizer'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleLogistics from 'roles/logistics'
 import roleClaimer, { Claimer } from 'roles/claim'
 import { Logistics } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
+import * as Logger from 'utils/logger'
 import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
 import { recordRoomStats, recordGameStats } from 'utils/stats'
@@ -38,6 +40,11 @@ function unwrappedLoop() {
         if (!room.memory.snapshot) {
             room.memory.snapshot = []
         }
+
+        Logger.debug('not sure what to do here')
+
+        const visualizer = new RoomVisualizer(room)
+        visualizer.render()
 
         for (const source of room.memory.sources) {
             const droppedEnergy = DroppedEnergyManager.get(source.dropSpot)
