@@ -41,8 +41,6 @@ function unwrappedLoop() {
             room.memory.snapshot = []
         }
 
-        Logger.debug('not sure what to do here')
-
         const visualizer = new RoomVisualizer(room)
         visualizer.render()
 
