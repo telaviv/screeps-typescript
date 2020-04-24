@@ -10,6 +10,7 @@ import assignGlobals from 'utils/globals'
 import { recordRoomStats, recordGameStats } from 'utils/stats'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import EnergySinkManager from 'managers/energy-sink-manager'
+import BuildManager from 'managers/build-manager'
 
 import { runSpawn } from './spawn'
 import updateStrategy from './strategy'
@@ -40,6 +41,8 @@ function unwrappedLoop() {
         if (!room.memory.snapshot) {
             room.memory.snapshot = []
         }
+
+        BuildManager.get(room).createConstructionSite()
 
         const visualizer = new RoomVisualizer(room)
         visualizer.render()

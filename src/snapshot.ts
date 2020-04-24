@@ -1,5 +1,6 @@
 import { Map, Record, RecordOf, Set } from 'immutable'
 import { getConstructionFlags, STRUCTURE_COLORS } from 'utils/flags'
+import * as Logger from 'utils/logger'
 
 interface FlatRoomPosition {
     x: number
@@ -82,6 +83,7 @@ export default class RoomSnapshot {
             const structureType = STRUCTURE_COLORS.get(
                 flag.color,
             ) as BuildableStructureConstant
+            Logger.debug('load-from-flags:add', structureType)
             this.addStructure(structureType, flag.pos)
             flag.remove()
         }

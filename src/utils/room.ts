@@ -109,9 +109,6 @@ export function getContainerAtPosition(
 }
 
 export function hasConstructionSite(room: Room): boolean {
-    if (room.memory.constructing) {
-        return true
-    }
     return getConstructionSites(room).length > 0
 }
 
@@ -122,10 +119,7 @@ export function makeConstructionSite(
     const room = Game.rooms[pos.roomName]
     const iroom = fromRoom(room)
     const ret = room.createConstructionSite(pos, type)
-    if (ret === OK) {
-        updateCache(room, iroom.setConstructionSite(pos.x, pos.y, true))
-        room.memory.constructing = true
-    } else {
+    if (ret !== OK) {
         Logger.warning('construction:failed', type, pos, ret)
     }
     return ret

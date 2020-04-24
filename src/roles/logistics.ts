@@ -139,12 +139,7 @@ const roleLogistics = {
                 })
             }
         } else if (isFullOfEnergy(creep)) {
-            const buildManager = getBuildManager(creep.room)
-            if (buildManager.createConstructionSite()) {
-                // wait till next cycle to figure it out
-            } else {
-                roleLogistics.switchTask(creep)
-            }
+            // just wait 1 tick and maybe a new construction site exists
         } else {
             creep.memory.currentTask = TASK_COLLECTING
         }

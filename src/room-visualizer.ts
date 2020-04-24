@@ -5,10 +5,30 @@ type DrawFunction = (visual: RoomVisual, pos: RoomPosition) => void
 
 const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_RAMPART, drawRampart],
+    [STRUCTURE_WALL, drawWall],
+    [STRUCTURE_STORAGE, drawStorage],
+    [STRUCTURE_LINK, drawLink],
+    [STRUCTURE_CONTAINER, drawContainer],
 ])
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
     visual.circle(pos, { fill: 'green', radius: 0.45 })
+}
+
+function drawWall(visual: RoomVisual, pos: RoomPosition): void {
+    visual.rect(pos.x - 0.5, pos.y - 0.5, 0.99, 0.99, { fill: 'grey' })
+}
+
+function drawStorage(visual: RoomVisual, pos: RoomPosition): void {
+    visual.rect(pos.x - 0.5, pos.y - 0.5, 0.99, 0.99, { fill: 'yellow' })
+}
+
+function drawLink(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('♦️', pos, { color: 'yellow', font: 0.95 })
+}
+
+function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
+    visual.circle(pos, { fill: 'yellow', radius: 0.45 })
 }
 
 function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
