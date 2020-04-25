@@ -139,7 +139,7 @@ const roleLogistics = {
                 })
             }
         } else if (isFullOfEnergy(creep)) {
-            // just wait 1 tick and maybe a new construction site exists
+            roleLogistics.switchTask(creep)
         } else {
             creep.memory.currentTask = TASK_COLLECTING
         }
