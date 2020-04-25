@@ -9,8 +9,8 @@ import * as Logger from 'utils/logger'
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
 
-const FRAGILE_WALL_HITS = 1000000
-const STRONG_WALL_HITS = 100000
+const STRONG_WALL_HITS = 1000000
+const FRAGILE_WALL_HITS = 100000
 
 export function isAtExtensionCap(room: Room): boolean {
     if (!room.controller) {
@@ -79,12 +79,16 @@ function isFragileWall(structure: Structure): boolean {
 }
 
 function isWeakWall(structure: Structure): boolean {
-    return (
-        includes(
-            [STRUCTURE_RAMPART, STRUCTURE_WALL],
-            structure.structureType,
-        ) && structure.hits < Math.min(structure.hitsMax, STRONG_WALL_HITS)
+    const isWall = includes(
+        [STRUCTURE_RAMPART, STRUCTURE_WALL],
+        structure.structureType,
     )
+
+    if (!isWall) {
+        return false
+    }
+
+    return structure.hits < Math.min(structure.hitsMax, STRONG_WALL_HITS)
 }
 
 export function getConstructionSites(room: Room): ConstructionSite[] {
