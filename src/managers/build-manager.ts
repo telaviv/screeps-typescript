@@ -11,6 +11,7 @@ import {
     makeConstructionSite,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
+import { wrap } from 'utils/profiling'
 import { getDropSpots } from 'utils/managers'
 import RoomSnapshot from 'snapshot'
 
@@ -56,7 +57,7 @@ export default class BuildManager {
         return this._snapshot
     }
 
-    createConstructionSite(): boolean {
+    createConstructionSite = wrap((): boolean => {
         if (!this.room.controller) {
             return false
         }
@@ -86,7 +87,7 @@ export default class BuildManager {
         }
 
         return false
-    }
+    }, 'buildManager:createConstructionSite')
 
     canBuildImportant(): boolean {
         return (

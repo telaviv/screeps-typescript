@@ -86,7 +86,7 @@ const roleLogistics = {
         }
     }, 'runLogistics'),
 
-    updateMemory(creep: Logistics) {
+    updateMemory: wrap((creep: Logistics) => {
         const memory = creep.memory
         const currentTask = memory.currentTask
 
@@ -102,7 +102,7 @@ const roleLogistics = {
             memory.waitTime = 0
             delete memory.currentTarget
         }
-    },
+    }, 'logistics:updateMemory'),
 
     assignWorkerPreference(creep: Logistics) {
         const memory = creep.memory
@@ -129,7 +129,7 @@ const roleLogistics = {
         creep.say(`${preference} ${currentTask}`)
     },
 
-    build(creep: Logistics) {
+    build: wrap((creep: Logistics) => {
         const targets = getConstructionSites(creep.room)
         if (targets.length) {
             if (creep.build(targets[0]) === ERR_NOT_IN_RANGE) {
@@ -143,9 +143,9 @@ const roleLogistics = {
         } else {
             creep.memory.currentTask = TASK_COLLECTING
         }
-    },
+    }, 'logistics:build'),
 
-    longDistanceBuild(creep: Logistics) {
+    longDistanceBuild: wrap((creep: Logistics) => {
         const site = findLongDistanceBuild(creep.memory.home)
         if (site === null) {
             roleLogistics.switchTask(creep)
@@ -159,9 +159,9 @@ const roleLogistics = {
                 range: 3,
             })
         }
-    },
+    }, 'logistics:longDistanceBuild'),
 
-    repairWalls(creep: Logistics) {
+    repairWalls: wrap((creep: Logistics) => {
         let structure = null
         if (creep.memory.currentTarget) {
             structure = Game.getObjectById<Structure>(
@@ -196,9 +196,9 @@ const roleLogistics = {
         } else if (err !== OK) {
             Logger.warning('logistics:repair-wall:failure', creep.name, err)
         }
-    },
+    }, 'logistics:repairWalls'),
 
-    repair(creep: Logistics) {
+    repair: wrap((creep: Logistics) => {
         const structure = EnergySinkManager.findRepairTarget(creep)
         if (structure === null) {
             roleLogistics.switchTask(creep)
@@ -214,9 +214,9 @@ const roleLogistics = {
         } else if (err !== OK) {
             Logger.warning('logistics:repair:failure', creep.name, err)
         }
-    },
+    }, 'logistics:repair'),
 
-    upgrade(creep: Logistics) {
+    upgrade: wrap((creep: Logistics) => {
         if (!creep.room.controller) {
             creep.say('???')
             return
@@ -226,12 +226,13 @@ const roleLogistics = {
         ) {
             creep.moveTo(creep.room.controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
+
                 range: 3,
             })
         }
-    },
+    }, 'logistics:upgrade'),
 
-    haulEnergy(creep: Logistics) {
+    haulEnergy: wrap((creep: Logistics) => {
         const energySinkManager = EnergySinkManager.get()
         const target = energySinkManager.makeTransferRequest(creep)
         if (target === null) {
@@ -249,7 +250,7 @@ const roleLogistics = {
         } else {
             Logger.warning('logistics:haul:failure', creep.name, err)
         }
-    },
+    }, 'logistics:haulEnergy'),
 
     switchTask(creep: Logistics) {
         let task = creep.memory.currentTask
@@ -257,6 +258,8 @@ const roleLogistics = {
             task = TASK_LONG_DISTANCE_BUILD
         } else if (!isAtExtensionCap(creep.room)) {
             task = TASK_BUILDING
+        } else if (hasFragileWall(creep.room)) {
+            task = TASK_WALL_REPAIRS
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
             task = TASK_REPAIRING
         } else {
