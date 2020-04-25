@@ -9,6 +9,7 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_STORAGE, drawStorage],
     [STRUCTURE_LINK, drawLink],
     [STRUCTURE_CONTAINER, drawContainer],
+    [STRUCTURE_EXTENSION, drawExtension],
 ])
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
@@ -28,6 +29,10 @@ function drawLink(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
+    visual.circle(pos, { fill: 'grey', radius: 0.45 })
+}
+
+function drawExtension(visual: RoomVisual, pos: RoomPosition): void {
     visual.circle(pos, { fill: 'yellow', radius: 0.45 })
 }
 

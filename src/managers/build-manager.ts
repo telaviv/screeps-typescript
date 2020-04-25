@@ -81,6 +81,10 @@ export default class BuildManager {
             return this.buildNextContainer()
         }
 
+        if (this.canBuildWall()) {
+            return this.buildNextWall()
+        }
+
         return false
     }
 
@@ -225,6 +229,19 @@ export default class BuildManager {
         return !isAtExtensionCap(this.room)
     }
 
+    private buildNextExtension(): boolean {
+        let pos = this.snapshot.getStructurePos(STRUCTURE_EXTENSION)
+
+        if (pos !== null) {
+            Logger.info('build-manager:buildNextExtension:cached', pos)
+        } else {
+            const iroom = fromRoom(this.room)
+            pos = iroom.nextExtensionPos()
+        }
+
+        return makeConstructionSite(pos, STRUCTURE_EXTENSION) === OK
+    }
+
     private buildNextTower(): boolean {
         let pos = this.snapshot.getStructurePos(STRUCTURE_TOWER)
 
@@ -238,17 +255,25 @@ export default class BuildManager {
         return makeConstructionSite(pos, STRUCTURE_TOWER) === OK
     }
 
-    private buildNextExtension(): boolean {
-        let pos = this.snapshot.getStructurePos(STRUCTURE_EXTENSION)
+    private canBuildWall(): boolean {
+        return (
+            this.snapshot.hasStructure(STRUCTURE_RAMPART) ||
+            this.snapshot.hasStructure(STRUCTURE_WALL)
+        )
+    }
 
+    private buildNextWall(): boolean {
+        let pos = this.snapshot.getStructurePos(STRUCTURE_RAMPART)
         if (pos !== null) {
-            Logger.info('build-manager:buildNextExtension:cached', pos)
-        } else {
-            const iroom = fromRoom(this.room)
-            pos = iroom.nextExtensionPos()
+            return makeConstructionSite(pos, STRUCTURE_RAMPART) === OK
         }
 
-        return makeConstructionSite(pos, STRUCTURE_EXTENSION) === OK
+        pos = this.snapshot.getStructurePos(STRUCTURE_WALL)
+        if (pos !== null) {
+            return makeConstructionSite(pos, STRUCTURE_WALL) === OK
+        }
+        Logger.warning('buildNextWall:failure', this.snapshot)
+        return false
     }
 }
 

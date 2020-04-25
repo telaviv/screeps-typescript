@@ -55,6 +55,10 @@ export default class RoomSnapshot {
         return null
     }
 
+    hasStructure(structureType: BuildableStructureConstant) {
+        return this.getStructurePos(structureType) !== null
+    }
+
     addStructure(structureType: StructureConstant, pos: FlatRoomPosition) {
         const immPos = new FlatRoomPositionRecord({
             x: pos.x,
