@@ -1,6 +1,8 @@
+import WarDepartment from 'war-department'
 import * as Logger from 'utils/logger'
 import { saveSnapshot } from 'snapshot'
 import roleClaimer from 'roles/claim'
+import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
 
 function killAllCreeps(roomName: string) {
@@ -20,6 +22,20 @@ function claimRoom(endRoom: string, startRoom: string) {
     Logger.info('claimRoom:create', err)
 }
 
+function sendWrecker(endRoom: string, startRoom: string) {
+    const spawns = Game.rooms[startRoom].find(FIND_MY_SPAWNS)
+    if (spawns.length === 0) {
+        throw new Error('no spawn in starting room')
+    }
+    const err = roleWrecker.create(spawns[0], endRoom)
+    Logger.info('sendWrecker:create', err)
+}
+
+function declareWar(endRoom: string, warRoom: string) {
+    const warDepartment = new WarDepartment(Game.rooms[warRoom])
+    warDepartment.declareWar(endRoom)
+}
+
 export default function assignGlobals() {
     global.killAllCreeps = killAllCreeps
     if (!Memory.logLevel) {
@@ -30,4 +46,6 @@ export default function assignGlobals() {
     global.claimRoom = claimRoom
     global.visualizeRoom = visualizeRoom
     global.assignGlobals = assignGlobals
+    global.sendWrecker = sendWrecker
+    global.declareWar = declareWar
 }

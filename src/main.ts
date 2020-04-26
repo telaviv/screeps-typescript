@@ -1,10 +1,11 @@
 import RoomVisualizer from 'room-visualizer'
+import WarDepartment from 'war-department'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleLogistics from 'roles/logistics'
 import roleClaimer, { Claimer } from 'roles/claim'
+import roleWrecker, { Wrecker } from 'roles/wrecker'
 import { Logistics } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
-import * as Logger from 'utils/logger'
 import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
 import { recordRoomStats, recordGameStats } from 'utils/stats'
@@ -37,25 +38,29 @@ function unwrappedLoop() {
     survey()
 
     Object.values(Game.rooms).forEach(room => {
-        room.memory.constructing = false
         if (!room.memory.snapshot) {
             room.memory.snapshot = []
         }
 
-        BuildManager.get(room).createConstructionSite()
-
         const visualizer = new RoomVisualizer(room)
         visualizer.render()
 
-        for (const source of room.memory.sources) {
-            const droppedEnergy = DroppedEnergyManager.get(source.dropSpot)
-            droppedEnergy.cleanup()
+        if (room.memory.sources) {
+            for (const source of room.memory.sources) {
+                const droppedEnergy = DroppedEnergyManager.get(source.dropSpot)
+                droppedEnergy.cleanup()
+            }
         }
 
         updateStrategy(room)
 
         if (room.controller && room.controller.my) {
             recordRoomStats(room)
+
+            BuildManager.get(room).createConstructionSite()
+
+            const warDepartment = new WarDepartment(room)
+            warDepartment.update()
 
             const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
                 filter: s => {
@@ -84,6 +89,8 @@ function unwrappedLoop() {
             roleLogistics.run(creep as Logistics)
         } else if (creep.memory.role === 'claimer') {
             roleClaimer.run(creep as Claimer)
+        } else if (creep.memory.role === 'wrecker') {
+            roleWrecker.run(creep as Wrecker)
         }
     }
     recordGameStats()

@@ -3,6 +3,7 @@ import times from 'lodash/times'
 import range from 'lodash/range'
 import includes from 'lodash/includes'
 import random from 'lodash/random'
+import { wrap } from 'utils/profiling'
 
 type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
 
@@ -246,7 +247,7 @@ interface TimeCache {
 }
 let cache: TimeCache = {}
 
-export function fromRoom(room: Room, useCache = true): ImmutableRoom {
+export const fromRoom = wrap((room: Room, useCache = true): ImmutableRoom => {
     if (useCache) {
         if (cache.hasOwnProperty(Game.time)) {
             const timeCache = cache[Game.time]
@@ -322,7 +323,7 @@ export function fromRoom(room: Room, useCache = true): ImmutableRoom {
     }
 
     return immutableRoom
-}
+}, 'immutable-room:fromRoom')
 
 export function updateCache(room: Room, immutableRoom: ImmutableRoom) {
     cache[Game.time][room.name] = immutableRoom

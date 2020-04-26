@@ -3,7 +3,6 @@
 import minBy from 'lodash/minBy'
 import includes from 'lodash/includes'
 import filter from 'lodash/filter'
-import { fromRoom, updateCache } from 'utils/immutable-room'
 import * as Logger from 'utils/logger'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
@@ -121,7 +120,9 @@ export function makeConstructionSite(
     type: BuildableStructureConstant,
 ): ScreepsReturnCode {
     const room = Game.rooms[pos.roomName]
-    const iroom = fromRoom(room)
+    if (!room.controller || !room.controller.my) {
+        return ERR_NOT_OWNER
+    }
     const ret = room.createConstructionSite(pos, type)
     if (ret !== OK) {
         Logger.warning('construction:failed', type, pos, ret)

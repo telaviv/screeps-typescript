@@ -1,3 +1,5 @@
+import includes from 'lodash/includes'
+
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 
@@ -34,7 +36,7 @@ const roleClaimer = {
                 creep.moveTo(creep.room.controller, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
-            } else if (err !== OK) {
+            } else if (!includes([OK, ERR_TIRED], err)) {
                 Logger.warning('claimer:attack:failed', creep.name, err)
             }
         } else {
@@ -54,6 +56,7 @@ const roleClaimer = {
         const err = spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
+                home: spawn.room.name,
                 roomName,
             } as ClaimerMemory,
         })

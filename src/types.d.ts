@@ -2,6 +2,7 @@
 
 interface CreepMemory {
     role: string
+    home: string | undefined
 }
 
 interface SourceMemory extends CreepMemory {
@@ -61,7 +62,6 @@ interface RoomMemory {
     strategy: StrategyPhase
     survey: SurveyMemory
     collapsed: boolean
-    constructing: boolean
     snapshot: RoomSnapshotMemory
     visuals: { snapshot: boolean }
 }
@@ -87,6 +87,8 @@ declare namespace NodeJS {
         claimRoom: any
         visualizeRoom: any
         assignGlobals: any
+        sendWrecker: any
+        declareWar: any
     }
 }
 

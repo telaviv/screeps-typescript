@@ -1,6 +1,7 @@
 import { Map, Record, RecordOf, Set } from 'immutable'
 import { getConstructionFlags, STRUCTURE_COLORS } from 'utils/flags'
 import * as Logger from 'utils/logger'
+import { wrap } from 'utils/profiling'
 
 interface FlatRoomPosition {
     x: number
@@ -103,14 +104,14 @@ export default class RoomSnapshot {
         this.room.memory.snapshot = snapshotMemory
     }
 
-    static create(room: Room): RoomSnapshot {
+    static create = wrap((room: Room): RoomSnapshot => {
         const snapshotMemory = room.memory.snapshot
         const snapshot = new RoomSnapshot(Map(), room.name)
         for (const { pos, structureType } of snapshotMemory) {
             snapshot.addStructure(structureType, pos)
         }
         return snapshot
-    }
+    }, 'RoomSnapshot:create')
 }
 
 export function saveSnapshot(roomName: string) {

@@ -1,5 +1,7 @@
 import filter from 'lodash/filter'
 
+import WarDepartment, { WarStatus } from 'war-department'
+import roleClaimer from 'roles/claim'
 import roleLogistics from 'roles/logistics'
 import {
     Logistics,
@@ -22,7 +24,10 @@ function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), creepName => {
         const creep = Game.creeps[creepName]
         return (
-            creep && creep.memory.role === role && creep.room.name === room.name
+            creep &&
+            creep.memory.role === role &&
+            ((creep.memory.home && creep.memory.home === room.name) ||
+                creep.room.name === room.name)
         )
     })
 }
@@ -50,7 +55,9 @@ export default function(spawn: StructureSpawn) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
     const harvesters = getCreeps('harvester', room)
+    const claimers = getCreeps('claimer', room)
     const energyManager = EnergyManager.get(spawn.room)
+    const warDepartment = new WarDepartment(spawn.room)
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
     const upgraders = getLogisticsCreeps(TASK_UPGRADING, room)
@@ -77,6 +84,11 @@ export default function(spawn: StructureSpawn) {
         roleLogistics.create(spawn, assignment, TASK_UPGRADING)
     } else if (builders.length < BUILDERS_COUNT) {
         roleLogistics.create(spawn, assignment, TASK_BUILDING)
+    } else if (
+        warDepartment.status === WarStatus.CLAIM &&
+        claimers.length === 0
+    ) {
+        roleClaimer.create(spawn, warDepartment.target)
     } else if (wallRepairers.length < WALL_REPAIRERS_COUNT) {
         roleLogistics.create(spawn, assignment, TASK_WALL_REPAIRS)
     } else {

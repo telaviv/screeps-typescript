@@ -1,7 +1,11 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
+/* eslint func-names: "off" */
 
-export function wrap(fn: any, key: string): any {
-    return (...args: any[]) => {
+export function wrap<T extends (...args: any[]) => any>(
+    fn: T,
+    key: string,
+): (...funcArgs: Parameters<T>) => ReturnType<T> {
+    return (...args: Parameters<T>): ReturnType<T> => {
         const startCpu = Game.cpu.getUsed()
         const ret = fn(...args)
         const stopCpu = Game.cpu.getUsed()
@@ -44,6 +48,23 @@ export function init() {
 
 export function clear() {
     Memory.profiler.data = {}
+    start()
+}
+
+export function profile(
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+) {
+    const originalMethod = descriptor.value
+    const key = `${target.constructor.name}.${propertyKey}`
+    descriptor.value = function(...args: any) {
+        const startCpu = Game.cpu.getUsed()
+        const ret = originalMethod.apply(this, args)
+        const stopCpu = Game.cpu.getUsed()
+        markProfileMemory(key, stopCpu - startCpu)
+        return ret
+    }
 }
 
 export function output() {
@@ -52,9 +73,13 @@ export function output() {
         return
     }
     const totalTicks = Game.time - Memory.profiler.start
-    for (const [key, data] of Object.entries(Memory.profiler.data)) {
+    const dataArray = Object.entries(Memory.profiler.data)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    dataArray.sort(([keya, dataa], [keyb, datab]) => datab.total - dataa.total)
+    for (const [key, data] of dataArray.slice(0, 10)) {
         console.log(
-            `${key}: ${data.total / totalTicks} ${data.total / data.calls}`,
+            `${key}: ${data.total / totalTicks} ${data.total /
+                data.calls} ${data.calls / totalTicks}`,
         )
     }
 }

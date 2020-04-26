@@ -53,10 +53,6 @@ const PREFERENCE_EMOJIS = {
 
 const roleLogistics = {
     run: wrap((creep: Logistics) => {
-        if (!creep.memory.home) {
-            creep.memory.home = creep.room.name
-        }
-
         roleLogistics.updateMemory(creep)
         roleLogistics.say(creep)
         if (creep.memory.waitTime > SLEEP_SAY_TIME) {

@@ -11,8 +11,8 @@ import {
     makeConstructionSite,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
-import { wrap } from 'utils/profiling'
 import { getDropSpots } from 'utils/managers'
+import { wrap, profile } from 'utils/profiling'
 import RoomSnapshot from 'snapshot'
 
 interface IImutableRoomItem {
@@ -87,9 +87,9 @@ export default class BuildManager {
         }
 
         return false
-    }, 'buildManager:createConstructionSite')
+    }, 'BuildManager:createConstructionSite')
 
-    canBuildImportant(): boolean {
+    canBuildImportant = wrap((): boolean => {
         return (
             this.hasImportantConstructionSite() ||
             this.canBuildExtension() ||
@@ -97,9 +97,9 @@ export default class BuildManager {
             this.canBuildTower() ||
             this.canBuildContainer()
         )
-    }
+    }, 'BuildManager:canBuildImportant')
 
-    private hasImportantConstructionSite(): boolean {
+    private hasImportantConstructionSite = wrap((): boolean => {
         const sites = getConstructionSites(this.room)
         if (sites.length === 0) {
             return false
@@ -115,16 +115,16 @@ export default class BuildManager {
             [STRUCTURE_WALL, STRUCTURE_RAMPART],
             site.structureType,
         )
-    }
+    }, 'BuildManager:hasImportantConstructionSite')
 
-    private canBuildContainer() {
+    private canBuildContainer = wrap(() => {
         const dropSpots = getDropSpots(this.room)
         return !every(dropSpots, dropSpot =>
             hasContainerAtPosition(this.room, dropSpot.pos),
         )
-    }
+    }, 'BuildManager:canBuildContainer')
 
-    private buildNextContainer(): boolean {
+    private buildNextContainer = wrap((): boolean => {
         let pos = this.snapshot.getStructurePos(STRUCTURE_CONTAINER)
 
         if (pos !== null) {
@@ -141,25 +141,29 @@ export default class BuildManager {
             return makeConstructionSite(pos, STRUCTURE_CONTAINER) === OK
         }
         return false
-    }
+    }, 'BuildManager:buildNextContainer')
 
-    private hasAConstructionSite() {
+    private hasAConstructionSite = wrap(() => {
         return hasConstructionSite(this.room)
-    }
+    }, 'BuildManager:hasAConstructionSite')
 
-    private canBuildTower(): boolean {
+    private canBuildTower = wrap((): boolean => {
         return !isAtTowerCap(this.room)
-    }
+    }, 'BuildManager:canBuildTower')
 
-    private canBuildSwampRoad(): boolean {
+    private canBuildSwampRoad = wrap((): boolean => {
+        if (Game.time % 100 !== 0) {
+            return false
+        }
         return this.findSwampRoad() !== undefined
-    }
+    }, 'BuildManager:canBuildSwampRoad')
 
-    private buildSwampRoad(): boolean {
+    private buildSwampRoad = wrap((): boolean => {
         const pos = this.findSwampRoad() as RoomPosition
         return makeConstructionSite(pos, STRUCTURE_ROAD) === OK
-    }
+    }, 'BuildManager:buildSwampRoad')
 
+    @profile
     private findSwampRoad(): RoomPosition | undefined {
         const iroom = fromRoom(this.room)
         const cachedPos = this.snapshot.getStructurePos(
@@ -186,7 +190,7 @@ export default class BuildManager {
         return new RoomPosition(pos.x, pos.y, this.room.name)
     }
 
-    private updateRoadCache() {
+    private updateRoadCache = wrap(() => {
         this._roads = OrderedSet()
         if (!this.room.controller) {
             return
@@ -217,7 +221,7 @@ export default class BuildManager {
             const key = new Coordinate({ x: pathStep.x, y: pathStep.y })
             this._roads = this._roads.add(key)
         }
-    }
+    }, 'BuildManager:updateRoadCache')
 
     private findRoadPath(start: RoomPosition, end: RoomPosition) {
         return this.room.findPath(start, end, {
@@ -226,11 +230,11 @@ export default class BuildManager {
         })
     }
 
-    private canBuildExtension() {
+    private canBuildExtension = wrap(() => {
         return !isAtExtensionCap(this.room)
-    }
+    }, 'BuildManager:canBuildExtension')
 
-    private buildNextExtension(): boolean {
+    private buildNextExtension = wrap((): boolean => {
         let pos = this.snapshot.getStructurePos(STRUCTURE_EXTENSION)
 
         if (pos !== null) {
@@ -241,7 +245,7 @@ export default class BuildManager {
         }
 
         return makeConstructionSite(pos, STRUCTURE_EXTENSION) === OK
-    }
+    }, 'BuildManager:buildNextExtension')
 
     private buildNextTower(): boolean {
         let pos = this.snapshot.getStructurePos(STRUCTURE_TOWER)
@@ -256,14 +260,14 @@ export default class BuildManager {
         return makeConstructionSite(pos, STRUCTURE_TOWER) === OK
     }
 
-    private canBuildWall(): boolean {
+    private canBuildWall = wrap((): boolean => {
         return (
             this.snapshot.hasStructure(STRUCTURE_RAMPART) ||
             this.snapshot.hasStructure(STRUCTURE_WALL)
         )
-    }
+    }, 'BuildManager:canBuildWall')
 
-    private buildNextWall(): boolean {
+    private buildNextWall = wrap((): boolean => {
         let pos = this.snapshot.getStructurePos(STRUCTURE_RAMPART)
         if (pos !== null) {
             return makeConstructionSite(pos, STRUCTURE_RAMPART) === OK
@@ -275,7 +279,7 @@ export default class BuildManager {
         }
         Logger.warning('buildNextWall:failure', this.snapshot)
         return false
-    }
+    }, 'BuildManager:buildNextWall')
 }
 
 export function getBuildManager(room: Room) {
