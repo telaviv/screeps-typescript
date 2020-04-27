@@ -1,6 +1,6 @@
 import WarDepartment from 'war-department'
 import * as Logger from 'utils/logger'
-import { saveSnapshot } from 'snapshot'
+import { saveSnapshot, resetSnapshot } from 'snapshot'
 import roleClaimer from 'roles/claim'
 import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
@@ -36,6 +36,14 @@ function declareWar(endRoom: string, warRoom: string) {
     warDepartment.declareWar(endRoom)
 }
 
+function pauseConstruction(room: string) {
+    Game.rooms[room].memory.construction.paused = true
+}
+
+function unpauseConstruction(room: string) {
+    Game.rooms[room].memory.construction.paused = false
+}
+
 export default function assignGlobals() {
     global.killAllCreeps = killAllCreeps
     if (!Memory.logLevel) {
@@ -48,4 +56,7 @@ export default function assignGlobals() {
     global.assignGlobals = assignGlobals
     global.sendWrecker = sendWrecker
     global.declareWar = declareWar
+    global.pauseConstruction = pauseConstruction
+    global.unpauseConstruction = unpauseConstruction
+    global.resetSnapshot = resetSnapshot
 }

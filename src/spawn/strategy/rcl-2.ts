@@ -19,6 +19,7 @@ const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
 const WALL_REPAIRERS_COUNT = 1
+const CLAIMERS_COUNT = 3
 
 function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), creepName => {
@@ -69,7 +70,10 @@ export default function(spawn: StructureSpawn) {
         roleHarvester.create(spawn, harvesterSource)
     }
 
-    if (warDepartment.status === WarStatus.CLAIM && claimers.length === 0) {
+    if (
+        warDepartment.status === WarStatus.CLAIM &&
+        claimers.length < CLAIMERS_COUNT
+    ) {
         roleClaimer.create(spawn, warDepartment.target)
     }
 
@@ -116,15 +120,17 @@ function createRescueCreeps(spawn: StructureSpawn) {
 function updateRescueStatus(room: Room) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
-    const logistics = getCreeps('logistics', room)
+    const haulers = getLogisticsCreeps(TASK_HAULING, room)
+    const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
+    const haulerCount = haulers.length + workers.length
     const harvesters = getCreeps('harvester', room)
     if (
         room.memory.collapsed &&
-        logistics.length >= sourceCount &&
+        haulerCount >= sourceCount &&
         harvesters.length >= sourceCount
     ) {
         room.memory.collapsed = false
-    } else if (!room.memory.collapsed && logistics.length < sourceCount) {
+    } else if (!room.memory.collapsed && haulerCount < sourceCount) {
         room.memory.collapsed = true
     }
 }

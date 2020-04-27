@@ -254,7 +254,7 @@ export default class EnergySinkManager {
                 | StructureExtension
                 | StructureSpawn
                 | StructureTower
-            return s.energy < s.energyCapacity
+            return TransferStructure.create(s.id).remainingCapacity() > 0
         }
         return false
     }

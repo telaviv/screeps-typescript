@@ -251,7 +251,9 @@ const roleLogistics = {
 
     switchTask(creep: Logistics) {
         let task = creep.memory.currentTask
-        if (needsLongDistanceBuild(creep.memory.home)) {
+        if (!EnergySinkManager.transfersAreFull(creep.room)) {
+            task = TASK_HAULING
+        } else if (needsLongDistanceBuild(creep.memory.home)) {
             task = TASK_LONG_DISTANCE_BUILD
         } else if (!isAtExtensionCap(creep.room)) {
             task = TASK_BUILDING
@@ -268,7 +270,7 @@ const roleLogistics = {
             `${creep.memory.currentTask}->${task}`,
         )
         if (creep.memory.currentTask === task) {
-            Logger.warning(
+            Logger.info(
                 'logistics:switch-task:failure',
                 creep.name,
                 "couldn't switch from",

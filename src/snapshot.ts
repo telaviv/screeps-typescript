@@ -104,6 +104,10 @@ export default class RoomSnapshot {
         this.room.memory.snapshot = snapshotMemory
     }
 
+    reset() {
+        this.snapshot = Map()
+    }
+
     static create = wrap((room: Room): RoomSnapshot => {
         const snapshotMemory = room.memory.snapshot
         const snapshot = new RoomSnapshot(Map(), room.name)
@@ -117,6 +121,14 @@ export default class RoomSnapshot {
 export function saveSnapshot(roomName: string) {
     const room = Game.rooms[roomName]
     const roomSnapshot = RoomSnapshot.create(room)
+    roomSnapshot.loadFromRoom()
+    roomSnapshot.saveToMemory()
+}
+
+export function resetSnapshot(roomName: string) {
+    const room = Game.rooms[roomName]
+    const roomSnapshot = RoomSnapshot.create(room)
+    roomSnapshot.reset()
     roomSnapshot.loadFromRoom()
     roomSnapshot.saveToMemory()
 }

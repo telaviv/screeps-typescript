@@ -8,7 +8,7 @@ export function spawnCreep(
     opts?: SpawnOptions,
 ): ScreepsReturnCode {
     const err = spawn.spawnCreep(body, name, opts)
-    if (!includes([OK, ERR_BUSY], err)) {
+    if (!includes([OK, ERR_BUSY, ERR_NOT_ENOUGH_ENERGY], err)) {
         Logger.warning('spawnCreep:failed', err)
     }
     return err

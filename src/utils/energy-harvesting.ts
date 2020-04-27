@@ -1,3 +1,5 @@
+import { hash } from 'immutable'
+
 import EnergyManager from 'managers/energy-manager'
 import SourceManager from 'managers/source-manager'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
@@ -109,12 +111,16 @@ function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
 
 export function getEnergy(creep: Logistics) {
     if (creep.room.name !== creep.memory.home) {
-        const target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE)
-        if (target) {
+        const sources = creep.room.find(FIND_SOURCES_ACTIVE)
+        if (sources.length > 0) {
+            const target = sources[hash(creep.name) % sources.length]
             if (creep.harvest(target) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(target)
+                creep.moveTo(target, {
+                    visualizePathStyle: { stroke: '#ffaa00' },
+                })
             }
         }
+        return
     }
 
     let sourceManager = getSourceManager(creep)

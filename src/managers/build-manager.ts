@@ -1,3 +1,4 @@
+import { stringToInt as hash } from 'utils/hash'
 import pokemon from 'utils/pokemon'
 import every from 'lodash/every'
 import includes from 'lodash/includes'
@@ -18,6 +19,12 @@ import * as Logger from 'utils/logger'
 import { getDropSpots } from 'utils/managers'
 import { wrap, profile } from 'utils/profiling'
 import RoomSnapshot from 'snapshot'
+
+declare global {
+    interface RoomMemory {
+        construction: { paused: boolean }
+    }
+}
 
 interface IImutableRoomItem {
     x: number
@@ -41,6 +48,10 @@ export default class BuildManager {
         this.room = room
         this._roads = null
         this._snapshot = null
+
+        if (!this.room.memory.construction) {
+            this.room.memory.construction = { paused: false }
+        }
     }
 
     static get(room: Room): BuildManager {
@@ -63,6 +74,10 @@ export default class BuildManager {
 
     createConstructionSite = wrap((): boolean => {
         if (!this.room.controller) {
+            return false
+        }
+
+        if (this.room.memory.construction.paused) {
             return false
         }
 
@@ -185,9 +200,10 @@ export default class BuildManager {
     }, 'BuildManager:canBuildTower')
 
     private canBuildSwampRoad = wrap((): boolean => {
-        if (Game.time % 100 !== 0) {
+        if (Game.time % 100 !== Math.abs(hash(this.room.name) % 100)) {
             return false
         }
+        Logger.info('canBuildSwampRoad:running', this.room.name)
         return this.findSwampRoad() !== undefined
     }, 'BuildManager:canBuildSwampRoad')
 

@@ -89,6 +89,9 @@ declare namespace NodeJS {
         assignGlobals: any
         sendWrecker: any
         declareWar: any
+        pauseConstruction: any
+        unpauseConstruction: any
+        resetSnapshot: any
     }
 }
 
