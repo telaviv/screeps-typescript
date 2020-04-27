@@ -3,7 +3,8 @@ Features
 
 [x] - Workers can wall repair really weak walls
 [-] - Logistics become workers when preference doesn't work.
-[ ] - Builders don't make construction sites, the build manager does
+[x] - Builders don't make construction sites, the build manager does
+[x] - Auto build spawn when we don't have one.
 [ ] - Snapshot System
    [x] - Save snapshot
    [ ] - Build from snapshot before generating iroom

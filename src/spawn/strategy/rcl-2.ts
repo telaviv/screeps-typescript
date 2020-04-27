@@ -64,8 +64,13 @@ export default function(spawn: StructureSpawn) {
     const builders = getLogisticsCreeps(TASK_BUILDING, room)
     const wallRepairers = getLogisticsCreeps(TASK_WALL_REPAIRS, room)
     const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
+
     if (harvesters.length < HARVESTERS_PER_SOURCE * sourceCount) {
         roleHarvester.create(spawn, harvesterSource)
+    }
+
+    if (warDepartment.status === WarStatus.CLAIM && claimers.length === 0) {
+        roleClaimer.create(spawn, warDepartment.target)
     }
 
     const request = roleLogistics.requestedCarryCapacity(spawn)
@@ -84,11 +89,6 @@ export default function(spawn: StructureSpawn) {
         roleLogistics.create(spawn, assignment, TASK_UPGRADING)
     } else if (builders.length < BUILDERS_COUNT) {
         roleLogistics.create(spawn, assignment, TASK_BUILDING)
-    } else if (
-        warDepartment.status === WarStatus.CLAIM &&
-        claimers.length === 0
-    ) {
-        roleClaimer.create(spawn, warDepartment.target)
     } else if (wallRepairers.length < WALL_REPAIRERS_COUNT) {
         roleLogistics.create(spawn, assignment, TASK_WALL_REPAIRS)
     } else {

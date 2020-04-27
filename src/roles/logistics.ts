@@ -11,6 +11,7 @@ import {
     findLongDistanceBuild,
     needsLongDistanceBuild,
 } from 'utils/room'
+import { spawnCreep } from 'utils/spawn'
 import * as Logger from 'utils/logger'
 import {
     PREFERENCE_WORKER,
@@ -292,7 +293,8 @@ const roleLogistics = {
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
-        return spawn.spawnCreep(
+        return spawnCreep(
+            spawn,
             calculateParts(capacity),
             `${ROLE}:${preference}:${Game.time}`,
             {
@@ -310,13 +312,15 @@ const roleLogistics = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
+    const partUnit = [WORK, MOVE, CARRY, MOVE]
+    const unitCost = partUnit.reduce((total, p) => total + BODYPART_COST[p], 0)
     let capacityLeft = capacity
+    let partsLeft = 50
     let parts: BodyPartConstant[] = []
-    const chunkCost =
-        BODYPART_COST[WORK] + BODYPART_COST[CARRY] + 2 * BODYPART_COST[MOVE]
-    while (capacityLeft >= chunkCost) {
-        parts = parts.concat([WORK, MOVE, CARRY, MOVE])
-        capacityLeft -= chunkCost
+    while (capacityLeft >= unitCost && partsLeft >= partUnit.length) {
+        parts = parts.concat(partUnit)
+        capacityLeft -= unitCost
+        partsLeft -= partUnit.length
     }
     return parts
 }

@@ -52,7 +52,7 @@ const roleClaimer = {
     }, 'runClaimer'),
 
     create(spawn: StructureSpawn, roomName: string): number {
-        const parts = calculateParts()
+        const parts = calculateParts(spawn.room.energyCapacityAvailable)
         const err = spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
@@ -64,8 +64,15 @@ const roleClaimer = {
     },
 }
 
-export function calculateParts(): BodyPartConstant[] {
-    return [CLAIM, MOVE]
+export function calculateParts(capacity: number): BodyPartConstant[] {
+    let capacityLeft = capacity
+    let parts: BodyPartConstant[] = []
+    const chunkCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]
+    while (capacityLeft >= chunkCost) {
+        parts = parts.concat([MOVE, CLAIM])
+        capacityLeft -= chunkCost
+    }
+    return parts
 }
 
 export default roleClaimer

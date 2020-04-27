@@ -1,5 +1,3 @@
-import * as Logger from 'utils/logger'
-
 declare global {
     interface RoomMemory {
         war: WarMemory
@@ -51,12 +49,7 @@ export default class WarDepartment {
         }
 
         const targetRoom = Game.rooms[this.target]
-        if (!targetRoom) {
-            Logger.warning('war-department:update:failure', this.warMemory)
-            return
-        }
-
-        if (targetRoom.controller && targetRoom.controller.my) {
+        if (targetRoom && targetRoom.controller && targetRoom.controller.my) {
             this.warMemory = { status: WarStatus.NONE, target: '' }
         }
     }

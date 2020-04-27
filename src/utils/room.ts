@@ -7,6 +7,7 @@ import * as Logger from 'utils/logger'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
+export const SPAWN_COUNTS = [1, 1, 1, 1, 1, 1, 1, 2, 3]
 
 const STRONG_WALL_HITS = 1000000
 const FRAGILE_WALL_HITS = 100000
@@ -25,6 +26,22 @@ export function isAtTowerCap(room: Room): boolean {
     }
     const towers = getTowers(room)
     return towers.length >= TOWER_COUNTS[room.controller.level]
+}
+
+export function hasNoSpawns(room: Room): boolean {
+    if (!room.controller) {
+        return true
+    }
+    const spawns = getSpawns(room)
+    return spawns.length === 0
+}
+
+export function isAtSpawnCap(room: Room): boolean {
+    if (!room.controller) {
+        return true
+    }
+    const spawns = getSpawns(room)
+    return spawns.length >= SPAWN_COUNTS[room.controller.level]
 }
 
 export function getExtensions(room: Room): StructureExtension[] {
@@ -126,6 +143,19 @@ export function makeConstructionSite(
     const ret = room.createConstructionSite(pos, type)
     if (ret !== OK) {
         Logger.warning('construction:failed', type, pos, ret)
+    }
+    return ret
+}
+
+export function makeSpawnConstructionSite(pos: RoomPosition, name?: string) {
+    const room = Game.rooms[pos.roomName]
+    if (!room.controller || !room.controller.my) {
+        return ERR_NOT_OWNER
+    }
+    Logger.debug('spawn:construction', pos, name)
+    const ret = room.createConstructionSite(pos.x, pos.y, STRUCTURE_SPAWN, name)
+    if (ret !== OK) {
+        Logger.warning('construction:failed', pos, STRUCTURE_SPAWN, ret, name)
     }
     return ret
 }

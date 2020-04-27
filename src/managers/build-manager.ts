@@ -1,3 +1,4 @@
+import pokemon from 'utils/pokemon'
 import every from 'lodash/every'
 import includes from 'lodash/includes'
 import { OrderedSet, Record as IRecord } from 'immutable'
@@ -6,9 +7,12 @@ import {
     hasContainerAtPosition,
     isAtExtensionCap,
     isAtTowerCap,
+    isAtSpawnCap,
+    hasNoSpawns,
     hasConstructionSite,
     getConstructionSites,
     makeConstructionSite,
+    makeSpawnConstructionSite,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { getDropSpots } from 'utils/managers'
@@ -66,6 +70,10 @@ export default class BuildManager {
             return false
         }
 
+        if (this.hasNoSpawns()) {
+            return this.buildNextSpawn()
+        }
+
         if (this.canBuildExtension()) {
             return this.buildNextExtension()
         }
@@ -76,6 +84,10 @@ export default class BuildManager {
 
         if (this.canBuildTower()) {
             return this.buildNextTower()
+        }
+
+        if (this.canBuildSpawn()) {
+            return this.buildNextSpawn()
         }
 
         if (this.canBuildContainer()) {
@@ -95,7 +107,8 @@ export default class BuildManager {
             this.canBuildExtension() ||
             this.canBuildSwampRoad() ||
             this.canBuildTower() ||
-            this.canBuildContainer()
+            this.canBuildContainer() ||
+            this.canBuildSpawn()
         )
     }, 'BuildManager:canBuildImportant')
 
@@ -146,6 +159,26 @@ export default class BuildManager {
     private hasAConstructionSite = wrap(() => {
         return hasConstructionSite(this.room)
     }, 'BuildManager:hasAConstructionSite')
+
+    private hasNoSpawns() {
+        return hasNoSpawns(this.room)
+    }
+
+    private canBuildSpawn() {
+        return !isAtSpawnCap(this.room)
+    }
+
+    private buildNextSpawn() {
+        let pos = this.snapshot.getStructurePos(STRUCTURE_SPAWN)
+
+        if (pos !== null) {
+            Logger.info('build-manager:buildNextSpawn:cached', pos)
+        } else {
+            const iroom = fromRoom(this.room)
+            pos = iroom.nextSpawnPos()
+        }
+        return makeSpawnConstructionSite(pos, pokemon()) === OK
+    }
 
     private canBuildTower = wrap((): boolean => {
         return !isAtTowerCap(this.room)
