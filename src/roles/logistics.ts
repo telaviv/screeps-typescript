@@ -251,9 +251,7 @@ const roleLogistics = {
 
     switchTask(creep: Logistics) {
         let task = creep.memory.currentTask
-        if (!EnergySinkManager.transfersAreFull(creep.room)) {
-            task = TASK_HAULING
-        } else if (needsLongDistanceBuild(creep.memory.home)) {
+        if (needsLongDistanceBuild(creep.memory.home)) {
             task = TASK_LONG_DISTANCE_BUILD
         } else if (!isAtExtensionCap(creep.room)) {
             task = TASK_BUILDING
