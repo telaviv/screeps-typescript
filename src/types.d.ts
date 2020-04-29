@@ -56,6 +56,12 @@ type RoomSnapshotMemory = Array<{
     structureType: StructureConstant
 }>
 
+interface FlatRoomPosition {
+    x: number
+    y: number
+    roomName: string
+}
+
 interface RoomMemory {
     roadPositions: RoomPositionSet
     sources: RoomSourceMemory[]

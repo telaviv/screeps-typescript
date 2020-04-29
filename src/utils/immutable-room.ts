@@ -206,6 +206,10 @@ export class ImmutableRoom implements ValueObject {
         return this.nextExtensionPos()
     }
 
+    nextStoragePos(): RoomPosition {
+        return this.nextExtensionPos()
+    }
+
     private findCentroid(): RoomPosition {
         let xAcc = 0
         let yAcc = 0

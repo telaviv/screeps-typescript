@@ -68,6 +68,10 @@ export function getContainers(room: Room): StructureContainer[] {
     }) as StructureContainer[]
 }
 
+export function getSources(room: Room): Source[] {
+    return room.find<FIND_SOURCES>(FIND_SOURCES)
+}
+
 export function hasFragileWall(room: Room): boolean {
     const walls = room.find<Structure>(FIND_STRUCTURES, {
         filter: isFragileWall,
