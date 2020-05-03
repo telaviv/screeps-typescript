@@ -14,17 +14,17 @@ export type DeliveryTask =
     | typeof TASK_REPAIRING
     | typeof TASK_WALL_REPAIRS
     | typeof TASK_LONG_DISTANCE_BUILD
-type Task = DeliveryTask | typeof TASK_COLLECTING
+type LogisticsTask = DeliveryTask | typeof TASK_COLLECTING
 export type LogisticsPreference = DeliveryTask | typeof PREFERENCE_WORKER
 
-export interface Logistics extends SourceCreep {
+export interface LogisticsCreep extends SourceCreep {
     memory: LogisticsMemory
 }
 
 export interface LogisticsMemory extends SourceMemory {
     role: 'logistics'
     preference: LogisticsPreference
-    currentTask: Task
+    currentTask: LogisticsTask
     currentTarget: Id<Structure> | undefined
     home: string
 }

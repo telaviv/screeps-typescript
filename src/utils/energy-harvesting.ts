@@ -1,7 +1,7 @@
 import EnergyManager from 'managers/energy-manager'
 import SourceManager from 'managers/source-manager'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
-import { Logistics } from 'roles/logistics-constants'
+import { LogisticsCreep } from 'roles/logistics-constants'
 
 import { fromRoom } from 'utils/immutable-room'
 
@@ -107,7 +107,7 @@ function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
     return getSourceManager(creep).droppedEnergy
 }
 
-export function getEnergy(creep: Logistics) {
+export function getEnergy(creep: LogisticsCreep) {
     if (creep.room.name !== creep.memory.home) {
         const target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE)
         if (target) {

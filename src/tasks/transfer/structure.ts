@@ -1,5 +1,6 @@
-import { TransferTask } from 'tasks'
-import { Logistics } from 'roles/logistics-constants'
+import { TransferTask, isTransferTask, getAllTasks } from 'tasks'
+import { LogisticsCreep } from 'roles/logistics-constants'
+import autoIncrement from 'utils/autoincrement'
 import { currentEnergyHeld } from 'utils/creep'
 
 export class TransferStructure {
@@ -12,16 +13,16 @@ export class TransferStructure {
     }
 
     static create(id: Id<AnyStoreStructure>) {
-        const tasks = (Memory.tasks.filter(task => {
-            if (task.type !== 'transfer') {
-                return false
-            }
-            const transferTask = (task as unknown) as TransferTask
-            return transferTask.structureId === id
-        }) as unknown) as TransferTask[]
+        const tasks: TransferTask[] = []
         const structure = Game.getObjectById<AnyStoreStructure>(id)
         if (structure === null) {
             throw new Error(`structure id ${id} doesn't exist`)
+        }
+
+        for (const task of getAllTasks()) {
+            if (isTransferTask(task)) {
+                tasks.push(task)
+            }
         }
         return new TransferStructure(structure, tasks)
     }
@@ -38,7 +39,7 @@ export class TransferStructure {
     }
 
     makeRequest(
-        creep: Logistics,
+        creep: LogisticsCreep,
         resource: ResourceConstant = RESOURCE_ENERGY,
     ): TransferTask {
         const creepEnergyAvailable = currentEnergyHeld(creep)
@@ -52,6 +53,7 @@ export class TransferStructure {
         )
         const task = {
             type: 'transfer' as 'transfer',
+            id: autoIncrement().toString(),
             creep: creep.name,
             structureId: this.structure.id,
             amount: amountToTransfer,
@@ -59,7 +61,7 @@ export class TransferStructure {
             resourceType: resource,
             complete: false,
         }
-        this.tasks.push(task)
+        creep.memory.tasks.push(task)
         return task
     }
 

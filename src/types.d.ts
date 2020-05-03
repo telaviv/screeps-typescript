@@ -42,7 +42,6 @@ interface Memory {
     uuid: number
     log: any
     profiler: ProfilerMemory
-    tasks: Task<any>[]
     logLevel: string
     stats: StatsMemory
 }
@@ -64,12 +63,6 @@ interface RoomMemory {
     collapsed: boolean
     snapshot: RoomSnapshotMemory
     visuals: { snapshot: boolean }
-}
-
-interface Task<T> {
-    readonly type: T
-    readonly timestamp: number
-    complete: boolean
 }
 
 type RoomPositionSet = RoomPosition[]

@@ -1,16 +1,17 @@
+import migrate from 'migrations'
 import RoomVisualizer from 'room-visualizer'
 import WarDepartment from 'war-department'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleLogistics from 'roles/logistics'
 import roleClaimer, { Claimer } from 'roles/claim'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
-import { Logistics } from 'roles/logistics-constants'
+import { LogisticsCreep } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
 import { recordRoomStats, recordGameStats } from 'utils/stats'
+import * as TaskRunner from 'tasks/runner'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
-import EnergySinkManager from 'managers/energy-sink-manager'
 import BuildManager from 'managers/build-manager'
 
 import { runSpawn } from './spawn'
@@ -20,10 +21,7 @@ import { runTower } from './tower'
 
 global.Profiler = Profiler
 assignGlobals()
-
-if (!Memory.tasks) {
-    Memory.tasks = []
-}
+migrate()
 
 function unwrappedLoop() {
     // Automatically delete memory of missing creeps
@@ -33,9 +31,8 @@ function unwrappedLoop() {
         }
     }
 
-    const energySinkManager = EnergySinkManager.get()
-    energySinkManager.cleanup()
     survey()
+    TaskRunner.cleanup()
 
     Object.values(Game.rooms).forEach(room => {
         if (!room.memory.snapshot) {
@@ -86,7 +83,7 @@ function unwrappedLoop() {
         if (creep.memory.role === 'harvester') {
             roleHarvester.run(creep as Harvester)
         } else if (creep.memory.role === 'logistics') {
-            roleLogistics.run(creep as Logistics)
+            roleLogistics.run(creep as LogisticsCreep)
         } else if (creep.memory.role === 'claimer') {
             roleClaimer.run(creep as Claimer)
         } else if (creep.memory.role === 'wrecker') {
