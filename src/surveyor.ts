@@ -2,9 +2,11 @@
 
 import RoomPlanner from 'room-planner'
 import { fromRoom } from 'utils/immutable-room'
+import { hasNoSpawns } from 'utils/room'
 import * as PositionSet from 'utils/roomPositionSet'
 import range from 'lodash/range'
 import each from 'lodash/each'
+import * as Logger from 'utils/logger'
 
 const getSpawn = (room: Room): StructureSpawn => {
     return room.find(FIND_MY_SPAWNS)[0]
@@ -53,6 +55,7 @@ function getLinkSpot(pos: RoomPosition, ignore?: RoomPosition): RoomPosition {
         )
     }
     if (linkSpots.length === 0) {
+        Logger.debug('surveyor:getLinkSpot:failure', pos, neighbors)
         throw new Error(
             `Couldn't find a link spot (${pos.x}, ${pos.y}, ${pos.roomName})`,
         )
@@ -62,6 +65,7 @@ function getLinkSpot(pos: RoomPosition, ignore?: RoomPosition): RoomPosition {
 }
 
 function planRoom(room: Room) {
+    Logger.info('surveyor:planRoom', room.name)
     assignSources(room)
     const iroom = fromRoom(room)
     const storageiPos = iroom.nextStoragePos()
@@ -79,9 +83,11 @@ function planRoom(room: Room) {
 
 const assignRoomFeatures = () => {
     each(Game.rooms, room => {
-        const roomPlanner = new RoomPlanner(room)
-        if (!roomPlanner.planIsFinished()) {
-            planRoom(room)
+        if (room.controller && room.controller.my && !hasNoSpawns(room)) {
+            const roomPlanner = new RoomPlanner(room)
+            if (!roomPlanner.planIsFinished()) {
+                planRoom(room)
+            }
         }
     })
 }

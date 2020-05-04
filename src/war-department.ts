@@ -11,6 +11,7 @@ interface WarMemory {
 
 export enum WarStatus {
     NONE = 'none',
+    ATTACK = 'attack',
     CLAIM = 'claim',
 }
 
@@ -24,6 +25,11 @@ export default class WarDepartment {
         }
     }
 
+    static create(roomName: string): WarDepartment {
+        const room = Game.rooms[roomName]
+        return new WarDepartment(room)
+    }
+
     get warMemory(): WarMemory {
         return this.room.memory.war
     }
@@ -34,6 +40,10 @@ export default class WarDepartment {
 
     get status(): WarStatus {
         return this.warMemory.status
+    }
+
+    set status(status: WarStatus) {
+        this.warMemory.status = status
     }
 
     get target(): string {
@@ -55,6 +65,6 @@ export default class WarDepartment {
     }
 
     declareWar(target: string) {
-        this.warMemory = { status: WarStatus.CLAIM, target }
+        this.warMemory = { status: WarStatus.ATTACK, target }
     }
 }

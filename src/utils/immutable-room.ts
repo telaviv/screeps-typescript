@@ -128,9 +128,9 @@ export class ImmutableRoom implements ValueObject {
 
     getClosestNeighbors(x: number, y: number): ImmutableRoomItem[] {
         const neighbors = []
-        for (let nx = Math.max(0, x - 1); nx < Math.min(50, x + 1); ++nx) {
-            for (let ny = Math.max(0, y - 1); ny < Math.min(50, y + 1); ++ny) {
-                if (x !== nx && y !== ny) {
+        for (let nx = Math.max(0, x - 1); nx <= Math.min(50, x + 1); ++nx) {
+            for (let ny = Math.max(0, y - 1); ny <= Math.min(50, y + 1); ++ny) {
+                if (!(x === nx && y === ny)) {
                     neighbors.push(this.get(nx, ny))
                 }
             }

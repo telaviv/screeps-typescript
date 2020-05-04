@@ -45,10 +45,11 @@ function unpauseConstruction(room: string) {
 }
 
 export default function assignGlobals() {
-    global.killAllCreeps = killAllCreeps
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
     }
+
+    global.killAllCreeps = killAllCreeps
     global.setLogLevel = Logger.setLogLevel
     global.saveSnapshot = saveSnapshot
     global.claimRoom = claimRoom

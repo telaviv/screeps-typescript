@@ -13,6 +13,7 @@ import {
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
+import roleAttacker from 'roles/attacker'
 import EnergyManager from 'managers/energy-manager'
 
 const HARVESTERS_PER_SOURCE = 1
@@ -20,6 +21,7 @@ const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
 const WALL_REPAIRERS_COUNT = 1
 const CLAIMERS_COUNT = 3
+const ATTACKERS_COUNT = 1
 
 function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), creepName => {
@@ -57,6 +59,7 @@ export default function(spawn: StructureSpawn) {
     const sourceCount = roomMemory.sources.length
     const harvesters = getCreeps('harvester', room)
     const claimers = getCreeps('claimer', room)
+    const attackers = getCreeps('attack', room)
     const energyManager = EnergyManager.get(spawn.room)
     const warDepartment = new WarDepartment(spawn.room)
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
@@ -71,6 +74,11 @@ export default function(spawn: StructureSpawn) {
     }
 
     if (
+        warDepartment.status === WarStatus.ATTACK &&
+        attackers.length < ATTACKERS_COUNT
+    ) {
+        roleAttacker.create(spawn, warDepartment.target)
+    } else if (
         warDepartment.status === WarStatus.CLAIM &&
         claimers.length < CLAIMERS_COUNT
     ) {
@@ -126,7 +134,7 @@ function updateRescueStatus(room: Room) {
     const harvesters = getCreeps('harvester', room)
     if (
         room.memory.collapsed &&
-        haulerCount >= sourceCount &&
+        haulerCount >= sourceCount + 1 &&
         harvesters.length >= sourceCount
     ) {
         room.memory.collapsed = false

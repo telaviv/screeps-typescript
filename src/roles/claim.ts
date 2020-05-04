@@ -30,7 +30,7 @@ const roleClaimer = {
         }
 
         let err
-        if (creep.room.controller.owner) {
+        if (creep.room.controller.owner || creep.room.controller.reservation) {
             err = creep.attackController(creep.room.controller)
             if (err === ERR_NOT_IN_RANGE) {
                 creep.moveTo(creep.room.controller, {
