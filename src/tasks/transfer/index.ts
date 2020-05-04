@@ -1,9 +1,12 @@
-import { TransferTask, isTransferTask } from 'tasks'
+import { Task } from 'tasks/constants'
 import { TransferStructure } from 'tasks/transfer/structure'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { currentEnergyHeld } from 'utils/creep'
 import * as Logger from 'utils/logger'
 import { getExtensions, getTowers, getSpawns } from 'utils/room'
+
+import { TransferTask } from './types'
+import { isTransferTask } from './utils'
 
 export function makeRequest(creep: LogisticsCreep): AnyStoreStructure | null {
     const energy = currentEnergyHeld(creep)

@@ -14,6 +14,10 @@ export default class EnergyManager {
     }
 
     static create(memory: RoomMemory) {
+        if (!memory.sources) {
+            return new EnergyManager([])
+        }
+
         const sources: SourceManager[] = memory.sources.map(source =>
             SourceManager.get(source),
         )

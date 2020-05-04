@@ -1,5 +1,5 @@
-import { isTransferTask } from 'tasks'
-import * as TransferTask from 'tasks/transfer/index'
+import * as TransferTask from 'tasks/transfer'
+import { isTransferTask } from 'tasks/transfer/utils'
 import * as Logger from 'utils/logger'
 
 export function cleanup() {

@@ -1,6 +1,3 @@
-/* eslint @typescript-eslint/no-explicit-any: "off" */
-export { Task, TaskMemory } from './constants'
-
 export function* getAllTasks() {
     for (const creepMemory of Object.values(Memory.creeps)) {
         if (creepMemory.tasks) {
@@ -8,11 +5,5 @@ export function* getAllTasks() {
                 yield task
             }
         }
-    }
-}
-
-declare global {
-    interface CreepMemory {
-        tasks: Task<any>[]
     }
 }
