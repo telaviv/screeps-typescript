@@ -12,8 +12,8 @@ import {
     needsLongDistanceBuild,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
+import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
-import { isTransferTask } from 'tasks/transfer/utils'
 import {
     PREFERENCE_WORKER,
     TASK_HAULING,
@@ -256,11 +256,7 @@ const roleLogistics = {
 
     runTask(creep: LogisticsCreep) {
         const task = creep.memory.tasks[0]
-        if (isTransferTask(task)) {
-            TransferTask.run(task, creep)
-        } else {
-            throw new Error(`task is not transfer task ${JSON.stringify(task)}`)
-        }
+        TaskRunner.run(task, creep)
     },
 
     switchTask(creep: LogisticsCreep) {

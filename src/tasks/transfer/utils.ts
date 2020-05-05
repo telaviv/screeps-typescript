@@ -1,3 +1,5 @@
+/* eslint @typescript-eslint/no-explicit-any: "off" */
+
 import { Task } from 'tasks/types'
 import { TransferTask } from 'tasks/transfer/types'
 

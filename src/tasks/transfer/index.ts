@@ -1,4 +1,3 @@
-import { Task } from 'tasks/constants'
 import { TransferStructure } from 'tasks/transfer/structure'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { currentEnergyHeld } from 'utils/creep'
@@ -87,7 +86,6 @@ export function completeRequest(creep: LogisticsCreep) {
     const task = creep.memory.tasks[0]
     if (isTransferTask(task)) {
         task.complete = true
-        creep.memory.tasks.shift()
     } else {
         Logger.warning(
             'task:transfer:complete:no-transfer',
@@ -98,10 +96,6 @@ export function completeRequest(creep: LogisticsCreep) {
 }
 
 export function cleanup(task: TransferTask): boolean {
-    if (task.complete) {
-        return true
-    }
-
     const structure = getStructure(task)
     const capacity = structure.store.getFreeCapacity(RESOURCE_ENERGY)
     return capacity === 0
@@ -147,4 +141,10 @@ function filterFillableStructures(structures: AnyStoreStructure[]) {
         const transfer = TransferStructure.get(structure.id)
         return transfer.remainingCapacity(RESOURCE_ENERGY) > 0
     })
+}
+
+export default {
+    verifyType: isTransferTask,
+    run,
+    cleanup,
 }

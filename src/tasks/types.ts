@@ -1,3 +1,5 @@
+/* eslint @typescript-eslint/no-explicit-any: "off" */
+
 export interface Task<T> {
     readonly id: string
     readonly type: T
@@ -7,8 +9,8 @@ export interface Task<T> {
 
 export type TaskMemory = { [id: string]: Task<any> }
 
-interface Runner<T> {
-    type: T
-    run: (creep: LogisticsCreep, task: Task<T>) => boolean
-    cleanup: (task: Task<T>) => boolean
+export interface Runner<T extends Task<any>> {
+    verifyType: (task: Task<any>) => task is T
+    run: (task: T, creep: LogisticsCreep) => boolean
+    cleanup: (task: T) => boolean
 }
