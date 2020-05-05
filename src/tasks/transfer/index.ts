@@ -45,6 +45,22 @@ export function makeRequest(creep: LogisticsCreep): AnyStoreStructure | null {
     return null
 }
 
+export function run(task: TransferTask, creep: LogisticsCreep): boolean {
+    const structure = getStructure(task)
+    const err = creep.transfer(structure, RESOURCE_ENERGY)
+    if (err === ERR_NOT_IN_RANGE) {
+        creep.moveTo(structure, {
+            visualizePathStyle: { stroke: '#ffffff' },
+        })
+    } else if (err === OK) {
+        completeRequest(creep)
+        return true
+    } else {
+        Logger.warning('task:transfer:run:failed', creep.name, err)
+    }
+    return false
+}
+
 function addTransferTask(creep: LogisticsCreep, structure: AnyStoreStructure) {
     const transferStructure = TransferStructure.get(structure.id)
     const task = transferStructure.makeRequest(creep)

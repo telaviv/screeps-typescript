@@ -13,6 +13,7 @@ import {
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import * as TransferTask from 'tasks/transfer'
+import { isTransferTask } from 'tasks/transfer/utils'
 import {
     PREFERENCE_WORKER,
     TASK_HAULING,
@@ -72,7 +73,18 @@ const roleLogistics = {
         const currentTask = creep.memory.currentTask
 
         if (currentTask === TASK_COLLECTING) {
+            // fix this
+            if (creep.memory.tasks.length > 0) {
+                Logger.warning(
+                    'roleLogistics:run:collecting:failed',
+                    creep.name,
+                    creep.memory.tasks,
+                )
+                creep.memory.tasks = []
+            }
             getEnergy(creep)
+        } else if (creep.memory.tasks.length > 0) {
+            roleLogistics.runTask(creep)
         } else if (currentTask === TASK_HAULING) {
             roleLogistics.haulEnergy(creep)
         } else if (currentTask === TASK_LONG_DISTANCE_BUILD) {
@@ -235,23 +247,21 @@ const roleLogistics = {
     }, 'logistics:upgrade'),
 
     haulEnergy: wrap((creep: LogisticsCreep) => {
-        const target = TransferTask.makeRequest(creep)
-        if (target === null) {
-            roleLogistics.switchTask(creep)
-            return
-        }
-
-        const err = creep.transfer(target, RESOURCE_ENERGY)
-        if (err === ERR_NOT_IN_RANGE) {
-            creep.moveTo(target, {
-                visualizePathStyle: { stroke: '#ffffff' },
-            })
-        } else if (err === OK) {
-            TransferTask.completeRequest(creep)
+        if (TransferTask.makeRequest(creep)) {
+            roleLogistics.runTask(creep)
         } else {
-            Logger.warning('logistics:haul:failure', creep.name, err)
+            roleLogistics.switchTask(creep)
         }
     }, 'logistics:haulEnergy'),
+
+    runTask(creep: LogisticsCreep) {
+        const task = creep.memory.tasks[0]
+        if (isTransferTask(task)) {
+            TransferTask.run(task, creep)
+        } else {
+            throw new Error(`task is not transfer task ${JSON.stringify(task)}`)
+        }
+    },
 
     switchTask(creep: LogisticsCreep) {
         let task = creep.memory.currentTask
