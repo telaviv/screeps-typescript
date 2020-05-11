@@ -4,6 +4,7 @@ import { saveSnapshot } from 'snapshot'
 import roleClaimer from 'roles/claim'
 import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
+import { getAllTasks } from 'tasks/utils'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach(creep => {
@@ -36,6 +37,15 @@ function declareWar(endRoom: string, warRoom: string) {
     warDepartment.declareWar(endRoom)
 }
 
+function printTasks(type?: string) {
+    for (const task of getAllTasks()) {
+        if (type && task !== type) {
+            continue
+        }
+        console.log(JSON.stringify(task))
+    }
+}
+
 export default function assignGlobals() {
     global.killAllCreeps = killAllCreeps
     if (!Memory.logLevel) {
@@ -48,4 +58,5 @@ export default function assignGlobals() {
     global.assignGlobals = assignGlobals
     global.sendWrecker = sendWrecker
     global.declareWar = declareWar
+    global.printTasks = printTasks
 }

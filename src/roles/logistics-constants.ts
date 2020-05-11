@@ -28,3 +28,7 @@ export interface LogisticsMemory extends SourceMemory {
     currentTarget: Id<Structure> | undefined
     home: string
 }
+
+export function isLogisticsCreep(creep: Creep): creep is LogisticsCreep {
+    return (creep as LogisticsCreep).memory.role === 'logistics'
+}

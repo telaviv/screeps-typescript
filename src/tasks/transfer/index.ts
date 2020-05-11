@@ -95,7 +95,17 @@ export function completeRequest(creep: LogisticsCreep) {
     }
 }
 
-export function cleanup(task: TransferTask): boolean {
+export function cleanup(task: TransferTask, creep: LogisticsCreep): boolean {
+    if (Game.getObjectById(task.structureId) === null) {
+        Logger.warning(
+            'transfer:cleanup:failure',
+            task.structureId,
+            creep.name,
+            task,
+        )
+        return true
+    }
+
     const structure = getStructure(task)
     const capacity = structure.store.getFreeCapacity(RESOURCE_ENERGY)
     return capacity === 0

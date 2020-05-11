@@ -12,5 +12,5 @@ export type TaskMemory = { [id: string]: Task<any> }
 export interface Runner<T extends Task<any>> {
     verifyType: (task: Task<any>) => task is T
     run: (task: T, creep: LogisticsCreep) => boolean
-    cleanup: (task: T) => boolean
+    cleanup: (task: T, creep: LogisticsCreep) => boolean
 }

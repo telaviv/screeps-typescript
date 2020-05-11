@@ -22,7 +22,7 @@ export class TransferStructure {
         }
 
         for (const task of getAllTasks()) {
-            if (isTransferTask(task)) {
+            if (isTransferTask(task) && task.structureId === id) {
                 tasks.push(task)
             }
         }

@@ -72,19 +72,10 @@ const roleLogistics = {
 
         const currentTask = creep.memory.currentTask
 
-        if (currentTask === TASK_COLLECTING) {
-            // fix this
-            if (creep.memory.tasks.length > 0) {
-                Logger.warning(
-                    'roleLogistics:run:collecting:failed',
-                    creep.name,
-                    creep.memory.tasks,
-                )
-                creep.memory.tasks = []
-            }
-            getEnergy(creep)
-        } else if (creep.memory.tasks.length > 0) {
+        if (creep.memory.tasks.length > 0) {
             roleLogistics.runTask(creep)
+        } else if (currentTask === TASK_COLLECTING) {
+            getEnergy(creep)
         } else if (currentTask === TASK_HAULING) {
             roleLogistics.haulEnergy(creep)
         } else if (currentTask === TASK_LONG_DISTANCE_BUILD) {
@@ -272,11 +263,6 @@ const roleLogistics = {
         } else {
             task = TASK_UPGRADING
         }
-        Logger.info(
-            'logistics:switch-task',
-            creep.name,
-            `${creep.memory.currentTask}->${task}`,
-        )
         if (creep.memory.currentTask === task) {
             Logger.warning(
                 'logistics:switch-task:failure',

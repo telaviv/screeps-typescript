@@ -82,6 +82,7 @@ declare namespace NodeJS {
         assignGlobals: any
         sendWrecker: any
         declareWar: any
+        printTasks: any
     }
 }
 

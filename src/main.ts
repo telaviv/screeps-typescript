@@ -23,6 +23,10 @@ global.Profiler = Profiler
 assignGlobals()
 migrate()
 
+if (!Memory.creeps) {
+    Memory.creeps = {}
+}
+
 function unwrappedLoop() {
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
