@@ -1,8 +1,8 @@
-export interface TransferTask extends Task<'transfer'> {
-    type: 'transfer'
-    creep: string
-    structureId: Id<AnyStoreStructure>
-    amount: number
-    resourceType: ResourceConstant
-    complete: boolean
+/* eslint @typescript-eslint/no-explicit-any: "off" */
+export { Task, TaskMemory } from './types'
+
+declare global {
+    interface CreepMemory {
+        tasks: Task<any>[]
+    }
 }

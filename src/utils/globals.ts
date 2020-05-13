@@ -4,6 +4,7 @@ import { saveSnapshot, resetSnapshot } from 'snapshot'
 import roleClaimer from 'roles/claim'
 import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
+import { getAllTasks } from 'tasks/utils'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach(creep => {
@@ -44,6 +45,15 @@ function unpauseConstruction(room: string) {
     Game.rooms[room].memory.construction.paused = false
 }
 
+function printTasks(type?: string) {
+    for (const task of getAllTasks()) {
+        if (type && task !== type) {
+            continue
+        }
+        console.log(JSON.stringify(task))
+    }
+}
+
 export default function assignGlobals() {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
@@ -60,4 +70,5 @@ export default function assignGlobals() {
     global.pauseConstruction = pauseConstruction
     global.unpauseConstruction = unpauseConstruction
     global.resetSnapshot = resetSnapshot
+    global.printTasks = printTasks
 }

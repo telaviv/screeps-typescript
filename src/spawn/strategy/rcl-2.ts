@@ -4,7 +4,7 @@ import WarDepartment, { WarStatus } from 'war-department'
 import roleClaimer from 'roles/claim'
 import roleLogistics from 'roles/logistics'
 import {
-    Logistics,
+    LogisticsCreep,
     LogisticsPreference,
     PREFERENCE_WORKER,
     TASK_HAULING,
@@ -37,7 +37,7 @@ function getCreeps(role: string, room: Room) {
 
 function getLogisticsCreeps(preference: LogisticsPreference, room: Room) {
     return filter(Object.keys(Memory.creeps), creepName => {
-        const creep = Game.creeps[creepName] as Logistics
+        const creep = Game.creeps[creepName] as LogisticsCreep
         return (
             creep &&
             creep.memory.role === 'logistics' &&

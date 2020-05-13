@@ -3,18 +3,18 @@
 const LOG_LEVELS = ['error', 'warning', 'info', 'debug']
 
 export function warning(...args: any[]) {
-    logForLevel('warning', ...args)
+    logForLevel('warning', 'yellow', ...args)
 }
 
 export function info(...args: any[]) {
-    logForLevel('info', ...args)
+    logForLevel('info', 'white', ...args)
 }
 
 export function debug(...args: any) {
-    logForLevel('debug', ...args)
+    logForLevel('debug', 'green', ...args)
 }
 
-function logForLevel(level: string, ...args: any[]) {
+function logForLevel(level: string, color: string, ...args: any[]) {
     const currentLogIndex = LOG_LEVELS.findIndex(l => l === Memory.logLevel)
     const requestedLogIndex = LOG_LEVELS.findIndex(l => l === level)
     if (requestedLogIndex > currentLogIndex) {
@@ -26,7 +26,10 @@ function logForLevel(level: string, ...args: any[]) {
         }
         return arg
     })
-    console.log(`[${level}][${Game.time}]`, ...normalized)
+    console.log(
+        `<span color="${color}">[${level}][${Game.time}]</span>`,
+        ...normalized,
+    )
 }
 
 export function setLogLevel(level: string) {

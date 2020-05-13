@@ -3,8 +3,8 @@ import { hash } from 'immutable'
 import EnergyManager from 'managers/energy-manager'
 import SourceManager from 'managers/source-manager'
 import DroppedEnergyManager from 'managers/dropped-energy-manager'
-import { Logistics } from 'roles/logistics-constants'
-
+import { LogisticsCreep, isLogisticsCreep } from 'roles/logistics-constants'
+import * as WithdrawTask from 'tasks/withdraw'
 import { fromRoom } from 'utils/immutable-room'
 
 function harvestEnergy(creep: SourceCreep) {
@@ -20,6 +20,10 @@ function harvestEnergy(creep: SourceCreep) {
 }
 
 function requestSourceEnergy(creep: SourceCreep): boolean {
+    if (isLogisticsCreep(creep) && WithdrawTask.makeRequest(creep)) {
+        return true
+    }
+
     const originalDroppedEnergy = getDropSpotManager(creep)
 
     // this happens when a creep gets lost and forgets they have a request.
@@ -109,7 +113,7 @@ function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
     return getSourceManager(creep).droppedEnergy
 }
 
-export function getEnergy(creep: Logistics) {
+export function getEnergy(creep: LogisticsCreep) {
     if (creep.room.name !== creep.memory.home) {
         const sources = creep.room.find(FIND_SOURCES_ACTIVE)
         if (sources.length > 0) {

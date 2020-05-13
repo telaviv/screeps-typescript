@@ -42,7 +42,6 @@ interface Memory {
     uuid: number
     log: any
     profiler: ProfilerMemory
-    tasks: Task<any>[]
     logLevel: string
     stats: StatsMemory
 }
@@ -72,12 +71,6 @@ interface RoomMemory {
     visuals: { snapshot: boolean }
 }
 
-interface Task<T> {
-    readonly type: T
-    readonly timestamp: number
-    complete: boolean
-}
-
 type RoomPositionSet = RoomPosition[]
 
 type SpawnRunner = (spawn: StructureSpawn) => void
@@ -98,6 +91,7 @@ declare namespace NodeJS {
         pauseConstruction: any
         unpauseConstruction: any
         resetSnapshot: any
+        printTasks: any
     }
 }
 
