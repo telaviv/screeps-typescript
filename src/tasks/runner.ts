@@ -4,9 +4,10 @@ import { LogisticsCreep } from 'roles/logistics-constants'
 import { Task, Runner } from 'tasks/types'
 import TransferRunner from 'tasks/transfer'
 import WithdrawRunner from 'tasks/withdraw'
+import PickupRunner from 'tasks/pickup'
 import * as Logger from 'utils/logger'
 
-const runners: Runner<any>[] = [TransferRunner, WithdrawRunner]
+const runners: Runner<any>[] = [TransferRunner, WithdrawRunner, PickupRunner]
 
 export function run(task: Task<any>, creep: LogisticsCreep): boolean {
     for (const runner of runners) {
