@@ -1,6 +1,7 @@
 import filter from 'lodash/filter'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
+import autoIncrement from 'utils/autoincrement'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { wrap } from 'utils/profiling'
 import {
@@ -293,7 +294,8 @@ const roleLogistics = {
         return spawnCreep(
             spawn,
             calculateParts(capacity),
-            `${ROLE}:${preference}:${Game.time}`,
+            `${ROLE}:${preference}:${spawn.room.name}:${autoIncrement() %
+                1000}`,
             {
                 memory: {
                     role: ROLE,

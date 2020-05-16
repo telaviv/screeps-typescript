@@ -33,6 +33,7 @@ export function run(task: PickupTask, creep: LogisticsCreep): boolean {
     if (err === ERR_NOT_IN_RANGE) {
         creep.moveTo(resource, {
             visualizePathStyle: { stroke: '#ffffff' },
+            range: 1,
         })
     } else if (err === OK) {
         Logger.info('task:pickup:complete', creep.name, task.amount)
