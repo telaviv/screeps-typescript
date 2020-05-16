@@ -1,6 +1,7 @@
 import includes from 'lodash/includes'
 import { freeEnergyCapacity } from 'utils/creep'
 import { hasContainerAtPosition, getContainerAtPosition } from 'utils/room'
+import * as Logger from 'utils/logger'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()
@@ -51,15 +52,22 @@ export default class DroppedEnergyManager {
     }
 
     private calculateStoredEnergy(): number {
+        let storedEnergy = this.calculateDroppedEnergy()
+        Logger.debug(
+            'dropped-energy-manager:stored-energy:debug',
+            storedEnergy,
+            this.pos,
+        )
         if (this.hasContainer()) {
             const container = this.getContainer() as StructureContainer
-            return container.store.getUsedCapacity(RESOURCE_ENERGY)
+            storedEnergy += container.store.getUsedCapacity(RESOURCE_ENERGY)
         }
+        return storedEnergy
+    }
+
+    private calculateDroppedEnergy(): number {
         const resources = this.room.lookForAt(LOOK_ENERGY, this.pos)
-        if (resources.length === 0) {
-            return 0
-        }
-        return resources[0].amount
+        return resources.reduce((acc, val) => acc + val.amount, 0)
     }
 
     hasContainer(): boolean {

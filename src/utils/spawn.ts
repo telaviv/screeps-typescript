@@ -10,6 +10,8 @@ export function spawnCreep(
     const err = spawn.spawnCreep(body, name, opts)
     if (!includes([OK, ERR_BUSY, ERR_NOT_ENOUGH_ENERGY], err)) {
         Logger.warning('spawnCreep:failed', err)
+    } else {
+        Logger.info('spawnCreep:success', name, err)
     }
     return err
 }

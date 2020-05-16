@@ -53,20 +53,7 @@ function addWithdrawTask(creep: LogisticsCreep, structure: AnyStoreStructure) {
     const withdrawObject = WithdrawObject.get(structure.id)
     const task = withdrawObject.makeRequest(creep)
     const withdrawable = getWithdrawable(task)
-    if (withdrawable instanceof Structure) {
-        Logger.info(
-            'withdraw:create',
-            creep.name,
-            creep.store.getFreeCapacity(task.resourceType),
-            creep.memory.tasks,
-            withdrawable.structureType,
-            task.withdrawId,
-            task.amount,
-            getUsedCapacity(structure, task.resourceType),
-            withdrawObject.resourcesAvailable(task.resourceType),
-            withdrawObject.tasks,
-        )
-    }
+    Logger.info('withdraw:create', creep.name, task.withdrawId, task.amount)
     creep.memory.tasks.push(task)
     return task
 }
