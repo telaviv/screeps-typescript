@@ -1,14 +1,11 @@
 import { hash } from 'immutable'
 
-import EnergyManager from 'managers/energy-manager'
-import SourceManager from 'managers/source-manager'
-import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import { LogisticsCreep, isLogisticsCreep } from 'roles/logistics-constants'
 import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
 import { fromRoom } from 'utils/immutable-room'
 
-function harvestEnergy(creep: SourceCreep) {
+export function harvestEnergy(creep: SourceCreep) {
     const source = Game.getObjectById(creep.memory.source) as Source
     if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
         creep.memory.waitTime += 1
@@ -18,73 +15,6 @@ function harvestEnergy(creep: SourceCreep) {
     } else {
         creep.memory.waitTime = 0
     }
-}
-
-function requestSourceEnergy(creep: SourceCreep): boolean {
-    if (isLogisticsCreep(creep)) {
-        if (PickupTask.makeRequest(creep) || WithdrawTask.makeRequest(creep)) {
-            return true
-        }
-    }
-
-    const originalDroppedEnergy = getDropSpotManager(creep)
-
-    // this happens when a creep gets lost and forgets they have a request.
-    if (originalDroppedEnergy.hasRequest(creep)) {
-        return true
-    }
-
-    const capacity = freeEnergyCapacity(creep)
-    const energyManager = EnergyManager.get(creep.room)
-    const source = energyManager.findLogisticsAssignment(capacity)
-    if (source === null) {
-        creep.memory.waitTime += 1
-        return false
-    }
-
-    const droppedEnergy = SourceManager.getById(source).droppedEnergy
-    creep.memory.source = source
-    if (!droppedEnergy.request(creep)) {
-        throw new Error(`this should be impossible ${creep.name}`)
-    }
-    return true
-}
-
-function pickupEnergy(creep: SourceCreep) {
-    const droppedEnergy = getDropSpotManager(creep)
-    const target = droppedEnergy.pos.lookFor(LOOK_ENERGY)
-    const err = creep.pickup(target[0])
-    if (err === ERR_NOT_IN_RANGE) {
-        creep.moveTo(droppedEnergy.pos.x, droppedEnergy.pos.y, {
-            range: 1,
-            visualizePathStyle: { stroke: '#ffaa00' },
-        })
-    }
-    return err
-}
-
-function withdrawEnergy(creep: SourceCreep) {
-    const droppedEnergy = getDropSpotManager(creep)
-    const container = getDropContainer(creep)
-
-    if (container === null) {
-        throw new Error('this should never be called without a container')
-    }
-
-    const err = creep.withdraw(container, RESOURCE_ENERGY)
-    if (err === ERR_NOT_IN_RANGE) {
-        creep.moveTo(droppedEnergy.pos.x, droppedEnergy.pos.y, {
-            range: 1,
-            visualizePathStyle: { stroke: '#ffaa00' },
-        })
-    }
-    return err
-}
-
-export function getDropContainer(
-    creep: SourceCreep,
-): StructureContainer | null {
-    return getDropSpotManager(creep).getContainer()
 }
 
 export function wander(creep: Creep) {
@@ -108,15 +38,7 @@ export function freeEnergyCapacity(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
 
-function getSourceManager(creep: SourceCreep): SourceManager {
-    return SourceManager.getById(creep.memory.source)
-}
-
-function getDropSpotManager(creep: SourceCreep): DroppedEnergyManager {
-    return getSourceManager(creep).droppedEnergy
-}
-
-export function getEnergy(creep: LogisticsCreep) {
+export function getEnergy(creep: LogisticsCreep): void {
     if (creep.room.name !== creep.memory.home) {
         const sources = creep.room.find(FIND_SOURCES_ACTIVE)
         if (sources.length > 0) {
@@ -130,24 +52,9 @@ export function getEnergy(creep: LogisticsCreep) {
         return
     }
 
-    let sourceManager = getSourceManager(creep)
-    if (!sourceManager.hasStaticHarvester()) {
-        harvestEnergy(creep)
-    }
-
-    if (!requestSourceEnergy(creep)) {
-        return
-    }
-
-    let err
-    sourceManager = getSourceManager(creep)
-    if (sourceManager.isContainerMining()) {
-        err = withdrawEnergy(creep)
-    } else {
-        err = pickupEnergy(creep)
-    }
-
-    if (err === OK) {
-        sourceManager.droppedEnergy.completeRequest(creep)
+    if (isLogisticsCreep(creep)) {
+        if (!PickupTask.makeRequest(creep)) {
+            WithdrawTask.makeRequest(creep)
+        }
     }
 }
