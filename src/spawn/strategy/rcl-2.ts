@@ -14,7 +14,6 @@ import {
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
 import roleAttacker from 'roles/attacker'
-import * as Logger from 'utils/logger'
 import EnergyManager from 'managers/energy-manager'
 
 const HARVESTERS_PER_SOURCE = 1
@@ -91,7 +90,6 @@ export default function(spawn: StructureSpawn) {
     const assignment = energyManager.findLogisticsAssignment(
         Math.min(request * 3, 0.95 * CONTAINER_CAPACITY),
     )
-    Logger.debug('rcl-2:assignment', assignment, spawn.room)
     if (assignment === null) {
         return
     }
@@ -121,12 +119,9 @@ function createRescueCreeps(spawn: StructureSpawn) {
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
 
-    Logger.debug('rcl-2:createRescueCreeps:1', spawn.room)
     if (workers.length < RESCUE_WORKER_COUNT) {
-        Logger.debug('rcl-2:createRescueCreeps:2', spawn.room)
         roleLogistics.create(spawn, logisticsSource, PREFERENCE_WORKER, true)
     } else if (harvesters.length < sourceCount) {
-        Logger.debug('rcl-2:createRescueCreeps:3', spawn.room)
         roleHarvester.create(spawn, harvesterSource)
     }
 }
