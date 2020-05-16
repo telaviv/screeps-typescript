@@ -48,18 +48,7 @@ export function run(task: PickupTask, creep: LogisticsCreep): boolean {
 function addPickupTask(creep: LogisticsCreep, resource: Resource) {
     const pickupTarget = PickupTarget.get(resource.id)
     const task = pickupTarget.makeRequest(creep)
-    Logger.info(
-        'pickup:create',
-        creep.name,
-        creep.store.getFreeCapacity(task.resourceType),
-        creep.memory.tasks,
-        resource.resourceType,
-        resource.pos,
-        task.amount,
-        resource.amount,
-        pickupTarget.resourcesAvailable(),
-        pickupTarget.tasks,
-    )
+    Logger.info('pickup:create', creep.name, task.resourceId, task.amount)
     creep.memory.tasks.push(task)
     return task
 }

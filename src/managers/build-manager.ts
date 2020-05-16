@@ -230,7 +230,7 @@ export default class BuildManager {
             return (
                 roomItem.canBuild() &&
                 roomItem.terrain === TERRAIN_MASK_SWAMP &&
-                !roomItem.hasRoad
+                !roomItem.nonObstacles.road
             )
         })
         if (!pos) {

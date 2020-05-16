@@ -1,4 +1,4 @@
-import { fromJS, ValueObject, List, Map, Record } from 'immutable'
+import { fromJS, ValueObject, List, Map, Record, RecordOf } from 'immutable'
 import times from 'lodash/times'
 import range from 'lodash/range'
 import includes from 'lodash/includes'
@@ -7,24 +7,34 @@ import { wrap } from 'utils/profiling'
 
 type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
 
+type NonObstacleType = 'road' | 'constructionSite' | 'rampart'
+
+interface NonObstacles {
+    road: boolean
+    constructionSite: boolean
+    rampart: boolean
+}
+
+const NonObstaclesRecord = Record<NonObstacles>({
+    road: false,
+    rampart: false,
+    constructionSite: false,
+})
+
 interface IImmutableRoomItem {
     x: number
     y: number
     terrain: number
-    structures: Structure[]
+    nonObstacles: RecordOf<NonObstacles>
     obstacle: Obstacle | ''
-    hasConstructionSite: boolean
-    hasRoad: boolean
 }
 
 const ImmutableRoomItemRecord = Record({
     x: 0,
     y: 0,
     terrain: 0,
-    structures: [] as Structure[],
+    nonObstacles: NonObstaclesRecord(),
     obstacle: '',
-    hasConstructionSite: false,
-    hasRoad: false,
 })
 
 export class ImmutableRoomItem extends ImmutableRoomItemRecord
@@ -32,16 +42,15 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
     readonly x!: number
     readonly y!: number
     readonly terrain!: number
-    readonly structures!: Structure[]
+    readonly nonObstacles!: RecordOf<NonObstacles>
     readonly obstacle!: Obstacle | ''
-    readonly hasRoad!: boolean
 
     isObstacle(): boolean {
         return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
     }
 
     canBuild(): boolean {
-        return !(this.isObstacle() || this.hasConstructionSite)
+        return !(this.isObstacle() || this.nonObstacles.constructionSite)
     }
 }
 
@@ -91,21 +100,21 @@ export class ImmutableRoom implements ValueObject {
         return this.set(x, y, roomItem.set('obstacle', obstacle))
     }
 
-    setHasRoad(x: number, y: number, hasRoad: boolean): ImmutableRoom {
-        const roomItem = this.get(x, y)
-        return this.set(x, y, roomItem.set('hasRoad', hasRoad))
+    setRoad(x: number, y: number, val: boolean): ImmutableRoom {
+        return this.setNonObstacle(x, y, 'road', val)
     }
 
-    setConstructionSite(
-        x: number,
-        y: number,
-        hasConstructionSite: boolean,
-    ): ImmutableRoom {
+    setConstructionSite(x: number, y: number, val: boolean): ImmutableRoom {
+        return this.setNonObstacle(x, y, 'constructionSite', val)
+    }
+
+    setNonObstacle(x: number, y: number, key: NonObstacleType, value: boolean) {
         const roomItem = this.get(x, y)
+        const nonObstacles = roomItem.get('nonObstacles')
         return this.set(
             x,
             y,
-            roomItem.set('hasConstructionSite', hasConstructionSite),
+            roomItem.set('nonObstacles', nonObstacles.set(key, value)),
         )
     }
 
@@ -312,7 +321,7 @@ export const fromRoom = wrap((room: Room, useCache = true): ImmutableRoom => {
             )
         } else if (structure.structureType === STRUCTURE_ROAD) {
             const pos = structure.pos
-            immutableRoom = immutableRoom.setHasRoad(pos.x, pos.y, true)
+            immutableRoom = immutableRoom.setRoad(pos.x, pos.y, true)
         }
     }
 

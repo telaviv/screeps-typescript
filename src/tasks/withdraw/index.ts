@@ -52,7 +52,6 @@ export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
 function addWithdrawTask(creep: LogisticsCreep, structure: AnyStoreStructure) {
     const withdrawObject = WithdrawObject.get(structure.id)
     const task = withdrawObject.makeRequest(creep)
-    const withdrawable = getWithdrawable(task)
     Logger.info('withdraw:create', creep.name, task.withdrawId, task.amount)
     creep.memory.tasks.push(task)
     return task
