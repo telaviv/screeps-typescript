@@ -34,10 +34,11 @@ export function makeRequest(creep: LogisticsCreep): boolean {
 
 export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
     const storeable = getWithdrawable(task)
-    const err = creep.withdraw(storeable, task.resourceType)
+    const err = creep.withdraw(storeable, task.resourceType, task.amount)
     if (err === ERR_NOT_IN_RANGE) {
         creep.moveTo(storeable, {
             visualizePathStyle: { stroke: '#ffffff' },
+            range: 1,
         })
     } else if (err === OK) {
         Logger.info('task:withdraw:complete', creep.name, task.amount)
