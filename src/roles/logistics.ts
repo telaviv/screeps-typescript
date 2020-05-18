@@ -3,6 +3,7 @@ import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import autoIncrement from 'utils/autoincrement'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
+import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import {
     getConstructionSites,
@@ -311,17 +312,7 @@ const roleLogistics = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    const partUnit = [WORK, MOVE, CARRY, MOVE]
-    const unitCost = partUnit.reduce((total, p) => total + BODYPART_COST[p], 0)
-    let capacityLeft = capacity
-    let partsLeft = 50
-    let parts: BodyPartConstant[] = []
-    while (capacityLeft >= unitCost && partsLeft >= partUnit.length) {
-        parts = parts.concat(partUnit)
-        capacityLeft -= unitCost
-        partsLeft -= partUnit.length
-    }
-    return parts
+    return fromBodyPlan([WORK, CARRY, MOVE, MOVE], capacity)
 }
 
 export default roleLogistics

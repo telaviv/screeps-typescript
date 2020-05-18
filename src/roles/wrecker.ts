@@ -1,5 +1,6 @@
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
+import { fromBodyPlan } from 'utils/parts'
 
 const ROLE = 'wrecker'
 
@@ -79,15 +80,7 @@ const roleWrecker = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    let capacityLeft = capacity
-    let parts: BodyPartConstant[] = []
-    const chunkCost =
-        BODYPART_COST[WORK] + BODYPART_COST[CARRY] + 2 * BODYPART_COST[MOVE]
-    while (capacityLeft >= chunkCost) {
-        parts = parts.concat([WORK, MOVE, CARRY, MOVE])
-        capacityLeft -= chunkCost
-    }
-    return parts
+    return fromBodyPlan([WORK, CARRY, MOVE, MOVE], capacity)
 }
 
 export default roleWrecker

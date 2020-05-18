@@ -1,5 +1,6 @@
 import includes from 'lodash/includes'
 
+import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 
@@ -65,14 +66,7 @@ const roleClaimer = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    let capacityLeft = capacity
-    let parts: BodyPartConstant[] = []
-    const chunkCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]
-    while (capacityLeft >= chunkCost) {
-        parts = parts.concat([MOVE, CLAIM])
-        capacityLeft -= chunkCost
-    }
-    return parts
+    return fromBodyPlan([CLAIM, MOVE], capacity)
 }
 
 export default roleClaimer

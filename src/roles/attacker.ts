@@ -1,5 +1,6 @@
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
+import { fromBodyPlan } from 'utils/parts'
 import WarDepartment, { WarStatus } from 'war-department'
 
 const ROLE = 'attack'
@@ -87,17 +88,7 @@ const roleAttacker = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    const partUnit = [ATTACK, MOVE]
-    const unitCost = partUnit.reduce((total, p) => total + BODYPART_COST[p], 0)
-    let capacityLeft = capacity
-    let partsLeft = 50
-    let parts: BodyPartConstant[] = []
-    while (capacityLeft >= unitCost && partsLeft >= partUnit.length) {
-        parts = parts.concat(partUnit)
-        capacityLeft -= unitCost
-        partsLeft -= partUnit.length
-    }
-    return parts
+    return fromBodyPlan([ATTACK, MOVE], capacity)
 }
 
 export default roleAttacker

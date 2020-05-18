@@ -17,7 +17,7 @@ export function makeRequest(creep: LogisticsCreep): boolean {
         return true
     }
 
-    const storages = getEligibleStorage(creep.room, capacity, RESOURCE_ENERGY)
+    const storages = getEligibleStorage(creep.room, capacity)
     if (storages.length > 0) {
         const storage = creep.pos.findClosestByRange(storages)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -36,11 +36,11 @@ export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
             range: 1,
         })
     } else if (err === OK) {
-        Logger.info('task:withdraw:complete', creep.name, task.amount)
+        Logger.info('withdraw:complete', creep.name, task.amount)
         completeRequest(creep)
         return true
     } else if (err !== ERR_BUSY) {
-        Logger.warning('task:withdraw:run:failed', creep.name, err)
+        Logger.warning('withdraw:run:failed', creep.name, err)
     }
     return false
 }
@@ -56,7 +56,7 @@ function addWithdrawTask(creep: LogisticsCreep, withdrawable: Withdrawable) {
 export function completeRequest(creep: LogisticsCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning(
-            'task:withdraw::complete:failure',
+            'withdraw::complete:failure',
             creep.name,
             creep.memory.tasks,
         )
@@ -66,7 +66,7 @@ export function completeRequest(creep: LogisticsCreep) {
         task.complete = true
     } else {
         Logger.warning(
-            'task:withdraw:complete:no-transfer',
+            'withdraw:complete:no-transfer',
             creep.name,
             creep.memory.tasks,
         )
@@ -76,7 +76,7 @@ export function completeRequest(creep: LogisticsCreep) {
 export function cleanup(task: WithdrawTask, creep: LogisticsCreep): boolean {
     if (Game.getObjectById(task.withdrawId) === null) {
         Logger.warning(
-            'task:withdraw:cleanup:failure',
+            'withdraw:cleanup:failure',
             task.withdrawId,
             creep.name,
             task,
@@ -90,7 +90,7 @@ export function cleanup(task: WithdrawTask, creep: LogisticsCreep): boolean {
     const ret = withdrawCapacity === 0 || creepCapacity === 0
     if (ret && withdrawable instanceof Structure) {
         Logger.warning(
-            'task:withdraw:cleanup:capacity-failure',
+            'withdraw:cleanup:capacity-failure',
             withdrawCapacity,
             creepCapacity,
             creep.name,
@@ -117,11 +117,7 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
     return Game.getObjectById(task.withdrawId) as Withdrawable
 }
 
-function getEligibleStorage(
-    room: Room,
-    capacity: number,
-    resource: ResourceConstant,
-): Withdrawable[] {
+function getEligibleStorage(room: Room, capacity: number): Withdrawable[] {
     const withdrawObjects = WithdrawObject.getStorageInRoom(room)
     const eligibles = withdrawObjects.filter(
         target => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
