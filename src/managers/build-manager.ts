@@ -203,8 +203,16 @@ export default class BuildManager {
         if (Game.time % 100 !== Math.abs(hash(this.room.name) % 100)) {
             return false
         }
-        Logger.info('canBuildSwampRoad:running', this.room.name)
-        return this.findSwampRoad() !== undefined
+        const startCpu = Game.cpu.getUsed()
+        const ret = this.findSwampRoad() !== undefined
+        const stopCpu = Game.cpu.getUsed()
+        Logger.info(
+            'canBuildSwampRoad:finished',
+            this.room.name,
+            stopCpu - startCpu,
+            ret,
+        )
+        return ret
     }, 'BuildManager:canBuildSwampRoad')
 
     private buildSwampRoad = wrap((): boolean => {
