@@ -1,4 +1,3 @@
-import maxBy from 'lodash/maxBy'
 import minBy from 'lodash/minBy'
 import { LogisticsMemory, TASK_HAULING } from 'roles/logistics-constants'
 
@@ -52,21 +51,6 @@ export default class EnergyManager {
             // eslint-disable-next-line @typescript-eslint/indent
             sourceCounts.get(id),
         ) as Id<Source>
-    }
-
-    findLogisticsAssignment(carryCapacity: number): Id<Source> | null {
-        if (this.sources.length === 0) {
-            return null
-        }
-
-        const source: SourceManager = maxBy(this.sources, s =>
-            s.droppedEnergy.availableEnergy(),
-        ) as SourceManager
-
-        if (source.droppedEnergy.availableEnergy() >= carryCapacity) {
-            return source.id
-        }
-        return null
     }
 
     private getSourceCounts(role: string): SourceCounts {

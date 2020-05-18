@@ -12,7 +12,6 @@ import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
 import { recordRoomStats, recordGameStats } from 'utils/stats'
 import * as TaskRunner from 'tasks/runner'
-import DroppedEnergyManager from 'managers/dropped-energy-manager'
 import BuildManager from 'managers/build-manager'
 
 import { runSpawn } from './spawn'
@@ -46,13 +45,6 @@ function unwrappedLoop() {
 
         const visualizer = new RoomVisualizer(room)
         visualizer.render()
-
-        if (room.memory.sources) {
-            for (const source of room.memory.sources) {
-                const droppedEnergy = DroppedEnergyManager.get(source.dropSpot)
-                droppedEnergy.cleanup()
-            }
-        }
 
         updateStrategy(room)
 

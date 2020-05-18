@@ -15,6 +15,7 @@ import {
 import roleHarvester from 'roles/harvester'
 import roleAttacker from 'roles/attacker'
 import EnergyManager from 'managers/energy-manager'
+import EnergySourceManager from 'managers/energy-source-manager'
 
 const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
@@ -62,6 +63,8 @@ export default function(spawn: StructureSpawn) {
     const claimers = getCreeps('claimer', room)
     const attackers = getCreeps('attack', room)
     const energyManager = EnergyManager.get(spawn.room)
+    const energySourceManager = new EnergySourceManager(room)
+    const energyAvailable = energySourceManager.energyAvailable()
     const warDepartment = new WarDepartment(spawn.room)
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
@@ -87,25 +90,22 @@ export default function(spawn: StructureSpawn) {
     }
 
     const request = roleLogistics.requestedCarryCapacity(spawn)
-    const assignment = energyManager.findLogisticsAssignment(
-        Math.min(request * 3, 0.95 * CONTAINER_CAPACITY),
-    )
-    if (assignment === null) {
+    if (energyAvailable < Math.min(request * 3, 0.95 * CONTAINER_CAPACITY)) {
         return
     }
 
     if (haulers.length < 1) {
-        roleLogistics.create(spawn, assignment, TASK_HAULING)
+        roleLogistics.create(spawn, TASK_HAULING)
     } else if (workers.length < 1) {
-        roleLogistics.create(spawn, assignment, PREFERENCE_WORKER)
+        roleLogistics.create(spawn, PREFERENCE_WORKER)
     } else if (upgraders.length < UPGRADERS_COUNT) {
-        roleLogistics.create(spawn, assignment, TASK_UPGRADING)
+        roleLogistics.create(spawn, TASK_UPGRADING)
     } else if (builders.length < BUILDERS_COUNT) {
-        roleLogistics.create(spawn, assignment, TASK_BUILDING)
+        roleLogistics.create(spawn, TASK_BUILDING)
     } else if (wallRepairers.length < WALL_REPAIRERS_COUNT) {
-        roleLogistics.create(spawn, assignment, TASK_WALL_REPAIRS)
+        roleLogistics.create(spawn, TASK_WALL_REPAIRS)
     } else {
-        roleLogistics.create(spawn, assignment, PREFERENCE_WORKER)
+        roleLogistics.create(spawn, PREFERENCE_WORKER)
     }
 }
 
@@ -114,13 +114,12 @@ function createRescueCreeps(spawn: StructureSpawn) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
     const energyManager = EnergyManager.get(spawn.room)
-    const logisticsSource = energyManager.forceSourceAssignment('logistics')
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
 
     if (workers.length < RESCUE_WORKER_COUNT) {
-        roleLogistics.create(spawn, logisticsSource, PREFERENCE_WORKER, true)
+        roleLogistics.create(spawn, PREFERENCE_WORKER, true)
     } else if (harvesters.length < sourceCount) {
         roleHarvester.create(spawn, harvesterSource)
     }

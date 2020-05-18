@@ -17,16 +17,17 @@ export type DeliveryTask =
 type LogisticsTask = DeliveryTask | typeof TASK_COLLECTING
 export type LogisticsPreference = DeliveryTask | typeof PREFERENCE_WORKER
 
-export interface LogisticsCreep extends SourceCreep {
+export interface LogisticsCreep extends Creep {
     memory: LogisticsMemory
 }
 
-export interface LogisticsMemory extends SourceMemory {
+export interface LogisticsMemory extends CreepMemory {
     role: 'logistics'
     preference: LogisticsPreference
     currentTask: LogisticsTask
     currentTarget: Id<Structure> | undefined
     home: string
+    waitTime: number
 }
 
 export function isLogisticsCreep(creep: Creep): creep is LogisticsCreep {

@@ -33,8 +33,16 @@ export class PickupTarget {
         return PickupTarget.create(id)
     }
 
+    static findInRoom(room: Room, resource: ResourceConstant): PickupTarget[] {
+        const resources = room.find<FIND_DROPPED_RESOURCES>(
+            FIND_DROPPED_RESOURCES,
+            { filter: r => r.resourceType === resource },
+        )
+        return resources.map(r => PickupTarget.get(r.id))
+    }
+
     resourcesAvailable(): number {
-        return this.resource.amount - this.sumOfPickups()
+        return Math.max(this.resource.amount - this.sumOfPickups(), 0)
     }
 
     makeRequest(creep: LogisticsCreep): PickupTask {

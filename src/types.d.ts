@@ -16,8 +16,7 @@ interface RoomSourceMemory {
 }
 
 interface DroppedEnergyMemory {
-    pos: RoomPosition
-    requests: string[]
+    pos: FlatRoomPosition
 }
 
 interface SourceCreep extends Creep {

@@ -114,18 +114,11 @@ function getDroppedResources(
     capacity: number,
     resource: ResourceConstant,
 ): Resource[] {
-    const resources = room.find<FIND_DROPPED_RESOURCES>(
-        FIND_DROPPED_RESOURCES,
-        { filter: r => r.resourceType === resource },
+    const targets = PickupTarget.findInRoom(room, resource)
+    const eligibles = targets.filter(
+        target => target.resourcesAvailable() >= capacity,
     )
-    return availableResources(resources, capacity)
-}
-
-function availableResources(resources: Resource[], capacity: number) {
-    return resources.filter(resource => {
-        const pickupTarget = PickupTarget.get(resource.id)
-        return pickupTarget.resourcesAvailable() >= capacity
-    })
+    return eligibles.map(eligible => eligible.resource)
 }
 
 export default {

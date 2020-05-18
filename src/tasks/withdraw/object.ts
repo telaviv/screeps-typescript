@@ -1,3 +1,5 @@
+import includes from 'lodash/includes'
+
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { getAllTasks } from 'tasks/utils'
 import autoIncrement from 'utils/autoincrement'
@@ -34,10 +36,25 @@ export class WithdrawObject {
         return WithdrawObject.create(id)
     }
 
+    static getStorageInRoom(room: Room): WithdrawObject[] {
+        const structures = room.find<StructureContainer | StructureStorage>(
+            FIND_STRUCTURES,
+            {
+                filter: r =>
+                    includes(
+                        [STRUCTURE_CONTAINER, STRUCTURE_STORAGE],
+                        r.structureType,
+                    ),
+            },
+        )
+        return structures.map(structure => WithdrawObject.get(structure.id))
+    }
+
     resourcesAvailable(resource: ResourceConstant = RESOURCE_ENERGY): number {
-        return (
+        return Math.max(
             getUsedCapacity(this.withdrawable, resource) -
-            this.sumOfWithdraws(resource)
+                this.sumOfWithdraws(resource),
+            0,
         )
     }
 

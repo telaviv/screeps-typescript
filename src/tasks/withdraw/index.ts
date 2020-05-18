@@ -1,5 +1,4 @@
 import { LogisticsCreep } from 'roles/logistics-constants'
-import { getContainers } from 'utils/room'
 import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import * as Logger from 'utils/logger'
 
@@ -18,15 +17,11 @@ export function makeRequest(creep: LogisticsCreep): boolean {
         return true
     }
 
-    const containers = getEligibleContainers(
-        creep.room,
-        capacity,
-        RESOURCE_ENERGY,
-    )
-    if (containers.length > 0) {
-        const structure = creep.pos.findClosestByRange(containers)
+    const storages = getEligibleStorage(creep.room, capacity, RESOURCE_ENERGY)
+    if (storages.length > 0) {
+        const storage = creep.pos.findClosestByRange(storages)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        addWithdrawTask(creep, structure!)
+        addWithdrawTask(creep, storage!)
         return true
     }
     return false
@@ -50,8 +45,8 @@ export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
     return false
 }
 
-function addWithdrawTask(creep: LogisticsCreep, structure: AnyStoreStructure) {
-    const withdrawObject = WithdrawObject.get(structure.id)
+function addWithdrawTask(creep: LogisticsCreep, withdrawable: Withdrawable) {
+    const withdrawObject = WithdrawObject.get(withdrawable.id)
     const task = withdrawObject.makeRequest(creep)
     Logger.info('withdraw:create', creep.name, task.withdrawId, task.amount)
     creep.memory.tasks.push(task)
@@ -122,27 +117,16 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
     return Game.getObjectById(task.withdrawId) as Withdrawable
 }
 
-function getEligibleContainers(
+function getEligibleStorage(
     room: Room,
     capacity: number,
     resource: ResourceConstant,
-): StructureContainer[] {
-    const containers = getContainers(room)
-    return structuresWithResources(containers, capacity, resource)
-}
-
-function structuresWithResources(
-    structures: AnyStoreStructure[],
-    capacity: number,
-    resource: ResourceConstant,
-) {
-    return structures.filter(structure => {
-        const storeable = WithdrawObject.get(structure.id)
-        return (
-            structure.structureType === STRUCTURE_CONTAINER &&
-            storeable.resourcesAvailable(resource) >= capacity
-        )
-    }) as StructureContainer[]
+): Withdrawable[] {
+    const withdrawObjects = WithdrawObject.getStorageInRoom(room)
+    const eligibles = withdrawObjects.filter(
+        target => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
+    )
+    return eligibles.map(eligible => eligible.withdrawable)
 }
 
 export default {

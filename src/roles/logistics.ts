@@ -284,7 +284,6 @@ const roleLogistics = {
 
     create(
         spawn: StructureSpawn,
-        source: Id<Source>,
         preference: LogisticsPreference = TASK_HAULING,
         rescue = false,
     ): number {
@@ -300,7 +299,6 @@ const roleLogistics = {
                 memory: {
                     role: ROLE,
                     home: spawn.room.name,
-                    source,
                     preference,
                     currentTask: TASK_COLLECTING,
                     currentTarget: undefined,

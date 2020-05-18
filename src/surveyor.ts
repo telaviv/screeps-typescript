@@ -34,7 +34,6 @@ function assignSources(room: Room) {
             id: source.id,
             dropSpot: {
                 pos,
-                requests: [],
             },
         })
         const linkSpot = getLinkSpot(pos, ppos)
