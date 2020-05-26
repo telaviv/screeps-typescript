@@ -52,8 +52,13 @@ const roleClaimer = {
         }
     }, 'runClaimer'),
 
-    create(spawn: StructureSpawn, roomName: string): number {
-        const parts = calculateParts(spawn.room.energyCapacityAvailable)
+    create(spawn: StructureSpawn, roomName: string, minimal = false): number {
+        let parts
+        if (minimal) {
+            parts = [CLAIM, MOVE]
+        } else {
+            parts = calculateParts(spawn.room.energyCapacityAvailable)
+        }
         const err = spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,

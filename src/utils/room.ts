@@ -4,6 +4,7 @@ import minBy from 'lodash/minBy'
 import includes from 'lodash/includes'
 import filter from 'lodash/filter'
 import * as Logger from 'utils/logger'
+import { randomElement } from 'utils/utilities'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
@@ -216,7 +217,7 @@ export function findLongDistanceBuild(home: string): ConstructionSite | null {
         if (room.name !== home) {
             const constructionSites = room.find(FIND_MY_CONSTRUCTION_SITES)
             if (constructionSites.length > 0) {
-                return constructionSites[0]
+                return randomElement(constructionSites)
             }
         }
     }

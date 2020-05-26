@@ -20,7 +20,7 @@ function claimRoom(endRoom: string, startRoom: string) {
     if (spawns.length === 0) {
         throw new Error('no spawn in starting room')
     }
-    const err = roleClaimer.create(spawns[0], endRoom)
+    const err = roleClaimer.create(spawns[0], endRoom, true)
     Logger.info('claimRoom:create', err)
 }
 
