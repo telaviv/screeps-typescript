@@ -67,6 +67,7 @@ function addTransferTask(creep: LogisticsCreep, structure: AnyStoreStructure) {
         'transfer:create',
         creep.name,
         structure.structureType,
+        task.id,
         task.amount,
         task.structureId,
         structure.store.getFreeCapacity(RESOURCE_ENERGY),

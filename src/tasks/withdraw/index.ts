@@ -29,7 +29,9 @@ export function makeRequest(creep: LogisticsCreep): boolean {
 
 export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
     const storeable = getWithdrawable(task)
-    const err = creep.withdraw(storeable, task.resourceType, task.amount)
+    const creepCapacity = getFreeCapacity(creep, task.resourceType)
+    const amount = Math.min(task.amount, creepCapacity)
+    const err = creep.withdraw(storeable, task.resourceType, amount)
     if (err === ERR_NOT_IN_RANGE) {
         creep.moveTo(storeable, {
             visualizePathStyle: { stroke: '#ffffff' },
@@ -48,7 +50,13 @@ export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
 function addWithdrawTask(creep: LogisticsCreep, withdrawable: Withdrawable) {
     const withdrawObject = WithdrawObject.get(withdrawable.id)
     const task = withdrawObject.makeRequest(creep)
-    Logger.info('withdraw:create', creep.name, task.withdrawId, task.amount)
+    Logger.info(
+        'withdraw:create',
+        creep.name,
+        task.id,
+        task.withdrawId,
+        task.amount,
+    )
     creep.memory.tasks.push(task)
     return task
 }

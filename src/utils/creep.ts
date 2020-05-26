@@ -13,3 +13,10 @@ export function calculateBodyCost(parts: BodyPartConstant[]): number {
     }
     return sum
 }
+
+export function moveToRoom(roomName: string, creep: Creep) {
+    creep.moveTo(new RoomPosition(25, 25, roomName), {
+        range: 23,
+        visualizePathStyle: { stroke: '#ffaa00' },
+    })
+}

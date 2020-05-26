@@ -72,6 +72,10 @@ export function getSources(room: Room): Source[] {
     return room.find<FIND_SOURCES>(FIND_SOURCES)
 }
 
+export function getActiveSources(room: Room): Source[] {
+    return room.find<FIND_SOURCES_ACTIVE>(FIND_SOURCES_ACTIVE)
+}
+
 export function hasFragileWall(room: Room): boolean {
     const walls = room.find<Structure>(FIND_STRUCTURES, {
         filter: isFragileWall,
@@ -111,8 +115,11 @@ function isWeakWall(structure: Structure): boolean {
     return structure.hits < Math.min(structure.hitsMax, STRONG_WALL_HITS)
 }
 
-export function getConstructionSites(room: Room): ConstructionSite[] {
-    return room.find(FIND_CONSTRUCTION_SITES)
+export function getConstructionSites(
+    room: Room,
+    opts?: FilterOptions<FIND_CONSTRUCTION_SITES>,
+): ConstructionSite[] {
+    return room.find(FIND_CONSTRUCTION_SITES, opts)
 }
 
 export function hasContainerAtPosition(room: Room, pos: RoomPosition): boolean {
@@ -132,8 +139,11 @@ export function getContainerAtPosition(
     return containers[0] as StructureContainer
 }
 
-export function hasConstructionSite(room: Room): boolean {
-    return getConstructionSites(room).length > 0
+export function hasConstructionSite(
+    room: Room,
+    opts?: FilterOptions<FIND_CONSTRUCTION_SITES>,
+): boolean {
+    return getConstructionSites(room, opts).length > 0
 }
 
 export function makeConstructionSite(

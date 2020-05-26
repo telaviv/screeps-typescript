@@ -10,6 +10,7 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_LINK, drawLink],
     [STRUCTURE_CONTAINER, drawContainer],
     [STRUCTURE_EXTENSION, drawExtension],
+    [STRUCTURE_ROAD, drawRoad],
 ])
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
@@ -34,6 +35,10 @@ function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
 
 function drawExtension(visual: RoomVisual, pos: RoomPosition): void {
     visual.circle(pos, { fill: 'yellow', radius: 0.45 })
+}
+
+function drawRoad(visual: RoomVisual, pos: RoomPosition): void {
+    visual.line(pos.x, pos.y, pos.x + 1, pos.y + 1)
 }
 
 function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {

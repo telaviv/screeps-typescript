@@ -2,6 +2,7 @@ import WarDepartment from 'war-department'
 import * as Logger from 'utils/logger'
 import { saveSnapshot, resetSnapshot } from 'snapshot'
 import roleClaimer from 'roles/claim'
+import roleScout from 'roles/scout'
 import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
 import { getAllTasks } from 'tasks/utils'
@@ -30,6 +31,15 @@ function sendWrecker(endRoom: string, startRoom: string) {
     }
     const err = roleWrecker.create(spawns[0], endRoom)
     Logger.info('sendWrecker:create', err)
+}
+
+function sendScout(destination: string, startRoom: string) {
+    const spawns = Game.rooms[startRoom].find(FIND_MY_SPAWNS)
+    if (spawns.length === 0) {
+        throw new Error('no spawn in starting room')
+    }
+    const err = roleScout.create(spawns[0], destination)
+    Logger.info('sendScout:create', err)
 }
 
 function declareWar(endRoom: string, warRoom: string) {
@@ -71,4 +81,5 @@ export default function assignGlobals() {
     global.unpauseConstruction = unpauseConstruction
     global.resetSnapshot = resetSnapshot
     global.printTasks = printTasks
+    global.sendScout = sendScout
 }

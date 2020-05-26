@@ -121,7 +121,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
     if (workers.length < RESCUE_WORKER_COUNT) {
         roleLogistics.create(spawn, PREFERENCE_WORKER, true)
     } else if (harvesters.length < sourceCount) {
-        roleHarvester.create(spawn, harvesterSource)
+        roleHarvester.create(spawn, harvesterSource, true)
     }
 }
 

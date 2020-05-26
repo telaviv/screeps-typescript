@@ -91,6 +91,7 @@ declare namespace NodeJS {
         unpauseConstruction: any
         resetSnapshot: any
         printTasks: any
+        sendScout: any
     }
 }
 

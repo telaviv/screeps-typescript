@@ -6,6 +6,7 @@ import roleLogistics from 'roles/logistics'
 import roleClaimer, { Claimer } from 'roles/claim'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
 import roleAttacker, { Attacker } from 'roles/attacker'
+import roleScout, { Scout } from 'roles/scout'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
@@ -87,6 +88,8 @@ function unwrappedLoop() {
             roleWrecker.run(creep as Wrecker)
         } else if (creep.memory.role === 'attack') {
             roleAttacker.run(creep as Attacker)
+        } else if (creep.memory.role === 'scout') {
+            roleScout.run(creep as Scout)
         }
     }
     recordGameStats()

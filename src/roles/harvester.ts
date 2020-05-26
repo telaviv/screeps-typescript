@@ -1,3 +1,4 @@
+import includes from 'lodash/includes'
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 
@@ -24,7 +25,7 @@ const roleHarvester = {
         const harvestPos = sourceMemory.dropSpot.pos
         if (creep.pos.x === harvestPos.x && creep.pos.y === harvestPos.y) {
             const err = creep.harvest(source)
-            if (err !== OK) {
+            if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
                 Logger.warning(
                     'harvester:harvest:failure',
                     creep.name,
@@ -39,9 +40,10 @@ const roleHarvester = {
         }
     }, 'runHarvester'),
 
-    create(spawn: StructureSpawn, source: Id<Source>): number {
+    create(spawn: StructureSpawn, source: Id<Source>, rescue = false): number {
         const capacity = spawn.room.energyCapacityAvailable
-        const parts = calculateParts(capacity)
+        const workParts = rescue ? 5 : 8
+        const parts = calculateParts(capacity, workParts)
         const err = spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
@@ -52,9 +54,12 @@ const roleHarvester = {
     },
 }
 
-export function calculateParts(capacity: number): BodyPartConstant[] {
+export function calculateParts(
+    capacity: number,
+    workParts: number,
+): BodyPartConstant[] {
     const chunkCost = BODYPART_COST[WORK] + BODYPART_COST[MOVE]
-    let capacityLeft = Math.min(capacity, 5 * chunkCost)
+    let capacityLeft = Math.min(capacity, workParts * chunkCost)
     let parts: BodyPartConstant[] = []
     while (capacityLeft >= chunkCost) {
         parts = parts.concat([WORK, MOVE])

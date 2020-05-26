@@ -4,13 +4,16 @@ import { LogisticsCreep, isLogisticsCreep } from 'roles/logistics-constants'
 import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
 import { fromRoom } from 'utils/immutable-room'
+import { getActiveSources } from 'utils/room'
 
-export function harvestEnergy(creep: SourceCreep) {
-    const source = Game.getObjectById(creep.memory.source) as Source
-    if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+export function harvestEnergy(creep: LogisticsCreep) {
+    const sources = getActiveSources(creep.room)
+    const source = creep.pos.findClosestByPath(sources)
+    if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
         creep.memory.waitTime += 1
         creep.moveTo(source, {
             visualizePathStyle: { stroke: '#ffaa00' },
+            range: 1,
         })
     } else {
         creep.memory.waitTime = 0
@@ -54,7 +57,9 @@ export function getEnergy(creep: LogisticsCreep): void {
 
     if (isLogisticsCreep(creep)) {
         if (!PickupTask.makeRequest(creep)) {
-            WithdrawTask.makeRequest(creep)
+            if (!WithdrawTask.makeRequest(creep)) {
+                harvestEnergy(creep)
+            }
         }
     }
 }

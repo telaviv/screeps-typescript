@@ -67,7 +67,7 @@ export default class BuildManager {
 
     get snapshot() {
         if (this._snapshot === null) {
-            this._snapshot = RoomSnapshot.create(this.room)
+            this._snapshot = RoomSnapshot.get(this.room)
         }
         return this._snapshot
     }
