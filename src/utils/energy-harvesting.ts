@@ -5,12 +5,15 @@ import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
 import { fromRoom } from 'utils/immutable-room'
 import { getActiveSources } from 'utils/room'
+import { randomElement } from 'utils/utilities'
 
 export function harvestEnergy(creep: LogisticsCreep) {
     const sources = getActiveSources(creep.room)
     const source = creep.pos.findClosestByPath(sources)
-    if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
+    if (!source) {
         creep.memory.waitTime += 1
+        wander(creep)
+    } else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
         creep.moveTo(source, {
             visualizePathStyle: { stroke: '#ffaa00' },
             range: 1,
@@ -21,11 +24,17 @@ export function harvestEnergy(creep: LogisticsCreep) {
 }
 
 export function wander(creep: Creep) {
-    const iroom = fromRoom(creep.room)
-    const pos = iroom.getRandomWalkablePosition(creep.pos.x, creep.pos.y)
-    if (pos) {
-        creep.moveTo(pos)
-    }
+    const direction = randomElement<DirectionConstant>([
+        TOP,
+        TOP_RIGHT,
+        RIGHT,
+        BOTTOM_RIGHT,
+        BOTTOM,
+        BOTTOM_LEFT,
+        LEFT,
+        TOP_LEFT,
+    ])
+    creep.move(direction)
     creep.say('🤔')
 }
 

@@ -139,7 +139,7 @@ export class ImmutableRoom implements ValueObject {
         const neighbors = []
         for (let nx = Math.max(0, x - 1); nx <= Math.min(50, x + 1); ++nx) {
             for (let ny = Math.max(0, y - 1); ny <= Math.min(50, y + 1); ++ny) {
-                if (!(x === nx && y === ny)) {
+                if (!(x === nx && y === ny) && this.get(nx, ny)) {
                     neighbors.push(this.get(nx, ny))
                 }
             }

@@ -117,8 +117,6 @@ const roleLogistics = {
         const buildManager = getBuildManager(creep.room)
         if (TransferTask.makeRequest(creep)) {
             memory.currentTask = TASK_HAULING
-        } else if (needsLongDistanceBuild(creep.memory.home)) {
-            memory.currentTask = TASK_LONG_DISTANCE_BUILD
         } else if (hasFragileWall(creep.room)) {
             memory.currentTask = TASK_WALL_REPAIRS
         } else if (buildManager.canBuildImportant()) {
@@ -255,9 +253,7 @@ const roleLogistics = {
 
     switchTask(creep: LogisticsCreep) {
         let task = creep.memory.currentTask
-        if (needsLongDistanceBuild(creep.memory.home)) {
-            task = TASK_LONG_DISTANCE_BUILD
-        } else if (!isAtExtensionCap(creep.room)) {
+        if (!isAtExtensionCap(creep.room)) {
             task = TASK_BUILDING
         } else if (hasFragileWall(creep.room)) {
             task = TASK_WALL_REPAIRS

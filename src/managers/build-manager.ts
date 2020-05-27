@@ -249,7 +249,7 @@ export default class BuildManager {
 
     private updateRoadCache = wrap(() => {
         this._roads = OrderedSet()
-        if (!this.room.controller) {
+        if (!this.room.controller || !this.room.memory.sources) {
             return
         }
 

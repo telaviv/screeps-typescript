@@ -39,6 +39,10 @@ function sendScout(destination: string, startRoom: string) {
         throw new Error('no spawn in starting room')
     }
     const err = roleScout.create(spawns[0], destination)
+    if (err === OK) {
+        const warDepartment = new WarDepartment(Game.rooms[startRoom])
+        warDepartment.claimRoom(destination)
+    }
     Logger.info('sendScout:create', err)
 }
 
