@@ -1,6 +1,5 @@
 import includes from 'lodash/includes'
 
-import { LogisticsCreep } from 'roles/logistics-constants'
 import { getAllTasks } from 'tasks/utils'
 import autoIncrement from 'utils/autoincrement'
 import { getUsedCapacity } from 'utils/store'
@@ -36,7 +35,7 @@ export class WithdrawObject {
         return WithdrawObject.create(id)
     }
 
-    static getStorageInRoom(room: Room): WithdrawObject[] {
+    static getTargetsInRoom(room: Room): WithdrawObject[] {
         const structures = room.find<StructureContainer | StructureStorage>(
             FIND_STRUCTURES,
             {
@@ -47,7 +46,11 @@ export class WithdrawObject {
                     ),
             },
         )
-        return structures.map(structure => WithdrawObject.get(structure.id))
+        const tombstones = room.find<FIND_TOMBSTONES>(FIND_TOMBSTONES)
+
+        const structureTargets = structures.map(s => WithdrawObject.get(s.id))
+        const tombstoneTargets = tombstones.map(t => WithdrawObject.get(t.id))
+        return structureTargets.concat(tombstoneTargets)
     }
 
     resourcesAvailable(resource: ResourceConstant = RESOURCE_ENERGY): number {
@@ -59,7 +62,7 @@ export class WithdrawObject {
     }
 
     makeRequest(
-        creep: LogisticsCreep,
+        creep: Creep,
         resource: ResourceConstant = RESOURCE_ENERGY,
     ): WithdrawTask {
         const creepCapacity = creep.store.getFreeCapacity(resource)

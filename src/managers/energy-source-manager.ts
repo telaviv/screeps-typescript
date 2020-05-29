@@ -13,7 +13,7 @@ export default class EnergySourceManager {
             acc + val.resourcesAvailable(RESOURCE_ENERGY)
 
         const pickups = PickupTarget.findInRoom(this.room, RESOURCE_ENERGY)
-        const withdrawals = WithdrawObject.getStorageInRoom(this.room)
+        const withdrawals = WithdrawObject.getTargetsInRoom(this.room)
         const pickupEnergy = pickups.reduce(resourceSum, 0)
         const withdrawEnergy = withdrawals.reduce(resourceSum, 0)
         return pickupEnergy + withdrawEnergy

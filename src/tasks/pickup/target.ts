@@ -1,4 +1,3 @@
-import { LogisticsCreep } from 'roles/logistics-constants'
 import { getAllTasks } from 'tasks/utils'
 import autoIncrement from 'utils/autoincrement'
 
@@ -45,7 +44,7 @@ export class PickupTarget {
         return Math.max(this.resource.amount - this.sumOfPickups(), 0)
     }
 
-    makeRequest(creep: LogisticsCreep): PickupTask {
+    makeRequest(creep: Creep): PickupTask {
         const creepCapacity = creep.store.getFreeCapacity(
             this.resource.resourceType,
         )

@@ -15,12 +15,16 @@ function killAllCreeps(roomName: string) {
     })
 }
 
-function claimRoom(endRoom: string, startRoom: string) {
+function claimRoom(destination: string, startRoom: string) {
     const spawns = Game.rooms[startRoom].find(FIND_MY_SPAWNS)
     if (spawns.length === 0) {
         throw new Error('no spawn in starting room')
     }
-    const err = roleClaimer.create(spawns[0], endRoom, true)
+    const err = roleClaimer.create(spawns[0], destination, true)
+    if (err === OK) {
+        const warDepartment = new WarDepartment(Game.rooms[startRoom])
+        warDepartment.claimRoom(destination)
+    }
     Logger.info('claimRoom:create', err)
 }
 
@@ -39,10 +43,6 @@ function sendScout(destination: string, startRoom: string) {
         throw new Error('no spawn in starting room')
     }
     const err = roleScout.create(spawns[0], destination)
-    if (err === OK) {
-        const warDepartment = new WarDepartment(Game.rooms[startRoom])
-        warDepartment.claimRoom(destination)
-    }
     Logger.info('sendScout:create', err)
 }
 

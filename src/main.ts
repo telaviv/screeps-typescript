@@ -6,6 +6,7 @@ import roleLogistics from 'roles/logistics'
 import roleClaimer, { Claimer } from 'roles/claim'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
 import roleAttacker, { Attacker } from 'roles/attacker'
+import roleRemoteUpgrade, { RemoteUpgrade } from 'roles/remote-upgrade'
 import roleScout, { Scout } from 'roles/scout'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
@@ -90,6 +91,8 @@ function unwrappedLoop() {
             roleAttacker.run(creep as Attacker)
         } else if (creep.memory.role === 'scout') {
             roleScout.run(creep as Scout)
+        } else if (creep.memory.role === 'remote-upgrade') {
+            roleRemoteUpgrade.run(creep as RemoteUpgrade)
         }
     }
     recordGameStats()

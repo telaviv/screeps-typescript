@@ -1,4 +1,5 @@
-import { LogisticsCreep } from 'roles/logistics-constants'
+import maxBy from 'lodash/maxBy'
+
 import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import * as Logger from 'utils/logger'
 
@@ -6,7 +7,7 @@ import { WithdrawObject } from './object'
 import { WithdrawTask, Withdrawable } from './types'
 import { isWithdrawTask } from './utils'
 
-export function makeRequest(creep: LogisticsCreep): boolean {
+export function makeRequest(creep: Creep): boolean {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -17,17 +18,17 @@ export function makeRequest(creep: LogisticsCreep): boolean {
         return true
     }
 
-    const storages = getEligibleStorage(creep.room, capacity)
-    if (storages.length > 0) {
-        const storage = creep.pos.findClosestByRange(storages)
+    const withdrawTargets = getEligibleTargets(creep.room, capacity)
+    if (withdrawTargets.length > 0) {
+        const target = creep.pos.findClosestByRange(withdrawTargets)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        addWithdrawTask(creep, storage!)
+        addWithdrawTask(creep, target!)
         return true
     }
     return false
 }
 
-export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
+export function run(task: WithdrawTask, creep: Creep): boolean {
     const storeable = getWithdrawable(task)
     const creepCapacity = getFreeCapacity(creep, task.resourceType)
     const amount = Math.min(task.amount, creepCapacity)
@@ -47,7 +48,7 @@ export function run(task: WithdrawTask, creep: LogisticsCreep): boolean {
     return false
 }
 
-function addWithdrawTask(creep: LogisticsCreep, withdrawable: Withdrawable) {
+function addWithdrawTask(creep: Creep, withdrawable: Withdrawable) {
     const withdrawObject = WithdrawObject.get(withdrawable.id)
     const task = withdrawObject.makeRequest(creep)
     Logger.info(
@@ -61,7 +62,7 @@ function addWithdrawTask(creep: LogisticsCreep, withdrawable: Withdrawable) {
     return task
 }
 
-export function completeRequest(creep: LogisticsCreep) {
+export function completeRequest(creep: Creep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning(
             'withdraw::complete:failure',
@@ -81,7 +82,7 @@ export function completeRequest(creep: LogisticsCreep) {
     }
 }
 
-export function cleanup(task: WithdrawTask, creep: LogisticsCreep): boolean {
+export function cleanup(task: WithdrawTask, creep: Creep): boolean {
     if (Game.getObjectById(task.withdrawId) === null) {
         Logger.warning(
             'withdraw:cleanup:failure',
@@ -125,12 +126,26 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
     return Game.getObjectById(task.withdrawId) as Withdrawable
 }
 
-function getEligibleStorage(room: Room, capacity: number): Withdrawable[] {
-    const withdrawObjects = WithdrawObject.getStorageInRoom(room)
-    const eligibles = withdrawObjects.filter(
+function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
+    const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
+    const nonEmpties = withdrawObjects.filter(
+        target => target.resourcesAvailable(RESOURCE_ENERGY) >= 50,
+    )
+
+    const eligibles = nonEmpties.filter(
         target => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
     )
-    return eligibles.map(eligible => eligible.withdrawable)
+    if (eligibles.length > 0) {
+        return eligibles.map(eligible => eligible.withdrawable)
+    }
+
+    if (nonEmpties.length === 0) {
+        return []
+    }
+    const bestTarget = maxBy(nonEmpties, t =>
+        t.resourcesAvailable(RESOURCE_ENERGY),
+    )
+    return [bestTarget!.withdrawable]
 }
 
 export default {

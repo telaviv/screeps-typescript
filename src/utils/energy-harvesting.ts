@@ -1,13 +1,11 @@
 import { hash } from 'immutable'
 
-import { LogisticsCreep, isLogisticsCreep } from 'roles/logistics-constants'
 import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
-import { fromRoom } from 'utils/immutable-room'
 import { getActiveSources } from 'utils/room'
 import { randomElement } from 'utils/utilities'
 
-export function harvestEnergy(creep: LogisticsCreep) {
+export function harvestEnergy(creep: ResourceCreep) {
     const sources = getActiveSources(creep.room)
     const source = creep.pos.findClosestByPath(sources)
     if (!source) {
@@ -50,7 +48,7 @@ export function freeEnergyCapacity(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
 
-export function getEnergy(creep: LogisticsCreep): void {
+export function getEnergy(creep: ResourceCreep): void {
     if (creep.room.name !== creep.memory.home) {
         const sources = creep.room.find(FIND_SOURCES_ACTIVE)
         if (sources.length > 0) {
@@ -64,11 +62,9 @@ export function getEnergy(creep: LogisticsCreep): void {
         return
     }
 
-    if (isLogisticsCreep(creep)) {
-        if (!PickupTask.makeRequest(creep)) {
-            if (!WithdrawTask.makeRequest(creep)) {
-                harvestEnergy(creep)
-            }
+    if (!PickupTask.makeRequest(creep)) {
+        if (!WithdrawTask.makeRequest(creep)) {
+            harvestEnergy(creep)
         }
     }
 }

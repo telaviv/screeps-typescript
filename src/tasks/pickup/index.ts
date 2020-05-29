@@ -1,4 +1,3 @@
-import { LogisticsCreep } from 'roles/logistics-constants'
 import { getFreeCapacity } from 'utils/store'
 import * as Logger from 'utils/logger'
 
@@ -6,7 +5,7 @@ import { PickupTarget } from './target'
 import { PickupTask } from './types'
 import { isPickupTask } from './utils'
 
-export function makeRequest(creep: LogisticsCreep): boolean {
+export function makeRequest(creep: Creep): boolean {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -27,7 +26,7 @@ export function makeRequest(creep: LogisticsCreep): boolean {
     return false
 }
 
-export function run(task: PickupTask, creep: LogisticsCreep): boolean {
+export function run(task: PickupTask, creep: Creep): boolean {
     const resource = getResource(task)
     const err = creep.pickup(resource)
     if (err === ERR_NOT_IN_RANGE) {
@@ -45,7 +44,7 @@ export function run(task: PickupTask, creep: LogisticsCreep): boolean {
     return false
 }
 
-function addPickupTask(creep: LogisticsCreep, resource: Resource) {
+function addPickupTask(creep: Creep, resource: Resource) {
     const pickupTarget = PickupTarget.get(resource.id)
     const task = pickupTarget.makeRequest(creep)
     Logger.info('pickup:create', creep.name, task.resourceId, task.amount)
@@ -53,7 +52,7 @@ function addPickupTask(creep: LogisticsCreep, resource: Resource) {
     return task
 }
 
-export function completeRequest(creep: LogisticsCreep) {
+export function completeRequest(creep: Creep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning(
             'task:pickup::complete:failure',
@@ -65,7 +64,7 @@ export function completeRequest(creep: LogisticsCreep) {
     task.complete = true
 }
 
-export function cleanup(task: PickupTask, creep: LogisticsCreep): boolean {
+export function cleanup(task: PickupTask, creep: Creep): boolean {
     if (Game.getObjectById(task.resourceId) === null) {
         Logger.info(
             'task:pickup:cleanup:non-existant',

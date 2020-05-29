@@ -80,7 +80,7 @@ const roleWrecker = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan([WORK, CARRY, MOVE, MOVE], capacity)
+    return fromBodyPlan(capacity, [WORK, CARRY, MOVE, MOVE])
 }
 
 export default roleWrecker

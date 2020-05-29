@@ -2,7 +2,9 @@ import filter from 'lodash/filter'
 
 import WarDepartment, { WarStatus } from 'war-department'
 import roleClaimer from 'roles/claim'
+import roleAttacker from 'roles/attacker'
 import roleLogistics from 'roles/logistics'
+import roleRemoteUpgrade from 'roles/remote-upgrade'
 import {
     LogisticsCreep,
     LogisticsPreference,
@@ -13,7 +15,6 @@ import {
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
-import roleAttacker from 'roles/attacker'
 import EnergyManager from 'managers/energy-manager'
 import EnergySourceManager from 'managers/energy-source-manager'
 
@@ -21,9 +22,11 @@ const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
 const WALL_REPAIRERS_COUNT = 1
+const RESCUE_WORKER_COUNT = 3
+
 const CLAIMERS_COUNT = 3
 const ATTACKERS_COUNT = 1
-const RESCUE_WORKER_COUNT = 3
+const REMOTE_UPGRADE_COUNT = 1
 
 function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), creepName => {
@@ -60,8 +63,6 @@ export default function(spawn: StructureSpawn) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
     const harvesters = getCreeps('harvester', room)
-    const claimers = getCreeps('claimer', room)
-    const attackers = getCreeps('attack', room)
     const energyManager = EnergyManager.get(spawn.room)
     const energySourceManager = new EnergySourceManager(room)
     const energyAvailable = energySourceManager.energyAvailable()
@@ -77,16 +78,8 @@ export default function(spawn: StructureSpawn) {
         roleHarvester.create(spawn, harvesterSource)
     }
 
-    if (
-        warDepartment.status === WarStatus.ATTACK &&
-        attackers.length < ATTACKERS_COUNT
-    ) {
-        roleAttacker.create(spawn, warDepartment.target)
-    } else if (
-        warDepartment.status === WarStatus.CLAIM &&
-        claimers.length < CLAIMERS_COUNT
-    ) {
-        roleClaimer.create(spawn, warDepartment.target)
+    if (warDepartment.status !== WarStatus.NONE) {
+        createWarCreeps(spawn, warDepartment)
     }
 
     const request = roleLogistics.requestedCarryCapacity(spawn)
@@ -106,6 +99,24 @@ export default function(spawn: StructureSpawn) {
         roleLogistics.create(spawn, TASK_WALL_REPAIRS)
     } else {
         roleLogistics.create(spawn, PREFERENCE_WORKER)
+    }
+}
+
+function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment) {
+    const room = spawn.room
+    const status = warDepartment.status
+    const attackers = getCreeps('attack', room)
+    const claimers = getCreeps('claimer', room)
+    const distantUpgraders = getCreeps('remote-upgrade', room)
+
+    if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
+        roleAttacker.create(spawn, warDepartment.target)
+    } else if (status === WarStatus.CLAIM && claimers.length < CLAIMERS_COUNT) {
+        roleClaimer.create(spawn, warDepartment.target)
+    } else if (status === WarStatus.SPAWN) {
+        if (distantUpgraders.length < REMOTE_UPGRADE_COUNT) {
+            roleRemoteUpgrade.create(spawn, warDepartment.target)
+        }
     }
 }
 

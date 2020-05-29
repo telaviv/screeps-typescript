@@ -1,5 +1,6 @@
 import includes from 'lodash/includes'
 
+import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
@@ -59,7 +60,7 @@ const roleClaimer = {
         } else {
             parts = calculateParts(spawn.room.energyCapacityAvailable)
         }
-        const err = spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
+        const err = spawn.spawnCreep(parts, `${ROLE}:${autoIncrement()}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
@@ -71,7 +72,7 @@ const roleClaimer = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan([CLAIM, MOVE], capacity)
+    return fromBodyPlan(capacity, [CLAIM, MOVE])
 }
 
 export default roleClaimer

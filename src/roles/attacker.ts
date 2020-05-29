@@ -88,7 +88,7 @@ const roleAttacker = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan([ATTACK, MOVE], capacity)
+    return fromBodyPlan(capacity, [ATTACK, MOVE])
 }
 
 export default roleAttacker

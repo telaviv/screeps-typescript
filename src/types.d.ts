@@ -23,6 +23,15 @@ interface SourceCreep extends Creep {
     memory: SourceMemory
 }
 
+interface ResourceCreepMemory extends CreepMemory {
+    tasks: Task<any>[]
+    waitTime: number
+}
+
+interface ResourceCreep extends Creep {
+    memory: ResourceCreepMemory
+}
+
 interface ProfilerData {
     [key: string]: { total: number; calls: number }
 }

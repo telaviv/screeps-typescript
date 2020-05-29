@@ -1,6 +1,5 @@
 /* eslint @typescript-eslint/no-explicit-any: "off" */
 
-import { LogisticsCreep } from 'roles/logistics-constants'
 import { Task, Runner } from 'tasks/types'
 import TransferRunner from 'tasks/transfer'
 import WithdrawRunner from 'tasks/withdraw'
@@ -9,7 +8,11 @@ import * as Logger from 'utils/logger'
 
 const runners: Runner<any>[] = [TransferRunner, WithdrawRunner, PickupRunner]
 
-export function run(task: Task<any>, creep: LogisticsCreep): boolean {
+export function run(task: Task<any>, creep: Creep): boolean {
+    if (!creep.memory.tasks) {
+        throw new Error(`This creep has no tasks: ${creep.name}`)
+    }
+
     for (const runner of runners) {
         if (runner.verifyType(task)) {
             return runner.run(task, creep)

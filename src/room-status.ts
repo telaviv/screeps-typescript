@@ -1,4 +1,3 @@
-const OWNED_STRUCTURES = [STRUCTURE_SPAWN]
 type spawn = 'spawn'
 
 interface SimpleStructure {

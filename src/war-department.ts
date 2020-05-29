@@ -1,5 +1,4 @@
 import { hasNoSpawns } from 'utils/room'
-import * as Logger from 'utils/logger'
 
 declare global {
     interface RoomMemory {

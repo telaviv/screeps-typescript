@@ -135,10 +135,10 @@ export class ImmutableRoom implements ValueObject {
         return new RoomPosition(roomItem.x, roomItem.y, this.name)
     }
 
-    getClosestNeighbors(x: number, y: number): ImmutableRoomItem[] {
+    getClosestNeighbors(x: number, y: number, r = 1): ImmutableRoomItem[] {
         const neighbors = []
-        for (let nx = Math.max(0, x - 1); nx <= Math.min(50, x + 1); ++nx) {
-            for (let ny = Math.max(0, y - 1); ny <= Math.min(50, y + 1); ++ny) {
+        for (let nx = Math.max(0, x - r); nx <= Math.min(50, x + r); ++nx) {
+            for (let ny = Math.max(0, y - r); ny <= Math.min(50, y + r); ++ny) {
                 if (!(x === nx && y === ny) && this.get(nx, ny)) {
                     neighbors.push(this.get(nx, ny))
                 }
@@ -212,7 +212,13 @@ export class ImmutableRoom implements ValueObject {
     }
 
     nextSpawnPos(): RoomPosition {
-        return this.nextExtensionPos()
+        const centroid = this.findCentroid()
+        for (const roomItem of this.spiral(centroid.x, centroid.y)) {
+            if (this.canPlaceSpawn(roomItem)) {
+                return new RoomPosition(roomItem.x, roomItem.y, this.name)
+            }
+        }
+        throw new Error('No eligible extension spot.')
     }
 
     nextStoragePos(): RoomPosition {
@@ -248,6 +254,19 @@ export class ImmutableRoom implements ValueObject {
         }
 
         for (const ri of this.getCardinalNeighbors(roomItem.x, roomItem.y)) {
+            if (!ri.canBuild()) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private canPlaceSpawn(roomItem: ImmutableRoomItem): boolean {
+        if (!roomItem.canBuild()) {
+            return false
+        }
+
+        for (const ri of this.getClosestNeighbors(roomItem.x, roomItem.y, 2)) {
             if (!ri.canBuild()) {
                 return false
             }

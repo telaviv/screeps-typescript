@@ -1,3 +1,6 @@
+import { getSpawns } from 'utils/room'
+import * as Logger from 'utils/logger'
+
 export function freeEnergyCapacity(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
@@ -19,4 +22,24 @@ export function moveToRoom(roomName: string, creep: Creep) {
         range: 23,
         visualizePathStyle: { stroke: '#ffaa00' },
     })
+}
+
+export function recycle(creep: Creep) {
+    const spawns = getSpawns(creep.room)
+    const spawn = creep.pos.findClosestByPath(spawns)
+    if (!spawn) {
+        Logger.warning('recycle:failed:noSpawns', creep.name, creep.room.name)
+        return
+    }
+
+    const err = spawn.recycleCreep(creep)
+    if (err === ERR_NOT_IN_RANGE) {
+        creep.moveTo(spawn, {
+            visualizePathStyle: { stroke: '#ffaa00' },
+            range: 1,
+        })
+        creep.say('♻')
+    } else if (err !== OK) {
+        Logger.warning('recycle:failed', err, creep.name)
+    }
 }
