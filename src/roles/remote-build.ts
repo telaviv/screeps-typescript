@@ -4,25 +4,27 @@ import * as TaskRunner from 'tasks/runner'
 import { moveToRoom, recycle } from 'utils/creep'
 import { profile } from 'utils/profiling'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
+import { getConstructionSites } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
+import autoIncrement from 'utils/autoincrement'
 
-const ROLE = 'remote-upgrade'
+const ROLE = 'remote-build'
 
-export interface RemoteUpgrade extends ResourceCreep {
-    memory: RemoteUpgradeMemory
+export interface RemoteBuild extends ResourceCreep {
+    memory: RemoteBuildMemory
 }
 
-interface RemoteUpgradeMemory extends ResourceCreepMemory {
-    role: 'remote-upgrade'
+interface RemoteBuildMemory extends ResourceCreepMemory {
+    role: 'remote-build'
     destination: string
     home: string
 }
 
-class RemoteUpgradeCreep {
-    readonly creep: RemoteUpgrade
+class RemoteBuildCreep {
+    readonly creep: RemoteBuild
 
-    constructor(creep: RemoteUpgrade) {
+    constructor(creep: RemoteBuild) {
         this.creep = creep
     }
 
@@ -34,7 +36,7 @@ class RemoteUpgradeCreep {
         return this.memory.home
     }
 
-    get memory(): RemoteUpgradeMemory {
+    get memory(): RemoteBuildMemory {
         return this.creep.memory
     }
 
@@ -43,6 +45,7 @@ class RemoteUpgradeCreep {
         if (this.creep.spawning) {
             return
         }
+
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
             TaskRunner.run(task, this.creep)
@@ -61,7 +64,7 @@ class RemoteUpgradeCreep {
             if (this.hasNoEnergy()) {
                 this.goHome()
             } else {
-                this.upgradeController()
+                this.build()
             }
         } else {
             if (this.hasNoEnergy()) {
@@ -94,19 +97,27 @@ class RemoteUpgradeCreep {
         return 2 * this.travelDistance() + this.creep.getActiveBodyparts(CARRY)
     }
 
-    private upgradeController() {
-        const controller = this.creep.room.controller
-        const err = this.creep.upgradeController(controller!)
-        if (err === ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(controller!, {
-                visualizePathStyle: { stroke: '#ffffff' },
-                range: 3,
-            })
-        } else if (err !== OK) {
+    private build() {
+        const targets = getConstructionSites(this.creep.room)
+        if (targets.length) {
+            const err = this.creep.build(targets[0])
+            if (err === ERR_NOT_IN_RANGE) {
+                this.creep.moveTo(targets[0], {
+                    visualizePathStyle: { stroke: '#ffffff' },
+                    range: 3,
+                })
+            } else if (err !== OK) {
+                Logger.warning(
+                    'remote-build:build:failure',
+                    err,
+                    this.creep.name,
+                )
+            }
+        } else {
             Logger.warning(
-                'remote-upgrade:upgrade:failure',
-                err,
-                this.creep.name,
+                'remote-build:build',
+                'nothing to build',
+                this.creep.room.name,
             )
         }
     }
@@ -129,22 +140,22 @@ class RemoteUpgradeCreep {
 }
 
 export default {
-    run: (creep: RemoteUpgrade) => {
-        const remoteUpgrade = new RemoteUpgradeCreep(creep)
-        remoteUpgrade.run()
+    run: (creep: RemoteBuild) => {
+        const remoteBuild = new RemoteBuildCreep(creep)
+        remoteBuild.run()
     },
 
     create(spawn: StructureSpawn, destination: string): number {
         const capacity = spawn.room.energyCapacityAvailable
         const parts = fromBodyPlan(capacity, [CARRY, MOVE], [WORK, MOVE])
-        return spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
+        return spawn.spawnCreep(parts, `${ROLE}:${autoIncrement()}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
                 destination,
                 tasks: [],
                 waitTime: 0,
-            } as RemoteUpgradeMemory,
+            } as RemoteBuildMemory,
         })
     },
 }

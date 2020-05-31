@@ -5,6 +5,7 @@ import roleClaimer from 'roles/claim'
 import roleAttacker from 'roles/attacker'
 import roleLogistics from 'roles/logistics'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
+import roleRemoteBuild from 'roles/remote-build'
 import {
     LogisticsCreep,
     LogisticsPreference,
@@ -27,6 +28,7 @@ const RESCUE_WORKER_COUNT = 3
 const CLAIMERS_COUNT = 3
 const ATTACKERS_COUNT = 1
 const REMOTE_UPGRADE_COUNT = 1
+const REMOTE_BUILD_COUNT = 2
 
 function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), creepName => {
@@ -107,15 +109,18 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment) {
     const status = warDepartment.status
     const attackers = getCreeps('attack', room)
     const claimers = getCreeps('claimer', room)
-    const distantUpgraders = getCreeps('remote-upgrade', room)
+    const remoteUpgraders = getCreeps('remote-upgrade', room)
+    const remoteBuilders = getCreeps('remote-build', room)
 
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
         roleAttacker.create(spawn, warDepartment.target)
     } else if (status === WarStatus.CLAIM && claimers.length < CLAIMERS_COUNT) {
         roleClaimer.create(spawn, warDepartment.target)
     } else if (status === WarStatus.SPAWN) {
-        if (distantUpgraders.length < REMOTE_UPGRADE_COUNT) {
+        if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
             roleRemoteUpgrade.create(spawn, warDepartment.target)
+        } else if (remoteBuilders.length < REMOTE_BUILD_COUNT) {
+            roleRemoteBuild.create(spawn, warDepartment.target)
         }
     }
 }
