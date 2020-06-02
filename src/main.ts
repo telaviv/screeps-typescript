@@ -8,6 +8,7 @@ import roleWrecker, { Wrecker } from 'roles/wrecker'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleRemoteBuild, { RemoteBuild } from 'roles/remote-build'
 import roleRemoteUpgrade, { RemoteUpgrade } from 'roles/remote-upgrade'
+import roleMason, { Mason } from 'roles/mason'
 import roleScout, { Scout } from 'roles/scout'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
@@ -54,7 +55,7 @@ function unwrappedLoop() {
         if (room.controller && room.controller.my) {
             recordRoomStats(room)
 
-            BuildManager.get(room).createConstructionSite()
+            BuildManager.get(room).ensureConstructionSites()
 
             const warDepartment = new WarDepartment(room)
             warDepartment.update()
@@ -96,6 +97,8 @@ function unwrappedLoop() {
             roleRemoteUpgrade.run(creep as RemoteUpgrade)
         } else if (creep.memory.role === 'remote-build') {
             roleRemoteBuild.run(creep as RemoteBuild)
+        } else if (creep.memory.role === 'mason') {
+            roleMason.run(creep as Mason)
         }
     }
     recordGameStats()

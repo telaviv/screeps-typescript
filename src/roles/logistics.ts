@@ -11,6 +11,7 @@ import {
     isAtExtensionCap,
     hasFragileWall,
     getWeakestWall,
+    hasTunnelSite,
 } from 'utils/room'
 import { spawnCreep } from 'utils/spawn'
 import * as Logger from 'utils/logger'
@@ -117,10 +118,10 @@ const roleLogistics = {
         const buildManager = getBuildManager(creep.room)
         if (TransferTask.makeRequest(creep)) {
             memory.currentTask = TASK_HAULING
-        } else if (hasFragileWall(creep.room)) {
-            memory.currentTask = TASK_WALL_REPAIRS
         } else if (buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING
+        } else if (hasFragileWall(creep.room)) {
+            memory.currentTask = TASK_WALL_REPAIRS
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
             memory.currentTask = TASK_REPAIRING
         } else {
@@ -136,10 +137,11 @@ const roleLogistics = {
     },
 
     build: wrap((creep: LogisticsCreep) => {
-        const targets = getConstructionSites(creep.room)
-        if (targets.length) {
-            if (creep.build(targets[0]) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(targets[0], {
+        const targets = roleLogistics.getNonWallSites(creep.room)
+        const target = creep.pos.findClosestByRange(targets)
+        if (target) {
+            if (creep.build(target) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(target, {
                     visualizePathStyle: { stroke: '#ffffff' },
                     range: 3,
                 })
@@ -150,6 +152,14 @@ const roleLogistics = {
             creep.memory.currentTask = TASK_COLLECTING
         }
     }, 'logistics:build'),
+
+    getNonWallSites: (room: Room) => {
+        return getConstructionSites(room, {
+            filter: (site: ConstructionSite) =>
+                site.structureType !== STRUCTURE_WALL &&
+                site.structureType !== STRUCTURE_RAMPART,
+        })
+    },
 
     repairWalls: wrap((creep: LogisticsCreep) => {
         let structure = null
@@ -237,7 +247,7 @@ const roleLogistics = {
 
     switchTask(creep: LogisticsCreep) {
         let task = creep.memory.currentTask
-        if (!isAtExtensionCap(creep.room)) {
+        if (!isAtExtensionCap(creep.room) || hasTunnelSite(creep.room)) {
             task = TASK_BUILDING
         } else if (hasFragileWall(creep.room)) {
             task = TASK_WALL_REPAIRS

@@ -4,6 +4,7 @@ import WarDepartment, { WarStatus } from 'war-department'
 import roleClaimer from 'roles/claim'
 import roleAttacker from 'roles/attacker'
 import roleLogistics from 'roles/logistics'
+import roleMason, { MasonCreep } from 'roles/mason'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
 import roleRemoteBuild from 'roles/remote-build'
 import {
@@ -12,7 +13,6 @@ import {
     PREFERENCE_WORKER,
     TASK_HAULING,
     TASK_BUILDING,
-    TASK_WALL_REPAIRS,
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
@@ -22,7 +22,7 @@ import EnergySourceManager from 'managers/energy-source-manager'
 const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
-const WALL_REPAIRERS_COUNT = 1
+const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 
 const CLAIMERS_COUNT = 3
@@ -65,6 +65,7 @@ export default function(spawn: StructureSpawn) {
     const roomMemory = room.memory
     const sourceCount = roomMemory.sources.length
     const harvesters = getCreeps('harvester', room)
+    const masons = getCreeps('mason', room)
     const energyManager = EnergyManager.get(spawn.room)
     const energySourceManager = new EnergySourceManager(room)
     const energyAvailable = energySourceManager.energyAvailable()
@@ -73,7 +74,6 @@ export default function(spawn: StructureSpawn) {
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
     const upgraders = getLogisticsCreeps(TASK_UPGRADING, room)
     const builders = getLogisticsCreeps(TASK_BUILDING, room)
-    const wallRepairers = getLogisticsCreeps(TASK_WALL_REPAIRS, room)
     const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
 
     if (harvesters.length < HARVESTERS_PER_SOURCE * sourceCount) {
@@ -97,8 +97,8 @@ export default function(spawn: StructureSpawn) {
         roleLogistics.create(spawn, TASK_UPGRADING)
     } else if (builders.length < BUILDERS_COUNT) {
         roleLogistics.create(spawn, TASK_BUILDING)
-    } else if (wallRepairers.length < WALL_REPAIRERS_COUNT) {
-        roleLogistics.create(spawn, TASK_WALL_REPAIRS)
+    } else if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
+        roleMason.create(spawn)
     } else {
         roleLogistics.create(spawn, PREFERENCE_WORKER)
     }

@@ -84,14 +84,23 @@ export function hasFragileWall(room: Room): boolean {
     return walls.length > 0
 }
 
-export function getWeakestWall(room: Room): Structure | null {
+export function hasWeakWall(room: Room): boolean {
     const walls = room.find<Structure>(FIND_STRUCTURES, {
+        filter: isWeakWall,
+    })
+    return walls.length > 0
+}
+
+export function getWeakestWall(
+    room: Room,
+): StructureWall | StructureRampart | null {
+    const walls = room.find<StructureWall | StructureRampart>(FIND_STRUCTURES, {
         filter: isWeakWall,
     })
     if (walls.length === 0) {
         return null
     }
-    return minBy(walls, 'hits') as Structure
+    return minBy(walls, 'hits')!
 }
 
 function isFragileWall(structure: Structure): boolean {
@@ -121,6 +130,36 @@ export function getConstructionSites(
     opts?: FilterOptions<FIND_CONSTRUCTION_SITES>,
 ): ConstructionSite[] {
     return room.find(FIND_CONSTRUCTION_SITES, opts)
+}
+
+export function getWallSites(
+    room: Room,
+): ConstructionSite<STRUCTURE_RAMPART | STRUCTURE_WALL>[] {
+    return getConstructionSites(room, {
+        filter: site =>
+            site.structureType === STRUCTURE_WALL ||
+            site.structureType === STRUCTURE_RAMPART,
+    }) as ConstructionSite<STRUCTURE_WALL | STRUCTURE_RAMPART>[]
+}
+
+export function hasWallSite(room: Room): boolean {
+    return hasConstructionSite(room, {
+        filter: site =>
+            site.structureType === STRUCTURE_WALL ||
+            site.structureType === STRUCTURE_RAMPART,
+    })
+}
+
+export function hasTunnelSite(room: Room): boolean {
+    return hasConstructionSite(room, {
+        filter: site => {
+            if (site.structureType !== STRUCTURE_ROAD) {
+                return false
+            }
+            const terrain = room.getTerrain()
+            return terrain.get(site.pos.x, site.pos.y) === TERRAIN_MASK_WALL
+        },
+    })
 }
 
 export function hasContainerAtPosition(room: Room, pos: RoomPosition): boolean {

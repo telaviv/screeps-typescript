@@ -72,7 +72,14 @@ export default class BuildManager {
         return this._snapshot
     }
 
-    createConstructionSite = wrap((): boolean => {
+    @profile
+    ensureConstructionSites(): boolean {
+        const nonWall = this.ensureNonWallSite()
+        const wall = this.ensureWallSite()
+        return nonWall || wall
+    }
+
+    private ensureWallSite(): boolean {
         if (!this.room.controller) {
             return false
         }
@@ -81,7 +88,27 @@ export default class BuildManager {
             return false
         }
 
-        if (this.hasAConstructionSite()) {
+        if (this.hasWallSite()) {
+            return false
+        }
+
+        if (this.canBuildWall()) {
+            return this.buildNextWall()
+        }
+
+        return false
+    }
+
+    private ensureNonWallSite(): boolean {
+        if (!this.room.controller) {
+            return false
+        }
+
+        if (this.room.memory.construction.paused) {
+            return false
+        }
+
+        if (this.hasNonWallSite()) {
             return false
         }
 
@@ -109,12 +136,8 @@ export default class BuildManager {
             return this.buildNextContainer()
         }
 
-        if (this.canBuildWall()) {
-            return this.buildNextWall()
-        }
-
         return false
-    }, 'BuildManager:createConstructionSite')
+    }
 
     canBuildImportant = wrap((): boolean => {
         return (
@@ -134,10 +157,10 @@ export default class BuildManager {
         }
         const site = sites[0]
         if (site.structureType === STRUCTURE_ROAD) {
-            const result =
-                this.room.getTerrain().get(site.pos.x, site.pos.y) ===
-                TERRAIN_MASK_SWAMP
-            return result
+            const terrain = this.room.getTerrain().get(site.pos.x, site.pos.y)
+            return (
+                terrain === TERRAIN_MASK_SWAMP || terrain === TERRAIN_MASK_WALL
+            )
         }
         return !includes(
             [STRUCTURE_WALL, STRUCTURE_RAMPART],
@@ -171,9 +194,21 @@ export default class BuildManager {
         return false
     }, 'BuildManager:buildNextContainer')
 
-    private hasAConstructionSite = wrap(() => {
-        return hasConstructionSite(this.room)
-    }, 'BuildManager:hasAConstructionSite')
+    private hasNonWallSite() {
+        return hasConstructionSite(this.room, {
+            filter: site =>
+                site.structureType !== STRUCTURE_WALL &&
+                site.structureType !== STRUCTURE_RAMPART,
+        })
+    }
+
+    private hasWallSite() {
+        return hasConstructionSite(this.room, {
+            filter: site =>
+                site.structureType === STRUCTURE_WALL ||
+                site.structureType === STRUCTURE_RAMPART,
+        })
+    }
 
     private hasNoSpawns() {
         return hasNoSpawns(this.room)
