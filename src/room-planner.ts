@@ -77,10 +77,10 @@ export default class RoomPlanner {
         this.plan.storage = pos
     }
 
-    planIsFinished() {
+    planIsFinished(): boolean {
         const sourceCount = getSources(this.room).length
 
-        return (
+        return !!(
             sourceCount === this.sources.length &&
             this.plan.storage &&
             this.links.controller &&

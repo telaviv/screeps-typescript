@@ -24,6 +24,13 @@ export function moveToRoom(roomName: string, creep: Creep) {
     })
 }
 
+export function moveTowardsCenter(creep: Creep) {
+    creep.moveTo(new RoomPosition(25, 25, creep.room.name), {
+        range: 21,
+        visualizePathStyle: { stroke: '#ffaa00' },
+    })
+}
+
 export function isAtEdge(creep: Creep) {
     return (
         creep.pos.x === 0 ||

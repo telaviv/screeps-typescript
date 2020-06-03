@@ -212,10 +212,12 @@ export default class BuildManager {
         const LINK_LEVELS = [0, 0, 0, 0, 0, 2, 3, 4, 6]
         const roomPlanner = new RoomPlanner(this.room)
         const links = getLinks(this.room)
+        const linkLevel = LINK_LEVELS[this.room.controller!.level]!
         return !!(
             roomPlanner.planIsFinished() &&
             this.room.controller &&
-            LINK_LEVELS[this.room.controller.level] >= links.length
+            linkLevel > 0 &&
+            linkLevel > links.length
         )
     }, 'BuildManager:canBuildLinks')
 
@@ -234,6 +236,22 @@ export default class BuildManager {
             const { x, y, roomName } = controllerLink
             const pos = new RoomPosition(x, y, roomName)
             return makeConstructionSite(pos, STRUCTURE_LINK) === OK
+        }
+
+        for (const sourceLink of Object.values(roomPlanner.links.sources)) {
+            if (
+                !hasStructureAt(
+                    STRUCTURE_LINK,
+                    this.room,
+                    sourceLink.x,
+                    sourceLink.y,
+                )
+            ) {
+                const { x, y, roomName } = sourceLink
+                Logger.warning('buildNextLink:sourceLink', sourceLink)
+                const pos = new RoomPosition(x, y, roomName)
+                return makeConstructionSite(pos, STRUCTURE_LINK) === OK
+            }
         }
         return false
     }

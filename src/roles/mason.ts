@@ -1,7 +1,7 @@
 /* eslint no-lonely-if: ["off"] */
 
 import * as TaskRunner from 'tasks/runner'
-import { isAtEdge, moveToRoom, recycle } from 'utils/creep'
+import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
 import { profile } from 'utils/profiling'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import {
@@ -72,8 +72,13 @@ export class MasonCreep {
             return
         }
 
-        if (!this.isAtHome() || isAtEdge(this.creep)) {
+        if (!this.isAtHome()) {
             this.goHome()
+            return
+        }
+
+        if (isAtEdge(this.creep)) {
+            moveTowardsCenter(this.creep)
             return
         }
 
@@ -188,7 +193,7 @@ export default {
         const parts = fromBodyPlan(capacity, [CARRY, WORK, MOVE, MOVE])
         return spawn.spawnCreep(
             parts,
-            `${ROLE}:${spawn.room.name}${autoIncrement()}`,
+            `${ROLE}:${spawn.room.name}:${autoIncrement()}`,
             {
                 memory: {
                     role: ROLE,
