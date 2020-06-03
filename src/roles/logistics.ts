@@ -289,7 +289,8 @@ const roleLogistics = {
         return spawnCreep(
             spawn,
             calculateParts(capacity),
-            `${ROLE}:${preference}:${spawn.room.name}:${autoIncrement()}`,
+            `${ROLE}:${preference}`,
+            spawn.room.name,
             {
                 memory: {
                     role: ROLE,

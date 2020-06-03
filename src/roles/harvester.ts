@@ -3,6 +3,7 @@ import includes from 'lodash/includes'
 import { fromBodyPlan, byPartCount, planCost } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
+import { spawnCreep } from 'utils/spawn'
 
 const ROLE = 'harvester'
 
@@ -52,9 +53,12 @@ const roleHarvester = {
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
         const parts = calculateParts(capacity)
-        const err = spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
+        const err = spawnCreep(spawn, parts, ROLE, spawn.room.name, {
             memory: {
                 role: ROLE,
+                home: spawn.room.name,
+                waitTime: 0,
+                tasks: [],
                 source,
             } as HarvesterMemory,
         })

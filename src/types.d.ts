@@ -1,13 +1,16 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
 
+interface SourceMemory extends CreepMemory {
+    source: Id<Source>
+}
+
+interface SourceCreep extends Creep {
+    memory: SourceMemory
+}
+
 interface CreepMemory {
     role: string
     home: string | undefined
-}
-
-interface SourceMemory extends CreepMemory {
-    source: Id<Source>
-    waitTime: number
 }
 
 interface RoomSourceMemory {
@@ -17,10 +20,6 @@ interface RoomSourceMemory {
 
 interface DroppedEnergyMemory {
     pos: FlatRoomPosition
-}
-
-interface SourceCreep extends Creep {
-    memory: SourceMemory
 }
 
 interface ResourceCreepMemory extends CreepMemory {
