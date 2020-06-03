@@ -73,8 +73,41 @@ export function getSources(room: Room): Source[] {
     return room.find<FIND_SOURCES>(FIND_SOURCES)
 }
 
+export function getLinks(room: Room): StructureLink[] {
+    return room.find<FIND_MY_STRUCTURES>(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_LINK },
+    }) as StructureLink[]
+}
+
+export function hasStructureAt(
+    structureType: StructureConstant,
+    room: Room,
+    x: number,
+    y: number,
+): boolean {
+    return (
+        room
+            .lookForAt<LOOK_STRUCTURES>(LOOK_STRUCTURES, x, y)
+            .filter(s => s.structureType === structureType).length > 0
+    )
+}
+
 export function getActiveSources(room: Room): Source[] {
     return room.find<FIND_SOURCES_ACTIVE>(FIND_SOURCES_ACTIVE)
+}
+
+export function getStorage(room: Room): StructureStorage | null {
+    const storages = room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_STORAGE },
+    }) as StructureStorage[]
+    if (storages.length > 0) {
+        return storages[0]
+    }
+    return null
+}
+
+export function hasStorage(room: Room): boolean {
+    return getStorage(room) !== null
 }
 
 export function hasFragileWall(room: Room): boolean {
@@ -156,6 +189,7 @@ export function hasTunnelSite(room: Room): boolean {
             if (site.structureType !== STRUCTURE_ROAD) {
                 return false
             }
+
             const terrain = room.getTerrain()
             return terrain.get(site.pos.x, site.pos.y) === TERRAIN_MASK_WALL
         },

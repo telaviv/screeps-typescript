@@ -1,7 +1,7 @@
 /* eslint no-lonely-if: ["off"] */
 
 import * as TaskRunner from 'tasks/runner'
-import { moveToRoom, recycle } from 'utils/creep'
+import { isAtEdge, moveToRoom, recycle } from 'utils/creep'
 import { profile } from 'utils/profiling'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import {
@@ -72,7 +72,7 @@ export class MasonCreep {
             return
         }
 
-        if (!this.isAtHome()) {
+        if (!this.isAtHome() || isAtEdge(this.creep)) {
             this.goHome()
             return
         }

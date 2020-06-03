@@ -2,7 +2,7 @@ import filter from 'lodash/filter'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import autoIncrement from 'utils/autoincrement'
-import { moveToRoom } from 'utils/creep'
+import { isAtEdge, moveToRoom } from 'utils/creep'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
@@ -71,7 +71,7 @@ const roleLogistics = {
             return
         }
 
-        if (creep.room.name !== creep.memory.home) {
+        if (creep.room.name !== creep.memory.home || isAtEdge(creep)) {
             moveToRoom(creep.memory.home, creep)
             return
         }

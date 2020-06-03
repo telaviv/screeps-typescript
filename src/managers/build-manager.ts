@@ -1,3 +1,5 @@
+import RoomPlanner from 'room-planner'
+import RoomSnapshot from 'snapshot'
 import { stringToInt as hash } from 'utils/hash'
 import pokemon from 'utils/pokemon'
 import every from 'lodash/every'
@@ -10,15 +12,17 @@ import {
     isAtTowerCap,
     isAtSpawnCap,
     hasNoSpawns,
+    hasStorage,
     hasConstructionSite,
     getConstructionSites,
+    getLinks,
     makeConstructionSite,
     makeSpawnConstructionSite,
+    hasStructureAt,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { getDropSpots } from 'utils/managers'
 import { wrap, profile } from 'utils/profiling'
-import RoomSnapshot from 'snapshot'
 
 declare global {
     interface RoomMemory {
@@ -136,6 +140,14 @@ export default class BuildManager {
             return this.buildNextContainer()
         }
 
+        if (this.canBuildStorage()) {
+            return this.buildNextStorage()
+        }
+
+        if (this.canBuildLinks()) {
+            return this.buildNextLink()
+        }
+
         return false
     }
 
@@ -146,7 +158,9 @@ export default class BuildManager {
             this.canBuildSwampRoad() ||
             this.canBuildTower() ||
             this.canBuildContainer() ||
-            this.canBuildSpawn()
+            this.canBuildSpawn() ||
+            this.canBuildStorage() ||
+            this.canBuildLinks()
         )
     }, 'BuildManager:canBuildImportant')
 
@@ -193,6 +207,61 @@ export default class BuildManager {
         }
         return false
     }, 'BuildManager:buildNextContainer')
+
+    private canBuildLinks = wrap(() => {
+        const LINK_LEVELS = [0, 0, 0, 0, 0, 2, 3, 4, 6]
+        const roomPlanner = new RoomPlanner(this.room)
+        const links = getLinks(this.room)
+        return !!(
+            roomPlanner.planIsFinished() &&
+            this.room.controller &&
+            LINK_LEVELS[this.room.controller.level] >= links.length
+        )
+    }, 'BuildManager:canBuildLinks')
+
+    @profile
+    private buildNextLink(): boolean {
+        const roomPlanner = new RoomPlanner(this.room)
+        const controllerLink = roomPlanner.plan.links.controller!
+        if (
+            !hasStructureAt(
+                STRUCTURE_LINK,
+                this.room,
+                controllerLink.x,
+                controllerLink.y,
+            )
+        ) {
+            const { x, y, roomName } = controllerLink
+            const pos = new RoomPosition(x, y, roomName)
+            return makeConstructionSite(pos, STRUCTURE_LINK) === OK
+        }
+        return false
+    }
+
+    private canBuildStorage = wrap(() => {
+        const roomPlanner = new RoomPlanner(this.room)
+        return (
+            this.room.controller &&
+            this.room.controller.level >= 4 &&
+            roomPlanner.storage &&
+            !hasStorage(this.room)
+        )
+    }, 'BuildManager:canBuildStorage')
+
+    private buildNextStorage = wrap((): boolean => {
+        let pos = this.snapshot.getStructurePos(STRUCTURE_STORAGE)
+        if (pos !== null) {
+            Logger.info('build-manager:buildNextStorage:cached', pos)
+        } else {
+            const roomPlanner = new RoomPlanner(this.room)
+            const { x, y, roomName } = roomPlanner.storage!
+            pos = new RoomPosition(x, y, roomName)
+        }
+        if (pos !== null) {
+            return makeConstructionSite(pos, STRUCTURE_STORAGE) === OK
+        }
+        return false
+    }, 'BuildManager:buildNextStorage')
 
     private hasNonWallSite() {
         return hasConstructionSite(this.room, {

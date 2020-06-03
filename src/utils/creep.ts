@@ -24,6 +24,15 @@ export function moveToRoom(roomName: string, creep: Creep) {
     })
 }
 
+export function isAtEdge(creep: Creep) {
+    return (
+        creep.pos.x === 0 ||
+        creep.pos.x === 49 ||
+        creep.pos.y === 0 ||
+        creep.pos.y === 49
+    )
+}
+
 export function recycle(creep: Creep) {
     const spawns = getSpawns(creep.room)
     const spawn = creep.pos.findClosestByPath(spawns)

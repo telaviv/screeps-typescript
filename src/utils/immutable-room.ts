@@ -1,13 +1,27 @@
+/* eslint @typescript-eslint/no-explicit-any: "off" */
+
 import { fromJS, ValueObject, List, Map, Record, RecordOf } from 'immutable'
+import maxBy from 'lodash/maxBy'
+
+import RoomPlanner from 'room-planner'
+import RoomSnapshot from 'snapshot'
 import times from 'lodash/times'
 import range from 'lodash/range'
 import includes from 'lodash/includes'
 import random from 'lodash/random'
+import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 
 type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
+type NonObstacle = 'road' | 'constructionSite' | 'rampart'
 
-type NonObstacleType = 'road' | 'constructionSite' | 'rampart'
+function isObstacle(x: any): x is Obstacle {
+    return OBSTACLE_OBJECT_TYPES.includes(x)
+}
+
+function isNonObstacle(x: any): x is NonObstacle {
+    return ['road', 'constructionSite', 'rampart'].includes(x)
+}
 
 interface NonObstacles {
     road: boolean
@@ -108,7 +122,7 @@ export class ImmutableRoom implements ValueObject {
         return this.setNonObstacle(x, y, 'constructionSite', val)
     }
 
-    setNonObstacle(x: number, y: number, key: NonObstacleType, value: boolean) {
+    setNonObstacle(x: number, y: number, key: NonObstacle, value: boolean) {
         const roomItem = this.get(x, y)
         const nonObstacles = roomItem.get('nonObstacles')
         return this.set(
@@ -218,11 +232,42 @@ export class ImmutableRoom implements ValueObject {
                 return new RoomPosition(roomItem.x, roomItem.y, this.name)
             }
         }
-        throw new Error('No eligible extension spot.')
+        throw new Error('No eligible spawn spot.')
     }
 
     nextStoragePos(): RoomPosition {
-        return this.nextExtensionPos()
+        const centroid = this.findCentroid()
+        for (const roomItem of this.spiral(centroid.x, centroid.y)) {
+            if (this.canPlaceStorage(roomItem)) {
+                return new RoomPosition(roomItem.x, roomItem.y, this.name)
+            }
+        }
+        throw new Error('No eligible storage spot.')
+    }
+
+    controllerLinkPos(): RoomPosition {
+        const room = Game.rooms[this.name]
+        const pos = room.controller!.pos
+        const neighbors = this.getClosestNeighbors(pos.x, pos.y, 3).filter(
+            ri => !ri.isObstacle(),
+        )
+        const { x, y } = maxBy(neighbors, n => this.calculateEmptiness(n, 3))!
+        return new RoomPosition(x, y, this.name)
+    }
+
+    calculateEmptiness = (
+        roomItem: ImmutableRoomItem,
+        rangeLength: number,
+    ): number => {
+        const neighbors = this.getClosestNeighbors(
+            roomItem.x,
+            roomItem.y,
+            rangeLength,
+        )
+        return neighbors.reduce(
+            (acc, val) => (val.isObstacle() ? acc : acc + 1),
+            0,
+        )
     }
 
     private findCentroid(): RoomPosition {
@@ -273,6 +318,19 @@ export class ImmutableRoom implements ValueObject {
         }
         return true
     }
+
+    private canPlaceStorage(roomItem: ImmutableRoomItem): boolean {
+        if (!roomItem.canBuild()) {
+            return false
+        }
+
+        for (const ri of this.getClosestNeighbors(roomItem.x, roomItem.y, 1)) {
+            if (!ri.canBuild()) {
+                return false
+            }
+        }
+        return true
+    }
 }
 
 interface RoomCache {
@@ -283,8 +341,8 @@ interface TimeCache {
 }
 let cache: TimeCache = {}
 
-export const fromRoom = wrap((room: Room, useCache = true): ImmutableRoom => {
-    if (useCache) {
+export const fromRoom = wrap(
+    (room: Room, includeSnapshot = true): ImmutableRoom => {
         if (cache.hasOwnProperty(Game.time)) {
             const timeCache = cache[Game.time]
             if (timeCache.hasOwnProperty(room.name)) {
@@ -294,72 +352,133 @@ export const fromRoom = wrap((room: Room, useCache = true): ImmutableRoom => {
             cache = {}
             cache[Game.time] = {} as RoomCache
         }
+
+        let immutableRoom = new ImmutableRoom(room.name)
+        const terrain = room.getTerrain()
+        for (let x = 0; x < 50; ++x) {
+            for (let y = 0; y < 50; ++y) {
+                const terrainItem = terrain.get(x, y)
+                if (terrainItem !== 0) {
+                    immutableRoom = immutableRoom.setTerrain(x, y, terrainItem)
+                }
+            }
+        }
+
+        interface StructureMap {
+            [index: string]: Obstacle
+        }
+
+        const STRUCTURE_INFO: StructureMap = {
+            [STRUCTURE_EXTENSION]: 'extension',
+            [STRUCTURE_SPAWN]: 'spawn',
+            [STRUCTURE_TOWER]: 'tower',
+            [STRUCTURE_WALL]: 'constructedWall',
+        }
+
+        const controller = room.controller
+        const structures = room.find(FIND_STRUCTURES)
+        const sources = room.find(FIND_SOURCES)
+        const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
+
+        if (controller) {
+            immutableRoom = immutableRoom.setObstacle(
+                controller.pos.x,
+                controller.pos.y,
+                'controller',
+            )
+        }
+
+        for (const structure of structures) {
+            if (
+                includes(Object.keys(STRUCTURE_INFO), structure.structureType)
+            ) {
+                const pos = structure.pos
+                immutableRoom = immutableRoom.setObstacle(
+                    pos.x,
+                    pos.y,
+                    STRUCTURE_INFO[structure.structureType],
+                )
+            } else if (structure.structureType === STRUCTURE_ROAD) {
+                const pos = structure.pos
+                immutableRoom = immutableRoom.setRoad(pos.x, pos.y, true)
+            }
+        }
+
+        for (const source of sources) {
+            const pos = source.pos
+            immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
+        }
+
+        for (const constructionSite of constructionSites) {
+            const pos = constructionSite.pos
+            immutableRoom = immutableRoom.setConstructionSite(
+                pos.x,
+                pos.y,
+                true,
+            )
+        }
+
+        if (includeSnapshot) {
+            immutableRoom = mergeRoomPlan(immutableRoom)
+            immutableRoom = mergeSnapshot(immutableRoom)
+        }
+
+        updateCache(room, immutableRoom)
+
+        return immutableRoom
+    },
+    'immutable-room:fromRoom',
+)
+
+export function mergeRoomPlan(immutableRoom: ImmutableRoom): ImmutableRoom {
+    let iroom = immutableRoom
+    const room = Game.rooms[immutableRoom.name]
+    const roomPlanner = new RoomPlanner(room)
+    if (roomPlanner.storage) {
+        const pos = roomPlanner.storage
+        const roomItem = iroom.get(pos.x, pos.y)
+        if (roomItem.obstacle && roomItem.obstacle !== 'storage') {
+            Logger.warning(
+                'immutable-room:mergeSnapshot:overwrite',
+                pos,
+                'storage',
+            )
+        }
+        iroom = iroom.setObstacle(pos.x, pos.y, 'storage')
     }
-    let immutableRoom = new ImmutableRoom(room.name)
-    const terrain = room.getTerrain()
-    for (let x = 0; x < 50; ++x) {
-        for (let y = 0; y < 50; ++y) {
-            const terrainItem = terrain.get(x, y)
-            if (terrainItem !== 0) {
-                immutableRoom = immutableRoom.setTerrain(x, y, terrainItem)
+    return iroom
+}
+
+export function mergeSnapshot(iroom: ImmutableRoom): ImmutableRoom {
+    const room = Game.rooms[iroom.name]
+    const snapshot = RoomSnapshot.get(room)
+    let niroom = iroom
+
+    for (const [pos, structureTypes] of snapshot.snapshot) {
+        for (const structureType in structureTypes) {
+            if (isObstacle(structureType)) {
+                const existingObstacle = niroom.get(pos.x, pos.y).obstacle
+                if (existingObstacle && existingObstacle !== structureType) {
+                    Logger.warning(
+                        'immutable-room:mergeSnapshot:overwrite',
+                        pos,
+                        structureType,
+                    )
+                }
+                niroom = niroom.setObstacle(pos.x, pos.y, structureType)
+            } else if (isNonObstacle(structureType)) {
+                niroom = niroom.setNonObstacle(
+                    pos.x,
+                    pos.y,
+                    structureType,
+                    true,
+                )
             }
         }
     }
 
-    interface StructureMap {
-        [index: string]: Obstacle
-    }
-
-    const STRUCTURE_INFO: StructureMap = {
-        [STRUCTURE_EXTENSION]: 'extension',
-        [STRUCTURE_SPAWN]: 'spawn',
-        [STRUCTURE_TOWER]: 'tower',
-        [STRUCTURE_WALL]: 'constructedWall',
-    }
-
-    const controller = room.controller
-    const structures = room.find(FIND_STRUCTURES)
-    const sources = room.find(FIND_SOURCES)
-    const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
-
-    if (controller) {
-        immutableRoom = immutableRoom.setObstacle(
-            controller.pos.x,
-            controller.pos.y,
-            'controller',
-        )
-    }
-
-    for (const structure of structures) {
-        if (includes(Object.keys(STRUCTURE_INFO), structure.structureType)) {
-            const pos = structure.pos
-            immutableRoom = immutableRoom.setObstacle(
-                pos.x,
-                pos.y,
-                STRUCTURE_INFO[structure.structureType],
-            )
-        } else if (structure.structureType === STRUCTURE_ROAD) {
-            const pos = structure.pos
-            immutableRoom = immutableRoom.setRoad(pos.x, pos.y, true)
-        }
-    }
-
-    for (const source of sources) {
-        const pos = source.pos
-        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
-    }
-
-    for (const constructionSite of constructionSites) {
-        const pos = constructionSite.pos
-        immutableRoom = immutableRoom.setConstructionSite(pos.x, pos.y, true)
-    }
-
-    if (useCache) {
-        updateCache(room, immutableRoom)
-    }
-
-    return immutableRoom
-}, 'immutable-room:fromRoom')
+    return niroom
+}
 
 export function updateCache(room: Room, immutableRoom: ImmutableRoom) {
     cache[Game.time][room.name] = immutableRoom

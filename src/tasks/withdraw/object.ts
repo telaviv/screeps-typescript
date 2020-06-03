@@ -47,10 +47,12 @@ export class WithdrawObject {
             },
         )
         const tombstones = room.find<FIND_TOMBSTONES>(FIND_TOMBSTONES)
+        const ruins = room.find<FIND_RUINS>(FIND_RUINS)
 
         const structureTargets = structures.map(s => WithdrawObject.get(s.id))
         const tombstoneTargets = tombstones.map(t => WithdrawObject.get(t.id))
-        return structureTargets.concat(tombstoneTargets)
+        const ruinTargets = ruins.map(t => WithdrawObject.get(t.id))
+        return structureTargets.concat(tombstoneTargets, ruinTargets)
     }
 
     resourcesAvailable(resource: ResourceConstant = RESOURCE_ENERGY): number {

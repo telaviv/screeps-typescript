@@ -10,6 +10,7 @@ interface LinkPlan {
     sources: { [sourceId: string]: FlatRoomPosition }
     mineral?: FlatRoomPosition
     storage?: FlatRoomPosition
+    controller?: FlatRoomPosition
 }
 
 interface RoomPlan {
@@ -23,7 +24,7 @@ export default class RoomPlanner {
     constructor(room: Room) {
         this.room = room
         if (!this.plan) {
-            this.room.memory.plan = {
+            this.plan = {
                 links: {
                     sources: {} as { [id: string]: FlatRoomPosition },
                 },
@@ -39,8 +40,16 @@ export default class RoomPlanner {
         return this.room.memory.plan
     }
 
+    set plan(plan: RoomPlan) {
+        this.room.memory.plan = plan
+    }
+
     get links() {
         return this.plan.links
+    }
+
+    get storage() {
+        return this.plan.storage
     }
 
     get sources() {
@@ -60,6 +69,10 @@ export default class RoomPlanner {
         this.links.storage = pos
     }
 
+    setControllerLink(pos: FlatRoomPosition) {
+        this.links.controller = pos
+    }
+
     setStoragePosition(pos: FlatRoomPosition) {
         this.plan.storage = pos
     }
@@ -70,6 +83,7 @@ export default class RoomPlanner {
         return (
             sourceCount === this.sources.length &&
             this.plan.storage &&
+            this.links.controller &&
             Object.keys(this.links.sources).length === sourceCount &&
             this.links.storage
         )

@@ -70,10 +70,12 @@ function planRoom(room: Room) {
     const storageiPos = iroom.nextStoragePos()
     const storagePos = new RoomPosition(storageiPos.x, storageiPos.y, room.name)
     const linkSpot = getLinkSpot(storagePos)
+    const controllerLink = iroom.controllerLinkPos()
 
     const roomPlanner = new RoomPlanner(room)
     roomPlanner.setStoragePosition(storagePos)
     roomPlanner.setStorageLink(linkSpot)
+    roomPlanner.setControllerLink(controllerLink)
 
     if (!roomPlanner.planIsFinished()) {
         throw new Error(`somehow didn't finish the plan for ${room.name}`)
