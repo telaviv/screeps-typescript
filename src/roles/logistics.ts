@@ -267,6 +267,11 @@ const roleLogistics = {
                 creep.name,
                 "couldn't switch from",
                 task,
+                '(',
+                isAtExtensionCap(creep.room),
+                ',',
+                hasTunnelSite(creep.room),
+                ')',
             )
         }
         creep.memory.currentTask = task
