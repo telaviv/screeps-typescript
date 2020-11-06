@@ -41,6 +41,7 @@ interface IImmutableRoomItem {
     terrain: number
     nonObstacles: RecordOf<NonObstacles>
     obstacle: Obstacle | ''
+    roomName: string
 }
 
 const ImmutableRoomItemRecord = Record({
@@ -49,6 +50,7 @@ const ImmutableRoomItemRecord = Record({
     terrain: 0,
     nonObstacles: NonObstaclesRecord(),
     obstacle: '',
+    roomName: '',
 })
 
 export class ImmutableRoomItem extends ImmutableRoomItemRecord
@@ -58,6 +60,7 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
     readonly terrain!: number
     readonly nonObstacles!: RecordOf<NonObstacles>
     readonly obstacle!: Obstacle | ''
+    readonly roomName!: string
 
     isObstacle(): boolean {
         return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
@@ -65,6 +68,18 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord
 
     canBuild(): boolean {
         return !(this.isObstacle() || this.nonObstacles.constructionSite)
+    }
+
+    terrainString(): string {
+        if (this.terrain === 1) {
+            return 'wall'
+        }
+
+        if (this.terrain === 2) {
+            return 'swamp'
+        }
+
+        return 'plain'
     }
 }
 
@@ -80,7 +95,16 @@ export class ImmutableRoom implements ValueObject {
         } else {
             this.grid = fromJS(
                 times(50, x =>
-                    times(50, y => new ImmutableRoomItem({ x, y, terrain: 0 })),
+                    times(
+                        50,
+                        y =>
+                            new ImmutableRoomItem({
+                                x,
+                                y,
+                                roomName: name,
+                                terrain: 0,
+                            }),
+                    ),
                 ),
             )
         }

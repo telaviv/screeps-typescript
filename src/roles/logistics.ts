@@ -1,7 +1,6 @@
 import filter from 'lodash/filter'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
-import autoIncrement from 'utils/autoincrement'
 import { isAtEdge, moveToRoom, moveTowardsCenter } from 'utils/creep'
 import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan } from 'utils/parts'

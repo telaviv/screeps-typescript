@@ -1,5 +1,3 @@
-import { getSources } from 'utils/room'
-
 declare global {
     interface RoomMemory {
         plan: RoomPlan
@@ -78,7 +76,7 @@ export default class RoomPlanner {
     }
 
     planIsFinished(): boolean {
-        const sourceCount = getSources(this.room).length
+        const sourceCount = this.room.find<FIND_SOURCES>(FIND_SOURCES).length
 
         return !!(
             sourceCount === this.sources.length &&

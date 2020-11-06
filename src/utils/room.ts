@@ -5,6 +5,7 @@ import includes from 'lodash/includes'
 import filter from 'lodash/filter'
 import * as Logger from 'utils/logger'
 import { randomElement } from 'utils/utilities'
+import { fromRoom } from 'utils/immutable-room'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
@@ -230,9 +231,28 @@ export function makeConstructionSite(
     }
     const ret = room.createConstructionSite(pos, type)
     if (ret !== OK) {
-        Logger.warning('construction:failed', type, pos, ret)
+        logConstructionFailure(pos, type, ret)
     }
     return ret
+}
+
+function logConstructionFailure(
+    pos: RoomPosition,
+    type: BuildableStructureConstant,
+    ret: ScreepsReturnCode,
+) {
+    const room = Game.rooms[pos.roomName]
+    const iroom = fromRoom(room)
+    const roomItem = iroom.get(pos.x, pos.y)
+    Logger.warning(
+        'construction:failed',
+        type,
+        pos,
+        ret,
+        roomItem.terrainString(),
+        roomItem.obstacle,
+        roomItem.roomName,
+    )
 }
 
 export function makeSpawnConstructionSite(pos: RoomPosition, name?: string) {
