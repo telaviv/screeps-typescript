@@ -393,6 +393,8 @@ export const fromRoom = wrap(
         }
 
         const STRUCTURE_INFO: StructureMap = {
+            [STRUCTURE_LINK]: 'link',
+            [STRUCTURE_STORAGE]: 'storage',
             [STRUCTURE_EXTENSION]: 'extension',
             [STRUCTURE_SPAWN]: 'spawn',
             [STRUCTURE_TOWER]: 'tower',
