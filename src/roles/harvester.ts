@@ -4,13 +4,14 @@ import { fromBodyPlan, byPartCount, planCost } from 'utils/parts'
 import { profile } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { spawnCreep } from 'utils/spawn'
+import { isFullOfEnergy } from 'utils/energy-harvesting'
 
 const ROLE = 'harvester'
 
 const BODY_PLANS = [
-    byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 16 }),
     byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 8 }),
     byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 4 }),
+    byPartCount({ [MOVE]: 8, [WORK]: 8, [CARRY]: 2 }),
     byPartCount({ [MOVE]: 7, [WORK]: 7, [CARRY]: 2 }),
     byPartCount({ [MOVE]: 5, [WORK]: 5 }),
 ]
@@ -35,21 +36,27 @@ export class HarvesterCreep {
         if (this.creep.spawning) {
             return
         }
-        const sourceMemory = this.getSourceMemory()
-        const source = Game.getObjectById(sourceMemory.id) as Source
-        if (this.isAtHarvestPos()) {
-            const err = this.creep.harvest(source)
-            if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
-                Logger.warning(
-                    'harvester:harvest:failure',
-                    this.creep.name,
-                    "couldn't harvest",
-                    err,
-                )
-            }
-        } else {
-            this.moveToHarvestPos()
+
+        if (this.canTransferEnergy()) {
+            this.transferEnergyToLink()
+            return
         }
+
+        if (!this.isAtHarvestPos()) {
+            this.moveToHarvestPos()
+            return
+        }
+
+        this.harvestSource()
+    }
+
+    get harvestPos() {
+        const sourceMemory = this.getSourceMemory()
+        return sourceMemory.dropSpot.pos
+    }
+
+    get room() {
+        return this.creep.room
     }
 
     getSourceMemory() {
@@ -63,11 +70,6 @@ export class HarvesterCreep {
         return sourceMemory
     }
 
-    get harvestPos() {
-        const sourceMemory = this.getSourceMemory()
-        return sourceMemory.dropSpot.pos
-    }
-
     isAtHarvestPos() {
         return (
             this.creep.pos.x === this.harvestPos.x &&
@@ -79,6 +81,62 @@ export class HarvesterCreep {
         this.creep.moveTo(this.harvestPos.x, this.harvestPos.y, {
             visualizePathStyle: { stroke: '#ffaa00' },
         })
+    }
+
+    harvestSource() {
+        const sourceMemory = this.getSourceMemory()
+        const source = Game.getObjectById(sourceMemory.id) as Source
+        const err = this.creep.harvest(source)
+        if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
+            Logger.warning(
+                'harvester:harvest:failure',
+                this.creep.name,
+                "couldn't harvest",
+                err,
+            )
+        }
+    }
+
+    canTransferEnergy() {
+        return (
+            this.creep.getActiveBodyparts(CARRY) > 5 &&
+            this.hasLink() &&
+            this.linkHasCapacity() &&
+            this.isFullOfEnergy()
+        )
+    }
+
+    transferEnergyToLink() {
+        this.creep.transfer(this.getLink()!, RESOURCE_ENERGY)
+    }
+
+    isFullOfEnergy() {
+        return isFullOfEnergy(this.creep)
+    }
+
+    linkHasCapacity() {
+        const link = this.getLink()!
+        return link.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+    }
+
+    getLink() {
+        const linkPos = this.room.memory.plan.links.sources[
+            this.creep.memory.source
+        ]
+
+        const links = this.room
+            .lookForAt<LOOK_STRUCTURES>(LOOK_STRUCTURES, linkPos.x, linkPos.y)
+            .filter(s => s.structureType === STRUCTURE_LINK) as StructureLink[]
+
+        if (links.length === 0) {
+            return null
+        }
+
+        return links[0]
+    }
+
+    hasLink() {
+        return this.getLink() !== null
     }
 }
 
