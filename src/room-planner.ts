@@ -29,6 +29,16 @@ export default class RoomPlanner {
             }
         }
 
+        if (!this.plan.links) {
+            this.plan.links = {
+                sources: {} as { [id: string]: FlatRoomPosition },
+            }
+        }
+
+        if (!this.plan.links.sources) {
+            this.plan.links.sources = {} as { [id: string]: FlatRoomPosition }
+        }
+
         if (!this.room.memory.sources) {
             this.room.memory.sources = [] as RoomSourceMemory[]
         }
@@ -79,8 +89,11 @@ export default class RoomPlanner {
         const sourceCount = this.room.find<FIND_SOURCES>(FIND_SOURCES).length
 
         return !!(
+            this.sources &&
             sourceCount === this.sources.length &&
             this.plan.storage &&
+            this.links &&
+            this.links.sources &&
             this.links.controller &&
             Object.keys(this.links.sources).length === sourceCount &&
             this.links.storage
