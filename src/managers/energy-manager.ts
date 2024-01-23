@@ -24,11 +24,11 @@ export default class EnergyManager {
         return new EnergyManager(sources)
     }
 
-    static get(room: Room): EnergyManager {
+    public static get(room: Room): EnergyManager {
         return EnergyManager.create(room.memory)
     }
 
-    hasEnoughHaulers(): boolean {
+    private hasEnoughHaulers(): boolean {
         let creeps: Creep[] = []
         for (const source of this.sources) {
             creeps = creeps.concat(source.creeps)
@@ -45,7 +45,7 @@ export default class EnergyManager {
         return haulerCount >= this.sources.length
     }
 
-    forceSourceAssignment(role: string): Id<Source> {
+    public forceSourceAssignment(role: string): Id<Source> {
         const sourceCounts = this.getSourceCounts(role)
         return minBy(Array.from(sourceCounts.keys()), (id) =>
             // eslint-disable-next-line @typescript-eslint/indent

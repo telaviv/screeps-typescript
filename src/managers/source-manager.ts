@@ -20,7 +20,7 @@ export default class SourceManager {
 
     static create(memory: RoomSourceMemory) {
         const droppedEnergy = DroppedEnergyManager.get(memory.dropSpot)
-        const creeps = filter(Game.creeps, (creep) => {
+        const creeps = filter(Game.creeps, (creep: Creep) => {
             if (!creep.memory.hasOwnProperty('source')) {
                 return false
             }
@@ -45,19 +45,19 @@ export default class SourceManager {
         return SourceManager.get(sourceMemory)
     }
 
-    hasStaticHarvester(): boolean {
+    public hasStaticHarvester(): boolean {
         const harvesters = this.creeps.filter(
             (creep) => creep.memory.role === 'harvester',
         )
         return some(
             harvesters,
-            (harvester) =>
+            (harvester: Creep) =>
                 harvester.pos.x === this.droppedEnergy.pos.x &&
                 harvester.pos.y === this.droppedEnergy.pos.y,
         )
     }
 
-    isContainerMining(): boolean {
+    public isContainerMining(): boolean {
         return this.droppedEnergy.getContainer() !== null
     }
 }

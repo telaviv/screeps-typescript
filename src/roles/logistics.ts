@@ -278,7 +278,7 @@ const roleLogistics = {
 
     requestedCarryCapacity(spawn: StructureSpawn) {
         const parts = calculateParts(spawn.room.energyCapacityAvailable)
-        const carrys = filter(parts, (p) => p === CARRY)
+        const carrys = filter(parts, (p: BodyPartConstant) => p === CARRY)
         return carrys.length * 50
     },
 

@@ -79,7 +79,7 @@ function planRoom(room: Room) {
 }
 
 const assignRoomFeatures = () => {
-    each(Game.rooms, (room) => {
+    each(Game.rooms, (room: Room) => {
         if (room.controller && room.controller.my && !hasNoSpawns(room)) {
             const roomPlanner = new RoomPlanner(room)
             if (!roomPlanner.planIsFinished()) {

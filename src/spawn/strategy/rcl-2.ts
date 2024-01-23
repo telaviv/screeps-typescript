@@ -31,7 +31,7 @@ const REMOTE_UPGRADE_COUNT = 1
 const REMOTE_BUILD_COUNT = 2
 
 function getCreeps(role: string, room: Room) {
-    return filter(Object.keys(Memory.creeps), (creepName) => {
+    return filter(Object.keys(Memory.creeps), (creepName: string) => {
         const creep = Game.creeps[creepName]
         return (
             creep &&
@@ -43,7 +43,7 @@ function getCreeps(role: string, room: Room) {
 }
 
 function getLogisticsCreeps(preference: LogisticsPreference, room: Room) {
-    return filter(Object.keys(Memory.creeps), (creepName) => {
+    return filter(Object.keys(Memory.creeps), (creepName: string) => {
         const creep = Game.creeps[creepName] as LogisticsCreep
         return (
             creep &&
@@ -68,6 +68,7 @@ export default function (spawn: StructureSpawn) {
     const masons = getCreeps('mason', room)
     const energyManager = EnergyManager.get(spawn.room)
     const energySourceManager = new EnergySourceManager(room)
+    // total energy on the floor or withdrawable buildings
     const energyAvailable = energySourceManager.energyAvailable()
     const warDepartment = new WarDepartment(spawn.room)
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
@@ -85,7 +86,7 @@ export default function (spawn: StructureSpawn) {
     }
 
     const request = roleLogistics.requestedCarryCapacity(spawn)
-    if (energyAvailable < Math.min(request * 3, 0.95 * CONTAINER_CAPACITY)) {
+    if (energyAvailable < Math.min(request * 3, 0.95 * spawn.room.energyCapacityAvailable)) {
         return
     }
 

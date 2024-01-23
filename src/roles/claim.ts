@@ -4,6 +4,7 @@ import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
+import EnergySourceManager from 'managers/energy-source-manager'
 
 const ROLE = 'claimer'
 
@@ -54,11 +55,12 @@ const roleClaimer = {
     }, 'runClaimer'),
 
     create(spawn: StructureSpawn, roomName: string, minimal = false): number {
+        const energyAvailable = EnergySourceManager.getEnergyAvailable(spawn.room)
         let parts
         if (minimal) {
             parts = [CLAIM, MOVE]
         } else {
-            parts = calculateParts(spawn.room.energyCapacityAvailable)
+            parts = calculateParts(energyAvailable)
         }
         const err = spawn.spawnCreep(parts, `${ROLE}:${autoIncrement()}`, {
             memory: {
@@ -67,6 +69,9 @@ const roleClaimer = {
                 roomName,
             } as ClaimerMemory,
         })
+        if (err === ERR_NOT_ENOUGH_ENERGY) {
+            Logger.warning('claimer:create:failed', spawn.room.name, parts, energyAvailable)
+        }
         return err
     },
 }

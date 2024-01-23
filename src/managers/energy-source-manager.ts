@@ -8,7 +8,11 @@ export default class EnergySourceManager {
         this.room = room
     }
 
-    energyAvailable() {
+    /**
+     * Calculates the total amount of available energy from pickups and withdrawals in the room.
+     * @returns The total amount of available energy.
+     */
+    public energyAvailable() {
         const resourceSum = (acc: number, val: WithdrawObject | PickupTarget) =>
             acc + val.resourcesAvailable(RESOURCE_ENERGY)
 
@@ -17,5 +21,15 @@ export default class EnergySourceManager {
         const pickupEnergy = pickups.reduce(resourceSum, 0)
         const withdrawEnergy = withdrawals.reduce(resourceSum, 0)
         return pickupEnergy + withdrawEnergy
+    }
+
+    /**
+     * Retrieves the available energy in the specified room.
+     *
+     * @param room - The room to get the energy from.
+     * @returns The amount of available energy in the room.
+     */
+    static getEnergyAvailable(room: Room) {
+        return new EnergySourceManager(room).energyAvailable();
     }
 }
