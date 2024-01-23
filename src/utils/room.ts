@@ -111,6 +111,13 @@ export function hasStorage(room: Room): boolean {
     return getStorage(room) !== null
 }
 
+export function hasOwnFragileWall(room: Room): boolean {
+    const walls = room.find(FIND_MY_STRUCTURES, {
+        filter: isFragileWall,
+    })
+    return walls.length > 0
+}
+
 export function hasFragileWall(room: Room): boolean {
     const walls = room.find(FIND_STRUCTURES, {
         filter: isFragileWall,
@@ -124,6 +131,19 @@ export function hasWeakWall(room: Room): boolean {
     })
     return walls.length > 0
 }
+
+export function getOwnWeakestWall(
+    room: Room,
+): StructureWall | StructureRampart | null {
+    const walls = room.find<StructureWall | StructureRampart>(FIND_MY_STRUCTURES, {
+        filter: isWeakWall,
+    })
+    if (walls.length === 0) {
+        return null
+    }
+    return minBy(walls, 'hits')!
+}
+
 
 export function getWeakestWall(
     room: Room,

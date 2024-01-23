@@ -17,19 +17,19 @@ const FlatRoomPositionRecord = Record<FlatRoomPosition>({
 type ImmutableSnapshot = Map<RecordOf<FlatRoomPosition>, Set<StructureConstant>>
 
 export default class RoomSnapshot {
-    readonly roomName: string
-    snapshot: ImmutableSnapshot
+    public readonly roomName: string
+    public snapshot: ImmutableSnapshot
 
-    constructor(snapshot: ImmutableSnapshot, roomName: string) {
+    public constructor(snapshot: ImmutableSnapshot, roomName: string) {
         this.roomName = roomName
         this.snapshot = snapshot
     }
 
-    get room(): Room {
+    public get room(): Room {
         return Game.rooms[this.roomName]
     }
 
-    getStructurePos(
+    public getStructurePos(
         testStructureType: BuildableStructureConstant,
         filter?: (pos: RoomPosition) => boolean,
     ): RoomPosition | null {
@@ -55,11 +55,14 @@ export default class RoomSnapshot {
         return null
     }
 
-    hasStructure(structureType: BuildableStructureConstant) {
+    public hasStructure(structureType: BuildableStructureConstant) {
         return this.getStructurePos(structureType) !== null
     }
 
-    addStructure(structureType: StructureConstant, pos: FlatRoomPosition) {
+    public addStructure(
+        structureType: StructureConstant,
+        pos: FlatRoomPosition,
+    ) {
         const immPos = new FlatRoomPositionRecord({
             x: pos.x,
             y: pos.y,
@@ -74,7 +77,7 @@ export default class RoomSnapshot {
         this.snapshot = this.snapshot.set(immPos, structureSet)
     }
 
-    loadFromRoom() {
+    public loadFromRoom() {
         this.loadFromFlags()
         const structures = this.room.find(FIND_STRUCTURES)
         for (const structure of structures) {
@@ -82,7 +85,7 @@ export default class RoomSnapshot {
         }
     }
 
-    loadFromFlags() {
+    public loadFromFlags() {
         for (const flag of getConstructionFlags(this.room)) {
             const structureType = STRUCTURE_COLORS.get(
                 flag.color,
@@ -92,7 +95,7 @@ export default class RoomSnapshot {
         }
     }
 
-    saveToMemory() {
+    public saveToMemory() {
         const snapshotMemory = []
         for (const [pos, structureTypes] of this.snapshot) {
             for (const structureType of structureTypes) {
@@ -103,15 +106,15 @@ export default class RoomSnapshot {
         updateCache(this.room, this)
     }
 
-    reset() {
+    public reset() {
         this.snapshot = Map()
     }
 
-    static create = wrap((room: Room): RoomSnapshot => {
+    public static create = wrap((room: Room): RoomSnapshot => {
         const snapshotMemory = room.memory.snapshot
         const snapshot = new RoomSnapshot(Map(), room.name)
         if (!snapshotMemory) {
-            return snapshot;
+            return snapshot
         }
         for (const { pos, structureType } of snapshotMemory) {
             snapshot.addStructure(structureType, pos)
@@ -120,7 +123,7 @@ export default class RoomSnapshot {
     }, 'RoomSnapshot:create')
 
     @profile
-    static get(room: Room): RoomSnapshot {
+    public static get(room: Room): RoomSnapshot {
         if (!cache.hasOwnProperty(room.name)) {
             const snapshot = RoomSnapshot.create(room)
             updateCache(room, snapshot)

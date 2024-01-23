@@ -7,8 +7,8 @@ import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import {
     getConstructionSites,
-    getWeakestWall,
-    hasFragileWall,
+    getOwnWeakestWall,
+    hasOwnFragileWall,
     hasTunnelSite,
     isAtExtensionCap,
 } from 'utils/room'
@@ -124,7 +124,7 @@ const roleLogistics = {
             memory.currentTask = TASK_HAULING
         } else if (buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING
-        } else if (hasFragileWall(creep.room)) {
+        } else if (hasOwnFragileWall(creep.room)) {
             memory.currentTask = TASK_WALL_REPAIRS
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
             memory.currentTask = TASK_REPAIRING
@@ -181,7 +181,7 @@ const roleLogistics = {
         }
 
         if (structure === null) {
-            structure = getWeakestWall(creep.room)
+            structure = getOwnWeakestWall(creep.room)
         }
 
         if (structure === null || structure.hits === structure.hitsMax) {
@@ -253,7 +253,7 @@ const roleLogistics = {
         let task = creep.memory.currentTask
         if (!isAtExtensionCap(creep.room) || hasTunnelSite(creep.room)) {
             task = TASK_BUILDING
-        } else if (hasFragileWall(creep.room)) {
+        } else if (hasOwnFragileWall(creep.room)) {
             task = TASK_WALL_REPAIRS
         } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
             task = TASK_REPAIRING

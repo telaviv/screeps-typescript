@@ -37,13 +37,10 @@ export class TransferStructure {
         resource: ResourceConstant = RESOURCE_ENERGY,
     ): number {
         if (this.structure.store === null) {
-            return 0;
+            return 0
         }
-        const capacity = this.structure.store.getFreeCapacity(resource) || 0;
-        return (
-            capacity -
-            this.sumOfTransfers(resource)
-        )
+        const capacity = this.structure.store.getFreeCapacity(resource) || 0
+        return capacity - this.sumOfTransfers(resource)
     }
 
     public makeRequest(

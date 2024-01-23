@@ -56,7 +56,8 @@ const ImmutableRoomItemRecord = Record({
 
 export class ImmutableRoomItem
     extends ImmutableRoomItemRecord
-    implements IImmutableRoomItem {
+    implements IImmutableRoomItem
+{
     public readonly x!: number
     public readonly y!: number
     public readonly terrain!: number
@@ -125,7 +126,7 @@ export class ImmutableRoom implements ValueObject {
     }
 
     public get(x: number, y: number): ImmutableRoomItem {
-        return this.grid.getIn([x, y]) as ImmutableRoomItem;
+        return this.grid.getIn([x, y]) as ImmutableRoomItem
     }
 
     public set(x: number, y: number, item: ImmutableRoomItem): ImmutableRoom {
