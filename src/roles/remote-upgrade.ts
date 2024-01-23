@@ -143,7 +143,7 @@ export default {
                 home: spawn.room.name,
                 destination,
                 tasks: [],
-                waitTime: 0,
+                idleTimestamp: null,
             } as RemoteUpgradeMemory,
         })
     },

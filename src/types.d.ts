@@ -24,7 +24,7 @@ interface DroppedEnergyMemory {
 
 interface ResourceCreepMemory extends CreepMemory {
     tasks: Task<any>[]
-    waitTime: number
+    idleTimestamp: number | null
 }
 
 interface ResourceCreep extends Creep {

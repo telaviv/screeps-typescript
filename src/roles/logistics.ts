@@ -3,7 +3,7 @@ import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import { isAtEdge, moveToRoom, moveTowardsCenter } from 'utils/creep'
 import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { fromBodyPlan } from 'utils/parts'
+import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import {
     getConstructionSites,
@@ -52,6 +52,8 @@ const PREFERENCE_EMOJIS = {
     [PREFERENCE_WORKER]: '👷',
 }
 
+const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
+
 const roleLogistics = {
     run: wrap((creep: LogisticsCreep) => {
         // remove this
@@ -61,11 +63,11 @@ const roleLogistics = {
 
         roleLogistics.updateMemory(creep)
         roleLogistics.say(creep)
-        if (creep.memory.waitTime > SLEEP_SAY_TIME) {
+        if (roleLogistics.idleTime(creep) > SLEEP_SAY_TIME) {
             creep.say('😴')
         }
 
-        if (creep.memory.waitTime > SUICIDE_TIME) {
+        if (roleLogistics.idleTime(creep) > SUICIDE_TIME) {
             creep.suicide()
             return
         }
@@ -109,10 +111,10 @@ const roleLogistics = {
             } else {
                 memory.currentTask = memory.preference
             }
-            memory.waitTime = 0
+            memory.idleTimestamp = null
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
             memory.currentTask = TASK_COLLECTING
-            memory.waitTime = 0
+            memory.idleTimestamp = null
             delete memory.currentTarget
         }
     }, 'logistics:updateMemory'),
@@ -138,6 +140,14 @@ const roleLogistics = {
         const preference = PREFERENCE_EMOJIS[memory.preference]
         const currentTask = TASK_EMOJIS[memory.currentTask]
         creep.say(`${preference} ${currentTask}`)
+    },
+
+    idleTime(creep: LogisticsCreep): number {
+        return Game.time - (creep.memory.idleTimestamp || Game.time)
+    },
+
+    unidle(creep: ResourceCreep) {
+        creep.memory.idleTimestamp = null;
     },
 
     build: wrap((creep: LogisticsCreep) => {
@@ -289,7 +299,7 @@ const roleLogistics = {
     ): number {
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
-            : spawn.room.energyCapacityAvailable
+            : spawn.room.energyAvailable
         return spawnCreep(
             spawn,
             calculateParts(capacity),
@@ -302,16 +312,27 @@ const roleLogistics = {
                     preference,
                     currentTask: TASK_COLLECTING,
                     currentTarget: undefined,
-                    waitTime: 0,
+                    idleTimestamp: null,
                     tasks: [],
                 } as LogisticsMemory,
             },
         )
     },
+
+    canCreate(capacity: number): boolean {
+        return fromBodyPlanSafe(capacity, BODY_PLAN_UNIT) !== null
+    },
 }
 
+/**
+ * Checks if a creep can spawn with the given energy capacity
+ * @param capacity total energy capacity
+ * @returns true if the creep can be spawned.
+ */
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan(capacity, [WORK, CARRY, MOVE, MOVE])
+    const plan = fromBodyPlan(capacity, BODY_PLAN_UNIT)
+    Logger.debug('logistics:calculateParts', JSON.stringify(plan), capacity)
+    return plan
 }
 
 export default roleLogistics

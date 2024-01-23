@@ -199,7 +199,7 @@ export default {
                     role: ROLE,
                     home: spawn.room.name,
                     tasks: [],
-                    waitTime: 0,
+                    idleTimestamp: null,
                     repairTarget: null,
                 } as MasonMemory,
             },

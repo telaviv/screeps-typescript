@@ -4,12 +4,12 @@ import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
 import { getActiveSources } from 'utils/room'
 import { randomElement } from 'utils/utilities'
+import roleLogistics from 'roles/logistics'
 
 export function harvestEnergy(creep: ResourceCreep) {
     const sources = getActiveSources(creep.room)
     const source = creep.pos.findClosestByPath(sources)
     if (!source) {
-        creep.memory.waitTime += 1
         wander(creep)
     } else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
         creep.moveTo(source, {
@@ -17,7 +17,7 @@ export function harvestEnergy(creep: ResourceCreep) {
             range: 1,
         })
     } else {
-        creep.memory.waitTime = 0
+        roleLogistics.unidle(creep);
     }
 }
 

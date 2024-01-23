@@ -135,15 +135,17 @@ export function hasWeakWall(room: Room): boolean {
 export function getOwnWeakestWall(
     room: Room,
 ): StructureWall | StructureRampart | null {
-    const walls = room.find<StructureWall | StructureRampart>(FIND_MY_STRUCTURES, {
-        filter: isWeakWall,
-    })
+    const walls = room.find<StructureWall | StructureRampart>(
+        FIND_MY_STRUCTURES,
+        {
+            filter: isWeakWall,
+        },
+    )
     if (walls.length === 0) {
         return null
     }
     return minBy(walls, 'hits')!
 }
-
 
 export function getWeakestWall(
     room: Room,

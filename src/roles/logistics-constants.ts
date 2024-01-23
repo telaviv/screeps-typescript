@@ -21,6 +21,7 @@ export interface LogisticsCreep extends Creep {
 
 export interface LogisticsMemory extends ResourceCreepMemory {
     role: string
+    idleTimestamp: number | null
     preference: LogisticsPreference
     currentTask: LogisticsTask
     currentTarget: Id<Structure> | undefined

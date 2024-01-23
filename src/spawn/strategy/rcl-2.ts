@@ -17,7 +17,6 @@ import {
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
 import EnergyManager from 'managers/energy-manager'
-import EnergySourceManager from 'managers/energy-source-manager'
 
 const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
@@ -29,6 +28,7 @@ const CLAIMERS_COUNT = 3
 const ATTACKERS_COUNT = 1
 const REMOTE_UPGRADE_COUNT = 1
 const REMOTE_BUILD_COUNT = 2
+const MAX_WORKER_COUNT = 5
 
 function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), (creepName: string) => {
@@ -67,9 +67,6 @@ export default function (spawn: StructureSpawn) {
     const harvesters = getCreeps('harvester', room)
     const masons = getCreeps('mason', room)
     const energyManager = EnergyManager.get(spawn.room)
-    const energySourceManager = new EnergySourceManager(room)
-    // total energy on the floor or withdrawable buildings
-    const energyAvailable = energySourceManager.energyAvailable()
     const warDepartment = new WarDepartment(spawn.room)
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
@@ -86,22 +83,35 @@ export default function (spawn: StructureSpawn) {
     }
 
     const request = roleLogistics.requestedCarryCapacity(spawn)
-    if (energyAvailable < Math.min(request * 3, 0.95 * spawn.room.energyCapacityAvailable)) {
+    if (
+        room.energyAvailable <
+        Math.min(request * 3, 0.95 * spawn.room.energyCapacityAvailable)
+    ) {
         return
     }
 
-    if (haulers.length < 1) {
-        roleLogistics.create(spawn, TASK_HAULING)
-    } else if (workers.length < 1) {
-        roleLogistics.create(spawn, PREFERENCE_WORKER)
-    } else if (upgraders.length < UPGRADERS_COUNT) {
-        roleLogistics.create(spawn, TASK_UPGRADING)
-    } else if (builders.length < BUILDERS_COUNT) {
-        roleLogistics.create(spawn, TASK_BUILDING)
-    } else if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
+    if (roleLogistics.canCreate(spawn.room.energyAvailable)) {
+        if (haulers.length < 1) {
+            roleLogistics.create(spawn, TASK_HAULING)
+            return
+        } else if (workers.length < 1) {
+            roleLogistics.create(spawn, PREFERENCE_WORKER)
+            return
+        } else if (upgraders.length < UPGRADERS_COUNT) {
+            roleLogistics.create(spawn, TASK_UPGRADING)
+            return
+        } else if (builders.length < BUILDERS_COUNT) {
+            roleLogistics.create(spawn, TASK_BUILDING)
+            return
+        }
+    }
+
+    if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
         roleMason.create(spawn)
-    } else {
+        return
+    } else if (roleLogistics.canCreate(spawn.room.energyAvailable) && workers.length < MAX_WORKER_COUNT) {
         roleLogistics.create(spawn, PREFERENCE_WORKER)
+        return
     }
 }
 

@@ -45,7 +45,7 @@ export function fromBodyPlanSafe(
     fixed: BodyPartConstant[] = [],
 ) {
     const parts = fromBodyPlan(capacity, plan, fixed)
-    if (planCost(parts) > capacity) {
+    if (planCost(parts) > capacity || parts.length === 0) {
         return null
     }
     return parts
