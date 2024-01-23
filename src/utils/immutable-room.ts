@@ -1,6 +1,7 @@
 /* eslint @typescript-eslint/no-explicit-any: "off" */
+/* eslint no-prototype-builtins: "off" */
 
-import { fromJS, ValueObject, List, Map, Record, RecordOf } from 'immutable'
+import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
 import maxBy from 'lodash/maxBy'
 
 import RoomPlanner from 'room-planner'
@@ -12,7 +13,7 @@ import random from 'lodash/random'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 
-type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
+type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
 type NonObstacle = 'road' | 'constructionSite' | 'rampart'
 
 function isObstacle(x: any): x is Obstacle {
@@ -53,24 +54,25 @@ const ImmutableRoomItemRecord = Record({
     roomName: '',
 })
 
-export class ImmutableRoomItem extends ImmutableRoomItemRecord
+export class ImmutableRoomItem
+    extends ImmutableRoomItemRecord
     implements IImmutableRoomItem {
-    readonly x!: number
-    readonly y!: number
-    readonly terrain!: number
-    readonly nonObstacles!: RecordOf<NonObstacles>
-    readonly obstacle!: Obstacle | ''
-    readonly roomName!: string
+    public readonly x!: number
+    public readonly y!: number
+    public readonly terrain!: number
+    public readonly nonObstacles!: RecordOf<NonObstacles>
+    public readonly obstacle!: Obstacle | ''
+    public readonly roomName!: string
 
-    isObstacle(): boolean {
+    public isObstacle(): boolean {
         return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
     }
 
-    canBuild(): boolean {
+    public canBuild(): boolean {
         return !(this.isObstacle() || this.nonObstacles.constructionSite)
     }
 
-    terrainString(): string {
+    public terrainString(): string {
         if (this.terrain === 1) {
             return 'wall'
         }
@@ -87,66 +89,81 @@ type RoomGrid = List<List<ImmutableRoomItem>>
 
 export class ImmutableRoom implements ValueObject {
     private readonly grid: RoomGrid
-    readonly name: string
+    public readonly name: string
 
-    constructor(name: string, grid?: RoomGrid) {
+    public constructor(name: string, grid?: RoomGrid) {
         if (grid) {
             this.grid = grid
         } else {
-            this.grid = fromJS(
-                times(50, x =>
-                    times(
-                        50,
-                        y =>
-                            new ImmutableRoomItem({
-                                x,
-                                y,
-                                roomName: name,
-                                terrain: 0,
-                            }),
-                    ),
+            this.grid = Seq(
+                times(50, (x: number) =>
+                    Seq(
+                        times(
+                            50,
+                            (y: number) =>
+                                new ImmutableRoomItem({
+                                    x,
+                                    y,
+                                    roomName: name,
+                                    terrain: 0,
+                                }),
+                        ),
+                    ).toList(),
                 ),
-            )
+            ).toList()
         }
         this.name = name
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    equals(other: any): boolean {
+    public equals(other: any): boolean {
         return this.grid.equals(other)
     }
 
-    hashCode(): number {
+    public hashCode(): number {
         return Map({ name: this.name, grid: this.grid }).hashCode()
     }
 
-    get(x: number, y: number): ImmutableRoomItem {
-        return this.grid.getIn([x, y])
+    public get(x: number, y: number): ImmutableRoomItem {
+        return this.grid.getIn([x, y]) as ImmutableRoomItem;
     }
 
-    set(x: number, y: number, item: ImmutableRoomItem): ImmutableRoom {
+    public set(x: number, y: number, item: ImmutableRoomItem): ImmutableRoom {
         return new ImmutableRoom(this.name, this.grid.setIn([x, y], item))
     }
 
-    setTerrain(x: number, y: number, terrain: number): ImmutableRoom {
+    public setTerrain(x: number, y: number, terrain: number): ImmutableRoom {
         const roomItem = this.get(x, y)
         return this.set(x, y, roomItem.set('terrain', terrain))
     }
 
-    setObstacle(x: number, y: number, obstacle: Obstacle): ImmutableRoom {
+    public setObstacle(
+        x: number,
+        y: number,
+        obstacle: Obstacle,
+    ): ImmutableRoom {
         const roomItem = this.get(x, y)
         return this.set(x, y, roomItem.set('obstacle', obstacle))
     }
 
-    setRoad(x: number, y: number, val: boolean): ImmutableRoom {
+    public setRoad(x: number, y: number, val: boolean): ImmutableRoom {
         return this.setNonObstacle(x, y, 'road', val)
     }
 
-    setConstructionSite(x: number, y: number, val: boolean): ImmutableRoom {
+    public setConstructionSite(
+        x: number,
+        y: number,
+        val: boolean,
+    ): ImmutableRoom {
         return this.setNonObstacle(x, y, 'constructionSite', val)
     }
 
-    setNonObstacle(x: number, y: number, key: NonObstacle, value: boolean) {
+    public setNonObstacle(
+        x: number,
+        y: number,
+        key: NonObstacle,
+        value: boolean,
+    ) {
         const roomItem = this.get(x, y)
         const nonObstacles = roomItem.get('nonObstacles')
         return this.set(
@@ -156,9 +173,12 @@ export class ImmutableRoom implements ValueObject {
         )
     }
 
-    getRandomWalkablePosition(x: number, y: number): RoomPosition | null {
+    public getRandomWalkablePosition(
+        x: number,
+        y: number,
+    ): RoomPosition | null {
         const neighbors = this.getClosestNeighbors(x, y)
-        const walkableNeighbors = neighbors.filter(pos => !pos.isObstacle())
+        const walkableNeighbors = neighbors.filter((pos) => !pos.isObstacle())
         console.log(
             'walkable neighbors',
             x,
@@ -173,7 +193,11 @@ export class ImmutableRoom implements ValueObject {
         return new RoomPosition(roomItem.x, roomItem.y, this.name)
     }
 
-    getClosestNeighbors(x: number, y: number, r = 1): ImmutableRoomItem[] {
+    public getClosestNeighbors(
+        x: number,
+        y: number,
+        r = 1,
+    ): ImmutableRoomItem[] {
         const neighbors = []
         for (let nx = Math.max(0, x - r); nx <= Math.min(50, x + r); ++nx) {
             for (let ny = Math.max(0, y - r); ny <= Math.min(50, y + r); ++ny) {
@@ -185,7 +209,7 @@ export class ImmutableRoom implements ValueObject {
         return neighbors
     }
 
-    getCardinalNeighbors = function*(
+    public getCardinalNeighbors = function* (
         this: ImmutableRoom,
         x: number,
         y: number,
@@ -205,7 +229,7 @@ export class ImmutableRoom implements ValueObject {
         }
     }
 
-    spiral = function*(
+    public spiral = function* (
         this: ImmutableRoom,
         x: number,
         y: number,
@@ -235,7 +259,7 @@ export class ImmutableRoom implements ValueObject {
         }
     }
 
-    nextExtensionPos(): RoomPosition {
+    public nextExtensionPos(): RoomPosition {
         const centroid = this.findCentroid()
         for (const roomItem of this.spiral(centroid.x, centroid.y)) {
             if (this.canPlaceExtension(roomItem)) {
@@ -245,11 +269,11 @@ export class ImmutableRoom implements ValueObject {
         throw new Error('No eligible extension spot.')
     }
 
-    nextTowerPos(): RoomPosition {
+    public nextTowerPos(): RoomPosition {
         return this.nextExtensionPos()
     }
 
-    nextSpawnPos(): RoomPosition {
+    public nextSpawnPos(): RoomPosition {
         const centroid = this.findCentroid()
         for (const roomItem of this.spiral(centroid.x, centroid.y)) {
             if (this.canPlaceSpawn(roomItem)) {
@@ -259,7 +283,7 @@ export class ImmutableRoom implements ValueObject {
         throw new Error('No eligible spawn spot.')
     }
 
-    nextStoragePos(): RoomPosition {
+    public nextStoragePos(): RoomPosition {
         const centroid = this.findCentroid()
         for (const roomItem of this.spiral(centroid.x, centroid.y)) {
             if (this.canPlaceStorage(roomItem)) {
@@ -269,17 +293,17 @@ export class ImmutableRoom implements ValueObject {
         throw new Error('No eligible storage spot.')
     }
 
-    controllerLinkPos(): RoomPosition {
+    public controllerLinkPos(): RoomPosition {
         const room = Game.rooms[this.name]
         const pos = room.controller!.pos
         const neighbors = this.getClosestNeighbors(pos.x, pos.y, 3).filter(
-            ri => !ri.isObstacle(),
+            (ri) => !ri.isObstacle(),
         )
-        const { x, y } = maxBy(neighbors, n => this.calculateEmptiness(n, 3))!
+        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
         return new RoomPosition(x, y, this.name)
     }
 
-    calculateEmptiness = (
+    public calculateEmptiness = (
         roomItem: ImmutableRoomItem,
         rangeLength: number,
     ): number => {

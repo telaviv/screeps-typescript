@@ -4,25 +4,25 @@ import { stringToInt as hash } from 'utils/hash'
 import pokemon from 'utils/pokemon'
 import every from 'lodash/every'
 import includes from 'lodash/includes'
-import { OrderedSet, Record as IRecord } from 'immutable'
+import { Record as IRecord, OrderedSet } from 'immutable'
 import { fromRoom } from 'utils/immutable-room'
 import {
-    hasContainerAtPosition,
-    isAtExtensionCap,
-    isAtTowerCap,
-    isAtSpawnCap,
-    hasNoSpawns,
-    hasStorage,
-    hasConstructionSite,
     getConstructionSites,
     getLinks,
+    hasConstructionSite,
+    hasContainerAtPosition,
+    hasNoSpawns,
+    hasStorage,
+    hasStructureAt,
+    isAtExtensionCap,
+    isAtSpawnCap,
+    isAtTowerCap,
     makeConstructionSite,
     makeSpawnConstructionSite,
-    hasStructureAt,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { getDropSpots } from 'utils/managers'
-import { wrap, profile } from 'utils/profiling'
+import { profile, wrap } from 'utils/profiling'
 
 declare global {
     interface RoomMemory {
@@ -184,7 +184,7 @@ export default class BuildManager {
 
     private canBuildContainer = wrap(() => {
         const dropSpots = getDropSpots(this.room)
-        return !every(dropSpots, dropSpot =>
+        return !every(dropSpots, (dropSpot) =>
             hasContainerAtPosition(this.room, dropSpot.pos),
         )
     }, 'BuildManager:canBuildContainer')
@@ -283,7 +283,7 @@ export default class BuildManager {
 
     private hasNonWallSite() {
         return hasConstructionSite(this.room, {
-            filter: site =>
+            filter: (site) =>
                 site.structureType !== STRUCTURE_WALL &&
                 site.structureType !== STRUCTURE_RAMPART,
         })
@@ -291,7 +291,7 @@ export default class BuildManager {
 
     private hasWallSite() {
         return hasConstructionSite(this.room, {
-            filter: site =>
+            filter: (site) =>
                 site.structureType === STRUCTURE_WALL ||
                 site.structureType === STRUCTURE_RAMPART,
         })
@@ -347,7 +347,7 @@ export default class BuildManager {
         const iroom = fromRoom(this.room)
         const cachedPos = this.snapshot.getStructurePos(
             STRUCTURE_ROAD,
-            pos => iroom.get(pos.x, pos.y).terrain === TERRAIN_MASK_SWAMP,
+            (pos) => iroom.get(pos.x, pos.y).terrain === TERRAIN_MASK_SWAMP,
         )
 
         if (cachedPos !== null) {
@@ -355,7 +355,7 @@ export default class BuildManager {
             return cachedPos
         }
 
-        const pos = this.roads.find(value => {
+        const pos = this.roads.find((value) => {
             const roomItem = iroom.get(value.x, value.y)
             return (
                 roomItem.canBuild() &&
@@ -376,12 +376,14 @@ export default class BuildManager {
         }
 
         let pathSteps: PathStep[] = []
-        const sources: RoomPosition[] = this.room.memory.sources.map(source => {
-            const { x, y, roomName } = source.dropSpot.pos
-            return new RoomPosition(x, y, roomName)
-        })
+        const sources: RoomPosition[] = this.room.memory.sources.map(
+            (source) => {
+                const { x, y, roomName } = source.dropSpot.pos
+                return new RoomPosition(x, y, roomName)
+            },
+        )
         const controller = this.room.controller.pos
-        const spawns = this.room.find(FIND_MY_SPAWNS).map(spawn => spawn.pos)
+        const spawns = this.room.find(FIND_MY_SPAWNS).map((spawn) => spawn.pos)
         for (const spawn of spawns) {
             for (const source of sources) {
                 const path = this.findRoadPath(spawn, source)

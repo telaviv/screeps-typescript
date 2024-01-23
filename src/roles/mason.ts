@@ -3,13 +3,13 @@
 import * as TaskRunner from 'tasks/runner'
 import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
 import { profile } from 'utils/profiling'
-import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
+import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import {
-    hasFragileWall,
-    hasWeakWall,
-    hasWallSite,
-    getWeakestWall,
     getWallSites,
+    getWeakestWall,
+    hasFragileWall,
+    hasWallSite,
+    hasWeakWall,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'

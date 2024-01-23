@@ -3,7 +3,7 @@
 import * as TaskRunner from 'tasks/runner'
 import { moveToRoom, recycle } from 'utils/creep'
 import { profile } from 'utils/profiling'
-import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
+import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 

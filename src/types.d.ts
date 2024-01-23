@@ -57,10 +57,10 @@ interface SurveyMemory {
     roads: RoomPositionSet
 }
 
-type RoomSnapshotMemory = Array<{
+type RoomSnapshotMemory = {
     pos: FlatRoomPosition
     structureType: StructureConstant
-}>
+}[]
 
 interface FlatRoomPosition {
     x: number

@@ -70,6 +70,7 @@ export function completeRequest(creep: Creep) {
             creep.memory.tasks,
         )
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const task = creep.memory.tasks[0]
     if (isWithdrawTask(task)) {
         task.complete = true
@@ -114,6 +115,7 @@ function getCurrentWithdrawRequest(creep: Creep): WithdrawTask | null {
         return null
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const currentTask = creep.memory.tasks[0]
     if (isWithdrawTask(currentTask)) {
         return currentTask
@@ -129,20 +131,20 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
 function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
     const nonEmpties = withdrawObjects.filter(
-        target => target.resourcesAvailable(RESOURCE_ENERGY) >= 50,
+        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= 50,
     )
 
     const eligibles = nonEmpties.filter(
-        target => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
+        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
     )
     if (eligibles.length > 0) {
-        return eligibles.map(eligible => eligible.withdrawable)
+        return eligibles.map((eligible) => eligible.withdrawable)
     }
 
     if (nonEmpties.length === 0) {
         return []
     }
-    const bestTarget = maxBy(nonEmpties, t =>
+    const bestTarget = maxBy(nonEmpties, (t) =>
         t.resourcesAvailable(RESOURCE_ENERGY),
     )
     return [bestTarget!.withdrawable]

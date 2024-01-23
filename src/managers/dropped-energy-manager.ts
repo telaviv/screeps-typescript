@@ -1,4 +1,4 @@
-import { hasContainerAtPosition, getContainerAtPosition } from 'utils/room'
+import { getContainerAtPosition, hasContainerAtPosition } from 'utils/room'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()

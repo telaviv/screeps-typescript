@@ -1,5 +1,5 @@
 export function add(pos: RoomPosition, posSet: RoomPositionSet) {
-    const found = posSet.find(npos => pos.isEqualTo(npos))
+    const found = posSet.find((npos) => pos.isEqualTo(npos))
     if (!found) {
         posSet.push(pos)
     }

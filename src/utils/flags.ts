@@ -12,7 +12,7 @@ export const STRUCTURE_COLORS = new Map<
 
 export function getConstructionFlags(room: Room): Flag[] {
     return room.find(FIND_FLAGS, {
-        filter: flag =>
+        filter: (flag) =>
             flag.secondaryColor === COLOR_PURPLE &&
             STRUCTURE_COLORS.has(flag.color),
     })

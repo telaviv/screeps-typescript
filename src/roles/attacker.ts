@@ -41,7 +41,7 @@ const roleAttacker = {
         }
 
         const structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
-            filter: structure => structure.structureType === 'invaderCore',
+            filter: (structure) => structure.structureType === 'invaderCore',
         })
 
         if (structures.length === 0) {

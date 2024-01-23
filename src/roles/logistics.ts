@@ -2,31 +2,31 @@ import filter from 'lodash/filter'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import { isAtEdge, moveToRoom, moveTowardsCenter } from 'utils/creep'
-import { getEnergy, isFullOfEnergy, hasNoEnergy } from 'utils/energy-harvesting'
+import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import {
     getConstructionSites,
-    isAtExtensionCap,
-    hasFragileWall,
     getWeakestWall,
+    hasFragileWall,
     hasTunnelSite,
+    isAtExtensionCap,
 } from 'utils/room'
 import { spawnCreep } from 'utils/spawn'
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
 import {
-    PREFERENCE_WORKER,
-    TASK_HAULING,
-    TASK_BUILDING,
-    TASK_UPGRADING,
-    TASK_REPAIRING,
-    TASK_COLLECTING,
-    TASK_WALL_REPAIRS,
     LogisticsCreep,
     LogisticsMemory,
     LogisticsPreference,
+    PREFERENCE_WORKER,
+    TASK_BUILDING,
+    TASK_COLLECTING,
+    TASK_HAULING,
+    TASK_REPAIRING,
+    TASK_UPGRADING,
+    TASK_WALL_REPAIRS,
 } from './logistics-constants'
 
 const ROLE = 'logistics'
@@ -278,7 +278,7 @@ const roleLogistics = {
 
     requestedCarryCapacity(spawn: StructureSpawn) {
         const parts = calculateParts(spawn.room.energyCapacityAvailable)
-        const carrys = filter(parts, p => p === CARRY)
+        const carrys = filter(parts, (p) => p === CARRY)
         return carrys.length * 50
     },
 

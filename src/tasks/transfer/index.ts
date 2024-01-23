@@ -2,7 +2,7 @@ import { TransferStructure } from 'tasks/transfer/structure'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { currentEnergyHeld } from 'utils/creep'
 import * as Logger from 'utils/logger'
-import { getExtensions, getTowers, getSpawns } from 'utils/room'
+import { getExtensions, getSpawns, getTowers } from 'utils/room'
 
 import { TransferTask } from './types'
 import { isTransferTask } from './utils'
@@ -84,6 +84,7 @@ export function completeRequest(creep: LogisticsCreep) {
             creep.memory.tasks,
         )
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const task = creep.memory.tasks[0]
     if (isTransferTask(task)) {
         task.complete = true
@@ -117,6 +118,7 @@ function getCurrentTransferRequest(creep: Creep): TransferTask | null {
         return null
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const currentTask = creep.memory.tasks[0]
     if (isTransferTask(currentTask)) {
         return currentTask
@@ -136,7 +138,7 @@ function fillableExtensions(room: Room): AnyStoreStructure[] {
 
 function fillableTowers(room: Room): AnyStoreStructure[] {
     const towers = getTowers(room)
-    return towers.filter(structure => {
+    return towers.filter((structure) => {
         const transfer = TransferStructure.get(structure.id)
         return transfer.remainingCapacity(RESOURCE_ENERGY) >= CARRY_CAPACITY
     })
@@ -148,7 +150,7 @@ function fillableSpawns(room: Room): AnyStoreStructure[] {
 }
 
 function filterFillableStructures(structures: AnyStoreStructure[]) {
-    return structures.filter(structure => {
+    return structures.filter((structure) => {
         const transfer = TransferStructure.get(structure.id)
         return transfer.remainingCapacity(RESOURCE_ENERGY) > 0
     })

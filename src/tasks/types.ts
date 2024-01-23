@@ -7,7 +7,9 @@ export interface Task<T> {
     complete: boolean
 }
 
-export type TaskMemory = { [id: string]: Task<any> }
+export interface TaskMemory {
+    [id: string]: Task<any>
+}
 
 export interface Runner<T extends Task<any>> {
     verifyType: (task: Task<any>) => task is T

@@ -14,7 +14,7 @@ import { LogisticsCreep } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
 import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
-import { recordRoomStats, recordGameStats } from 'utils/stats'
+import { recordGameStats, recordRoomStats } from 'utils/stats'
 import * as TaskRunner from 'tasks/runner'
 import BuildManager from 'managers/build-manager'
 
@@ -42,7 +42,7 @@ function unwrappedLoop() {
     survey()
     TaskRunner.cleanup()
 
-    Object.values(Game.rooms).forEach(room => {
+    Object.values(Game.rooms).forEach((room) => {
         if (!room.memory.snapshot) {
             room.memory.snapshot = []
         }
@@ -61,7 +61,7 @@ function unwrappedLoop() {
             warDepartment.update()
 
             const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
-                filter: s => {
+                filter: (s) => {
                     return (
                         s.structureType === STRUCTURE_TOWER ||
                         s.structureType === STRUCTURE_SPAWN

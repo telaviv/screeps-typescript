@@ -1,4 +1,8 @@
-/* eslint @typescript-eslint/no-explicit-any: ["off"] */
+/* eslint @typescript-eslint/no-unsafe-assignment: ["off"] */
+/* eslint @typescript-eslint/no-unsafe-member-access: ["off"] */
+/* eslint @typescript-eslint/no-unsafe-call: ["off"] */
+/* eslint @typescript-eslint/no-unsafe-return: ["off"] */
+/* eslint @typescript-eslint/restrict-template-expressions: ["off"] */
 /* eslint func-names: "off" */
 
 export function wrap<T extends (...args: any[]) => any>(
@@ -58,7 +62,7 @@ export function profile(
 ) {
     const originalMethod = descriptor.value
     const key = `${target.constructor.name}.${propertyKey}`
-    descriptor.value = function(...args: any) {
+    descriptor.value = function (...args: any) {
         const startCpu = Game.cpu.getUsed()
         const ret = originalMethod.apply(this, args)
         const stopCpu = Game.cpu.getUsed()
@@ -78,8 +82,9 @@ export function output() {
     dataArray.sort(([keya, dataa], [keyb, datab]) => datab.total - dataa.total)
     for (const [key, data] of dataArray.slice(0, 10)) {
         console.log(
-            `${key}: ${data.total / totalTicks} ${data.total /
-                data.calls} ${data.calls / totalTicks}`,
+            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${
+                data.calls / totalTicks
+            }`,
         )
     }
 }

@@ -1,3 +1,7 @@
+/* eslint import/no-unresolved: "off" */
+/* eslint @typescript-eslint/no-unsafe-member-access: "off" */
+/* eslint @typescript-eslint/no-unsafe-call: "off" */
+
 import roleBuilder from 'roles/builder'
 import roleHarvester from 'roles/harvester'
 import roleLogistics from 'roles/logistics'

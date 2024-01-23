@@ -1,6 +1,5 @@
-/* eslint-disable global-require, no-cond-assign, no-prototype-builtins, no-underscore-dangle */
 import { SourceMapConsumer } from 'source-map'
-import escape from 'lodash/escape'
+import _ from 'lodash'
 
 export default class ErrorMapper {
     // Cache consumer
@@ -8,8 +7,10 @@ export default class ErrorMapper {
 
     public static get consumer(): SourceMapConsumer {
         if (this._consumer == null) {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             this._consumer = new SourceMapConsumer(require('main.js.map'))
         }
+
         return this._consumer
     }
 
@@ -28,11 +29,12 @@ export default class ErrorMapper {
     public static sourceMappedStackTrace(error: Error | string): string {
         const stack: string =
             error instanceof Error ? (error.stack as string) : error
-        if (this.cache.hasOwnProperty(stack)) {
+        if (Object.prototype.hasOwnProperty.call(this.cache, stack)) {
             return this.cache[stack]
         }
 
-        const re = /^\s+at\s+(.+?\s+)?\(?([0-z._\-\\/]+):(\d+):(\d+)\)?$/gm
+        // eslint-disable-next-line no-useless-escape
+        const re = /^\s+at\s+(.+?\s+)?\(?([0-z._\-\\\/]+):(\d+):(\d+)\)?$/gm
         let match: RegExpExecArray | null
         let outStack = error.toString()
 
@@ -46,12 +48,14 @@ export default class ErrorMapper {
                 if (pos.line != null) {
                     if (pos.name) {
                         outStack += `\n    at ${pos.name} (${pos.source}:${pos.line}:${pos.column})`
-                    } else if (match[1]) {
-                        // no original source file name known - use file name from given trace
-                        outStack += `\n    at ${match[1]} (${pos.source}:${pos.line}:${pos.column})`
                     } else {
-                        // no original source file name known or in given trace - omit name
-                        outStack += `\n    at ${pos.source}:${pos.line}:${pos.column}`
+                        if (match[1]) {
+                            // no original source file name known - use file name from given trace
+                            outStack += `\n    at ${match[1]} (${pos.source}:${pos.line}:${pos.column})`
+                        } else {
+                            // no original source file name known or in given trace - omit name
+                            outStack += `\n    at ${pos.source}:${pos.line}:${pos.column}`
+                        }
                     }
                 } else {
                     // no known position
@@ -74,20 +78,18 @@ export default class ErrorMapper {
             } catch (e) {
                 if (e instanceof Error) {
                     if ('sim' in Game.rooms) {
-                        const message =
-                            "Source maps don't work in the simulator - displaying original error"
+                        const message = `Source maps don't work in the simulator - displaying original error`
                         console.log(
-                            `<span style='color:red'>${message}<br>${escape(
+                            `<span style='color:red'>${message}<br>${_.escape(
                                 e.stack,
                             )}</span>`,
                         )
                     } else {
-                        const errorString = `<span style='color:red'>${escape(
-                            this.sourceMappedStackTrace(e),
-                        )}</span>`
-
-                        console.log(errorString)
-                        Game.notify(errorString, 1)
+                        console.log(
+                            `<span style='color:red'>${_.escape(
+                                this.sourceMappedStackTrace(e),
+                            )}</span>`,
+                        )
                     }
                 } else {
                     // can't handle it

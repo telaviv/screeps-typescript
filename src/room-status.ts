@@ -4,12 +4,12 @@ interface SimpleStructure {
     structureType: StructureConstant
     pos: FlatRoomPosition
     my: boolean
-    owner: Owner
+    owner?: Owner
 }
 
 interface SimpleController {
     my: boolean
-    owner: Owner
+    owner?: Owner
     isPowerEnabled: boolean
     level: number
     reservation?: ReservationDefinition
@@ -70,7 +70,7 @@ function getControllerStatus(
 
 function getStructuresStatus(room: Room): SimpleStructure[] {
     const spawns = room.find<StructureSpawn>(FIND_STRUCTURES, {
-        filter: s => s.structureType === STRUCTURE_SPAWN,
+        filter: (s) => s.structureType === STRUCTURE_SPAWN,
     })
     return spawns.map(getStructureStatus)
 }

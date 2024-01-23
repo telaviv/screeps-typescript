@@ -17,7 +17,7 @@ export default class EnergyManager {
             return new EnergyManager([])
         }
 
-        const sources: SourceManager[] = memory.sources.map(source =>
+        const sources: SourceManager[] = memory.sources.map((source) =>
             SourceManager.get(source),
         )
 
@@ -33,7 +33,7 @@ export default class EnergyManager {
         for (const source of this.sources) {
             creeps = creeps.concat(source.creeps)
         }
-        const haulerCount = creeps.filter(creep => {
+        const haulerCount = creeps.filter((creep) => {
             const memory = creep.memory
             if (memory.role !== 'logistics') {
                 return false
@@ -47,7 +47,7 @@ export default class EnergyManager {
 
     forceSourceAssignment(role: string): Id<Source> {
         const sourceCounts = this.getSourceCounts(role)
-        return minBy(Array.from(sourceCounts.keys()), id =>
+        return minBy(Array.from(sourceCounts.keys()), (id) =>
             // eslint-disable-next-line @typescript-eslint/indent
             sourceCounts.get(id),
         ) as Id<Source>

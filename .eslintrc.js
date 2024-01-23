@@ -1,66 +1,89 @@
 module.exports = {
-    root: true,
-    parser: '@typescript-eslint/parser',
-    parserOptions: {
-        project: './tsconfig.json',
+  env: {
+    browser: true,
+    es6: true,
+    node: true
+  },
+  extends: [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "plugin:prettier/recommended",
+    "prettier",
+    "plugin:import/errors",
+    "plugin:import/warnings",
+    "plugin:import/typescript"
+  ],
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    project: "tsconfig.json",
+    sourceType: "module"
+  },
+  plugins: ["@typescript-eslint", "import"],
+  settings: {
+    "import/parsers": {
+      "@typescript-eslint/parser": [".ts", ".tsx"]
     },
-    plugins: ['@typescript-eslint'],
-    extends: [
-        'airbnb-typescript/base',
-        'plugin:@typescript-eslint/eslint-recommended',
-        'plugin:@typescript-eslint/recommended',
-        'plugin:@typescript-eslint/recommended-requiring-type-checking',
+    "import/resolver": {
+      typescript: {}
+    }
+  },
+  rules: {
+    "@typescript-eslint/array-type": "error",
+    "@typescript-eslint/consistent-type-assertions": "error",
+    "@typescript-eslint/consistent-type-definitions": "error",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-member-accessibility": [
+      "error",
+      {
+        accessibility: "explicit"
+      }
     ],
-    rules: {
-        'arrow-parens': ['error', 'as-needed'],
-        'arrow-body-style': ['off'],
-        'import/no-extraneous-dependencies': 'off',
-        'import/no-unresolved': ['off'],
-        'func-names': ['error', 'always', { generators: 'never' }],
-        'function-paren-newline': 'off',
-        'generator-star-spacing': 'off',
-        'import/prefer-default-export': ['off'],
-        'implicit-arrow-linebreak': 'off',
-        'linebreak-style': ['warn', 'unix'],
-        'lines-between-class-members': 'off',
-        'max-classes-per-file': 'off',
-        'max-len': ['error', { code: 120 }],
-        'no-extra-semi': 'off',
-        'no-console': 'off',
-        'no-confusing-arrow': 'off',
-        'no-continue': 'off',
-        'no-param-reassign': ['error', { props: false }],
-        'no-prototype-builtins': 'off',
-        'no-plusplus': 'off',
-        'no-restricted-syntax': ['off'],
-        'no-underscore-dangle': 'off',
-        'object-curly-newline': ['off'],
-        'linebreak-style': ['error', 'unix'],
-        'padded-blocks': ['off'],
-        'prefer-destructuring': 'off',
-        'space-before-function-paren': 'off',
-        'operator-linebreak': ['off'],
-        '@typescript-eslint/no-non-null-assertion': 'off',
-        '@typescript-eslint/interface-name-prefix': 'off',
-        '@typescript-eslint/explicit-function-return-type': 'off',
-        '@typescript-eslint/no-use-before-define': 'off',
-        '@typescript-eslint/semi': ['warn', 'never'],
-        '@typescript-eslint/indent': 'off',
-        '@typescript-eslint/unbound-method': 'off',
-        '@typescript-eslint/member-delimiter-style': [
-            'error',
-            {
-                multiline: { delimiter: 'none' },
-            },
-        ],
-    },
-    overrides: [
-        {
-            files: ['**/*.spec.ts'],
-            rules: {
-                'padded-blocks': 'off', // I like padding my describe blocks
-                '@typescript-eslint/unbound-method': 'off', // Complains about expect(instance.method)...
-            },
-        },
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-parameter-properties": "off",
+    "@typescript-eslint/no-shadow": [
+      "error",
+      {
+        hoist: "all"
+      }
     ],
-}
+    "@typescript-eslint/no-unused-expressions": "error",
+    "@typescript-eslint/no-use-before-define": ["error", { functions: false }],
+    "@typescript-eslint/prefer-for-of": "error",
+    "@typescript-eslint/space-within-parens": ["off", "never"],
+    "@typescript-eslint/unified-signatures": "error",
+    "arrow-parens": ["off", "as-needed"],
+    camelcase: "error",
+    complexity: "off",
+    "dot-notation": "error",
+    "eol-last": "off",
+    eqeqeq: ["error", "smart"],
+    "guard-for-in": "off",
+    "id-blacklist": ["error", "any", "Number", "number", "String", "string", "Boolean", "boolean", "Undefined"],
+    "id-match": "error",
+    "linebreak-style": "off",
+    "max-classes-per-file": "off",
+    "new-parens": "off",
+    "newline-per-chained-call": "off",
+    "no-bitwise": "error",
+    "no-caller": "error",
+    "no-cond-assign": "error",
+    "no-console": "off",
+    "no-eval": "error",
+    "no-invalid-this": "off",
+    "no-multiple-empty-lines": "off",
+    "no-new-wrappers": "error",
+    "no-shadow": "off",
+    "no-throw-literal": "error",
+    "no-trailing-spaces": "off",
+    "no-undef-init": "error",
+    "no-underscore-dangle": "warn",
+    "no-var": "error",
+    "object-shorthand": "error",
+    "one-var": ["error", "never"],
+    "quote-props": "off",
+    radix: "error",
+    "sort-imports": "warn",
+    "spaced-comment": "error",
+  }
+};

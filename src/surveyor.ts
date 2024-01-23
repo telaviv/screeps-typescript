@@ -3,16 +3,12 @@
 import RoomPlanner from 'room-planner'
 import { fromRoom } from 'utils/immutable-room'
 import { hasNoSpawns } from 'utils/room'
-import * as PositionSet from 'utils/roomPositionSet'
-import range from 'lodash/range'
 import each from 'lodash/each'
 import * as Logger from 'utils/logger'
 
 const getSpawn = (room: Room): StructureSpawn => {
     return room.find(FIND_MY_SPAWNS)[0]
 }
-
-function getNeighbors(pos: RoomPosition) {}
 
 function assignSources(room: Room) {
     const sources = room.find(FIND_SOURCES)
@@ -46,11 +42,11 @@ function getLinkSpot(pos: RoomPosition, ignore?: RoomPosition): RoomPosition {
     const room = Game.rooms[pos.roomName]
     const iroom = fromRoom(room)
     const neighbors = iroom.getClosestNeighbors(pos.x, pos.y)
-    let linkSpots = neighbors.filter(npos => !npos.isObstacle())
+    let linkSpots = neighbors.filter((npos) => !npos.isObstacle())
 
     if (ignore) {
         linkSpots = linkSpots.filter(
-            npos => !(npos.x === ignore.x && npos.y === ignore.y),
+            (npos) => !(npos.x === ignore.x && npos.y === ignore.y),
         )
     }
     if (linkSpots.length === 0) {
@@ -83,7 +79,7 @@ function planRoom(room: Room) {
 }
 
 const assignRoomFeatures = () => {
-    each(Game.rooms, room => {
+    each(Game.rooms, (room) => {
         if (room.controller && room.controller.my && !hasNoSpawns(room)) {
             const roomPlanner = new RoomPlanner(room)
             if (!roomPlanner.planIsFinished()) {

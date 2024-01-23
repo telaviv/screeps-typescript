@@ -18,9 +18,9 @@ describe('calculateParts()', () => {
 
         for (const { capacity, work, move, carry } of checks) {
             const parts = calculateParts(capacity)
-            const works = filter(parts, p => p === WORK)
-            const moves = filter(parts, p => p === MOVE)
-            const carrys = filter(parts, p => p === CARRY)
+            const works = filter(parts, (p) => p === WORK)
+            const moves = filter(parts, (p) => p === MOVE)
+            const carrys = filter(parts, (p) => p === CARRY)
             expect(works.length).toEqual(work)
             expect(moves.length).toEqual(move)
             expect(carrys.length).toEqual(carry)

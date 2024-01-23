@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/no-explicit-any: "off" */
 
-import { Task, Runner } from 'tasks/types'
+import { Runner, Task } from 'tasks/types'
 import TransferRunner from 'tasks/transfer'
 import WithdrawRunner from 'tasks/withdraw'
 import PickupRunner from 'tasks/pickup'
@@ -32,7 +32,9 @@ function cleanupCreepTask(creep: Creep) {
     if (!creepMemory.tasks || creepMemory.tasks.length === 0) {
         return
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const task = creepMemory.tasks[0]
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (task.complete) {
         creepMemory.tasks.shift()
         cleanupCreepTask(creep)

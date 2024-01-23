@@ -26,9 +26,10 @@ describe('tower module', () => {
                 repair: () => OK,
             })
             runTower(tower)
-            expect(
-                tower.pos.findClosestByRange,
-            ).toHaveBeenCalledWith(FIND_STRUCTURES, { filter: isDamaged })
+            expect(tower.pos.findClosestByRange).toHaveBeenCalledWith(
+                FIND_STRUCTURES,
+                { filter: isDamaged },
+            )
             expect(tower.repair).toHaveBeenCalledWith(damagedStructure)
         })
 

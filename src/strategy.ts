@@ -22,7 +22,7 @@ const RCL_TO_STRATEGY = [
     StrategyPhase.RCL_8,
 ]
 
-export default function(room: Room) {
+export default function (room: Room) {
     if (!room.controller) {
         room.memory.strategy = StrategyPhase.RCL_0
     } else {

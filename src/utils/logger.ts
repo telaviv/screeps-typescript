@@ -15,8 +15,8 @@ export function debug(...args: any) {
 }
 
 function logForLevel(level: string, color: string, ...args: any[]) {
-    const currentLogIndex = LOG_LEVELS.findIndex(l => l === Memory.logLevel)
-    const requestedLogIndex = LOG_LEVELS.findIndex(l => l === level)
+    const currentLogIndex = LOG_LEVELS.findIndex((l) => l === Memory.logLevel)
+    const requestedLogIndex = LOG_LEVELS.findIndex((l) => l === level)
     if (requestedLogIndex > currentLogIndex) {
         return
     }
@@ -33,7 +33,7 @@ function logForLevel(level: string, color: string, ...args: any[]) {
 }
 
 export function setLogLevel(level: string) {
-    if (LOG_LEVELS.findIndex(l => l === level) === -1) {
+    if (LOG_LEVELS.findIndex((l) => l === level) === -1) {
         throw new Error(`level ${level} isn't a valid log level`)
     }
     Memory.logLevel = level

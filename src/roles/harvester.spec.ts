@@ -15,8 +15,8 @@ describe('calculateParts()', () => {
 
         for (const { capacity, work, move } of checks) {
             const parts = calculateParts(capacity)
-            const works = filter(parts, p => p === WORK)
-            const moves = filter(parts, p => p === MOVE)
+            const works = filter(parts, (p) => p === WORK)
+            const moves = filter(parts, (p) => p === MOVE)
             expect(works.length).toEqual(work)
             expect(moves.length).toEqual(move)
         }
@@ -24,8 +24,8 @@ describe('calculateParts()', () => {
 
     it('maxes out at 5 works', () => {
         const parts = calculateParts(1000000)
-        const works = filter(parts, p => p === WORK)
-        const moves = filter(parts, p => p === MOVE)
+        const works = filter(parts, (p) => p === WORK)
+        const moves = filter(parts, (p) => p === MOVE)
         expect(works.length).toEqual(5)
         expect(moves.length).toEqual(5)
     })

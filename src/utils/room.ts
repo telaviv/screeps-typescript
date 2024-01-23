@@ -49,35 +49,35 @@ export function isAtSpawnCap(room: Room): boolean {
 export function getExtensions(room: Room): StructureExtension[] {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_EXTENSION },
-    }) as StructureExtension[]
+    })
 }
 
 export function getTowers(room: Room): StructureTower[] {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_TOWER },
-    }) as StructureTower[]
+    })
 }
 
 export function getSpawns(room: Room): StructureSpawn[] {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_SPAWN },
-    }) as StructureSpawn[]
+    })
 }
 
 export function getContainers(room: Room): StructureContainer[] {
     return room.find(FIND_STRUCTURES, {
         filter: { structureType: STRUCTURE_CONTAINER },
-    }) as StructureContainer[]
+    })
 }
 
 export function getSources(room: Room): Source[] {
-    return room.find<FIND_SOURCES>(FIND_SOURCES)
+    return room.find(FIND_SOURCES)
 }
 
 export function getLinks(room: Room): StructureLink[] {
-    return room.find<FIND_MY_STRUCTURES>(FIND_MY_STRUCTURES, {
+    return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_LINK },
-    }) as StructureLink[]
+    })
 }
 
 export function hasStructureAt(
@@ -89,18 +89,18 @@ export function hasStructureAt(
     return (
         room
             .lookForAt<LOOK_STRUCTURES>(LOOK_STRUCTURES, x, y)
-            .filter(s => s.structureType === structureType).length > 0
+            .filter((s) => s.structureType === structureType).length > 0
     )
 }
 
 export function getActiveSources(room: Room): Source[] {
-    return room.find<FIND_SOURCES_ACTIVE>(FIND_SOURCES_ACTIVE)
+    return room.find(FIND_SOURCES_ACTIVE)
 }
 
 export function getStorage(room: Room): StructureStorage | null {
-    const storages = room.find(FIND_MY_STRUCTURES, {
+    const storages = room.find<StructureStorage>(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_STORAGE },
-    }) as StructureStorage[]
+    })
     if (storages.length > 0) {
         return storages[0]
     }
@@ -112,14 +112,14 @@ export function hasStorage(room: Room): boolean {
 }
 
 export function hasFragileWall(room: Room): boolean {
-    const walls = room.find<Structure>(FIND_STRUCTURES, {
+    const walls = room.find(FIND_STRUCTURES, {
         filter: isFragileWall,
     })
     return walls.length > 0
 }
 
 export function hasWeakWall(room: Room): boolean {
-    const walls = room.find<Structure>(FIND_STRUCTURES, {
+    const walls = room.find(FIND_STRUCTURES, {
         filter: isWeakWall,
     })
     return walls.length > 0
@@ -170,7 +170,7 @@ export function getWallSites(
     room: Room,
 ): ConstructionSite<STRUCTURE_RAMPART | STRUCTURE_WALL>[] {
     return getConstructionSites(room, {
-        filter: site =>
+        filter: (site) =>
             site.structureType === STRUCTURE_WALL ||
             site.structureType === STRUCTURE_RAMPART,
     }) as ConstructionSite<STRUCTURE_WALL | STRUCTURE_RAMPART>[]
@@ -178,7 +178,7 @@ export function getWallSites(
 
 export function hasWallSite(room: Room): boolean {
     return hasConstructionSite(room, {
-        filter: site =>
+        filter: (site) =>
             site.structureType === STRUCTURE_WALL ||
             site.structureType === STRUCTURE_RAMPART,
     })
@@ -186,7 +186,7 @@ export function hasWallSite(room: Room): boolean {
 
 export function hasTunnelSite(room: Room): boolean {
     return hasConstructionSite(room, {
-        filter: site => {
+        filter: (site) => {
             if (site.structureType !== STRUCTURE_ROAD) {
                 return false
             }
@@ -276,7 +276,7 @@ export enum RoomType {
 }
 
 export const getRoomType = (roomName: string): RoomType => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const [EW, NS] = roomName.match(/\d+/g) as any
     // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     if (EW % 10 === 0 || NS % 10 === 0) {
@@ -295,7 +295,7 @@ export const getRoomType = (roomName: string): RoomType => {
 }
 
 function findSpawnlessRooms() {
-    return Object.values(Game.rooms).filter(room => {
+    return Object.values(Game.rooms).filter((room) => {
         if (!(room.controller && room.controller.my)) {
             return false
         }

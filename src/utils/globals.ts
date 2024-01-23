@@ -1,6 +1,6 @@
 import WarDepartment from 'war-department'
 import * as Logger from 'utils/logger'
-import { saveSnapshot, resetSnapshot } from 'snapshot'
+import { resetSnapshot, saveSnapshot } from 'snapshot'
 import roleClaimer from 'roles/claim'
 import roleScout from 'roles/scout'
 import roleWrecker from 'roles/wrecker'
@@ -8,7 +8,7 @@ import { visualizeRoom } from 'room-visualizer'
 import { getAllTasks } from 'tasks/utils'
 
 function killAllCreeps(roomName: string) {
-    Object.values(Game.creeps).forEach(creep => {
+    Object.values(Game.creeps).forEach((creep) => {
         if (creep.room.name === roomName) {
             creep.suicide()
         }

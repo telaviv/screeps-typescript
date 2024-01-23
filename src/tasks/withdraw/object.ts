@@ -8,15 +8,15 @@ import { WithdrawTask, Withdrawable } from './types'
 import { isWithdrawTask } from './utils'
 
 export class WithdrawObject {
-    readonly withdrawable: Withdrawable
-    readonly tasks: WithdrawTask[]
+    public readonly withdrawable: Withdrawable
+    public readonly tasks: WithdrawTask[]
 
-    constructor(withdrawable: Withdrawable, tasks: WithdrawTask[]) {
+    public constructor(withdrawable: Withdrawable, tasks: WithdrawTask[]) {
         this.withdrawable = withdrawable
         this.tasks = tasks
     }
 
-    static create(id: Id<Withdrawable>) {
+    public static create(id: Id<Withdrawable>) {
         const tasks: WithdrawTask[] = []
         const withdrawable = Game.getObjectById<Withdrawable>(id)
         if (withdrawable === null) {
@@ -31,31 +31,33 @@ export class WithdrawObject {
         return new WithdrawObject(withdrawable, tasks)
     }
 
-    static get(id: Id<Withdrawable>) {
+    public static get(id: Id<Withdrawable>) {
         return WithdrawObject.create(id)
     }
 
-    static getTargetsInRoom(room: Room): WithdrawObject[] {
+    public static getTargetsInRoom(room: Room): WithdrawObject[] {
         const structures = room.find<StructureContainer | StructureStorage>(
             FIND_STRUCTURES,
             {
-                filter: r =>
+                filter: (r) =>
                     includes(
                         [STRUCTURE_CONTAINER, STRUCTURE_STORAGE],
                         r.structureType,
                     ),
             },
         )
-        const tombstones = room.find<FIND_TOMBSTONES>(FIND_TOMBSTONES)
-        const ruins = room.find<FIND_RUINS>(FIND_RUINS)
+        const tombstones = room.find(FIND_TOMBSTONES)
+        const ruins = room.find(FIND_RUINS)
 
-        const structureTargets = structures.map(s => WithdrawObject.get(s.id))
-        const tombstoneTargets = tombstones.map(t => WithdrawObject.get(t.id))
-        const ruinTargets = ruins.map(t => WithdrawObject.get(t.id))
+        const structureTargets = structures.map((s) => WithdrawObject.get(s.id))
+        const tombstoneTargets = tombstones.map((t) => WithdrawObject.get(t.id))
+        const ruinTargets = ruins.map((t) => WithdrawObject.get(t.id))
         return structureTargets.concat(tombstoneTargets, ruinTargets)
     }
 
-    resourcesAvailable(resource: ResourceConstant = RESOURCE_ENERGY): number {
+    public resourcesAvailable(
+        resource: ResourceConstant = RESOURCE_ENERGY,
+    ): number {
         return Math.max(
             getUsedCapacity(this.withdrawable, resource) -
                 this.sumOfWithdraws(resource),
@@ -63,7 +65,7 @@ export class WithdrawObject {
         )
     }
 
-    makeRequest(
+    public makeRequest(
         creep: Creep,
         resource: ResourceConstant = RESOURCE_ENERGY,
     ): WithdrawTask {
@@ -78,7 +80,7 @@ export class WithdrawObject {
         const resourcesAvailable = this.resourcesAvailable(resource)
         const amountToWithdraw = Math.min(creepCapacity, resourcesAvailable)
         const task = {
-            type: 'withdraw' as 'withdraw',
+            type: 'withdraw' as const,
             id: autoIncrement().toString(),
             creep: creep.name,
             withdrawId: this.withdrawable.id,
@@ -93,7 +95,7 @@ export class WithdrawObject {
 
     private sumOfWithdraws(resource: ResourceConstant): number {
         return this.tasks
-            .filter(task => task.resourceType === resource)
+            .filter((task) => task.resourceType === resource)
             .reduce((acc, val) => acc + val.amount, 0)
     }
 }

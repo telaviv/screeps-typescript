@@ -5,6 +5,9 @@ import { PickupTarget } from './target'
 import { PickupTask } from './types'
 import { isPickupTask } from './utils'
 
+/* eslint @typescript-eslint/no-unsafe-assignment: "off" */
+/* eslint @typescript-eslint/no-unsafe-member-access: "off" */
+
 export function makeRequest(creep: Creep): boolean {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
@@ -115,9 +118,9 @@ function getDroppedResources(
 ): Resource[] {
     const targets = PickupTarget.findInRoom(room, resource)
     const eligibles = targets.filter(
-        target => target.resourcesAvailable() >= capacity,
+        (target) => target.resourcesAvailable() >= capacity,
     )
-    return eligibles.map(eligible => eligible.resource)
+    return eligibles.map((eligible) => eligible.resource)
 }
 
 export default {

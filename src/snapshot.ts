@@ -1,6 +1,6 @@
 import { Map, Record, RecordOf, Set } from 'immutable'
-import { getConstructionFlags, STRUCTURE_COLORS } from 'utils/flags'
-import { wrap, profile } from 'utils/profiling'
+import { STRUCTURE_COLORS, getConstructionFlags } from 'utils/flags'
+import { profile, wrap } from 'utils/profiling'
 
 interface FlatRoomPosition {
     x: number
@@ -43,7 +43,7 @@ export default class RoomSnapshot {
                     )
                     const lookStructures = roomPosition.lookFor(LOOK_STRUCTURES)
                     const hasStructure = lookStructures.some(
-                        ls => ls.structureType === structureType,
+                        (ls) => ls.structureType === structureType,
                     )
 
                     if (!hasStructure && (!filter || filter(roomPosition))) {
@@ -110,6 +110,9 @@ export default class RoomSnapshot {
     static create = wrap((room: Room): RoomSnapshot => {
         const snapshotMemory = room.memory.snapshot
         const snapshot = new RoomSnapshot(Map(), room.name)
+        if (!snapshotMemory) {
+            return snapshot;
+        }
         for (const { pos, structureType } of snapshotMemory) {
             snapshot.addStructure(structureType, pos)
         }
@@ -145,7 +148,7 @@ interface RoomCache {
     [roomName: string]: RoomSnapshot
 }
 
-let cache: RoomCache = {}
+const cache: RoomCache = {}
 
 export function updateCache(room: Room, snapshot: RoomSnapshot) {
     cache[room.name] = snapshot

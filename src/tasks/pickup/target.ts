@@ -5,15 +5,15 @@ import { PickupTask } from './types'
 import { isPickupTask } from './utils'
 
 export class PickupTarget {
-    readonly resource: Resource
-    readonly tasks: PickupTask[]
+    public readonly resource: Resource
+    public readonly tasks: PickupTask[]
 
-    constructor(resource: Resource, tasks: PickupTask[]) {
+    public constructor(resource: Resource, tasks: PickupTask[]) {
         this.resource = resource
         this.tasks = tasks
     }
 
-    static create(id: Id<Resource>) {
+    public static create(id: Id<Resource>) {
         const tasks: PickupTask[] = []
         const resource = Game.getObjectById<Resource>(id)
         if (resource === null) {
@@ -28,23 +28,25 @@ export class PickupTarget {
         return new PickupTarget(resource, tasks)
     }
 
-    static get(id: Id<Resource>) {
+    public static get(id: Id<Resource>) {
         return PickupTarget.create(id)
     }
 
-    static findInRoom(room: Room, resource: ResourceConstant): PickupTarget[] {
-        const resources = room.find<FIND_DROPPED_RESOURCES>(
-            FIND_DROPPED_RESOURCES,
-            { filter: r => r.resourceType === resource },
-        )
-        return resources.map(r => PickupTarget.get(r.id))
+    public static findInRoom(
+        room: Room,
+        resource: ResourceConstant,
+    ): PickupTarget[] {
+        const resources = room.find(FIND_DROPPED_RESOURCES, {
+            filter: (r) => r.resourceType === resource,
+        })
+        return resources.map((r) => PickupTarget.get(r.id))
     }
 
-    resourcesAvailable(): number {
+    public resourcesAvailable(): number {
         return Math.max(this.resource.amount - this.sumOfPickups(), 0)
     }
 
-    makeRequest(creep: Creep): PickupTask {
+    public makeRequest(creep: Creep): PickupTask {
         const creepCapacity = creep.store.getFreeCapacity(
             this.resource.resourceType,
         )
@@ -65,7 +67,7 @@ export class PickupTarget {
         }
         const amountToPickup = Math.min(creepCapacity, resourcesAvailable)
         const task = {
-            type: 'pickup' as 'pickup',
+            type: 'pickup' as const,
             id: autoIncrement().toString(),
             creep: creep.name,
             resourceId: this.resource.id,

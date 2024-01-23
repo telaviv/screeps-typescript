@@ -11,8 +11,8 @@ import {
     LogisticsCreep,
     LogisticsPreference,
     PREFERENCE_WORKER,
-    TASK_HAULING,
     TASK_BUILDING,
+    TASK_HAULING,
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
@@ -31,7 +31,7 @@ const REMOTE_UPGRADE_COUNT = 1
 const REMOTE_BUILD_COUNT = 2
 
 function getCreeps(role: string, room: Room) {
-    return filter(Object.keys(Memory.creeps), creepName => {
+    return filter(Object.keys(Memory.creeps), (creepName) => {
         const creep = Game.creeps[creepName]
         return (
             creep &&
@@ -43,7 +43,7 @@ function getCreeps(role: string, room: Room) {
 }
 
 function getLogisticsCreeps(preference: LogisticsPreference, room: Room) {
-    return filter(Object.keys(Memory.creeps), creepName => {
+    return filter(Object.keys(Memory.creeps), (creepName) => {
         const creep = Game.creeps[creepName] as LogisticsCreep
         return (
             creep &&
@@ -54,7 +54,7 @@ function getLogisticsCreeps(preference: LogisticsPreference, room: Room) {
     })
 }
 
-export default function(spawn: StructureSpawn) {
+export default function (spawn: StructureSpawn) {
     updateRescueStatus(spawn.room)
 
     if (spawn.room.memory.collapsed) {

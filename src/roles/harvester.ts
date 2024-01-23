@@ -1,6 +1,6 @@
 import includes from 'lodash/includes'
 
-import { fromBodyPlan, byPartCount, planCost } from 'utils/parts'
+import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
 import { profile } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { spawnCreep } from 'utils/spawn'
@@ -62,7 +62,7 @@ export class HarvesterCreep {
     getSourceMemory() {
         const roomMemory = Memory.rooms[this.creep.room.name]
         const sourceMemory = roomMemory.sources.find(
-            s => s.id === this.creep.memory.source,
+            (s) => s.id === this.creep.memory.source,
         )
         if (!sourceMemory) {
             throw Error(`source memory isn't real ${roomMemory.sources}`)
@@ -120,13 +120,14 @@ export class HarvesterCreep {
     }
 
     getLink() {
-        const linkPos = this.room.memory.plan.links.sources[
-            this.creep.memory.source
-        ]
+        const linkPos =
+            this.room.memory.plan.links.sources[this.creep.memory.source]
 
         const links = this.room
             .lookForAt<LOOK_STRUCTURES>(LOOK_STRUCTURES, linkPos.x, linkPos.y)
-            .filter(s => s.structureType === STRUCTURE_LINK) as StructureLink[]
+            .filter(
+                (s) => s.structureType === STRUCTURE_LINK,
+            ) as StructureLink[]
 
         if (links.length === 0) {
             return null

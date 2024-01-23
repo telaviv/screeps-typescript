@@ -86,7 +86,7 @@ export default class RoomPlanner {
     }
 
     planIsFinished(): boolean {
-        const sourceCount = this.room.find<FIND_SOURCES>(FIND_SOURCES).length
+        const sourceCount = this.room.find(FIND_SOURCES).length
 
         return !!(
             this.sources &&

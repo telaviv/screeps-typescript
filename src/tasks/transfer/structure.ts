@@ -6,15 +6,15 @@ import autoIncrement from 'utils/autoincrement'
 import { currentEnergyHeld } from 'utils/creep'
 
 export class TransferStructure {
-    readonly structure: AnyStoreStructure
-    readonly tasks: TransferTask[]
+    public readonly structure: AnyStoreStructure
+    public readonly tasks: TransferTask[]
 
-    constructor(structure: AnyStoreStructure, tasks: TransferTask[]) {
+    public constructor(structure: AnyStoreStructure, tasks: TransferTask[]) {
         this.structure = structure
         this.tasks = tasks
     }
 
-    static create(id: Id<AnyStoreStructure>) {
+    public static create(id: Id<AnyStoreStructure>) {
         const tasks: TransferTask[] = []
         const structure = Game.getObjectById<AnyStoreStructure>(id)
         if (structure === null) {
@@ -29,18 +29,24 @@ export class TransferStructure {
         return new TransferStructure(structure, tasks)
     }
 
-    static get(id: Id<AnyStoreStructure>) {
+    public static get(id: Id<AnyStoreStructure>) {
         return TransferStructure.create(id)
     }
 
-    remainingCapacity(resource: ResourceConstant = RESOURCE_ENERGY): number {
+    public remainingCapacity(
+        resource: ResourceConstant = RESOURCE_ENERGY,
+    ): number {
+        if (this.structure.store === null) {
+            return 0;
+        }
+        const capacity = this.structure.store.getFreeCapacity(resource) || 0;
         return (
-            this.structure.store.getFreeCapacity(resource) -
+            capacity -
             this.sumOfTransfers(resource)
         )
     }
 
-    makeRequest(
+    public makeRequest(
         creep: LogisticsCreep,
         resource: ResourceConstant = RESOURCE_ENERGY,
     ): TransferTask {
@@ -54,7 +60,7 @@ export class TransferStructure {
             structureCapacity,
         )
         const task = {
-            type: 'transfer' as 'transfer',
+            type: 'transfer' as const,
             id: autoIncrement().toString(),
             creep: creep.name,
             structureId: this.structure.id,
@@ -69,7 +75,7 @@ export class TransferStructure {
 
     private sumOfTransfers(resource: ResourceConstant): number {
         return this.tasks
-            .filter(task => task.resourceType === resource)
+            .filter((task) => task.resourceType === resource)
             .reduce((acc, val) => acc + val.amount, 0)
     }
 }

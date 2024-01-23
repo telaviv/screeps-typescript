@@ -6,5 +6,5 @@ export function getDropSpots(room: Room): DroppedEnergyManager[] {
     if (!em.sources) {
         return []
     }
-    return em.sources.map(source => source.droppedEnergy)
+    return em.sources.map((source) => source.droppedEnergy)
 }
