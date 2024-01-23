@@ -4,7 +4,7 @@ import { getBuildManager } from 'managers/build-manager'
 import { isAtEdge, moveToRoom, moveTowardsCenter } from 'utils/creep'
 import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
-import { wrap } from 'utils/profiling'
+import { mprofile } from 'utils/profiling'
 import {
     getConstructionSites,
     getOwnWeakestWall,
@@ -54,252 +54,265 @@ const PREFERENCE_EMOJIS = {
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
 
-const roleLogistics = {
-    run: wrap((creep: LogisticsCreep) => {
-        // remove this
-        if (!creep.memory.tasks) {
-            creep.memory.tasks = []
+class RoleLogistics {
+    private creep: LogisticsCreep;
+
+    constructor(creep: LogisticsCreep) {
+        this.creep = creep;
+    }
+
+    @mprofile('runLogistics')
+    public run() {
+        this.updateMemory();
+        this.say();
+        if (this.idleTime() > SLEEP_SAY_TIME) {
+            this.creep.say('😴');
         }
 
-        roleLogistics.updateMemory(creep)
-        roleLogistics.say(creep)
-        if (roleLogistics.idleTime(creep) > SLEEP_SAY_TIME) {
-            creep.say('😴')
+        if (this.idleTime() > SUICIDE_TIME) {
+            this.creep.suicide();
+            return;
         }
 
-        if (roleLogistics.idleTime(creep) > SUICIDE_TIME) {
-            creep.suicide()
-            return
+        if (this.creep.room.name !== this.creep.memory.home) {
+            moveToRoom(this.creep.memory.home, this.creep);
+            return;
         }
 
-        if (creep.room.name !== creep.memory.home) {
-            moveToRoom(creep.memory.home, creep)
-            return
+        if (isAtEdge(this.creep)) {
+            moveTowardsCenter(this.creep);
+            return;
         }
 
-        if (isAtEdge(creep)) {
-            moveTowardsCenter(creep)
-            return
-        }
+        const currentTask = this.creep.memory.currentTask;
 
-        const currentTask = creep.memory.currentTask
-
-        if (creep.memory.tasks.length > 0) {
-            roleLogistics.runTask(creep)
+        if (this.creep.memory.tasks.length > 0) {
+            this.runTask();
         } else if (currentTask === TASK_COLLECTING) {
-            getEnergy(creep)
+            getEnergy(this.creep);
         } else if (currentTask === TASK_HAULING) {
-            roleLogistics.haulEnergy(creep)
+            this.haulEnergy();
         } else if (currentTask === TASK_BUILDING) {
-            roleLogistics.build(creep)
+            this.build();
         } else if (currentTask === TASK_UPGRADING) {
-            roleLogistics.upgrade(creep)
+            this.upgrade();
         } else if (currentTask === TASK_REPAIRING) {
-            roleLogistics.repair(creep)
+            this.repair();
         } else if (currentTask === TASK_WALL_REPAIRS) {
-            roleLogistics.repairWalls(creep)
+            this.repairWalls();
         }
-    }, 'runLogistics'),
+    }
 
-    updateMemory: wrap((creep: LogisticsCreep) => {
-        const memory = creep.memory
-        const currentTask = memory.currentTask
+    public static staticRun(creep: LogisticsCreep) {
+        return (new RoleLogistics(creep)).run();
+    }
 
-        if (currentTask === TASK_COLLECTING && isFullOfEnergy(creep)) {
+    @mprofile('logistics:updateMemory')
+    private updateMemory() {
+        const memory = this.creep.memory;
+        const currentTask = memory.currentTask;
+
+        if (currentTask === TASK_COLLECTING && isFullOfEnergy(this.creep)) {
             if (memory.preference === PREFERENCE_WORKER) {
-                roleLogistics.assignWorkerPreference(creep)
+                this.assignWorkerPreference();
             } else {
-                memory.currentTask = memory.preference
+                memory.currentTask = memory.preference;
             }
-            memory.idleTimestamp = null
-        } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(creep)) {
-            memory.currentTask = TASK_COLLECTING
-            memory.idleTimestamp = null
-            delete memory.currentTarget
+            memory.idleTimestamp = null;
+        } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(this.creep)) {
+            memory.currentTask = TASK_COLLECTING;
+            memory.idleTimestamp = null;
+            delete memory.currentTarget;
         }
-    }, 'logistics:updateMemory'),
+    }
 
-    assignWorkerPreference(creep: LogisticsCreep) {
-        const memory = creep.memory
-        const buildManager = getBuildManager(creep.room)
-        if (TransferTask.makeRequest(creep)) {
-            memory.currentTask = TASK_HAULING
+
+    private assignWorkerPreference() {
+        const memory = this.creep.memory;
+        const buildManager = getBuildManager(this.creep.room);
+        if (TransferTask.makeRequest(this.creep)) {
+            memory.currentTask = TASK_HAULING;
         } else if (buildManager.canBuildImportant()) {
-            memory.currentTask = TASK_BUILDING
-        } else if (hasOwnFragileWall(creep.room)) {
-            memory.currentTask = TASK_WALL_REPAIRS
-        } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
-            memory.currentTask = TASK_REPAIRING
+            memory.currentTask = TASK_BUILDING;
+        } else if (hasOwnFragileWall(this.creep.room)) {
+            memory.currentTask = TASK_WALL_REPAIRS;
+        } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
+            memory.currentTask = TASK_REPAIRING;
         } else {
-            memory.currentTask = TASK_UPGRADING
+            memory.currentTask = TASK_UPGRADING;
         }
-    },
+    }
 
-    say(creep: LogisticsCreep) {
-        const memory = creep.memory
-        const preference = PREFERENCE_EMOJIS[memory.preference]
-        const currentTask = TASK_EMOJIS[memory.currentTask]
-        creep.say(`${preference} ${currentTask}`)
-    },
+    say() {
+        const memory = this.creep.memory;
+        const preference = PREFERENCE_EMOJIS[memory.preference];
+        const currentTask = TASK_EMOJIS[memory.currentTask];
+        this.creep.say(`${preference} ${currentTask}`);
+    }
 
-    idleTime(creep: LogisticsCreep): number {
-        return Game.time - (creep.memory.idleTimestamp || Game.time)
-    },
+    public idleTime(): number {
+        return Game.time - (this.creep.memory.idleTimestamp || Game.time);
+    }
 
-    unidle(creep: ResourceCreep) {
+    public static unidle(creep: ResourceCreep) {
         creep.memory.idleTimestamp = null;
-    },
+    }
 
-    build: wrap((creep: LogisticsCreep) => {
-        const targets = roleLogistics.getNonWallSites(creep.room)
-        const target = creep.pos.findClosestByRange(targets)
+    @mprofile('logistics:build')
+    build() {
+        const targets = this.getNonWallSites(this.creep.room);
+        const target = this.creep.pos.findClosestByRange(targets);
         if (target) {
-            if (creep.build(target) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(target, {
+            if (this.creep.build(target) === ERR_NOT_IN_RANGE) {
+                this.creep.moveTo(target, {
                     visualizePathStyle: { stroke: '#ffffff' },
                     range: 3,
-                })
+                });
             }
-        } else if (isFullOfEnergy(creep)) {
-            roleLogistics.switchTask(creep)
+        } else if (isFullOfEnergy(this.creep)) {
+            this.switchTask();
         } else {
-            creep.memory.currentTask = TASK_COLLECTING
+            this.creep.memory.currentTask = TASK_COLLECTING;
         }
-    }, 'logistics:build'),
+    }
 
-    getNonWallSites: (room: Room) => {
+    getNonWallSites(room: Room) {
         return getConstructionSites(room, {
             filter: (site: ConstructionSite) =>
                 site.structureType !== STRUCTURE_WALL &&
                 site.structureType !== STRUCTURE_RAMPART,
-        })
-    },
+        });
+    }
 
-    repairWalls: wrap((creep: LogisticsCreep) => {
-        let structure = null
-        if (creep.memory.currentTarget) {
+    @mprofile('logistics:repairWalls')
+    repairWalls() {
+        let structure = null;
+        if (this.creep.memory.currentTarget) {
             structure = Game.getObjectById<Structure>(
-                creep.memory.currentTarget,
-            )
+                this.creep.memory.currentTarget,
+            );
             if (structure === null) {
                 Logger.warning(
                     'repair:target:failure',
-                    creep.name,
-                    creep.memory.currentTarget,
-                )
+                    this.creep.name,
+                    this.creep.memory.currentTarget,
+                );
             }
         }
 
         if (structure === null) {
-            structure = getOwnWeakestWall(creep.room)
+            structure = getOwnWeakestWall(this.creep.room);
         }
 
         if (structure === null || structure.hits === structure.hitsMax) {
-            roleLogistics.switchTask(creep)
-            return
+            this.switchTask();
+            return;
         }
 
-        creep.memory.currentTarget = structure.id
+        this.creep.memory.currentTarget = structure.id;
 
-        const err = creep.repair(structure)
+        const err = this.creep.repair(structure);
         if (err === ERR_NOT_IN_RANGE) {
-            creep.moveTo(structure.pos, {
+            this.creep.moveTo(structure.pos, {
                 visualizePathStyle: { stroke: '#ffffff' },
                 range: 3,
-            })
+            });
         } else if (err !== OK) {
-            Logger.warning('logistics:repair-wall:failure', creep.name, err)
+            Logger.warning('logistics:repair-wall:failure', this.creep.name, err);
         }
-    }, 'logistics:repairWalls'),
+    }
 
-    repair: wrap((creep: LogisticsCreep) => {
-        const structure = EnergySinkManager.findRepairTarget(creep)
+    @mprofile('logistics:repair')
+    repair() {
+        const structure = EnergySinkManager.findRepairTarget(this.creep);
         if (structure === null) {
-            roleLogistics.switchTask(creep)
-            return
+            this.switchTask();
+            return;
         }
 
-        const err = creep.repair(structure)
+        const err = this.creep.repair(structure);
         if (err === ERR_NOT_IN_RANGE) {
-            creep.moveTo(structure.pos, {
+            this.creep.moveTo(structure.pos, {
                 visualizePathStyle: { stroke: '#ffffff' },
                 range: 3,
-            })
+            });
         } else if (err !== OK) {
-            Logger.warning('logistics:repair:failure', creep.name, err)
+            Logger.warning('logistics:repair:failure', this.creep.name, err);
         }
-    }, 'logistics:repair'),
+    }
 
-    upgrade: wrap((creep: LogisticsCreep) => {
-        if (!creep.room.controller) {
-            creep.say('???')
-            return
+    @mprofile('logistics:upgrade')
+    upgrade() {
+        if (!this.creep.room.controller) {
+            this.creep.say('???');
+            return;
         }
         if (
-            creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE
+            this.creep.upgradeController(this.creep.room.controller) === ERR_NOT_IN_RANGE
         ) {
-            creep.moveTo(creep.room.controller, {
+            this.creep.moveTo(this.creep.room.controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
 
                 range: 3,
-            })
+            });
         }
-    }, 'logistics:upgrade'),
+    }
 
-    haulEnergy: wrap((creep: LogisticsCreep) => {
-        if (TransferTask.makeRequest(creep)) {
-            roleLogistics.runTask(creep)
+    @mprofile('logistics:haulEnergy')
+    haulEnergy() {
+        if (TransferTask.makeRequest(this.creep)) {
+            this.runTask();
         } else {
-            roleLogistics.switchTask(creep)
+            this.switchTask();
         }
-    }, 'logistics:haulEnergy'),
+    }
 
-    runTask(creep: LogisticsCreep) {
-        const task = creep.memory.tasks[0]
-        TaskRunner.run(task, creep)
-    },
+    runTask() {
+        const task = this.creep.memory.tasks[0];
+        TaskRunner.run(task, this.creep);
+    }
 
-    switchTask(creep: LogisticsCreep) {
-        let task = creep.memory.currentTask
-        if (!isAtExtensionCap(creep.room) || hasTunnelSite(creep.room)) {
-            task = TASK_BUILDING
-        } else if (hasOwnFragileWall(creep.room)) {
-            task = TASK_WALL_REPAIRS
-        } else if (EnergySinkManager.canRepairNonWalls(creep.room)) {
-            task = TASK_REPAIRING
+    switchTask() {
+        let task = this.creep.memory.currentTask;
+        if (!isAtExtensionCap(this.creep.room) || hasTunnelSite(this.creep.room)) {
+            task = TASK_BUILDING;
+        } else if (hasOwnFragileWall(this.creep.room)) {
+            task = TASK_WALL_REPAIRS;
+        } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
+            task = TASK_REPAIRING;
         } else {
-            task = TASK_UPGRADING
+            task = TASK_UPGRADING;
         }
-        if (creep.memory.currentTask === task) {
+        if (this.creep.memory.currentTask === task) {
             Logger.info(
                 'logistics:switch-task:failure',
-                creep.name,
+                this.creep.name,
                 "couldn't switch from",
                 task,
                 '(',
-                isAtExtensionCap(creep.room),
+                isAtExtensionCap(this.creep.room),
                 ',',
-                hasTunnelSite(creep.room),
+                hasTunnelSite(this.creep.room),
                 ')',
-            )
+            );
         }
-        creep.memory.currentTask = task
-    },
+        this.creep.memory.currentTask = task;
+    }
 
-    requestedCarryCapacity(spawn: StructureSpawn) {
-        const parts = calculateParts(spawn.room.energyCapacityAvailable)
-        const carrys = filter(parts, (p: BodyPartConstant) => p === CARRY)
-        return carrys.length * 50
-    },
+    static requestedCarryCapacity(spawn: StructureSpawn): number {
+        const parts = calculateParts(spawn.room.energyCapacityAvailable);
+        const carrys = filter(parts, (p: BodyPartConstant) => p === CARRY);
+        return carrys.length * 50;
+    }
 
-    create(
+    public static createCreep(
         spawn: StructureSpawn,
         preference: LogisticsPreference = TASK_HAULING,
         rescue = false,
-    ): number {
+    ): ScreepsReturnCode {
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
-            : spawn.room.energyAvailable
+            : spawn.room.energyAvailable;
         return spawnCreep(
             spawn,
             calculateParts(capacity),
@@ -316,12 +329,12 @@ const roleLogistics = {
                     tasks: [],
                 } as LogisticsMemory,
             },
-        )
-    },
+        );
+    }
 
-    canCreate(capacity: number): boolean {
-        return fromBodyPlanSafe(capacity, BODY_PLAN_UNIT) !== null
-    },
+    public static canCreateCreep(capacity: number): boolean {
+        return fromBodyPlanSafe(capacity, BODY_PLAN_UNIT) !== null;
+    }
 }
 
 /**
@@ -330,9 +343,9 @@ const roleLogistics = {
  * @returns true if the creep can be spawned.
  */
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    const plan = fromBodyPlan(capacity, BODY_PLAN_UNIT)
-    Logger.debug('logistics:calculateParts', JSON.stringify(plan), capacity)
-    return plan
+    const plan = fromBodyPlan(capacity, BODY_PLAN_UNIT);
+    Logger.debug('logistics:calculateParts', JSON.stringify(plan), capacity);
+    return plan;
 }
 
-export default roleLogistics
+export default RoleLogistics;

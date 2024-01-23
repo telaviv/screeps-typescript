@@ -2,7 +2,7 @@ import migrate from 'migrations'
 import RoomVisualizer from 'room-visualizer'
 import WarDepartment from 'war-department'
 import roleHarvester, { Harvester } from 'roles/harvester'
-import roleLogistics from 'roles/logistics'
+import RoleLogistics from 'roles/logistics'
 import roleClaimer, { Claimer } from 'roles/claim'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
 import roleAttacker, { Attacker } from 'roles/attacker'
@@ -84,7 +84,7 @@ function unwrappedLoop() {
         if (creep.memory.role === 'harvester') {
             roleHarvester.run(creep as Harvester)
         } else if (creep.memory.role === 'logistics') {
-            roleLogistics.run(creep as LogisticsCreep)
+            RoleLogistics.staticRun(creep as LogisticsCreep)
         } else if (creep.memory.role === 'claimer') {
             roleClaimer.run(creep as Claimer)
         } else if (creep.memory.role === 'wrecker') {

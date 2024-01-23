@@ -3,7 +3,7 @@ import filter from 'lodash/filter'
 import WarDepartment, { WarStatus } from 'war-department'
 import roleClaimer from 'roles/claim'
 import roleAttacker from 'roles/attacker'
-import roleLogistics from 'roles/logistics'
+import RoleLogistics from 'roles/logistics'
 import roleMason, { MasonCreep } from 'roles/mason'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
 import roleRemoteBuild from 'roles/remote-build'
@@ -82,7 +82,7 @@ export default function (spawn: StructureSpawn) {
         createWarCreeps(spawn, warDepartment)
     }
 
-    const request = roleLogistics.requestedCarryCapacity(spawn)
+    const request = RoleLogistics.requestedCarryCapacity(spawn)
     if (
         room.energyAvailable <
         Math.min(request * 3, 0.95 * spawn.room.energyCapacityAvailable)
@@ -90,18 +90,18 @@ export default function (spawn: StructureSpawn) {
         return
     }
 
-    if (roleLogistics.canCreate(spawn.room.energyAvailable)) {
+    if (RoleLogistics.canCreateCreep(spawn.room.energyAvailable)) {
         if (haulers.length < 1) {
-            roleLogistics.create(spawn, TASK_HAULING)
+            RoleLogistics.createCreep(spawn, TASK_HAULING)
             return
         } else if (workers.length < 1) {
-            roleLogistics.create(spawn, PREFERENCE_WORKER)
+            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
             return
         } else if (upgraders.length < UPGRADERS_COUNT) {
-            roleLogistics.create(spawn, TASK_UPGRADING)
+            RoleLogistics.createCreep(spawn, TASK_UPGRADING)
             return
         } else if (builders.length < BUILDERS_COUNT) {
-            roleLogistics.create(spawn, TASK_BUILDING)
+            RoleLogistics.createCreep(spawn, TASK_BUILDING)
             return
         }
     }
@@ -109,8 +109,8 @@ export default function (spawn: StructureSpawn) {
     if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
         roleMason.create(spawn)
         return
-    } else if (roleLogistics.canCreate(spawn.room.energyAvailable) && workers.length < MAX_WORKER_COUNT) {
-        roleLogistics.create(spawn, PREFERENCE_WORKER)
+    } else if (RoleLogistics.canCreateCreep(spawn.room.energyAvailable) && workers.length < MAX_WORKER_COUNT) {
+        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
         return
     }
 }
@@ -146,7 +146,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
     const workers = getLogisticsCreeps(PREFERENCE_WORKER, room)
 
     if (workers.length < RESCUE_WORKER_COUNT) {
-        roleLogistics.create(spawn, PREFERENCE_WORKER, true)
+        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, true)
     } else if (harvesters.length < sourceCount) {
         roleHarvester.create(spawn, harvesterSource, true)
     }

@@ -5,6 +5,7 @@ import * as PickupTask from 'tasks/pickup'
 import { getActiveSources } from 'utils/room'
 import { randomElement } from 'utils/utilities'
 import roleLogistics from 'roles/logistics'
+import RoleLogistics from 'roles/logistics'
 
 export function harvestEnergy(creep: ResourceCreep) {
     const sources = getActiveSources(creep.room)
@@ -17,7 +18,7 @@ export function harvestEnergy(creep: ResourceCreep) {
             range: 1,
         })
     } else {
-        roleLogistics.unidle(creep);
+        RoleLogistics.unidle(creep);
     }
 }
 

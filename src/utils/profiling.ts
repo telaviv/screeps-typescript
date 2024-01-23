@@ -18,6 +18,23 @@ export function wrap<T extends (...args: any[]) => any>(
     }
 }
 
+export function mprofile(key: string) {
+    return (
+        target: any,
+        propertyKey: string,
+        descriptor: PropertyDescriptor,
+    ) => {
+        const originalMethod = descriptor.value
+        descriptor.value = function (...args: any) {
+            const startCpu = Game.cpu.getUsed()
+            const ret = originalMethod.apply(this, args)
+            const stopCpu = Game.cpu.getUsed()
+            markProfileMemory(key, stopCpu - startCpu)
+            return ret
+        }
+    }
+}
+
 function markProfileMemory(key: string, time: number) {
     if (!Memory.profiler) {
         init()
@@ -82,8 +99,7 @@ export function output() {
     dataArray.sort(([keya, dataa], [keyb, datab]) => datab.total - dataa.total)
     for (const [key, data] of dataArray.slice(0, 10)) {
         console.log(
-            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${
-                data.calls / totalTicks
+            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks
             }`,
         )
     }
