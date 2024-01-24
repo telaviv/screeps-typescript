@@ -83,14 +83,11 @@ export default function (spawn: StructureSpawn) {
     }
 
     const request = RoleLogistics.requestedCarryCapacity(spawn)
-    if (
-        room.energyAvailable <
-        Math.min(request * 3, 0.95 * spawn.room.energyCapacityAvailable)
-    ) {
+    if (room.energyAvailable < 0.95 * spawn.room.energyCapacityAvailable) {
         return
     }
 
-    if (RoleLogistics.canCreateCreep(spawn.room.energyAvailable)) {
+    if (RoleLogistics.shouldCreateCreep(spawn)) {
         if (haulers.length < 1) {
             RoleLogistics.createCreep(spawn, TASK_HAULING)
             return
@@ -109,7 +106,7 @@ export default function (spawn: StructureSpawn) {
     if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
         roleMason.create(spawn)
         return
-    } else if (RoleLogistics.canCreateCreep(spawn.room.energyAvailable) && workers.length < MAX_WORKER_COUNT) {
+    } else if (RoleLogistics.shouldCreateCreep(spawn)) {
         RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
         return
     }

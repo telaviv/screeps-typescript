@@ -30,8 +30,9 @@ import {
 } from './logistics-constants'
 
 const ROLE = 'logistics'
-const SUICIDE_TIME = 200
-const SLEEP_SAY_TIME = 50
+const SUICIDE_TIME = 25
+const RESPAWN_IDLE_LIMIT = 0
+const SLEEP_SAY_TIME = 10
 
 const TASK_EMOJIS = {
     [TASK_HAULING]: '🚚',
@@ -154,8 +155,15 @@ class RoleLogistics {
         return Game.time - (this.creep.memory.idleTimestamp || Game.time);
     }
 
+    public static idle(creep: ResourceCreep) {
+        creep.memory.idleTimestamp = Game.time;
+    }
+
     public static unidle(creep: ResourceCreep) {
-        creep.memory.idleTimestamp = null;
+        if (creep.memory.idleTimestamp === null) {
+            return
+        }
+        creep.memory.idleTimestamp += 1;
     }
 
     @mprofile('logistics:build')
@@ -334,6 +342,31 @@ class RoleLogistics {
 
     public static canCreateCreep(capacity: number): boolean {
         return fromBodyPlanSafe(capacity, BODY_PLAN_UNIT) !== null;
+    }
+
+    public static shouldCreateCreep(spawn: StructureSpawn): boolean {
+        const logistics = filter(Object.keys(Memory.creeps), (creepName: string) => {
+            const creep = Game.creeps[creepName] as LogisticsCreep
+            return (
+                creep &&
+                creep.memory.role === 'logistics' &&
+                creep.room.name === spawn.room.name
+            )
+        }).map((creepName: string) => new RoleLogistics(Game.creeps[creepName] as LogisticsCreep))
+
+        const maxIdleTime = logistics.reduce((max: number, role: RoleLogistics) => {
+            return Math.max(max, role.idleTime())
+        }, 0)
+        const canCreateCreep = RoleLogistics.canCreateCreep(spawn.room.energyAvailable);
+        const retVal = RoleLogistics.canCreateCreep(spawn.room.energyAvailable) && maxIdleTime < RESPAWN_IDLE_LIMIT
+        Logger.debug(
+            'logistics:shouldCreateCreep',
+            JSON.stringify(logistics.map((role: RoleLogistics) => ({ name: role.creep.name, idleTime: role.idleTime() }))),
+            maxIdleTime,
+            spawn.room.energyAvailable,
+            canCreateCreep,
+            retVal)
+        return retVal
     }
 }
 

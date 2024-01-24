@@ -12,13 +12,15 @@ export function harvestEnergy(creep: ResourceCreep) {
     const source = creep.pos.findClosestByPath(sources)
     if (!source) {
         wander(creep)
+        RoleLogistics.idle(creep)
     } else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
         creep.moveTo(source, {
             visualizePathStyle: { stroke: '#ffaa00' },
             range: 1,
         })
+        RoleLogistics.idle(creep)
     } else {
-        RoleLogistics.unidle(creep);
+        RoleLogistics.unidle(creep)
     }
 }
 
