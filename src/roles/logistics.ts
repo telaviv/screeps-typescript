@@ -1,6 +1,7 @@
 import filter from 'lodash/filter'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
+import BuildManager from 'managers/build-manager'
 import { isAtEdge, moveToRoom, moveTowardsCenter } from 'utils/creep'
 import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
@@ -30,7 +31,7 @@ import {
 } from './logistics-constants'
 
 const ROLE = 'logistics'
-const SUICIDE_TIME = 25
+const SUICIDE_TIME = 40
 const RESPAWN_IDLE_LIMIT = 0
 const SLEEP_SAY_TIME = 10
 
@@ -358,7 +359,7 @@ class RoleLogistics {
             return Math.max(max, role.idleTime())
         }, 0)
         const canCreateCreep = RoleLogistics.canCreateCreep(spawn.room.energyAvailable);
-        const retVal = RoleLogistics.canCreateCreep(spawn.room.energyAvailable) && maxIdleTime < RESPAWN_IDLE_LIMIT
+        const retVal = RoleLogistics.canCreateCreep(spawn.room.energyAvailable) && maxIdleTime <= RESPAWN_IDLE_LIMIT
         Logger.debug(
             'logistics:shouldCreateCreep',
             JSON.stringify(logistics.map((role: RoleLogistics) => ({ name: role.creep.name, idleTime: role.idleTime() }))),

@@ -44,13 +44,26 @@ const roleAttacker = {
             filter: (structure) => structure.structureType === 'invaderCore',
         })
 
-        if (structures.length === 0) {
+        const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
+
+        if (structures.length === 0 && hostiles.length === 0) {
             const warDepartment = WarDepartment.create(creep.memory.home)
             if (warDepartment.status === WarStatus.ATTACK) {
                 warDepartment.status = WarStatus.CLAIM
             }
 
             creep.suicide()
+        }
+
+        if (hostiles.length > 0) {
+            const hostile = hostiles[0];
+            const err = creep.attack(hostile);
+            if (err === ERR_NOT_IN_RANGE) {
+                creep.moveTo(hostile, {
+                    visualizePathStyle: { stroke: '#ffaa00' },
+                })
+            }
+            return
         }
 
         const structure = structures[0]
@@ -88,7 +101,7 @@ const roleAttacker = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan(capacity, [ATTACK, MOVE])
+    return fromBodyPlan(capacity, [RANGED_ATTACK, MOVE])
 }
 
 export default roleAttacker

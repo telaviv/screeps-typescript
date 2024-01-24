@@ -6,6 +6,8 @@ import roleScout from 'roles/scout'
 import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
 import { getAllTasks } from 'tasks/utils'
+import { RoomManager } from 'managers/room-manager'
+import ErrorMapper, { trace } from './ErrorMapper'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach((creep) => {
@@ -16,16 +18,13 @@ function killAllCreeps(roomName: string) {
 }
 
 function claimRoom(destination: string, startRoom: string) {
-    const spawns = Game.rooms[startRoom].find(FIND_MY_SPAWNS)
-    if (spawns.length === 0) {
-        throw new Error('no spawn in starting room')
+    const room = Game.rooms[startRoom]
+    if (!room) {
+        throw Error(`Couldn't find room ${startRoom}`);
     }
-    const err = roleClaimer.create(spawns[0], destination, true)
-    if (err === OK) {
-        const warDepartment = new WarDepartment(Game.rooms[startRoom])
-        warDepartment.claimRoom(destination)
-    }
-    Logger.info('claimRoom:create', err)
+    const roomManager = new RoomManager(Game.rooms[startRoom])
+    roomManager.addClaimRoomTask(destination)
+    Logger.info('claimRoom:success', destination)
 }
 
 function sendWrecker(endRoom: string, startRoom: string) {
@@ -76,7 +75,7 @@ export default function assignGlobals() {
     global.killAllCreeps = killAllCreeps
     global.setLogLevel = Logger.setLogLevel
     global.saveSnapshot = saveSnapshot
-    global.claimRoom = claimRoom
+    global.claimRoom = ErrorMapper.wrap(claimRoom)
     global.visualizeRoom = visualizeRoom
     global.assignGlobals = assignGlobals
     global.sendWrecker = sendWrecker

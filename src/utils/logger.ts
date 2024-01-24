@@ -2,6 +2,10 @@
 
 const LOG_LEVELS = ['error', 'warning', 'info', 'debug']
 
+export function error(...args: any[]) {
+    logForLevel('error', 'red', ...args)
+}
+
 export function warning(...args: any[]) {
     logForLevel('warning', 'yellow', ...args)
 }

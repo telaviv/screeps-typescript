@@ -71,10 +71,10 @@ export default class ErrorMapper {
         return outStack
     }
 
-    public static wrapLoop(loop: () => void): () => void {
-        return () => {
+    public static wrap(fn: (...args: any) => void): (...args: any) => void {
+        return (...args: any) => {
             try {
-                loop()
+                fn.apply(this, args);
             } catch (e) {
                 if (e instanceof Error) {
                     if ('sim' in Game.rooms) {
@@ -99,3 +99,16 @@ export default class ErrorMapper {
         }
     }
 }
+
+export const trace = (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+) => {
+    const originalMethod = descriptor.value
+    descriptor.value = function (...args: any) {
+        ErrorMapper.wrap(originalMethod.bind(this))(...args)
+    }
+}
+
+

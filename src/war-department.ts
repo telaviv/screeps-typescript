@@ -57,6 +57,11 @@ export default class WarDepartment {
         return this.warMemory.target
     }
 
+    public hasHostiles(): boolean {
+        const hostiles = this.room.find(FIND_HOSTILE_CREEPS)
+        return hostiles.length > 0;
+    }
+
     public update() {
         if (this.status === WarStatus.NONE) {
             return

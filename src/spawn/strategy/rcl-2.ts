@@ -17,6 +17,7 @@ import {
 } from 'roles/logistics-constants'
 import roleHarvester from 'roles/harvester'
 import EnergyManager from 'managers/energy-manager'
+import { RoomManager } from 'managers/room-manager'
 
 const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
@@ -25,10 +26,9 @@ const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 
 const CLAIMERS_COUNT = 3
-const ATTACKERS_COUNT = 1
+const ATTACKERS_COUNT = 2
 const REMOTE_UPGRADE_COUNT = 1
 const REMOTE_BUILD_COUNT = 2
-const MAX_WORKER_COUNT = 5
 
 function getCreeps(role: string, room: Room) {
     return filter(Object.keys(Memory.creeps), (creepName: string) => {
@@ -67,6 +67,7 @@ export default function (spawn: StructureSpawn) {
     const harvesters = getCreeps('harvester', room)
     const masons = getCreeps('mason', room)
     const energyManager = EnergyManager.get(spawn.room)
+    const roomManager = new RoomManager(room);
     const warDepartment = new WarDepartment(spawn.room)
     const harvesterSource = energyManager.forceSourceAssignment('harvester')
     const haulers = getLogisticsCreeps(TASK_HAULING, room)
@@ -80,6 +81,7 @@ export default function (spawn: StructureSpawn) {
 
     if (warDepartment.status !== WarStatus.NONE) {
         createWarCreeps(spawn, warDepartment)
+        return
     }
 
     const request = RoleLogistics.requestedCarryCapacity(spawn)
@@ -103,6 +105,10 @@ export default function (spawn: StructureSpawn) {
         }
     }
 
+    if (roomManager.claimRoom()) {
+        return
+    }
+
     if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
         roleMason.create(spawn)
         return
@@ -122,7 +128,13 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment) {
 
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
         roleAttacker.create(spawn, warDepartment.target)
-    } else if (status === WarStatus.CLAIM && claimers.length < CLAIMERS_COUNT) {
+    }
+
+    if (warDepartment.hasHostiles()) {
+        return;
+    }
+
+    if (status === WarStatus.CLAIM && claimers.length < CLAIMERS_COUNT) {
         roleClaimer.create(spawn, warDepartment.target)
     } else if (status === WarStatus.SPAWN) {
         if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
