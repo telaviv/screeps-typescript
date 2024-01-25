@@ -56,8 +56,7 @@ const ImmutableRoomItemRecord = Record({
 
 export class ImmutableRoomItem
     extends ImmutableRoomItemRecord
-    implements IImmutableRoomItem
-{
+    implements IImmutableRoomItem {
     public readonly x!: number
     public readonly y!: number
     public readonly terrain!: number
@@ -69,8 +68,17 @@ export class ImmutableRoomItem
         return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
     }
 
+    public isAtEdge(): boolean {
+        return (
+            this.x === 0 ||
+            this.x === 49 ||
+            this.y === 0 ||
+            this.y === 49
+        )
+    }
+
     public canBuild(): boolean {
-        return !(this.isObstacle() || this.nonObstacles.constructionSite)
+        return !(this.isObstacle() || this.isAtEdge() || this.nonObstacles.constructionSite)
     }
 
     public terrainString(): string {
@@ -83,6 +91,10 @@ export class ImmutableRoomItem
         }
 
         return 'plain'
+    }
+
+    public get pos(): RoomPosition {
+        return new RoomPosition(this.x, this.y, this.roomName)
     }
 }
 
@@ -179,8 +191,8 @@ export class ImmutableRoom implements ValueObject {
         y: number,
     ): RoomPosition | null {
         const neighbors = this.getClosestNeighbors(x, y)
-        const walkableNeighbors = neighbors.filter((pos) => !pos.isObstacle())
-        console.log(
+        const walkableNeighbors = neighbors.filter((pos) => pos.canBuild())
+        Logger.debug(
             'walkable neighbors',
             x,
             y,

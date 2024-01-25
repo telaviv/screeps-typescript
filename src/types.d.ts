@@ -13,15 +13,6 @@ interface CreepMemory {
     home: string | undefined
 }
 
-interface RoomSourceMemory {
-    id: string
-    dropSpot: DroppedEnergyMemory
-}
-
-interface DroppedEnergyMemory {
-    pos: FlatRoomPosition
-}
-
 interface ResourceCreepMemory extends CreepMemory {
     tasks: Task<any>[]
     idleTimestamp: number | null

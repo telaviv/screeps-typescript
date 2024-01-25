@@ -1,5 +1,8 @@
 import { getSpawns } from 'utils/room'
 import * as Logger from 'utils/logger'
+import { filter } from 'lodash'
+import { LogisticsPreference, LogisticsCreep } from 'roles/logistics-constants'
+import { Harvester, HarvesterCreep } from 'roles/harvester'
 
 export function freeEnergyCapacity(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
@@ -58,4 +61,34 @@ export function recycle(creep: Creep) {
     } else if (err !== OK) {
         Logger.warning('recycle:failed', err, creep.name)
     }
+}
+
+export function getCreeps(role: string, room: Room): Creep[] {
+    return Object.values(Game.creeps).filter((creep: Creep) => {
+        return (
+            creep.memory.role === role &&
+            ((creep.memory.home && creep.memory.home === room.name) ||
+                creep.room.name === room.name)
+        )
+    })
+}
+
+export function getHarvesters(room: Room): Harvester[] {
+    return Object.values(Game.creeps).filter((creep: Creep) => {
+        return (
+            creep.memory.role === 'harvester' &&
+            ((creep.memory.home && creep.memory.home === room.name) ||
+                creep.room.name === room.name)
+        )
+    }) as Harvester[];
+}
+
+export function getLogisticsCreeps(preference: LogisticsPreference, room: Room): LogisticsCreep[] {
+    return (Object.values(Game.creeps) as LogisticsCreep[]).filter((creep: LogisticsCreep) => {
+        return (
+            creep.memory.role === 'logistics' &&
+            creep.memory.preference === preference &&
+            creep.room.name === room.name
+        )
+    })
 }

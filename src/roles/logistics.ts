@@ -1,9 +1,8 @@
 import filter from 'lodash/filter'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
-import BuildManager from 'managers/build-manager'
-import { isAtEdge, moveToRoom, moveTowardsCenter } from 'utils/creep'
-import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { moveToRoom } from 'utils/creep'
+import { getEnergyTask, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import { mprofile } from 'utils/profiling'
 import {
@@ -20,7 +19,9 @@ import * as TransferTask from 'tasks/transfer'
 import {
     LogisticsCreep,
     LogisticsMemory,
+    LogisticsTask,
     LogisticsPreference,
+    NO_TASK,
     PREFERENCE_WORKER,
     TASK_BUILDING,
     TASK_COLLECTING,
@@ -29,6 +30,9 @@ import {
     TASK_UPGRADING,
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
+import { fromRoom } from 'utils/immutable-room'
+import SourcesManager from 'managers/sources-manager'
+import autoIncrement from 'utils/autoincrement'
 
 const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -42,6 +46,7 @@ const TASK_EMOJIS = {
     [TASK_COLLECTING]: '⚡',
     [TASK_UPGRADING]: '🌃',
     [TASK_WALL_REPAIRS]: '🧱',
+    [NO_TASK]: '🚳',
 }
 
 const PREFERENCE_EMOJIS = {
@@ -52,6 +57,7 @@ const PREFERENCE_EMOJIS = {
     [TASK_UPGRADING]: '🌃',
     [TASK_WALL_REPAIRS]: '🧱',
     [PREFERENCE_WORKER]: '👷',
+    [NO_TASK]: '🚳',
 }
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
@@ -72,7 +78,7 @@ class RoleLogistics {
         }
 
         if (this.idleTime() > SUICIDE_TIME) {
-            this.creep.suicide();
+            //this.creep.suicide();
             return;
         }
 
@@ -81,17 +87,12 @@ class RoleLogistics {
             return;
         }
 
-        if (isAtEdge(this.creep)) {
-            moveTowardsCenter(this.creep);
-            return;
-        }
-
         const currentTask = this.creep.memory.currentTask;
 
         if (this.creep.memory.tasks.length > 0) {
             this.runTask();
         } else if (currentTask === TASK_COLLECTING) {
-            getEnergy(this.creep);
+            this.getEnergy()
         } else if (currentTask === TASK_HAULING) {
             this.haulEnergy();
         } else if (currentTask === TASK_BUILDING) {
@@ -102,11 +103,35 @@ class RoleLogistics {
             this.repair();
         } else if (currentTask === TASK_WALL_REPAIRS) {
             this.repairWalls();
+        } else if (currentTask === NO_TASK) {
+            this.wander();
+            RoleLogistics.idle(this.creep)
+            this.switchTask();
         }
     }
 
     public static staticRun(creep: LogisticsCreep) {
         return (new RoleLogistics(creep)).run();
+    }
+
+    private getEnergy() {
+        if (!getEnergyTask(this.creep)) {
+            const sourcesManager = new SourcesManager(this.creep.room)
+            const target = sourcesManager.getNextAvailableMiningTarget();
+            if (!target) {
+                this.creep.memory.currentTask = NO_TASK;
+                return
+            }
+            const task = {
+                type: 'mining' as const,
+                id: autoIncrement().toString(),
+                creep: this.creep.name,
+                source: target.source,
+                pos: { x: target.pos.x, y: target.pos.y, roomName: target.pos.roomName },
+                timestamp: Game.time,
+            }
+            this.creep.memory.tasks.push(task)
+        }
     }
 
     @mprofile('logistics:updateMemory')
@@ -120,11 +145,11 @@ class RoleLogistics {
             } else {
                 memory.currentTask = memory.preference;
             }
-            memory.idleTimestamp = null;
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(this.creep)) {
             memory.currentTask = TASK_COLLECTING;
+        }
+        if (memory.tasks.length > 0) {
             memory.idleTimestamp = null;
-            delete memory.currentTarget;
         }
     }
 
@@ -165,6 +190,10 @@ class RoleLogistics {
             return
         }
         creep.memory.idleTimestamp += 1;
+    }
+
+    public static removeIdle(creep: ResourceCreep) {
+        creep.memory.idleTimestamp = null;
     }
 
     @mprofile('logistics:build')
@@ -276,13 +305,39 @@ class RoleLogistics {
         }
     }
 
+
+    private wander() {
+        const iroom = fromRoom(this.creep.room)
+        const pos = iroom.getRandomWalkablePosition(this.creep.pos.x, this.creep.pos.y)
+        if (pos !== null) {
+            this.creep.moveTo(pos)
+        }
+        this.creep.say('🤔')
+    }
+
     runTask() {
         const task = this.creep.memory.tasks[0];
-        TaskRunner.run(task, this.creep);
+        if (task.type === 'mining') {
+            const source = Game.getObjectById<Source>(task.source)!
+            if (this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+                this.creep.memory.tasks.shift();
+                this.switchTask()
+                return
+            }
+            if (this.creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                this.creep.moveTo(source, {
+                    visualizePathStyle: { stroke: '#ffaa00' },
+                })
+            } else {
+                this.creep.memory.currentTask = NO_TASK
+            }
+        } else {
+            TaskRunner.run(task, this.creep);
+        }
     }
 
     switchTask() {
-        let task = this.creep.memory.currentTask;
+        let task: LogisticsTask = this.creep.memory.currentTask;
         if (!isAtExtensionCap(this.creep.room) || hasTunnelSite(this.creep.room)) {
             task = TASK_BUILDING;
         } else if (hasOwnFragileWall(this.creep.room)) {
@@ -292,7 +347,7 @@ class RoleLogistics {
         } else {
             task = TASK_UPGRADING;
         }
-        if (this.creep.memory.currentTask === task) {
+        if (this.creep.memory.currentTask === task || this.creep.memory.currentTask !== NO_TASK) {
             Logger.info(
                 'logistics:switch-task:failure',
                 this.creep.name,
@@ -369,6 +424,7 @@ class RoleLogistics {
             retVal)
         return retVal
     }
+
 }
 
 /**

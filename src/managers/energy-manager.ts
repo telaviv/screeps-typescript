@@ -28,23 +28,6 @@ export default class EnergyManager {
         return EnergyManager.create(room.memory)
     }
 
-    private hasEnoughHaulers(): boolean {
-        let creeps: Creep[] = []
-        for (const source of this.sources) {
-            creeps = creeps.concat(source.creeps)
-        }
-        const haulerCount = creeps.filter((creep) => {
-            const memory = creep.memory
-            if (memory.role !== 'logistics') {
-                return false
-            }
-            const logisticsMemory = memory as LogisticsMemory
-            return logisticsMemory.preference === TASK_HAULING
-        }).length
-
-        return haulerCount >= this.sources.length
-    }
-
     public forceSourceAssignment(role: string): Id<Source> {
         const sourceCounts = this.getSourceCounts(role)
         return minBy(Array.from(sourceCounts.keys()), (id) =>
@@ -57,7 +40,7 @@ export default class EnergyManager {
         const counts: SourceCounts = new Map<Id<Source>, number>()
         for (const source of this.sources) {
             let count = 0
-            for (const creep of source.creeps) {
+            for (const creep of source.harvesters) {
                 if (creep.memory.role === role) {
                     count++
                 }

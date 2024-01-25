@@ -10,6 +10,11 @@ export default class DroppedEnergyManager {
         this.memory = memory
     }
 
+    public static createFromSourceId(id: Id<Source>): DroppedEnergyManager {
+        const source = Game.getObjectById(id)!
+        return DroppedEnergyManager.get(source.room.memory.sources.find((s) => s.id === id)!.dropSpot)
+    }
+
     public static create(memory: DroppedEnergyMemory): DroppedEnergyManager {
         const { x, y, roomName } = memory.pos
         const pos = new RoomPosition(x, y, roomName)

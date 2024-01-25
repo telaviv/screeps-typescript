@@ -22,6 +22,7 @@ export interface Harvester extends SourceCreep {
 
 interface HarvesterMemory extends SourceMemory {
     role: 'harvester'
+    pos: FlatRoomPosition
 }
 
 export class HarvesterCreep {
@@ -50,16 +51,15 @@ export class HarvesterCreep {
         this.harvestSource()
     }
 
-    get harvestPos() {
-        const sourceMemory = this.getSourceMemory()
-        return sourceMemory.dropSpot.pos
+    get harvestPos(): RoomPosition {
+        return new RoomPosition(this.creep.memory.pos.x, this.creep.memory.pos.y, this.creep.memory.pos.roomName)
     }
 
     get room() {
         return this.creep.room
     }
 
-    getSourceMemory() {
+    private getSourceMemory(): RoomSourceMemory {
         const roomMemory = Memory.rooms[this.creep.room.name]
         const sourceMemory = roomMemory.sources.find(
             (s) => s.id === this.creep.memory.source,
@@ -85,7 +85,7 @@ export class HarvesterCreep {
 
     harvestSource() {
         const sourceMemory = this.getSourceMemory()
-        const source = Game.getObjectById(sourceMemory.id) as Source
+        const source = Game.getObjectById(sourceMemory.id)!
         const err = this.creep.harvest(source)
         if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
             Logger.warning(
@@ -147,7 +147,7 @@ const roleHarvester = {
         harvester.run()
     },
 
-    create(spawn: StructureSpawn, source: Id<Source>, rescue = false): number {
+    create(spawn: StructureSpawn, pos: RoomPosition, source: Id<Source>, rescue = false): number {
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
@@ -158,6 +158,7 @@ const roleHarvester = {
                 home: spawn.room.name,
                 waitTime: 0,
                 tasks: [],
+                pos: { x: pos.x, y: pos.y, roomName: pos.roomName },
                 source,
             } as HarvesterMemory,
         })
