@@ -116,12 +116,19 @@ export default class SourceManager {
         const harvesters = this.harvesters
         const available: RoomPosition[] = [];
         for (const pos of this.positions) {
+            let isAvailable = true;
             for (const harvester of harvesters) {
                 if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
-                    continue;
+                    isAvailable = false;
+                    break;
                 }
             }
-            available.push(pos);
+            if (this.id === '33bd077274d064f') {
+                console.log(`Source ${this.id} has available position ${JSON.stringify(pos)}`);
+            }
+            if (isAvailable) {
+                available.push(pos);
+            }
         }
         return available;
     }
@@ -131,18 +138,23 @@ export default class SourceManager {
         const auxHarvesters = this.auxHarvesters
         const available: RoomPosition[] = [];
         for (const pos of this.positions) {
+            let isAvailable = true;
             for (const harvester of harvesters) {
                 if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
-                    continue;
+                    isAvailable = false;
+                    break;
                 }
             }
             for (const auxHarvester of auxHarvesters) {
                 const auxPos = auxHarvester.memory.tasks[0].pos;
                 if (pos.isEqualTo(auxPos.x, auxPos.y)) {
-                    continue;
+                    isAvailable = false;
+                    break;
                 }
             }
-            available.push(pos);
+            if (isAvailable) {
+                available.push(pos);
+            }
         }
         return available;
     }

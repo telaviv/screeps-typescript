@@ -50,6 +50,9 @@ export default class SourcesManager {
             if (!sourceManager.hasStaticHarvester()) {
                 pos = sourceManager.containerPosition;
                 source = sourceManager.id;
+                if (source === '33bd077274d064f') {
+                    console.log(`Source ${source} has no static harvester`);
+                }
             }
         }
         if (pos && source) {
@@ -60,6 +63,9 @@ export default class SourcesManager {
             for (const position of positions) {
                 pos = position
                 source = sourceManager.id
+            }
+            if (source === '33bd077274d064f') {
+                console.log(`Source ${source} has available positions ${JSON.stringify(positions)}`);
             }
         }
         if (pos && source) {

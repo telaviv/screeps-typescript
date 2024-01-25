@@ -318,17 +318,23 @@ class RoleLogistics {
     private runTask() {
         const task = this.creep.memory.tasks[0];
         if (task.type === 'mining') {
+            console.log(`screep ${this.creep.name} is mining ${task.source} at ${task.pos}`);
             const source = Game.getObjectById<Source>(task.source)!
             if (this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
                 this.creep.memory.tasks.shift();
                 this.switchTask()
                 return
             }
-            if (this.creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(task.pos, {
+            const err = this.creep.harvest(source)
+            console.log(`screep ${this.creep.name} is mining ${task.source} at ${task.pos}: ${err}`);
+            if (err === ERR_NOT_IN_RANGE) {
+                const err = this.creep.moveTo(task.pos.x, task.pos.y, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
+                console.log(`mining screep ${this.creep.name} is moving to ${task.pos}: ${err}`);
+
             } else {
+                console.log(`mining screep ${this.creep.name} harvest err ${err}`);
                 this.creep.memory.currentTask = NO_TASK
             }
         } else {
