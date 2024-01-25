@@ -7,6 +7,8 @@ import { getHarvesters, getLogisticsCreeps } from 'utils/creep'
 import { Harvester } from 'roles/harvester'
 import { LogisticsCreep } from 'roles/logistics-constants'
 
+const MAX_WORK_PARTS = 10
+
 export default class SourceManager {
     public readonly id: Id<Source>
     public readonly source: Source
@@ -101,7 +103,7 @@ export default class SourceManager {
     public hasEnoughHarvesters(): boolean {
         console.log(`Source:hasEnoughHarvesters ${this.id}`, JSON.stringify(this.harvesters))
         const works = this.harvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
-        if (works >= 10) {
+        if (works >= MAX_WORK_PARTS) {
             return true
         }
         console.log(`Source:hasEnoughHarvesters ${this.id} available`, JSON.stringify(this.getAvailableHarvesterPositions()))
@@ -110,7 +112,7 @@ export default class SourceManager {
 
     public hasEnoughAuxHarvesters(): boolean {
         const works = this.allHarvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
-        if (works >= 10) {
+        if (works >= MAX_WORK_PARTS) {
             return true
         }
         return this.getAvailableAuxHarvesterPositions().length === 0
