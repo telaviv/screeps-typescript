@@ -17,7 +17,7 @@ export default class SourcesManager {
         }
     }
 
-    hasEnoughHarvesters(): boolean {
+    public hasEnoughHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughHarvesters()) {
                 console.log(`Source ${sourceManager.id} does not have enough harvesters`);
@@ -28,7 +28,22 @@ export default class SourcesManager {
         return true;
     }
 
-    public getNextAvailableMiningTarget(): { source: Id<Source>, pos: RoomPosition } | null {
+    public hasEnoughAuxHarvesters(): boolean {
+        for (const sourceManager of this.sourceManagers) {
+            if (!sourceManager.hasEnoughAuxHarvesters()) {
+                console.log(`Source ${sourceManager.id} does not have enough aux harvesters`);
+                return false;
+            }
+        }
+        console.log(`Sources have enough aux harvesters`);
+        return true;
+    }
+
+    public hasAllContainerHarvesters() {
+        return this.sourceManagers.every((sourceManager) => sourceManager.hasStaticHarvester());
+    }
+
+    public getNextHarvesterMiningTarget(): { source: Id<Source>, pos: RoomPosition } | null {
         let source: Id<Source> | null = null
         let pos: RoomPosition | null = null;
         for (const sourceManager of this.sourceManagers) {
@@ -41,7 +56,23 @@ export default class SourcesManager {
             return { source, pos }
         }
         for (const sourceManager of this.sourceManagers) {
-            const positions = sourceManager.getAvailablePositions()
+            const positions = sourceManager.getAvailableHarvesterPositions()
+            for (const position of positions) {
+                pos = position
+                source = sourceManager.id
+            }
+        }
+        if (pos && source) {
+            return { source, pos }
+        }
+        return null
+    }
+
+    public getNextAuxHarvesterMiningTarget(): { source: Id<Source>, pos: RoomPosition } | null {
+        let source: Id<Source> | null = null
+        let pos: RoomPosition | null = null;
+        for (const sourceManager of this.sourceManagers) {
+            const positions = sourceManager.getAvailableAuxHarvesterPositions()
             for (const position of positions) {
                 pos = position
                 source = sourceManager.id
@@ -54,7 +85,7 @@ export default class SourcesManager {
     }
 
     public createHarvester(spawn: StructureSpawn): number {
-        const target = this.getNextAvailableMiningTarget()
+        const target = this.getNextHarvesterMiningTarget()
         if (!target) {
             throw new Error("No available positions for harvester")
         }

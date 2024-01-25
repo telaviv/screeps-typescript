@@ -78,7 +78,7 @@ class RoleLogistics {
         }
 
         if (this.idleTime() > SUICIDE_TIME) {
-            //this.creep.suicide();
+            this.creep.suicide();
             return;
         }
 
@@ -117,7 +117,7 @@ class RoleLogistics {
     private getEnergy() {
         if (!getEnergyTask(this.creep)) {
             const sourcesManager = new SourcesManager(this.creep.room)
-            const target = sourcesManager.getNextAvailableMiningTarget();
+            const target = sourcesManager.getNextAuxHarvesterMiningTarget()
             if (!target) {
                 this.creep.memory.currentTask = NO_TASK;
                 return
@@ -315,7 +315,7 @@ class RoleLogistics {
         this.creep.say('🤔')
     }
 
-    runTask() {
+    private runTask() {
         const task = this.creep.memory.tasks[0];
         if (task.type === 'mining') {
             const source = Game.getObjectById<Source>(task.source)!
@@ -325,7 +325,7 @@ class RoleLogistics {
                 return
             }
             if (this.creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(source, {
+                this.creep.moveTo(task.pos, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
             } else {

@@ -83,12 +83,17 @@ export function getHarvesters(room: Room): Harvester[] {
     }) as Harvester[];
 }
 
-export function getLogisticsCreeps(preference: LogisticsPreference, room: Room): LogisticsCreep[] {
+export function getLogisticsCreeps(options: {
+    preference?: LogisticsPreference,
+    room?: Room,
+    taskType?: string
+}): LogisticsCreep[] {
     return (Object.values(Game.creeps) as LogisticsCreep[]).filter((creep: LogisticsCreep) => {
         return (
-            creep.memory.role === 'logistics' &&
-            creep.memory.preference === preference &&
-            creep.room.name === room.name
+            (!options.preference || creep.memory.preference === options.preference) &&
+            (!options.room || creep.room.name === options.room.name) &&
+            (!options.taskType || creep.memory.tasks.length > 0 &&
+                creep.memory.tasks[0].type === options.taskType)
         )
     })
 }

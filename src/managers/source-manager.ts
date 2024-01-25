@@ -3,8 +3,9 @@ import some from 'lodash/some'
 
 import DroppedEnergyManager from './dropped-energy-manager'
 import { fromRoom } from 'utils/immutable-room'
-import { getHarvesters } from 'utils/creep'
+import { getHarvesters, getLogisticsCreeps } from 'utils/creep'
 import { Harvester } from 'roles/harvester'
+import { LogisticsCreep } from 'roles/logistics-constants'
 
 export default class SourceManager {
     public readonly id: Id<Source>
@@ -56,6 +57,13 @@ export default class SourceManager {
         )
     }
 
+    public get auxHarvesters(): LogisticsCreep[] {
+        return filter(
+            getLogisticsCreeps({ taskType: 'mining' }),
+            (creep: LogisticsCreep) => creep.memory.tasks && creep.memory.tasks[0].source === this.id,
+        )
+    }
+
     public get positions(): RoomPosition[] {
         const iroom = fromRoom(this.room)
         const neighbors = iroom.getClosestNeighbors(this.source.pos.x, this.source.pos.y)
@@ -87,22 +95,56 @@ export default class SourceManager {
     }
 
     public hasEnoughHarvesters(): boolean {
-        console.log(`Source ${this.id}`, JSON.stringify(this.harvesters))
+        console.log(`Source:hasEnoughHarvesters ${this.id}`, JSON.stringify(this.harvesters))
         const works = this.harvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
         if (works >= 10) {
             return true
         }
-        console.log(`Source ${this.id} available`, JSON.stringify(this.getAvailablePositions()))
-        return this.getAvailablePositions().length === 0
+        console.log(`Source:hasEnoughHarvesters ${this.id} available`, JSON.stringify(this.getAvailableHarvesterPositions()))
+        return this.getAvailableHarvesterPositions().length === 0
     }
 
-    public getAvailablePositions(): RoomPosition[] {
-        const harvesters = this.harvesters
-        console.log(`Source ${this.id}`, JSON.stringify(this.positions))
-        return this.positions.filter((pos) => {
-            return !some(harvesters, (harvester: Harvester) => {
-                pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)
-            })
-        })
+    public hasEnoughAuxHarvesters(): boolean {
+        const works = this.auxHarvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
+        if (works >= 10) {
+            return true
+        }
+        return this.getAvailableAuxHarvesterPositions().length === 0
     }
+
+    public getAvailableHarvesterPositions(): RoomPosition[] {
+        const harvesters = this.harvesters
+        const available: RoomPosition[] = [];
+        for (const pos of this.positions) {
+            for (const harvester of harvesters) {
+                if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
+                    continue;
+                }
+            }
+            available.push(pos);
+        }
+        return available;
+    }
+
+    public getAvailableAuxHarvesterPositions(): RoomPosition[] {
+        const harvesters = this.harvesters
+        const auxHarvesters = this.auxHarvesters
+        const available: RoomPosition[] = [];
+        for (const pos of this.positions) {
+            for (const harvester of harvesters) {
+                if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
+                    continue;
+                }
+            }
+            for (const auxHarvester of auxHarvesters) {
+                const auxPos = auxHarvester.memory.tasks[0].pos;
+                if (pos.isEqualTo(auxPos.x, auxPos.y)) {
+                    continue;
+                }
+            }
+            available.push(pos);
+        }
+        return available;
+    }
+
 }
