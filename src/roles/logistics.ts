@@ -71,6 +71,9 @@ class RoleLogistics {
 
     @mprofile('runLogistics')
     public run() {
+        if (this.creep.spawning) {
+            return
+        }
         this.updateMemory();
         this.say();
         if (this.idleTime() > SLEEP_SAY_TIME) {
@@ -119,7 +122,7 @@ class RoleLogistics {
             const sourcesManager = new SourcesManager(this.creep.room)
             const target = sourcesManager.getNextAuxHarvesterMiningTarget()
             if (!target) {
-                this.creep.memory.currentTask = NO_TASK;
+                this.setToNoTask('no aux harvester mining targets');
                 return
             }
             const task = {
@@ -132,6 +135,14 @@ class RoleLogistics {
             }
             this.creep.memory.tasks.push(task)
         }
+    }
+
+    private setToNoTask(reason: string): void {
+        if (this.creep.memory.tasks.length > 0) {
+            Logger.warning('logistics:setToNoTask:failure:hasTasks', this.creep.name, reason)
+            return
+        }
+        this.creep.memory.currentTask = NO_TASK
     }
 
     @mprofile('logistics:updateMemory')
@@ -318,7 +329,6 @@ class RoleLogistics {
     private runTask() {
         const task = this.creep.memory.tasks[0];
         if (task.type === 'mining') {
-            console.log(`screep ${this.creep.name} is mining ${task.source} at ${task.pos}`);
             const source = Game.getObjectById<Source>(task.source)!
             if (this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
                 this.creep.memory.tasks.shift();
@@ -326,16 +336,12 @@ class RoleLogistics {
                 return
             }
             const err = this.creep.harvest(source)
-            console.log(`screep ${this.creep.name} is mining ${task.source} at ${task.pos}: ${err}`);
             if (err === ERR_NOT_IN_RANGE) {
                 const err = this.creep.moveTo(task.pos.x, task.pos.y, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
-                console.log(`mining screep ${this.creep.name} is moving to ${task.pos}: ${err}`);
-
-            } else {
-                console.log(`mining screep ${this.creep.name} harvest err ${err}`);
-                this.creep.memory.currentTask = NO_TASK
+            } else if (err !== OK) {
+                this.setToNoTask(`mining err ${err}`)
             }
         } else {
             TaskRunner.run(task, this.creep);

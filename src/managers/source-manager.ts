@@ -64,6 +64,10 @@ export default class SourceManager {
         )
     }
 
+    public get allHarvesters(): Creep[] {
+        return [...this.harvesters, ...this.auxHarvesters]
+    }
+
     public get positions(): RoomPosition[] {
         const iroom = fromRoom(this.room)
         const neighbors = iroom.getClosestNeighbors(this.source.pos.x, this.source.pos.y)
@@ -105,7 +109,7 @@ export default class SourceManager {
     }
 
     public hasEnoughAuxHarvesters(): boolean {
-        const works = this.auxHarvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
+        const works = this.allHarvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
         if (works >= 10) {
             return true
         }
