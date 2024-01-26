@@ -1,13 +1,13 @@
 import WarDepartment from 'war-department'
 import * as Logger from 'utils/logger'
 import { resetSnapshot, saveSnapshot } from 'snapshot'
-import roleClaimer from 'roles/claim'
 import roleScout from 'roles/scout'
 import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
 import { getAllTasks } from 'tasks/utils'
 import { RoomManager } from 'managers/room-manager'
 import ErrorMapper, { trace } from './ErrorMapper'
+import { Task } from 'tasks/types'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach((creep) => {
@@ -58,7 +58,7 @@ function unpauseConstruction(room: string) {
     Game.rooms[room].memory.construction.paused = false
 }
 
-function printTasks(type?: string) {
+function printTasks(type?: Task<any>) {
     for (const task of getAllTasks()) {
         if (type && task !== type) {
             continue

@@ -14,6 +14,7 @@ import {
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 import autoIncrement from 'utils/autoincrement'
+import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 
 const ROLE = 'mason'
 type Wall = StructureWall | StructureRampart

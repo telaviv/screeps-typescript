@@ -16,6 +16,7 @@ import { spawnCreep } from 'utils/spawn'
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
+import * as MiningTask from 'tasks/mining'
 import {
     LogisticsCreep,
     LogisticsMemory,
@@ -23,6 +24,7 @@ import {
     LogisticsPreference,
     NO_TASK,
     PREFERENCE_WORKER,
+    TASK_MINING,
     TASK_BUILDING,
     TASK_COLLECTING,
     TASK_HAULING,
@@ -31,8 +33,7 @@ import {
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
 import { fromRoom } from 'utils/immutable-room'
-import SourcesManager from 'managers/sources-manager'
-import autoIncrement from 'utils/autoincrement'
+import { ResourceCreep } from 'tasks/types'
 
 const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -45,6 +46,7 @@ const TASK_EMOJIS = {
     [TASK_REPAIRING]: '🛠️',
     [TASK_COLLECTING]: '⚡',
     [TASK_UPGRADING]: '🌃',
+    [TASK_MINING]: '⛏️',
     [TASK_WALL_REPAIRS]: '🧱',
     [NO_TASK]: '🚳',
 }
@@ -119,21 +121,10 @@ class RoleLogistics {
 
     private getEnergy() {
         if (!getEnergyTask(this.creep)) {
-            const sourcesManager = new SourcesManager(this.creep.room)
-            const target = sourcesManager.getNextAuxHarvesterMiningTarget()
-            if (!target) {
-                this.setToNoTask('no aux harvester mining targets');
+            if (!MiningTask.makeRequest(this.creep)) {
+                this.setToNoTask('no mining targets');
                 return
             }
-            const task = {
-                type: 'mining' as const,
-                id: autoIncrement().toString(),
-                creep: this.creep.name,
-                source: target.source,
-                pos: { x: target.pos.x, y: target.pos.y, roomName: target.pos.roomName },
-                timestamp: Game.time,
-            }
-            this.creep.memory.tasks.push(task)
         }
     }
 
@@ -301,7 +292,6 @@ class RoleLogistics {
         ) {
             this.creep.moveTo(this.creep.room.controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
-
                 range: 3,
             });
         }
@@ -328,24 +318,7 @@ class RoleLogistics {
 
     private runTask() {
         const task = this.creep.memory.tasks[0];
-        if (task.type === 'mining') {
-            const source = Game.getObjectById<Source>(task.source)!
-            if (this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-                this.creep.memory.tasks.shift();
-                this.switchTask()
-                return
-            }
-            const err = this.creep.harvest(source)
-            if (err === ERR_NOT_IN_RANGE) {
-                const err = this.creep.moveTo(task.pos.x, task.pos.y, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
-            } else if (err !== OK) {
-                this.setToNoTask(`mining err ${err}`)
-            }
-        } else {
-            TaskRunner.run(task, this.creep);
-        }
+        TaskRunner.run(task, this.creep);
     }
 
     switchTask() {

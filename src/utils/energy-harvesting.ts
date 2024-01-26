@@ -3,6 +3,7 @@ import { hash } from 'immutable'
 import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
 import * as Logger from 'utils/logger'
+import { ResourceCreep } from 'tasks/types'
 
 export function isFullOfEnergy(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0

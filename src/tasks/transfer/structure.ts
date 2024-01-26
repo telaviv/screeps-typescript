@@ -1,9 +1,9 @@
 import { TransferTask } from 'tasks/transfer/types'
 import { isTransferTask } from 'tasks/transfer/utils'
-import { LogisticsCreep } from 'roles/logistics-constants'
 import { getAllTasks } from 'tasks/utils'
 import autoIncrement from 'utils/autoincrement'
 import { currentEnergyHeld } from 'utils/creep'
+import { ResourceCreep } from 'tasks/types'
 
 export class TransferStructure {
     public readonly structure: AnyStoreStructure
@@ -44,7 +44,7 @@ export class TransferStructure {
     }
 
     public makeRequest(
-        creep: LogisticsCreep,
+        creep: ResourceCreep,
         resource: ResourceConstant = RESOURCE_ENERGY,
     ): TransferTask {
         const creepEnergyAvailable = currentEnergyHeld(creep)

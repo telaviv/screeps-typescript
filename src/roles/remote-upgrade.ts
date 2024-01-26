@@ -6,6 +6,7 @@ import { profile } from 'utils/profiling'
 import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
+import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 
 const ROLE = 'remote-upgrade'
 

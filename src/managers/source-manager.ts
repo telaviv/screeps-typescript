@@ -6,6 +6,8 @@ import { fromRoom } from 'utils/immutable-room'
 import { getHarvesters, getLogisticsCreeps } from 'utils/creep'
 import { Harvester } from 'roles/harvester'
 import { LogisticsCreep } from 'roles/logistics-constants'
+import { isMiningTask } from 'tasks/mining/utils'
+import { MiningTask } from 'tasks/mining/types'
 
 const MAX_WORK_PARTS = 10
 
@@ -62,9 +64,30 @@ export default class SourceManager {
     public get auxHarvesters(): LogisticsCreep[] {
         return filter(
             getLogisticsCreeps({ taskType: 'mining' }),
-            (creep: LogisticsCreep) => creep.memory.tasks && creep.memory.tasks[0].source === this.id,
+            (creep: LogisticsCreep) => {
+                if (!creep.memory.tasks) {
+                    return false
+                }
+                const task = creep.memory.tasks[0]
+                if (isMiningTask(task)) {
+                    return task.source === this.id
+                }
+                return false
+            },
         )
     }
+
+    public getAuxTasks(): MiningTask[] {
+        const tasks: MiningTask[] = []
+        for (const auxHarvester of this.auxHarvesters) {
+            const task = auxHarvester.memory.tasks[0]
+            if (isMiningTask(task)) {
+                tasks.push(task)
+            }
+        }
+        return tasks
+    }
+
 
     public get allHarvesters(): Creep[] {
         return [...this.harvesters, ...this.auxHarvesters]
@@ -101,6 +124,7 @@ export default class SourceManager {
     }
 
     public hasEnoughHarvesters(): boolean {
+        //TODO: if we dont' have our static harvester, then we don't have enough harvesters
         console.log(`Source:hasEnoughHarvesters ${this.id}`, JSON.stringify(this.harvesters))
         const works = this.harvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
         if (works >= MAX_WORK_PARTS) {
@@ -151,9 +175,8 @@ export default class SourceManager {
                     break;
                 }
             }
-            for (const auxHarvester of auxHarvesters) {
-                const auxPos = auxHarvester.memory.tasks[0].pos;
-                if (pos.isEqualTo(auxPos.x, auxPos.y)) {
+            for (const task of this.getAuxTasks()) {
+                if (pos.isEqualTo(task.pos.x, task.pos.y)) {
                     isAvailable = false;
                     break;
                 }
@@ -164,5 +187,4 @@ export default class SourceManager {
         }
         return available;
     }
-
 }

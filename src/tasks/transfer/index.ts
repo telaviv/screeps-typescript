@@ -1,13 +1,13 @@
 import { TransferStructure } from 'tasks/transfer/structure'
-import { LogisticsCreep } from 'roles/logistics-constants'
 import { currentEnergyHeld } from 'utils/creep'
 import * as Logger from 'utils/logger'
 import { getExtensions, getSpawns, getTowers } from 'utils/room'
 
 import { TransferTask } from './types'
 import { isTransferTask } from './utils'
+import { ResourceCreep } from 'tasks/types'
 
-export function makeRequest(creep: LogisticsCreep): AnyStoreStructure | null {
+export function makeRequest(creep: ResourceCreep): AnyStoreStructure | null {
     const energy = currentEnergyHeld(creep)
     if (energy === 0) {
         return null
@@ -44,7 +44,7 @@ export function makeRequest(creep: LogisticsCreep): AnyStoreStructure | null {
     return null
 }
 
-export function run(task: TransferTask, creep: LogisticsCreep): boolean {
+export function run(task: TransferTask, creep: ResourceCreep): boolean {
     const structure = getStructure(task)
     const err = creep.transfer(structure, RESOURCE_ENERGY)
     if (err === ERR_NOT_IN_RANGE) {
@@ -60,7 +60,7 @@ export function run(task: TransferTask, creep: LogisticsCreep): boolean {
     return false
 }
 
-function addTransferTask(creep: LogisticsCreep, structure: AnyStoreStructure) {
+function addTransferTask(creep: ResourceCreep, structure: AnyStoreStructure) {
     const transferStructure = TransferStructure.get(structure.id)
     const task = transferStructure.makeRequest(creep)
     Logger.info(
@@ -76,7 +76,7 @@ function addTransferTask(creep: LogisticsCreep, structure: AnyStoreStructure) {
     return task
 }
 
-export function completeRequest(creep: LogisticsCreep) {
+export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning(
             'task:transfer:complete:failure',
@@ -97,7 +97,7 @@ export function completeRequest(creep: LogisticsCreep) {
     }
 }
 
-export function cleanup(task: TransferTask, creep: LogisticsCreep): boolean {
+export function cleanup(task: TransferTask, creep: ResourceCreep): boolean {
     if (Game.getObjectById(task.structureId) === null) {
         Logger.warning(
             'transfer:cleanup:failure',

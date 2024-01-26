@@ -1,9 +1,12 @@
+import { ResourceCreepMemory } from "tasks/types"
+
 export const TASK_HAULING = 'hauling'
 export const TASK_BUILDING = 'building'
 export const TASK_UPGRADING = 'upgrading'
 export const TASK_REPAIRING = 'repairing'
 export const TASK_WALL_REPAIRS = 'wall-repairs'
 export const TASK_COLLECTING = 'collecting'
+export const TASK_MINING = 'mining'
 export const NO_TASK = 'no-task'
 export const PREFERENCE_WORKER = 'worker'
 

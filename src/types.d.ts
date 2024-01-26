@@ -13,15 +13,6 @@ interface CreepMemory {
     home: string | undefined
 }
 
-interface ResourceCreepMemory extends CreepMemory {
-    tasks: Task<any>[]
-    idleTimestamp: number | null
-}
-
-interface ResourceCreep extends Creep {
-    memory: ResourceCreepMemory
-}
-
 interface ProfilerData {
     [key: string]: { total: number; calls: number }
 }
