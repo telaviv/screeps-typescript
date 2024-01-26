@@ -33,7 +33,6 @@ import {
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
 import { fromRoom } from 'utils/immutable-room'
-import { ResourceCreep } from 'tasks/types'
 import { isMiningTask } from 'tasks/mining/utils'
 
 const ROLE = 'logistics'
@@ -74,29 +73,60 @@ class RoleLogistics {
 
     @mprofile('runLogistics')
     public run() {
+        if (this.creep.name === 'logistics:worker:W8N3:24427') {
+            console.log('checkpoint 1', this.creep.memory.currentTask);
+        }
         if (this.creep.spawning) {
             return
         }
+        if (this.creep.name === 'logistics:worker:W8N3:24427') {
+            console.log('checkpoint 2', this.creep.memory.currentTask);
+        }
+
         this.updateMemory();
+        if (this.creep.name === 'logistics:worker:W8N3:24427') {
+            console.log('checkpoint 3', this.creep.memory.currentTask);
+        }
         this.say();
         if (this.idleTime() > SUICIDE_TIME) {
             this.creep.suicide();
             return;
         }
+        if (this.creep.name === 'logistics:worker:W8N3:24427') {
+            console.log('checkpoint 4', this.creep.memory.currentTask);
+        }
+
 
         if (this.creep.room.name !== this.creep.memory.home) {
             moveToRoom(this.creep.memory.home, this.creep);
             return;
+        }
+        if (this.creep.name === 'logistics:worker:W8N3:24427') {
+            console.log('checkpoint 5', this.creep.memory.currentTask);
         }
 
         const currentTask = this.creep.memory.currentTask;
         const tasks = this.creep.memory.tasks
 
         if (tasks.length > 0 || currentTask !== NO_TASK) {
+            if (this.creep.name === 'logistics:worker:W8N3:24427') {
+                console.log('checkpoint unidle', this.creep.memory.currentTask);
+            }
+
+            console.log(`${this.creep.name} unidling: ${currentTask}`)
             this.unidle()
         } else {
+            if (this.creep.name === 'logistics:worker:W8N3:24427') {
+                console.log('checkpoint idle', this.creep.memory.currentTask);
+            }
+
+            console.log(`${this.creep.name} idling: ${currentTask}`)
             this.idle()
         }
+        if (this.creep.name === 'logistics:worker:W8N3:24427') {
+            console.log('checkpoint 6', this.creep.memory.currentTask);
+        }
+
 
         if (tasks.length > 0) {
             this.runTask();
@@ -153,9 +183,6 @@ class RoleLogistics {
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(this.creep)) {
             memory.currentTask = TASK_COLLECTING;
         }
-        if (memory.tasks.length > 0) {
-            memory.idleTimestamp = null;
-        }
     }
 
 
@@ -198,7 +225,9 @@ class RoleLogistics {
     }
 
     private idle() {
-        this.creep.memory.idleTimestamp = Game.time;
+        if (this.creep.memory.idleTimestamp === null) {
+            this.creep.memory.idleTimestamp = Game.time
+        }
     }
 
     private unidle() {
