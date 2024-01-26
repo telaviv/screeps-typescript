@@ -140,7 +140,7 @@ class RoleLogistics {
                 }
             }
         }
-        Logger.error('logistics:getEnergy:failure', 'no tasks could be made', this.creep.name)
+        Logger.debug('logistics:getEnergy:failure', 'no tasks could be made', this.creep.name)
         this.setToNoTask('no tasks could be made')
     }
 

@@ -1,7 +1,7 @@
 import includes from 'lodash/includes'
 
 import autoIncrement from 'utils/autoincrement'
-import { fromBodyPlan } from 'utils/parts'
+import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 
@@ -53,22 +53,16 @@ const roleClaimer = {
         }
     }, 'runClaimer'),
 
+    canCreate(spawn: StructureSpawn): boolean {
+        const energyAvailable = spawn.room.energyAvailable
+        const parts = calculateParts(energyAvailable)
+        return parts !== null;
+    },
+
     create(spawn: StructureSpawn, roomName: string, minimal = false): number {
         const energyAvailable = spawn.room.energyAvailable
-        let parts
-        if (minimal) {
-            parts = [CLAIM, MOVE]
-        } else {
-            parts = calculateParts(energyAvailable)
-        }
-        const err = spawn.spawnCreep(parts, `${ROLE}:${autoIncrement()}`, {
-            memory: {
-                role: ROLE,
-                home: spawn.room.name,
-                roomName,
-            } as ClaimerMemory,
-        })
-        if (err === ERR_NOT_ENOUGH_ENERGY) {
+        let parts = calculateParts(energyAvailable)
+        if (!parts) {
             Logger.warning(
                 'claimer:create:failed',
                 spawn.room.name,
@@ -76,12 +70,26 @@ const roleClaimer = {
                 energyAvailable,
             )
         }
+        if (minimal) {
+            parts = [CLAIM, MOVE]
+        }
+
+        const err = spawn.spawnCreep(parts!, `${ROLE}:${autoIncrement()}`, {
+            memory: {
+                role: ROLE,
+                home: spawn.room.name,
+                roomName,
+            } as ClaimerMemory,
+        })
+        if (err === ERR_NOT_ENOUGH_ENERGY) {
+            throw new Error('not enough energy to make claimer')
+        }
         return err
     },
 }
 
-export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan(capacity, [CLAIM, MOVE])
+export function calculateParts(capacity: number): BodyPartConstant[] | null {
+    return fromBodyPlanSafe(capacity, [CLAIM, MOVE])
 }
 
 export default roleClaimer

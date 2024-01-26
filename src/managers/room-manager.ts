@@ -65,6 +65,11 @@ export class RoomManager {
         this.roomTasks.push(task)
     }
 
+    public canClaimRoom(): boolean {
+        return this.hasClaimRoomTask() &&
+            roleClaimer.canCreate(this.room.find(FIND_MY_SPAWNS)[0])
+    }
+
     public hasClaimRoomTask(): boolean {
         return this.roomTasks.some(task => task.type === "claim")
     }
@@ -84,11 +89,11 @@ export class RoomManager {
         if (err === OK) {
             const warDepartment = new WarDepartment(Game.rooms[destination])
             warDepartment.claimRoom(destination)
-            Logger.info('RoomManager:claimRoom:war', destination)
+            Logger.info('RoomManager:claimRoom:success', destination)
+            this.roomTasks = this.roomTasks.filter(task => task.id !== claimTask.id)
+            return true
         }
-        Logger.info('RoomManager:claimRoom:success', destination)
-        this.roomTasks = this.roomTasks.filter(task => task.id !== claimTask.id)
-        return true
+        return false
     }
 
     public getClaimRoomTask(): ClaimRoomTask | undefined {

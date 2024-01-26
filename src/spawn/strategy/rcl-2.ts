@@ -78,7 +78,8 @@ export default function (spawn: StructureSpawn) {
         }
     }
 
-    if (roomManager.claimRoom()) {
+    if (roomManager.canClaimRoom()) {
+        roomManager.claimRoom()
         return
     }
 

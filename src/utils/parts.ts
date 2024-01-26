@@ -63,6 +63,6 @@ export function byPartCount(parts: Partial<Record<BodyPartConstant, number>>) {
     return plan
 }
 
-export function planCost(plan: BodyPartConstant[]) {
+export function planCost(plan: BodyPartConstant[]): number {
     return plan.reduce((acc, val) => BODYPART_COST[val] + acc, 0)
 }

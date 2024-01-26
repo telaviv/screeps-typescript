@@ -97,3 +97,5 @@ export function getLogisticsCreeps(options: {
         )
     })
 }
+
+global.getHarvesters = getHarvesters

@@ -9,7 +9,7 @@ import { LogisticsCreep } from 'roles/logistics-constants'
 import { isMiningTask } from 'tasks/mining/utils'
 import { MiningTask } from 'tasks/mining/types'
 
-const MAX_WORK_PARTS = 10
+const MAX_WORK_PARTS = 5
 
 export default class SourceManager {
     public readonly id: Id<Source>
@@ -188,3 +188,5 @@ export default class SourceManager {
         return available;
     }
 }
+
+global.SourceManager = SourceManager;

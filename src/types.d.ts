@@ -82,6 +82,9 @@ declare namespace NodeJS {
         resetSnapshot: any
         printTasks: any
         sendScout: any
+        SourceManager: any
+        SourcesManager: any
+        getHarvesters: any
     }
 }
 

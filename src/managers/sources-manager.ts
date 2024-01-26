@@ -1,5 +1,7 @@
 import roleHarvester from "roles/harvester";
 import SourceManager from "./source-manager";
+import { getHarvesters } from "utils/creep";
+import * as Logger from 'utils/logger';
 
 export default class SourcesManager {
     private room: Room;
@@ -59,9 +61,13 @@ export default class SourcesManager {
             }
         }
         if (pos && source) {
-            return { source, pos }
+            if (this.verifyPositionAvailable(pos, source)) {
+                return { source, pos }
+            } else {
+                Logger.error(`position ${pos}/${source} is not available for a new harvester}`);
+            }
         }
-        return null
+        return null;
     }
 
     public getNextAuxHarvesterMiningTarget(): { source: Id<Source>, pos: RoomPosition } | null {
@@ -83,10 +89,24 @@ export default class SourcesManager {
     public createHarvester(spawn: StructureSpawn): number {
         const target = this.getNextHarvesterMiningTarget()
         if (!target) {
-            throw new Error("No available positions for harvester")
+            throw new Error("no available positions for harvester")
         }
         const { pos, source } = target
         const sourceManager = SourceManager.getById(source)
         return roleHarvester.create(spawn, pos, sourceManager.id);
     }
+
+    private verifyPositionAvailable(pos: RoomPosition, source: Id<Source>): boolean {
+        const harvesters = getHarvesters(this.room)
+        for (const harvester of harvesters) {
+            if (harvester.memory.source === source &&
+                harvester.memory.pos.x === pos.x &&
+                harvester.memory.pos.y === pos.y) {
+                return false;
+            }
+        }
+        return true
+    }
 }
+
+global.SourcesManager = SourcesManager;
