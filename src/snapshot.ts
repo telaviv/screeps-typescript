@@ -2,6 +2,17 @@ import { Map, Record, RecordOf, Set } from 'immutable'
 import { STRUCTURE_COLORS, getConstructionFlags } from 'utils/flags'
 import { profile, wrap } from 'utils/profiling'
 
+type RoomSnapshotMemory = {
+    pos: FlatRoomPosition
+    structureType: StructureConstant
+}[]
+
+declare global {
+    interface RoomMemory {
+        snapshot: RoomSnapshotMemory
+    }
+}
+
 interface FlatRoomPosition {
     x: number
     y: number

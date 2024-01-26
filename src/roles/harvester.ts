@@ -5,6 +5,8 @@ import { profile } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { spawnCreep } from 'utils/spawn'
 import { isFullOfEnergy } from 'utils/energy-harvesting'
+import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
+import { RoomSourceMemory } from 'managers/types'
 
 const ROLE = 'harvester'
 

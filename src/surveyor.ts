@@ -1,10 +1,16 @@
 /* eslint @typescript-eslint/no-unused-vars: ['off'] */
 
+import { minCutWalls } from 'screeps-min-cut-wall'
+
 import RoomPlanner from 'room-planner'
-import { fromRoom } from 'utils/immutable-room'
-import { hasNoSpawns } from 'utils/room'
+import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
+import * as RoomUtils from 'utils/room'
 import each from 'lodash/each'
 import * as Logger from 'utils/logger'
+
+type ConstructionFeatures = {
+    [K in BuildableStructureConstant]: { x: number, y: number }[];
+};
 
 const getSpawn = (room: Room): StructureSpawn => {
     return room.find(FIND_MY_SPAWNS)[0]
@@ -73,14 +79,49 @@ function planRoom(room: Room) {
     roomPlanner.setStorageLink(linkSpot)
     roomPlanner.setControllerLink(controllerLink)
 
+
     if (!roomPlanner.planIsFinished()) {
         throw new Error(`somehow didn't finish the plan for ${room.name}`)
     }
 }
 
+/* function getRoomFeatures(room: Room): ConstructionFeatures {
+    const sources = RoomUtils.getSources(room)
+    const controller = room.controller
+    const storage = RoomUtils.getStorage(room)
+    const spawns = RoomUtils.getSpawns(room)
+    const containers = RoomUtils.getContainers(room)
+    const walls = RoomUtils.getWalls(room)
+    const ramparts = RoomUtils.getRamparts(room)
+    const extensions = RoomUtils.getExtensions(room)
+    const links = RoomUtils.getLinks(room)
+    const roads = RoomUtils.getRoads(room)
+    const labs = RoomUtils.getLabs(room)
+    const towers = RoomUtils.getTowers(room)
+    const nukers = RoomUtils.getNukers(room)
+    const powerSpawns = RoomUtils.getPowerSpawns(room)
+    const factories = RoomUtils.getFactories(room)
+    const terminals = RoomUtils.getTerminals(room)
+    const extractors = RoomUtils.getExtractors(room)
+
+
+}
+
+function getRampartPositions(room: Room, features: RoomPosition[]): RoomPosition[] {
+    type Position = [number, number]
+    const isCenter = (pos: Position): boolean => {
+        return features.some((feature) => feature.x === pos[0] && feature.y === pos[1])
+    }
+    const isWall = (pos: Position): boolean => {
+        return room.getTerrain().get(pos[0], pos[1]) === TERRAIN_MASK_WALL
+    }
+    const positions = minCutWalls({ isCenter, isWall })
+    return positions.map((pos) => new RoomPosition(pos[0], pos[1], room.name))
+}
+ */
 const assignRoomFeatures = () => {
     each(Game.rooms, (room: Room) => {
-        if (room.controller && room.controller.my && !hasNoSpawns(room)) {
+        if (room.controller && room.controller.my && !RoomUtils.hasNoSpawns(room)) {
             const roomPlanner = new RoomPlanner(room)
             if (!roomPlanner.planIsFinished()) {
                 planRoom(room)

@@ -80,6 +80,60 @@ export function getLinks(room: Room): StructureLink[] {
     })
 }
 
+export function getWalls(room: Room): StructureWall[] {
+    return room.find(FIND_STRUCTURES, {
+        filter: { structureType: STRUCTURE_WALL },
+    })
+}
+
+export function getRamparts(room: Room): StructureRampart[] {
+    return room.find(FIND_STRUCTURES, {
+        filter: { structureType: STRUCTURE_RAMPART },
+    })
+}
+
+export function getRoads(room: Room): StructureRoad[] {
+    return room.find(FIND_STRUCTURES, {
+        filter: { structureType: STRUCTURE_ROAD },
+    })
+}
+
+export function getLabs(room: Room): StructureLab[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_LAB },
+    })
+}
+
+export function getNukers(room: Room): StructureNuker[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_NUKER },
+    })
+}
+
+export function getPowerSpawns(room: Room): StructurePowerSpawn[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_POWER_SPAWN },
+    })
+}
+
+export function getFactories(room: Room): StructureFactory[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_FACTORY },
+    })
+}
+
+export function getTerminals(room: Room): StructureTerminal[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_TERMINAL },
+    })
+}
+
+export function getExtractors(room: Room): StructureExtractor[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_EXTRACTOR },
+    })
+}
+
 export function hasStructureAt(
     structureType: StructureConstant,
     room: Room,
@@ -105,6 +159,12 @@ export function getStorage(room: Room): StructureStorage | null {
         return storages[0]
     }
     return null
+}
+
+export function getStorages(room: Room): StructureStorage[] {
+    return room.find<StructureStorage>(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_STORAGE },
+    })
 }
 
 export function hasStorage(room: Room): boolean {

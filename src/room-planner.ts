@@ -1,3 +1,6 @@
+import { RoomSourceMemory } from "managers/types"
+import { FlatRoomPosition } from "types"
+
 declare global {
     interface RoomMemory {
         plan: RoomPlan

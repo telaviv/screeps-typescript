@@ -4,6 +4,21 @@
 /* eslint @typescript-eslint/no-unsafe-return: ["off"] */
 /* eslint @typescript-eslint/restrict-template-expressions: ["off"] */
 /* eslint func-names: "off" */
+interface ProfilerData {
+    [key: string]: { total: number; calls: number }
+}
+
+interface ProfilerMemory {
+    recording: boolean
+    data: ProfilerData
+    start?: number
+}
+
+declare global {
+    interface Memory {
+        profiler: ProfilerMemory
+    }
+}
 
 export function wrap<T extends (...args: any[]) => any>(
     fn: T,

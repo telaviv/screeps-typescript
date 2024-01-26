@@ -12,18 +12,45 @@ import roleMason, { Mason } from 'roles/mason'
 import roleScout, { Scout } from 'roles/scout'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import ErrorMapper from 'utils/ErrorMapper'
-import * as Profiler from 'utils/profiling'
 import assignGlobals from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import * as TaskRunner from 'tasks/runner'
 import BuildManager from 'managers/build-manager'
 
 import { runSpawn } from './spawn'
-import updateStrategy from './strategy'
+import updateStrategy, { StrategyPhase } from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
+import { RoomSourceMemory } from 'managers/types'
 
-global.Profiler = Profiler
+declare global {
+    /*
+      Example types, expand on these or remove them and add your own.
+      Note: Values, properties defined here do no fully *exist* by this type definiton alone.
+            You must also give them an implemention if you would like to use them. (ex. actually setting a `role` property in a Creeps memory)
+
+      Types added in this `global` block are in an ambient, global context. This is needed because `main.ts` is a module file (uses import or export).
+      Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
+    */
+    // Memory extension samples
+    interface Memory { }
+
+    interface RoomMemory {
+        strategy: StrategyPhase
+        collapsed: boolean
+        visuals: { snapshot: boolean }
+    }
+
+    interface CreepMemory {
+        role: string;
+    }
+
+    // Syntax for adding proprties to `global` (ex "global.log")
+    namespace NodeJS {
+        interface Global { }
+    }
+}
+
 assignGlobals()
 migrate()
 
@@ -82,7 +109,7 @@ function unwrappedLoop() {
     for (const name of Object.keys(Game.creeps)) {
         const creep = Game.creeps[name]
         if (creep.memory.role === 'harvester') {
-            roleHarvester.run(creep as Harvester)
+            roleHarvester.run(creep as unknown as Harvester)
         } else if (creep.memory.role === 'logistics') {
             RoleLogistics.staticRun(creep as LogisticsCreep)
         } else if (creep.memory.role === 'claimer') {

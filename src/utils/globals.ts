@@ -86,3 +86,8 @@ export default function assignGlobals() {
     global.printTasks = printTasks
     global.sendScout = sendScout
 }
+
+
+declare global {
+    
+}

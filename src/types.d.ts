@@ -1,26 +1,7 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
-
-interface SourceMemory extends CreepMemory {
-    source: Id<Source>
-}
-
-interface SourceCreep extends Creep {
-    memory: SourceMemory
-}
-
 interface CreepMemory {
     role: string
     home: string | undefined
-}
-
-interface ProfilerData {
-    [key: string]: { total: number; calls: number }
-}
-
-interface ProfilerMemory {
-    recording: boolean
-    data: ProfilerData
-    start?: number
 }
 
 interface StatsMemory {
@@ -35,28 +16,9 @@ interface Memory {
     stats: StatsMemory
 }
 
-interface SurveyMemory {
-    roads: RoomPositionSet
-}
-
-type RoomSnapshotMemory = {
-    pos: FlatRoomPosition
-    structureType: StructureConstant
-}[]
-
-interface FlatRoomPosition {
-    x: number
-    y: number
-    roomName: string
-}
-
 interface RoomMemory {
     roadPositions: RoomPositionSet
-    sources: RoomSourceMemory[]
-    strategy: StrategyPhase
-    survey: SurveyMemory
     collapsed: boolean
-    snapshot: RoomSnapshotMemory
     visuals: { snapshot: boolean }
 }
 

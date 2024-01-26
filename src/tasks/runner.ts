@@ -50,7 +50,7 @@ function cleanupCreepTask(creep: ResourceCreep) {
 
     for (const runner of runners) {
         if (runner.verifyType(task) && runner.cleanup(task, creep)) {
-            Logger.warning('task-runner:cleanup:needs-cleanup', task)
+            Logger.info('task-runner:cleanup:needs-cleanup', task)
             creepMemory.tasks.shift()
             cleanupCreepTask(creep)
             return
