@@ -127,12 +127,10 @@ export default class SourceManager {
         if (!this.hasStaticHarvester()) {
             return false
         }
-        console.log(`Source:hasEnoughHarvesters ${this.id}`, JSON.stringify(this.harvesters))
         const works = this.harvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
         if (works >= MAX_WORK_PARTS) {
             return true
         }
-        console.log(`Source:hasEnoughHarvesters ${this.id} available`, JSON.stringify(this.getAvailableHarvesterPositions()))
         return this.getAvailableHarvesterPositions().length === 0
     }
 
@@ -154,9 +152,6 @@ export default class SourceManager {
                     isAvailable = false;
                     break;
                 }
-            }
-            if (this.id === '33bd077274d064f') {
-                console.log(`Source ${this.id} has available position ${JSON.stringify(pos)}`);
             }
             if (isAvailable) {
                 available.push(pos);

@@ -20,22 +20,18 @@ export default class SourcesManager {
     public hasEnoughHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughHarvesters()) {
-                console.log(`Source ${sourceManager.id} does not have enough harvesters`);
                 return false;
             }
         }
-        console.log(`Sources have enough harvesters`);
         return true;
     }
 
     public hasEnoughAuxHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughAuxHarvesters()) {
-                console.log(`Source ${sourceManager.id} does not have enough aux harvesters`);
                 return false;
             }
         }
-        console.log(`Sources have enough aux harvesters`);
         return true;
     }
 
@@ -50,9 +46,6 @@ export default class SourcesManager {
             if (!sourceManager.hasStaticHarvester()) {
                 pos = sourceManager.containerPosition;
                 source = sourceManager.id;
-                if (source === '33bd077274d064f') {
-                    console.log(`Source ${source} has no static harvester`);
-                }
             }
         }
         if (pos && source) {
@@ -63,9 +56,6 @@ export default class SourcesManager {
             for (const position of positions) {
                 pos = position
                 source = sourceManager.id
-            }
-            if (source === '33bd077274d064f') {
-                console.log(`Source ${source} has available positions ${JSON.stringify(positions)}`);
             }
         }
         if (pos && source) {

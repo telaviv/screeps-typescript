@@ -50,7 +50,7 @@ const TASK_EMOJIS = {
     [TASK_UPGRADING]: '🌃',
     [TASK_MINING]: '⛏️',
     [TASK_WALL_REPAIRS]: '🧱',
-    [NO_TASK]: '🚳',
+    [NO_TASK]: '🤔',
 }
 
 const PREFERENCE_EMOJIS = {
@@ -61,7 +61,7 @@ const PREFERENCE_EMOJIS = {
     [TASK_UPGRADING]: '🌃',
     [TASK_WALL_REPAIRS]: '🧱',
     [PREFERENCE_WORKER]: '👷',
-    [NO_TASK]: '🚳',
+    [NO_TASK]: '🤔',
 }
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
