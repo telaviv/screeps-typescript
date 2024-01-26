@@ -124,7 +124,9 @@ export default class SourceManager {
     }
 
     public hasEnoughHarvesters(): boolean {
-        //TODO: if we dont' have our static harvester, then we don't have enough harvesters
+        if (!this.hasStaticHarvester()) {
+            return false
+        }
         console.log(`Source:hasEnoughHarvesters ${this.id}`, JSON.stringify(this.harvesters))
         const works = this.harvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
         if (works >= MAX_WORK_PARTS) {
@@ -164,8 +166,11 @@ export default class SourceManager {
     }
 
     public getAvailableAuxHarvesterPositions(): RoomPosition[] {
+        if (this.source.energy === 0) {
+            return []
+        }
+
         const harvesters = this.harvesters
-        const auxHarvesters = this.auxHarvesters
         const available: RoomPosition[] = [];
         for (const pos of this.positions) {
             let isAvailable = true;

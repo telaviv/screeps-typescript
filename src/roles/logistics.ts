@@ -34,6 +34,7 @@ import {
 } from './logistics-constants'
 import { fromRoom } from 'utils/immutable-room'
 import { ResourceCreep } from 'tasks/types'
+import { isMiningTask } from 'tasks/mining/utils'
 
 const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -78,10 +79,6 @@ class RoleLogistics {
         }
         this.updateMemory();
         this.say();
-        if (this.idleTime() > SLEEP_SAY_TIME) {
-            this.creep.say('😴');
-        }
-
         if (this.idleTime() > SUICIDE_TIME) {
             this.creep.suicide();
             return;
@@ -93,8 +90,15 @@ class RoleLogistics {
         }
 
         const currentTask = this.creep.memory.currentTask;
+        const tasks = this.creep.memory.tasks
 
-        if (this.creep.memory.tasks.length > 0) {
+        if (tasks.length > 0 || currentTask !== NO_TASK) {
+            this.unidle()
+        } else {
+            this.idle()
+        }
+
+        if (tasks.length > 0) {
             this.runTask();
         } else if (currentTask === TASK_COLLECTING) {
             this.getEnergy()
@@ -110,7 +114,6 @@ class RoleLogistics {
             this.repairWalls();
         } else if (currentTask === NO_TASK) {
             this.wander();
-            RoleLogistics.idle(this.creep)
             this.switchTask();
         }
     }
@@ -173,29 +176,33 @@ class RoleLogistics {
     }
 
     say() {
+        if (this.idleTime() > SLEEP_SAY_TIME) {
+            this.creep.say('😴')
+            return
+        }
         const memory = this.creep.memory;
         const preference = PREFERENCE_EMOJIS[memory.preference];
         const currentTask = TASK_EMOJIS[memory.currentTask];
-        this.creep.say(`${preference} ${currentTask}`);
+        const tasks = this.creep.memory.tasks
+        if (tasks.length > 0 && isMiningTask(tasks[0])) {
+            this.creep.say(`${preference} ⛏️`)
+        } else if (currentTask === NO_TASK) {
+            this.creep.say('🤔')
+        } else {
+            this.creep.say(`${preference} ${currentTask}`);
+        }
     }
 
-    public idleTime(): number {
+    private idleTime(): number {
         return Game.time - (this.creep.memory.idleTimestamp || Game.time);
     }
 
-    public static idle(creep: ResourceCreep) {
-        creep.memory.idleTimestamp = Game.time;
+    private idle() {
+        this.creep.memory.idleTimestamp = Game.time;
     }
 
-    public static unidle(creep: ResourceCreep) {
-        if (creep.memory.idleTimestamp === null) {
-            return
-        }
-        creep.memory.idleTimestamp += 1;
-    }
-
-    public static removeIdle(creep: ResourceCreep) {
-        creep.memory.idleTimestamp = null;
+    private unidle() {
+        this.creep.memory.idleTimestamp = null;
     }
 
     @mprofile('logistics:build')
@@ -313,7 +320,6 @@ class RoleLogistics {
         if (pos !== null) {
             this.creep.moveTo(pos)
         }
-        this.creep.say('🤔')
     }
 
     private runTask() {
