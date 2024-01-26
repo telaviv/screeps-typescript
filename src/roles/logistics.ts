@@ -2,7 +2,7 @@ import filter from 'lodash/filter'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { getBuildManager } from 'managers/build-manager'
 import { moveToRoom } from 'utils/creep'
-import { getEnergyTask, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import { mprofile } from 'utils/profiling'
 import {
@@ -17,6 +17,8 @@ import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
 import * as MiningTask from 'tasks/mining'
+import * as WithdrawTask from 'tasks/withdraw'
+import * as PickupTask from 'tasks/pickup'
 import {
     LogisticsCreep,
     LogisticsMemory,
@@ -63,6 +65,7 @@ const PREFERENCE_EMOJIS = {
 }
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
+const watchedScreep = 'logistics:worker:W8N3:25120'
 
 class RoleLogistics {
     private creep: LogisticsCreep;
@@ -73,60 +76,29 @@ class RoleLogistics {
 
     @mprofile('runLogistics')
     public run() {
-        if (this.creep.name === 'logistics:worker:W8N3:24427') {
-            console.log('checkpoint 1', this.creep.memory.currentTask);
-        }
         if (this.creep.spawning) {
             return
         }
-        if (this.creep.name === 'logistics:worker:W8N3:24427') {
-            console.log('checkpoint 2', this.creep.memory.currentTask);
+        if (this.creep.memory.tasks.length > 0 || this.creep.memory.currentTask !== NO_TASK) {
+            this.unidle()
+        } else {
+            this.idle()
         }
 
-        this.updateMemory();
-        if (this.creep.name === 'logistics:worker:W8N3:24427') {
-            console.log('checkpoint 3', this.creep.memory.currentTask);
-        }
         this.say();
+        this.updateMemory();
         if (this.idleTime() > SUICIDE_TIME) {
             this.creep.suicide();
             return;
         }
-        if (this.creep.name === 'logistics:worker:W8N3:24427') {
-            console.log('checkpoint 4', this.creep.memory.currentTask);
-        }
-
 
         if (this.creep.room.name !== this.creep.memory.home) {
             moveToRoom(this.creep.memory.home, this.creep);
             return;
         }
-        if (this.creep.name === 'logistics:worker:W8N3:24427') {
-            console.log('checkpoint 5', this.creep.memory.currentTask);
-        }
 
         const currentTask = this.creep.memory.currentTask;
         const tasks = this.creep.memory.tasks
-
-        if (tasks.length > 0 || currentTask !== NO_TASK) {
-            if (this.creep.name === 'logistics:worker:W8N3:24427') {
-                console.log('checkpoint unidle', this.creep.memory.currentTask);
-            }
-
-            console.log(`${this.creep.name} unidling: ${currentTask}`)
-            this.unidle()
-        } else {
-            if (this.creep.name === 'logistics:worker:W8N3:24427') {
-                console.log('checkpoint idle', this.creep.memory.currentTask);
-            }
-
-            console.log(`${this.creep.name} idling: ${currentTask}`)
-            this.idle()
-        }
-        if (this.creep.name === 'logistics:worker:W8N3:24427') {
-            console.log('checkpoint 6', this.creep.memory.currentTask);
-        }
-
 
         if (tasks.length > 0) {
             this.runTask();
@@ -152,13 +124,24 @@ class RoleLogistics {
         return (new RoleLogistics(creep)).run();
     }
 
-    private getEnergy() {
-        if (!getEnergyTask(this.creep)) {
-            if (!MiningTask.makeRequest(this.creep)) {
-                this.setToNoTask('no mining targets');
-                return
+    private getEnergy(): void {
+        const taskMap = [
+            { tasker: PickupTask, name: 'pickup' },
+            { tasker: WithdrawTask, name: 'withdraw' },
+            { tasker: MiningTask, name: 'mining' }
+        ]
+        for (const { tasker, name } of taskMap) {
+            const ret = tasker.makeRequest(this.creep)
+            if (ret) {
+                if (this.creep.memory.tasks.length === 0) {
+                    Logger.error('logistics:getEnergy:failureToMakeTask', name, this.creep.name)
+                } else {
+                    return
+                }
             }
         }
+        Logger.error('logistics:getEnergy:failure', 'no tasks could be made', this.creep.name)
+        this.setToNoTask('no tasks could be made')
     }
 
     private setToNoTask(reason: string): void {
