@@ -89,5 +89,21 @@ export default function assignGlobals() {
 
 
 declare global {
-    
+    namespace NodeJS {
+        interface Global {
+            killAllCreeps: (roomName: string) => void,
+            setLogLevel: (level: string) => void,
+            saveSnapshot: (roomName: string) => void,
+            claimRoom: (destination: string, startRoom: string) => void,
+            visualizeRoom: (roomName: string) => void,
+            assignGlobals: () => void,
+            sendWrecker: (endRoom: string, startRoom: string) => void,
+            declareWar: (endRoom: string, warRoom: string) => void,
+            pauseConstruction: (room: string) => void,
+            unpauseConstruction: (room: string) => void,
+            resetSnapshot: (roomName: string) => void,
+            printTasks: (type?: Task<any>) => void,
+            sendScout: (destination: string, startRoom: string) => void,
+        }
+    }
 }

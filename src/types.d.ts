@@ -24,8 +24,6 @@ interface RoomMemory {
 
 type RoomPositionSet = RoomPosition[]
 
-type SpawnRunner = (spawn: StructureSpawn) => void
-
 // `global` extension samples
 declare namespace NodeJS {
     interface Global {

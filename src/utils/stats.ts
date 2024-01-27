@@ -48,3 +48,9 @@ export function recordGameStats() {
 export function recordStatistic(key: string, value: number) {
     Memory.stats[key] = value
 }
+
+declare global {
+    interface Memory {
+        stats: { [key: string]: number }
+    }
+}

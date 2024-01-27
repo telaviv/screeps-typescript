@@ -5,7 +5,7 @@ import { minCutWalls } from 'screeps-min-cut-wall'
 import RoomPlanner from 'room-planner'
 import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 import * as RoomUtils from 'utils/room'
-import each from 'lodash/each'
+import { each } from 'lodash'
 import * as Logger from 'utils/logger'
 
 type ConstructionFeatures = {

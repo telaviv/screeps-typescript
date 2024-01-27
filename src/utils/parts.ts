@@ -1,5 +1,4 @@
-import constant from 'lodash/constant'
-import times from 'lodash/times'
+import { constant, times } from 'lodash'
 import * as Logger from 'utils/logger'
 
 /**

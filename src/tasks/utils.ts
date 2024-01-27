@@ -1,7 +1,9 @@
+import { isResourceCreep } from "./types";
+
 export function* getAllTasks() {
-    for (const creepMemory of Object.values(Memory.creeps)) {
-        if (creepMemory.tasks) {
-            for (const task of creepMemory.tasks) {
+    for (const creep of Object.values(Game.creeps)) {
+        if (isResourceCreep(creep)) {
+            for (const task of creep.memory.tasks) {
                 yield task
             }
         }

@@ -113,7 +113,7 @@ export function cleanup(task: TransferTask, creep: ResourceCreep): boolean {
     return capacity === 0
 }
 
-function getCurrentTransferRequest(creep: Creep): TransferTask | null {
+function getCurrentTransferRequest(creep: ResourceCreep): TransferTask | null {
     if (creep.memory.tasks.length === 0) {
         return null
     }

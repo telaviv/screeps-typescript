@@ -1,5 +1,5 @@
 import { SourceMapConsumer } from 'source-map'
-import _ from 'lodash'
+import { escape } from 'lodash'
 
 export default class ErrorMapper {
     // Cache consumer
@@ -80,13 +80,13 @@ export default class ErrorMapper {
                     if ('sim' in Game.rooms) {
                         const message = `Source maps don't work in the simulator - displaying original error`
                         console.log(
-                            `<span style='color:red'>${message}<br>${_.escape(
+                            `<span style='color:red'>${message}<br>${escape(
                                 e.stack,
                             )}</span>`,
                         )
                     } else {
                         console.log(
-                            `<span style='color:red'>${_.escape(
+                            `<span style='color:red'>${escape(
                                 this.sourceMappedStackTrace(e),
                             )}</span>`,
                         )

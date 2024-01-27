@@ -28,6 +28,7 @@ export function isResourceCreep(creep: Creep): creep is ResourceCreep {
 
 export function cleanup() {
     for (const creep of Object.values(Game.creeps)) {
+        console.log('creep', creep, typeof creep)
         if (isResourceCreep(creep)) {
             cleanupCreepTask(creep)
         }

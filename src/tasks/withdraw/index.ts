@@ -6,8 +6,9 @@ import * as Logger from 'utils/logger'
 import { WithdrawObject } from './object'
 import { WithdrawTask, Withdrawable } from './types'
 import { isWithdrawTask } from './utils'
+import { ResourceCreep } from '../types'
 
-export function makeRequest(creep: Creep): boolean {
+export function makeRequest(creep: ResourceCreep): boolean {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -28,7 +29,7 @@ export function makeRequest(creep: Creep): boolean {
     return false
 }
 
-export function run(task: WithdrawTask, creep: Creep): boolean {
+export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     const storeable = getWithdrawable(task)
     const creepCapacity = getFreeCapacity(creep, task.resourceType)
     const amount = Math.min(task.amount, creepCapacity)
@@ -48,7 +49,7 @@ export function run(task: WithdrawTask, creep: Creep): boolean {
     return false
 }
 
-function addWithdrawTask(creep: Creep, withdrawable: Withdrawable) {
+function addWithdrawTask(creep: ResourceCreep, withdrawable: Withdrawable) {
     const withdrawObject = WithdrawObject.get(withdrawable.id)
     const task = withdrawObject.makeRequest(creep)
     Logger.info(
@@ -62,7 +63,7 @@ function addWithdrawTask(creep: Creep, withdrawable: Withdrawable) {
     return task
 }
 
-export function completeRequest(creep: Creep) {
+export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning(
             'withdraw::complete:failure',
@@ -110,7 +111,7 @@ export function cleanup(task: WithdrawTask, creep: Creep): boolean {
     return ret
 }
 
-function getCurrentWithdrawRequest(creep: Creep): WithdrawTask | null {
+function getCurrentWithdrawRequest(creep: ResourceCreep): WithdrawTask | null {
     if (creep.memory.tasks.length === 0) {
         return null
     }

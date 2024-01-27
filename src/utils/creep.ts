@@ -3,6 +3,8 @@ import * as Logger from 'utils/logger'
 import { filter } from 'lodash'
 import { LogisticsPreference, LogisticsCreep } from 'roles/logistics-constants'
 import { Harvester, HarvesterCreep } from 'roles/harvester'
+import { ResourceCreep, isResourceCreep } from '../tasks/types'
+import { isLogisticsCreep } from '../roles/logistics-constants'
 
 export function freeEnergyCapacity(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
@@ -43,7 +45,7 @@ export function isAtEdge(creep: Creep) {
     )
 }
 
-export function recycle(creep: Creep) {
+export function recycle(creep: ResourceCreep) {
     const spawns = getSpawns(creep.room)
     const spawn = creep.pos.findClosestByPath(spawns)
     if (!spawn) {
@@ -88,14 +90,5 @@ export function getLogisticsCreeps(options: {
     room?: Room,
     taskType?: string
 }): LogisticsCreep[] {
-    return (Object.values(Game.creeps) as LogisticsCreep[]).filter((creep: LogisticsCreep) => {
-        return (
-            (!options.preference || creep.memory.preference === options.preference) &&
-            (!options.room || creep.room.name === options.room.name) &&
-            (!options.taskType || creep.memory.tasks.length > 0 &&
-                creep.memory.tasks[0].type === options.taskType)
-        )
-    })
+    return Object.values(Game.creeps).filter(isLogisticsCreep);
 }
-
-global.getHarvesters = getHarvesters

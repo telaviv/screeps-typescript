@@ -1,3 +1,5 @@
+import { FlatRoomPosition } from './types'
+
 type spawn = 'spawn'
 
 interface SimpleStructure {

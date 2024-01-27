@@ -4,11 +4,12 @@ import * as Logger from 'utils/logger'
 import { PickupTarget } from './target'
 import { PickupTask } from './types'
 import { isPickupTask } from './utils'
+import { ResourceCreep } from '../types'
 
 /* eslint @typescript-eslint/no-unsafe-assignment: "off" */
 /* eslint @typescript-eslint/no-unsafe-member-access: "off" */
 
-export function makeRequest(creep: Creep): boolean {
+export function makeRequest(creep: ResourceCreep): boolean {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -29,7 +30,7 @@ export function makeRequest(creep: Creep): boolean {
     return false
 }
 
-export function run(task: PickupTask, creep: Creep): boolean {
+export function run(task: PickupTask, creep: ResourceCreep): boolean {
     const resource = getResource(task)
     const err = creep.pickup(resource)
     if (err === ERR_NOT_IN_RANGE) {
@@ -47,7 +48,7 @@ export function run(task: PickupTask, creep: Creep): boolean {
     return false
 }
 
-function addPickupTask(creep: Creep, resource: Resource) {
+function addPickupTask(creep: ResourceCreep, resource: Resource) {
     const pickupTarget = PickupTarget.get(resource.id)
     const task = pickupTarget.makeRequest(creep)
     Logger.info('pickup:create', creep.name, task.resourceId, task.amount)
@@ -55,7 +56,7 @@ function addPickupTask(creep: Creep, resource: Resource) {
     return task
 }
 
-export function completeRequest(creep: Creep) {
+export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning(
             'task:pickup::complete:failure',
@@ -67,7 +68,7 @@ export function completeRequest(creep: Creep) {
     task.complete = true
 }
 
-export function cleanup(task: PickupTask, creep: Creep): boolean {
+export function cleanup(task: PickupTask, creep: ResourceCreep): boolean {
     if (Game.getObjectById(task.resourceId) === null) {
         Logger.info(
             'task:pickup:cleanup:non-existant',
@@ -94,7 +95,7 @@ export function cleanup(task: PickupTask, creep: Creep): boolean {
     return ret
 }
 
-function getCurrentPickupRequest(creep: Creep): PickupTask | null {
+function getCurrentPickupRequest(creep: ResourceCreep): PickupTask | null {
     if (creep.memory.tasks.length === 0) {
         return null
     }
