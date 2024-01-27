@@ -6,12 +6,10 @@ import maxBy from 'lodash/maxBy'
 
 import RoomPlanner from 'room-planner'
 import RoomSnapshot from 'snapshot'
-import times from 'lodash/times'
-import range from 'lodash/range'
-import includes from 'lodash/includes'
-import random from 'lodash/random'
+import { includes, times, range, random } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
+import { FlatRoomPosition } from 'types'
 
 type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
 type NonObstacle = 'road' | 'constructionSite' | 'rampart'
@@ -272,17 +270,19 @@ export class ImmutableRoom implements ValueObject {
         }
     }
 
-    public nextExtensionPos(): RoomPosition {
+    public nextExtensionPos(): FlatRoomPosition {
         const centroid = this.findCentroid()
         for (const roomItem of this.spiral(centroid.x, centroid.y)) {
             if (this.canPlaceExtension(roomItem)) {
-                return new RoomPosition(roomItem.x, roomItem.y, this.name)
+                return { x: roomItem.x, y: roomItem.y, roomName: this.name }
+            } else {
+                console.log('cant place extension', roomItem.x, roomItem.y)
             }
         }
         throw new Error('No eligible extension spot.')
     }
 
-    public nextTowerPos(): RoomPosition {
+    public nextTowerPos(): FlatRoomPosition {
         return this.nextExtensionPos()
     }
 
@@ -331,7 +331,7 @@ export class ImmutableRoom implements ValueObject {
         )
     }
 
-    private findCentroid(): RoomPosition {
+    private findCentroid(): FlatRoomPosition {
         let xAcc = 0
         let yAcc = 0
         let count = 0
@@ -351,7 +351,7 @@ export class ImmutableRoom implements ValueObject {
         }
         const nx = Math.floor(xAcc / count)
         const ny = Math.floor(yAcc / count)
-        return new RoomPosition(nx, ny, this.name)
+        return { x: nx, y: ny, roomName: this.name }
     }
 
     private canPlaceExtension(roomItem: ImmutableRoomItem): boolean {

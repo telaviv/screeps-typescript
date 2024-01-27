@@ -422,7 +422,8 @@ export default class BuildManager {
             Logger.info('build-manager:buildNextExtension:cached', pos)
         } else {
             const iroom = fromRoom(this.room)
-            pos = iroom.nextExtensionPos()
+            const flatPos = iroom.nextExtensionPos()
+            pos = new RoomPosition(flatPos.x, flatPos.y, this.room.name)
         }
 
         return makeConstructionSite(pos, STRUCTURE_EXTENSION) === OK
@@ -435,7 +436,8 @@ export default class BuildManager {
             Logger.info('build-manager:buildNextTower:cached', pos)
         } else {
             const iroom = fromRoom(this.room)
-            pos = iroom.nextTowerPos()
+            const flatPos = iroom.nextTowerPos()
+            pos = new RoomPosition(flatPos.x, flatPos.y, this.room.name)
         }
 
         return makeConstructionSite(pos, STRUCTURE_TOWER) === OK
