@@ -10,6 +10,7 @@ import { includes, times, range, random } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition } from 'types'
+import { EXTENSION_COUNTS } from './room'
 
 type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
 type NonObstacle = 'road' | 'constructionSite' | 'rampart'
@@ -126,6 +127,28 @@ export class ImmutableRoom implements ValueObject {
         this.name = name
     }
 
+    public reduce<T>(
+        reducer: (acc: T, val: ImmutableRoomItem) => T,
+        initial: T,
+    ): T {
+        let acc = initial
+        for (const x of range(50)) {
+            for (const y of range(50)) {
+                acc = reducer(acc, this.get(x, y))
+            }
+        }
+        return acc
+    }
+
+    public getObstacles(type: string): ImmutableRoomItem[] {
+        return this.reduce<ImmutableRoomItem[]>((acc, val) => {
+            if (val.obstacle === type) {
+                acc.push(val)
+            }
+            return acc
+        }, [])
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public equals(other: any): boolean {
         return this.grid.equals(other)
@@ -240,46 +263,53 @@ export class ImmutableRoom implements ValueObject {
         }
     }
 
-    public spiral = function* (
+    public breadthFirst = function* (
         this: ImmutableRoom,
         x: number,
         y: number,
     ): Generator<ImmutableRoomItem, void, unknown> {
-        let nx = 0
-        let ny = 0
-        let dx = 0
-        let dy = -1
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        for (const _ of range(2500)) {
-            const px = x + nx
-            const py = y + ny
-            if (px >= 0 && px < 50 && py >= 0 && py < 50) {
-                yield this.get(px, py)
+        const queue = [this.get(x, y)]
+        const visited = new Set<ImmutableRoomItem>()
+        while (queue.length > 0) {
+            const roomItem = queue.shift()!
+            if (visited.has(roomItem)) {
+                continue
             }
-            if (
-                nx === ny ||
-                (nx < 0 && nx === -ny) ||
-                (nx > 0 && nx === 1 - ny)
-            ) {
-                const temp = dx
-                dx = -dy
-                dy = temp
+            visited.add(roomItem)
+            yield roomItem
+            for (const neighbor of this.getClosestNeighbors(
+                roomItem.x,
+                roomItem.y,
+            )) {
+                queue.push(neighbor)
             }
-            nx += dx
-            ny += dy
         }
     }
 
     public nextExtensionPos(): FlatRoomPosition {
         const centroid = this.findCentroid()
-        for (const roomItem of this.spiral(centroid.x, centroid.y)) {
+        for (const roomItem of this.breadthFirst(centroid.x, centroid.y)) {
             if (this.canPlaceExtension(roomItem)) {
                 return { x: roomItem.x, y: roomItem.y, roomName: this.name }
-            } else {
-                console.log('cant place extension', roomItem.x, roomItem.y)
             }
         }
         throw new Error('No eligible extension spot.')
+    }
+
+    public addExtensions(limit = EXTENSION_COUNTS[8]): ImmutableRoom {
+        let count = this.getObstacles('extension').length
+        if (count >= limit) {
+            return this
+        }
+
+        let iroom: ImmutableRoom = this
+        while (count < limit) {
+            const pos = iroom.nextExtensionPos()
+            iroom = iroom.setObstacle(pos.x, pos.y, 'extension')
+            count++
+        }
+
+        return iroom
     }
 
     public nextTowerPos(): FlatRoomPosition {
@@ -288,7 +318,7 @@ export class ImmutableRoom implements ValueObject {
 
     public nextSpawnPos(): RoomPosition {
         const centroid = this.findCentroid()
-        for (const roomItem of this.spiral(centroid.x, centroid.y)) {
+        for (const roomItem of this.breadthFirst(centroid.x, centroid.y)) {
             if (this.canPlaceSpawn(roomItem)) {
                 return new RoomPosition(roomItem.x, roomItem.y, this.name)
             }
@@ -296,14 +326,23 @@ export class ImmutableRoom implements ValueObject {
         throw new Error('No eligible spawn spot.')
     }
 
-    public nextStoragePos(): RoomPosition {
+    public nextStoragePos(): FlatRoomPosition {
         const centroid = this.findCentroid()
-        for (const roomItem of this.spiral(centroid.x, centroid.y)) {
+        for (const roomItem of this.breadthFirst(centroid.x, centroid.y)) {
             if (this.canPlaceStorage(roomItem)) {
-                return new RoomPosition(roomItem.x, roomItem.y, this.name)
+                return { x: roomItem.x, y: roomItem.y, roomName: this.name }
             }
         }
         throw new Error('No eligible storage spot.')
+    }
+
+    public setStorage(): ImmutableRoom {
+        const storage = this.getObstacles('storage')
+        if (storage.length > 0) {
+            return this
+        }
+        const pos = this.nextStoragePos()
+        return this.setObstacle(pos.x, pos.y, 'storage')
     }
 
     public controllerLinkPos(): RoomPosition {
@@ -314,6 +353,19 @@ export class ImmutableRoom implements ValueObject {
         )
         const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
         return new RoomPosition(x, y, this.name)
+    }
+
+    public hasControllerLink(): boolean {
+        const room = Game.rooms[this.name]
+        const controller = room.controller!
+        const links = this.getObstacles('link')
+        const neighbors = this.getClosestNeighbors(controller.pos.x, controller.pos.y)
+        for (const link of links) {
+            if (neighbors.includes(link)) {
+                return true
+            }
+        }
+        return false
     }
 
     public calculateEmptiness = (
@@ -348,6 +400,9 @@ export class ImmutableRoom implements ValueObject {
                     count++
                 }
             }
+        }
+        if (count === 0) {
+            return { x: 25, y: 25, roomName: this.name }
         }
         const nx = Math.floor(xAcc / count)
         const ny = Math.floor(yAcc / count)
