@@ -6,32 +6,34 @@ import maxBy from 'lodash/maxBy'
 
 import RoomPlanner from 'room-planner'
 import RoomSnapshot from 'snapshot'
-import { includes, times, range, random } from 'lodash'
+import { includes, times, range, random, sortBy } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition } from 'types'
 import { EXTENSION_COUNTS } from './room'
 
 type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
-type NonObstacle = 'road' | 'constructionSite' | 'rampart'
+type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
 
 function isObstacle(x: any): x is Obstacle {
     return OBSTACLE_OBJECT_TYPES.includes(x)
 }
 
 function isNonObstacle(x: any): x is NonObstacle {
-    return ['road', 'constructionSite', 'rampart'].includes(x)
+    return ['road', 'constructionSite', 'rampart', 'container'].includes(x)
 }
 
 interface NonObstacles {
     road: boolean
     constructionSite: boolean
     rampart: boolean
+    container: boolean
 }
 
 const NonObstaclesRecord = Record<NonObstacles>({
     road: false,
     rampart: false,
+    container: false,
     constructionSite: false,
 })
 
@@ -92,6 +94,10 @@ export class ImmutableRoomItem
         return 'plain'
     }
 
+    public distanceTo(other: ImmutableRoomItem | FlatRoomPosition): number {
+        return Math.sqrt((this.x - other.x) ** 2 + (this.y - other.y) ** 2)
+    }
+
     public get pos(): RoomPosition {
         return new RoomPosition(this.x, this.y, this.roomName)
     }
@@ -143,6 +149,15 @@ export class ImmutableRoom implements ValueObject {
     public getObstacles(type: string): ImmutableRoomItem[] {
         return this.reduce<ImmutableRoomItem[]>((acc, val) => {
             if (val.obstacle === type) {
+                acc.push(val)
+            }
+            return acc
+        }, [])
+    }
+
+    public getNonObstacles(type: NonObstacle): ImmutableRoomItem[] {
+        return this.reduce<ImmutableRoomItem[]>((acc, val) => {
+            if (val.nonObstacles[type]) {
                 acc.push(val)
             }
             return acc
@@ -296,7 +311,7 @@ export class ImmutableRoom implements ValueObject {
         throw new Error('No eligible extension spot.')
     }
 
-    public addExtensions(limit = EXTENSION_COUNTS[8]): ImmutableRoom {
+    public setExtensions(limit = EXTENSION_COUNTS[8]): ImmutableRoom {
         let count = this.getObstacles('extension').length
         if (count >= limit) {
             return this
@@ -345,10 +360,10 @@ export class ImmutableRoom implements ValueObject {
         return this.setObstacle(pos.x, pos.y, 'storage')
     }
 
-    public controllerLinkPos(): RoomPosition {
+    public controllerLinkPos(): FlatRoomPosition {
         const room = Game.rooms[this.name]
         const pos = room.controller!.pos
-        const neighbors = this.getClosestNeighbors(pos.x, pos.y, 3).filter(
+        const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter(
             (ri) => !ri.isObstacle(),
         )
         const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
@@ -358,14 +373,155 @@ export class ImmutableRoom implements ValueObject {
     public hasControllerLink(): boolean {
         const room = Game.rooms[this.name]
         const controller = room.controller!
+        return this.hasNearbyLink(controller.pos.x, controller.pos.y)
+    }
+
+    public hasStorageLink(): boolean {
+        const room = Game.rooms[this.name]
+        const storage = room.storage
+        if (!storage) {
+            return true
+        }
+        return this.hasNearbyLink(storage.pos.x, storage.pos.y)
+    }
+
+    public setStorageLink(): ImmutableRoom {
+        if (this.hasStorageLink()) {
+            return this
+        }
+        const pos = this.storageLinkPos()
+        return this.setObstacle(pos.x, pos.y, 'link')
+    }
+
+    public storageLinkPos(): FlatRoomPosition {
+        const room = Game.rooms[this.name]
+        const pos = room.storage!.pos
+        const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter(
+            (ri) => !ri.isObstacle(),
+        )
+        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
+        return new RoomPosition(x, y, this.name)
+    }
+
+
+    private hasNearbyLink(x: number, y: number): boolean {
         const links = this.getObstacles('link')
-        const neighbors = this.getClosestNeighbors(controller.pos.x, controller.pos.y)
+        const neighbors = this.getClosestNeighbors(x, y)
         for (const link of links) {
             if (neighbors.includes(link)) {
                 return true
             }
         }
         return false
+    }
+
+    /**
+     * Finds the container assigned to each source in the room.
+     *
+     * @returns An array of tuples, where each tuple contains a source item
+     *  and its corresponding container item (or null if no container is found).
+     *  it's sorted by the number of neighbors each source has from least to most.
+     */
+    private getSourceContainerInfo(): {
+        source: ImmutableRoomItem,
+        container: ImmutableRoomItem | null,
+        neighbors: ImmutableRoomItem[]
+    }[] {
+        const sources = this.getObstacles('source')
+        const neighborPairs: [ImmutableRoomItem, ImmutableRoomItem[]][] = sortBy(sources.map(
+            (source) => [
+                source,
+                this.getClosestNeighbors(source.x, source.y).filter((ri) => !ri.isObstacle()),
+            ]
+        ), ([_, neighbors]) => neighbors.length)
+        const usedPositions = new Set<ImmutableRoomItem>()
+        const sourceContainerInfo: {
+            source: ImmutableRoomItem,
+            container: ImmutableRoomItem | null,
+            neighbors: ImmutableRoomItem[],
+        }[] = []
+        for (const [source, neighbors] of neighborPairs) {
+            if (neighbors.length === 0) {
+                Logger.error('immutable-room:getSourceContainerPairs:source-without-neighbors', source)
+                return []
+            }
+            const containers = neighbors.filter((ri) => ri.nonObstacles.container && !usedPositions.has(ri))
+            const nonContainers = neighbors.filter((ri) => !ri.nonObstacles.container)
+            if (containers.length === 0) {
+                sourceContainerInfo.push({
+                    source,
+                    container: null,
+                    neighbors: nonContainers
+                })
+            } else {
+                const container = containers[0]
+                usedPositions.add(container)
+                sourceContainerInfo.push({
+                    source,
+                    container,
+                    neighbors: nonContainers,
+                })
+            }
+        }
+        return sourceContainerInfo
+    }
+
+    public setSourceContainers(): ImmutableRoom {
+        const info = this.getSourceContainerInfo()
+        let iroom: ImmutableRoom = this
+        const usedPositions = new Set<ImmutableRoomItem>()
+        for (const { source, container, neighbors } of info) {
+            if (container === null) {
+                const available = neighbors.filter((ri) => !usedPositions.has(ri))
+                if (available.length === 0) {
+                    Logger.error('immutable-room:setSourceContainers:no-available-positions', source)
+                    return iroom
+                }
+                const ncontainer = this.sortByCentroidDistance(available)[0]
+                usedPositions.add(ncontainer)
+                iroom = iroom.setNonObstacle(ncontainer.x, ncontainer.y, 'container', true)
+            }
+        }
+        return iroom
+    }
+
+    private sortByCentroidDistance(roomItems: ImmutableRoomItem[]): ImmutableRoomItem[] {
+        const centroid = this.findCentroid()
+        return sortBy(roomItems, (ri) => ri.distanceTo(centroid))
+    }
+
+    public setSourceContainerLinks(): ImmutableRoom {
+        const info = this.getSourceContainerInfo()
+        for (const { container } of info) {
+            if (container == null) {
+                continue
+            }
+            const neighbors = this.getClosestNeighbors(container.x, container.y)
+            const links = neighbors.filter((ri) => ri.obstacle === 'link')
+            if (links.length > 0) {
+                continue
+            }
+            const available = neighbors.filter((ri) => !ri.isObstacle() && !ri.nonObstacles.container)
+            const containerCountMap = available.map((ri) => {
+                const neighbors = this.getClosestNeighbors(ri.x, ri.y)
+                const containers = neighbors.filter((ri) => ri.nonObstacles.container)
+                return { container: ri, count: containers.length }
+            })
+            const sorted = sortBy(containerCountMap, ({ count }) => count)
+            const maxCount = sorted[sorted.length - 1].count
+            const maxCountContainers = sorted.filter(({ count }) => count === maxCount)
+            const pos = this.sortByCentroidDistance(maxCountContainers.map(({ container }) => container))[0]
+            return this.setObstacle(pos.x, pos.y, 'link').setSourceContainerLinks()
+        }
+        return this;
+    }
+
+    public setControllerLink(): ImmutableRoom {
+        if (this.hasControllerLink()) {
+            return this
+        }
+        const pos = this.storageLinkPos()
+        return this.setObstacle(pos.x, pos.y, 'link')
     }
 
     public calculateEmptiness = (

@@ -9,8 +9,22 @@ import { each } from 'lodash'
 import * as Logger from 'utils/logger'
 
 type ConstructionFeatures = {
-    [K in BuildableStructureConstant]: { x: number, y: number }[];
+    [K in BuildableStructureConstant]?: { x: number, y: number }[];
 };
+
+
+declare global {
+    interface RoomMemory {
+        constructionFeatures?: ConstructionFeatures;
+    }
+}
+
+function saveConstructionFeatures(room: Room) {
+    const features = calculateConstructionFeatures(room)
+    if (room.memory.constructionFeatures) {
+        room.memory.constructionFeatures = features
+    }
+}
 
 const getSpawn = (room: Room): StructureSpawn => {
     return room.find(FIND_MY_SPAWNS)[0]
@@ -84,14 +98,24 @@ function planRoom(room: Room) {
         throw new Error(`somehow didn't finish the plan for ${room.name}`)
     }
 }
-/*
-function planRoom2(room: Room): ConstructionFeatures {
+
+function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     let iroom: ImmutableRoom = fromRoom(room)
     iroom = iroom.setStorage()
+    iroom = iroom.setSourceContainers()
+    iroom = iroom.setStorageLink()
+    iroom = iroom.setSourceContainerLinks()
+    iroom = iroom.setControllerLink()
+    iroom = iroom.setExtensions()
 
-
-
-
+    return {
+        [STRUCTURE_EXTENSION]: iroom.getObstacles('extension').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_TOWER]: iroom.getObstacles('tower').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_LINK]: iroom.getObstacles('link').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_CONTAINER]: iroom.getNonObstacles('container').map((pos) => ({ x: pos.x, y: pos.y })),
+    }
 }
 
 /*
@@ -111,6 +135,7 @@ function getRampartPositions(room: Room, features: RoomPosition): RoomPosition[]
 const assignRoomFeatures = () => {
     each(Game.rooms, (room: Room) => {
         if (room.controller && room.controller.my && !RoomUtils.hasNoSpawns(room)) {
+            saveConstructionFeatures(room)
             const roomPlanner = new RoomPlanner(room)
             if (!roomPlanner.planIsFinished()) {
                 planRoom(room)
@@ -120,7 +145,7 @@ const assignRoomFeatures = () => {
 }
 
 const survey = () => {
-    assignRoomFeatures()
+    assignRoomFeatures();
 }
 
-export default survey
+export default survey;

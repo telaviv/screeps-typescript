@@ -49,7 +49,7 @@ describe('immutable-room module', () => {
         describe('#addExtensions', () => {
             it('adds extensions to the room up to the specified limit', () => {
                 const room = new ImmutableRoom('test')
-                const updatedRoom = room.addExtensions(5)
+                const updatedRoom = room.setExtensions(5)
 
                 expect(updatedRoom.getObstacles('extension')).to.have.lengthOf(5)
             })
@@ -59,14 +59,14 @@ describe('immutable-room module', () => {
                 room = room.setObstacle(1, 1, 'extension')
                 room = room.setObstacle(2, 2, 'extension')
 
-                const updatedRoom = room.addExtensions(5)
+                const updatedRoom = room.setExtensions(5)
 
                 expect(updatedRoom.getObstacles('extension')).to.have.lengthOf(5)
             })
 
             it('adds extensions to the room up to the default limit', () => {
                 const room = new ImmutableRoom('test')
-                const updatedRoom = room.addExtensions()
+                const updatedRoom = room.setExtensions()
 
                 expect(updatedRoom.getObstacles('extension')).to.have.lengthOf(60)
             })
@@ -197,6 +197,134 @@ describe('immutable-room module', () => {
                 const storage = updatedRoom.getObstacles('storage')[0]
                 expect(storage.x).to.equal(1)
                 expect(storage.y).to.equal(1)
+            })
+        })
+
+        describe('#setSourceContainers', () => {
+            it('sets the source container positions', () => {
+                let iroom = new ImmutableRoom('test')
+                iroom = iroom.setObstacle(1, 1, 'source')
+                iroom = iroom.setTerrain(0, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 2, TERRAIN_MASK_WALL)
+
+                const nroom = iroom.setSourceContainers()
+                const positions = nroom.getNonObstacles('container')
+                expect(positions).to.have.lengthOf(1)
+                expect(positions[0].x).to.equal(2)
+                expect(positions[0].y).to.equal(1)
+            })
+
+            it("doesn't add container if one exists", () => {
+                let iroom = new ImmutableRoom('test')
+                iroom = iroom.setObstacle(1, 1, 'source')
+                iroom = iroom.setNonObstacle(2, 2, 'container', true)
+                iroom = iroom.setTerrain(0, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 2, TERRAIN_MASK_WALL)
+
+                const nroom = iroom.setSourceContainers()
+                const positions = nroom.getNonObstacles('container')
+                expect(positions).to.have.lengthOf(1)
+                expect(positions[0].x).to.equal(2)
+                expect(positions[0].y).to.equal(2)
+            })
+
+
+            it("adds a container even two sources share a container", () => {
+                let iroom = new ImmutableRoom('test')
+                iroom = iroom.setObstacle(1, 1, 'source')
+                iroom = iroom.setObstacle(2, 1, 'source')
+                iroom = iroom.setNonObstacle(2, 2, 'container', true)
+                iroom = iroom.setTerrain(0, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(3, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(3, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(3, 2, TERRAIN_MASK_WALL)
+
+                const nroom = iroom.setSourceContainers()
+                const positions = nroom.getNonObstacles('container')
+                expect(positions).to.have.lengthOf(2)
+                expect(positions[0].x).to.equal(1)
+                expect(positions[0].y).to.equal(2)
+                expect(positions[1].x).to.equal(2)
+                expect(positions[1].y).to.equal(2)
+            })
+        })
+
+        describe('#setSourceContainerLinks', () => {
+            it('sets the source container link position', () => {
+                let iroom = new ImmutableRoom('test')
+                iroom = iroom.setObstacle(1, 1, 'source')
+                iroom = iroom.setNonObstacle(2, 1, 'container', true)
+                iroom = iroom.setTerrain(0, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(3, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 3, TERRAIN_MASK_WALL)
+
+                const nroom = iroom.setSourceContainerLinks()
+                const positions = nroom.getObstacles('link')
+                expect(positions).to.have.lengthOf(1)
+                expect(positions[0].x).to.equal(3)
+                expect(positions[0].y).to.equal(1)
+            })
+
+            it('chooses the spot closest to the centroid', () => {
+                let iroom = new ImmutableRoom('test')
+                iroom = iroom.setObstacle(1, 1, 'source')
+                iroom = iroom.setObstacle(49, 49, 'controller')
+                iroom = iroom.setNonObstacle(2, 1, 'container', true)
+                iroom = iroom.setTerrain(0, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(3, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 2, TERRAIN_MASK_WALL)
+
+                const nroom = iroom.setSourceContainerLinks()
+                const positions = nroom.getObstacles('link')
+                expect(positions).to.have.lengthOf(1)
+                expect(positions[0].x).to.equal(3)
+                expect(positions[0].y).to.equal(2)
+            })
+
+            it('chooses the spot with more resource containers', () => {
+                let iroom = new ImmutableRoom('test')
+                iroom = iroom.setTerrain(0, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(1, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(2, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(3, 0, TERRAIN_MASK_WALL)
+                iroom = iroom.setTerrain(0, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setObstacle(1, 1, 'source')
+                iroom = iroom.setTerrain(2, 1, TERRAIN_MASK_WALL)
+                iroom = iroom.setObstacle(3, 1, 'source')
+                iroom = iroom.setTerrain(0, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setNonObstacle(1, 2, 'container', true)
+                iroom = iroom.setTerrain(2, 2, TERRAIN_MASK_WALL)
+                iroom = iroom.setNonObstacle(3, 2, 'container', true)
+
+                const nroom = iroom.setSourceContainerLinks()
+                const positions = nroom.getObstacles('link')
+                expect(positions).to.have.lengthOf(1)
+                expect(positions[0].x).to.equal(2)
+                expect(positions[0].y).to.equal(3)
             })
         })
 
