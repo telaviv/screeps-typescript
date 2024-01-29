@@ -66,7 +66,7 @@ export default class SourceManager {
         return filter(
             getLogisticsCreeps({ taskType: 'mining' }),
             (creep: LogisticsCreep) => {
-                if (!creep.memory.tasks) {
+                if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
                     return false
                 }
                 const task = creep.memory.tasks[0]

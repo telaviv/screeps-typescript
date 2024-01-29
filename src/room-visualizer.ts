@@ -46,6 +46,7 @@ function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
     return filter(structures, { structureType }).length > 0
 }
 
+/*
 export default class RoomVisualizer {
     readonly room: Room
 
@@ -75,6 +76,45 @@ export default class RoomVisualizer {
                 drawFunction(this.room.visual, roomPos)
             } else {
                 Logger.warning('room-visualizer:render:missing', structureType)
+            }
+        }
+    }
+}
+*/
+
+export default class RoomVisualizer {
+    readonly room: Room
+
+    constructor(room: Room) {
+        this.room = room
+        if (!this.room.memory.visuals) {
+            this.room.memory.visuals = { snapshot: false }
+        }
+    }
+
+    get visuals() {
+        return this.room.memory.visuals
+    }
+
+    render() {
+        if (!this.visuals.snapshot) {
+            return
+        }
+        if (!this.room.memory.constructionFeatures) {
+            return
+        }
+        for (const [structureType, positions] of Object.entries(this.room.memory.constructionFeatures)) {
+            for (const pos of positions) {
+                const roomPos = new RoomPosition(pos.x, pos.y, this.room.name)
+                if (hasStructureAt(structureType as BuildableStructureConstant, roomPos)) {
+                    continue
+                }
+                const drawFunction = STRUCTURE_VISUALS.get(structureType as BuildableStructureConstant)
+                if (drawFunction) {
+                    drawFunction(this.room.visual, roomPos)
+                } else {
+                    Logger.warning('room-visualizer:render:missing', structureType)
+                }
             }
         }
     }

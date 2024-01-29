@@ -21,7 +21,7 @@ declare global {
 
 function saveConstructionFeatures(room: Room) {
     const features = calculateConstructionFeatures(room)
-    if (room.memory.constructionFeatures) {
+    if (!room.memory.constructionFeatures) {
         room.memory.constructionFeatures = features
     }
 }

@@ -10,6 +10,9 @@ import * as Logger from 'utils/logger'
 const runners: Runner<any>[] = [TransferRunner, WithdrawRunner, PickupRunner, MiningRunner]
 
 export function run(task: Task<any>, creep: ResourceCreep): boolean {
+    if (task === undefined) {
+        throw new Error(`undefined task: ${creep.name}`)
+    }
     if (!creep.memory.tasks) {
         throw new Error(`This creep has no tasks: ${creep.name}`)
     }
@@ -28,7 +31,6 @@ export function isResourceCreep(creep: Creep): creep is ResourceCreep {
 
 export function cleanup() {
     for (const creep of Object.values(Game.creeps)) {
-        console.log('creep', creep, typeof creep)
         if (isResourceCreep(creep)) {
             cleanupCreepTask(creep)
         }

@@ -194,6 +194,9 @@ class RoleLogistics {
         const preference = PREFERENCE_EMOJIS[memory.preference];
         const currentTask = TASK_EMOJIS[memory.currentTask];
         const tasks = this.creep.memory.tasks
+        if (tasks.length > 0 && tasks[0] === undefined) {
+            throw new Error(`undefined task: ${this.creep.name}: ${JSON.stringify(tasks)} $${tasks.length}`)
+        }
         if (tasks.length > 0 && isMiningTask(tasks[0])) {
             this.creep.say(`${preference} ⛏️`)
         } else if (currentTask === NO_TASK) {
