@@ -7,6 +7,7 @@ import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 import * as RoomUtils from 'utils/room'
 import { each } from 'lodash'
 import * as Logger from 'utils/logger'
+import * as Profiling from 'utils/profiling'
 
 type ConstructionFeatures = {
     [K in BuildableStructureConstant]?: { x: number, y: number }[];
@@ -20,8 +21,8 @@ declare global {
 }
 
 function saveConstructionFeatures(room: Room) {
-    const features = calculateConstructionFeatures(room)
     if (!room.memory.constructionFeatures) {
+        const features = calculateConstructionFeatures(room)
         room.memory.constructionFeatures = features
     }
 }
@@ -108,18 +109,22 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     iroom = iroom.setControllerLink()
     iroom = iroom.setExtensions()
 
-    return {
+    const features = {
         [STRUCTURE_EXTENSION]: iroom.getObstacles('extension').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_TOWER]: iroom.getObstacles('tower').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_LINK]: iroom.getObstacles('link').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_CONTAINER]: iroom.getNonObstacles('container').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_RAMPART]: [] as { x: number, y: number }[],
     }
+    const positions = Object.values(features).reduce((acc, val) => acc.concat(val), [])
+    features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
+    return features
 }
 
-/*
-function getRampartPositions(room: Room, features: RoomPosition): RoomPosition[] {
+
+function getRampartPositions(room: Room, features: { x: number, y: number }[]): { x: number, y: number }[] {
     type Position = [number, number]
     const isCenter = (pos: Position): boolean => {
         return features.some((feature) => feature.x === pos[0] && feature.y === pos[1])
@@ -128,11 +133,10 @@ function getRampartPositions(room: Room, features: RoomPosition): RoomPosition[]
         return room.getTerrain().get(pos[0], pos[1]) === TERRAIN_MASK_WALL
     }
     const positions = minCutWalls({ isCenter, isWall })
-    return positions.map((pos) => new RoomPosition(pos[0], pos[1], room.name))
+    return positions.map((pos) => ({ x: pos[0], y: pos[1] }))
 }
-*/
 
-const assignRoomFeatures = () => {
+const assignRoomFeatures = Profiling.wrap(() => {
     each(Game.rooms, (room: Room) => {
         if (room.controller && room.controller.my && !RoomUtils.hasNoSpawns(room)) {
             saveConstructionFeatures(room)
@@ -142,7 +146,7 @@ const assignRoomFeatures = () => {
             }
         }
     })
-}
+}, 'assignRoomFeatures')
 
 const survey = () => {
     assignRoomFeatures();

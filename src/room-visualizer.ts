@@ -14,7 +14,7 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
 ])
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
-    visual.circle(pos, { fill: 'green', radius: 0.45 })
+    visual.circle(pos, { fill: 'red', radius: 0.35 })
 }
 
 function drawWall(visual: RoomVisual, pos: RoomPosition): void {

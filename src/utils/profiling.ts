@@ -20,6 +20,45 @@ declare global {
     }
 }
 
+export function start() {
+    Memory.profiler.recording = true
+    Memory.profiler.start = Game.time
+}
+
+export function stop() {
+    Memory.profiler.recording = false
+}
+
+export function init() {
+    if (!Memory.profiler) {
+        Memory.profiler = { recording: false, data: {} }
+    }
+}
+
+export function clear() {
+    Memory.profiler.data = {}
+    start()
+}
+
+declare global {
+    // Syntax for adding proprties to `global` (ex "global.log")
+    namespace NodeJS {
+        interface Global {
+            initProfiler: () => void
+            startProfiler: () => void
+            stopProfiler: () => void
+            clearProfiler: () => void
+            outputProfiler: () => void
+        }
+    }
+}
+
+global.initProfiler = init
+global.startProfiler = start
+global.stopProfiler = stop
+global.clearProfiler = clear
+global.outputProfiler = output
+
 export function wrap<T extends (...args: any[]) => any>(
     fn: T,
     key: string,
@@ -67,25 +106,6 @@ function markProfileMemory(key: string, time: number) {
     data[key].calls += 1
 }
 
-export function start() {
-    Memory.profiler.recording = true
-    Memory.profiler.start = Game.time
-}
-
-export function stop() {
-    Memory.profiler.recording = false
-}
-
-export function init() {
-    if (!Memory.profiler) {
-        Memory.profiler = { recording: false, data: {} }
-    }
-}
-
-export function clear() {
-    Memory.profiler.data = {}
-    start()
-}
 
 export function profile(
     target: any,
@@ -114,8 +134,7 @@ export function output() {
     dataArray.sort(([keya, dataa], [keyb, datab]) => datab.total - dataa.total)
     for (const [key, data] of dataArray.slice(0, 10)) {
         console.log(
-            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks
-            }`,
+            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks}`,
         )
     }
 }
