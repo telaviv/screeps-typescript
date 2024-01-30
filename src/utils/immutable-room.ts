@@ -9,8 +9,8 @@ import RoomSnapshot from 'snapshot'
 import { includes, times, range, random, sortBy } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
-import { FlatRoomPosition } from 'types'
-import { EXTENSION_COUNTS } from './room'
+import { FlatRoomPosition, Position } from 'types'
+import { EXTENSION_COUNTS, TOWER_COUNTS } from './room'
 
 type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
 type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
@@ -331,6 +331,22 @@ export class ImmutableRoom implements ValueObject {
         return this.nextExtensionPos()
     }
 
+    public setTowers(limit = TOWER_COUNTS[8]): ImmutableRoom {
+        let count = this.getObstacles('tower').length
+        if (count >= limit) {
+            return this
+        }
+
+        let iroom: ImmutableRoom = this
+        while (count < limit) {
+            const pos = iroom.nextTowerPos()
+            iroom = iroom.setObstacle(pos.x, pos.y, 'tower')
+            count++
+        }
+
+        return iroom
+    }
+
     public nextSpawnPos(): RoomPosition {
         const centroid = this.findCentroid()
         for (const roomItem of this.breadthFirst(centroid.x, centroid.y)) {
@@ -605,6 +621,30 @@ export class ImmutableRoom implements ValueObject {
         }
         return true
     }
+
+    public sortedExtensionPositions(): Position[] {
+        return this.sortByCentroidDistance(this.getObstacles('extension')).map(
+            (ri) => ({ x: ri.x, y: ri.y }),
+        )
+    }
+
+    public sortedContainerPositions(): Position[] {
+        return this.sortByCentroidDistance(this.getNonObstacles('container')).map(
+            (ri) => ({ x: ri.x, y: ri.y }),
+        )
+    }
+
+    public sortedTowerPositions(): Position[] {
+        return this.sortByCentroidDistance(this.getObstacles('tower')).map(
+            (ri) => ({ x: ri.x, y: ri.y }),
+        )
+    }
+
+    public sortedLinkPositions(): Position[] {
+        const containerInfo = this.getSourceContainerInfo()
+        const sourceContainers = containerInfo.map(({ container }) => container).filter((ri) => ri !== null) as ImmutableRoomItem[]
+        const storageLink = 
+    }
 }
 
 interface RoomCache {
@@ -616,7 +656,7 @@ interface TimeCache {
 let cache: TimeCache = {}
 
 export const fromRoom = wrap(
-    (room: Room, includeSnapshot = true): ImmutableRoom => {
+    (room: Room): ImmutableRoom => {
         if (cache.hasOwnProperty(Game.time)) {
             const timeCache = cache[Game.time]
             if (timeCache.hasOwnProperty(room.name)) {
@@ -694,67 +734,12 @@ export const fromRoom = wrap(
             )
         }
 
-        if (includeSnapshot) {
-            immutableRoom = mergeRoomPlan(immutableRoom)
-            immutableRoom = mergeSnapshot(immutableRoom)
-        }
-
         updateCache(room, immutableRoom)
 
         return immutableRoom
     },
     'immutable-room:fromRoom',
 )
-
-export function mergeRoomPlan(immutableRoom: ImmutableRoom): ImmutableRoom {
-    let iroom = immutableRoom
-    const room = Game.rooms[immutableRoom.name]
-    const roomPlanner = new RoomPlanner(room)
-    if (roomPlanner.storage) {
-        const pos = roomPlanner.storage
-        const roomItem = iroom.get(pos.x, pos.y)
-        if (roomItem.obstacle && roomItem.obstacle !== 'storage') {
-            Logger.warning(
-                'immutable-room:mergeSnapshot:overwrite',
-                pos,
-                'storage',
-            )
-        }
-        iroom = iroom.setObstacle(pos.x, pos.y, 'storage')
-    }
-    return iroom
-}
-
-export function mergeSnapshot(iroom: ImmutableRoom): ImmutableRoom {
-    const room = Game.rooms[iroom.name]
-    const snapshot = RoomSnapshot.get(room)
-    let niroom = iroom
-
-    for (const [pos, structureTypes] of snapshot.snapshot) {
-        for (const structureType in structureTypes) {
-            if (isObstacle(structureType)) {
-                const existingObstacle = niroom.get(pos.x, pos.y).obstacle
-                if (existingObstacle && existingObstacle !== structureType) {
-                    Logger.warning(
-                        'immutable-room:mergeSnapshot:overwrite',
-                        pos,
-                        structureType,
-                    )
-                }
-                niroom = niroom.setObstacle(pos.x, pos.y, structureType)
-            } else if (isNonObstacle(structureType)) {
-                niroom = niroom.setNonObstacle(
-                    pos.x,
-                    pos.y,
-                    structureType,
-                    true,
-                )
-            }
-        }
-    }
-
-    return niroom
-}
 
 export function updateCache(room: Room, immutableRoom: ImmutableRoom) {
     cache[Game.time][room.name] = immutableRoom

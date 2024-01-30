@@ -11,6 +11,7 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_CONTAINER, drawContainer],
     [STRUCTURE_EXTENSION, drawExtension],
     [STRUCTURE_ROAD, drawRoad],
+    [STRUCTURE_TOWER, drawTower],
 ])
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
@@ -19,6 +20,10 @@ function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
 
 function drawWall(visual: RoomVisual, pos: RoomPosition): void {
     visual.rect(pos.x - 0.5, pos.y - 0.5, 0.99, 0.99, { fill: 'grey' })
+}
+
+function drawTower(visual: RoomVisual, pos: RoomPosition): void {
+    visual.circle(pos, { fill: 'black', radius: 0.45 })
 }
 
 function drawStorage(visual: RoomVisual, pos: RoomPosition): void {

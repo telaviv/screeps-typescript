@@ -21,12 +21,24 @@ export default {
     format: "cjs",
     sourcemap: true
   },
+  onwarn: function (warning) {
+    const ignoredCircular = [
+      'immutable',
+    ];
+    if (
+      warning.code === 'CIRCULAR_DEPENDENCY' &&
+      ignoredCircular.some(d => warning.importer.includes(d))
+    ) {
+      return;
+    }
+    throw Error(warning.message);
+  },
 
   plugins: [
     clear({ targets: ["dist"] }),
     resolve({ rootDir: "src" }),
     commonjs(),
-    typescript({tsconfig: "./tsconfig.json"}),
-    screeps({config: cfg, dryRun: cfg == null})
+    typescript({ tsconfig: "./tsconfig.json" }),
+    screeps({ config: cfg, dryRun: cfg == null })
   ]
 }

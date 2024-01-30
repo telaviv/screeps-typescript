@@ -8,9 +8,11 @@ import * as RoomUtils from 'utils/room'
 import { each } from 'lodash'
 import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
+import { Position } from 'types';
+
 
 type ConstructionFeatures = {
-    [K in BuildableStructureConstant]?: { x: number, y: number }[];
+    [K in BuildableStructureConstant]?: Position[];
 };
 
 
@@ -37,6 +39,10 @@ function saveConstructionFeatures(room: Room) {
         const features = calculateConstructionFeatures(room)
         room.memory.constructionFeatures = features
     }
+}
+
+export function getConstructionFeatures(room: Room): ConstructionFeatures {
+    return room.memory.constructionFeatures!;
 }
 
 const getSpawn = (room: Room): StructureSpawn => {
@@ -120,6 +126,7 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     iroom = iroom.setSourceContainerLinks()
     iroom = iroom.setControllerLink()
     iroom = iroom.setExtensions()
+    iroom = iroom.setTowers()
 
     const features = {
         [STRUCTURE_EXTENSION]: iroom.getObstacles('extension').map((pos) => ({ x: pos.x, y: pos.y })),
@@ -134,7 +141,6 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
     return features
 }
-
 
 function getRampartPositions(room: Room, features: { x: number, y: number }[]): { x: number, y: number }[] {
     type Position = [number, number]
