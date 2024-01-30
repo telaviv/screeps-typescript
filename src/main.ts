@@ -21,7 +21,7 @@ import { runSpawn } from './spawn'
 import updateStrategy, { StrategyPhase } from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
-import { RoomSourceMemory } from 'managers/types'
+
 
 declare global {
     /*

@@ -394,15 +394,17 @@ export class ImmutableRoom implements ValueObject {
     }
 
     public storageLinkPos(): FlatRoomPosition {
-        const room = Game.rooms[this.name]
-        const pos = room.storage!.pos
+        const storages = this.getObstacles('storage')
+        if (storages.length === 0) {
+            throw new Error('No storage found.')
+        }
+        const pos = storages[0]
         const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter(
             (ri) => !ri.isObstacle(),
         )
         const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
         return new RoomPosition(x, y, this.name)
     }
-
 
     private hasNearbyLink(x: number, y: number): boolean {
         const links = this.getObstacles('link')

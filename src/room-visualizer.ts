@@ -22,7 +22,7 @@ function drawWall(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawStorage(visual: RoomVisual, pos: RoomPosition): void {
-    visual.rect(pos.x - 0.5, pos.y - 0.5, 0.99, 0.99, { fill: 'yellow' })
+    visual.rect(pos.x - 0.5, pos.y - 1, 0.99, 1.99, { fill: 'white' })
 }
 
 function drawLink(visual: RoomVisual, pos: RoomPosition): void {
@@ -45,42 +45,6 @@ function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
     const structures = pos.lookFor(LOOK_STRUCTURES)
     return filter(structures, { structureType }).length > 0
 }
-
-/*
-export default class RoomVisualizer {
-    readonly room: Room
-
-    constructor(room: Room) {
-        this.room = room
-        if (!this.room.memory.visuals) {
-            this.room.memory.visuals = { snapshot: false }
-        }
-    }
-
-    get visuals() {
-        return this.room.memory.visuals
-    }
-
-    render() {
-        if (!this.visuals.snapshot) {
-            return
-        }
-        for (const { pos, structureType } of this.room.memory.snapshot) {
-            const roomPos = new RoomPosition(pos.x, pos.y, pos.roomName)
-            const drawFunction = STRUCTURE_VISUALS.get(structureType)
-
-            if (hasStructureAt(structureType, roomPos)) {
-                continue
-            }
-            if (drawFunction) {
-                drawFunction(this.room.visual, roomPos)
-            } else {
-                Logger.warning('room-visualizer:render:missing', structureType)
-            }
-        }
-    }
-}
-*/
 
 export default class RoomVisualizer {
     readonly room: Room

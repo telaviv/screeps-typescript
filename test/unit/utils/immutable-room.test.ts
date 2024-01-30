@@ -200,6 +200,20 @@ describe('immutable-room module', () => {
             })
         })
 
+        describe('#setStorageLink', () => {
+            it('does not add a new link if one exists', () => {
+                let room = new ImmutableRoom('test')
+                room = room.setObstacle(1, 1, 'storage')
+                room = room.setObstacle(2, 2, 'link')
+
+                const updatedRoom = room.setStorageLink()
+                const links = updatedRoom.getObstacles('link')
+                expect(links).to.have.lengthOf(1)
+                expect(links[0].x).to.equal(2)
+                expect(links[0].y).to.equal(2)
+            })
+        })
+
         describe('#setSourceContainers', () => {
             it('sets the source container positions', () => {
                 let iroom = new ImmutableRoom('test')

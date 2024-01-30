@@ -18,6 +18,18 @@ declare global {
     interface RoomMemory {
         constructionFeatures?: ConstructionFeatures;
     }
+
+    namespace NodeJS {
+        interface Global {
+            clearConstructionFeatures(roomName: string): void;
+        }
+    }
+}
+
+global.clearConstructionFeatures = clearConstructionFeatures
+
+function clearConstructionFeatures(roomName: string) {
+    Memory.rooms[roomName].constructionFeatures = undefined
 }
 
 function saveConstructionFeatures(room: Room) {
