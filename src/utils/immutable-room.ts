@@ -6,7 +6,7 @@ import maxBy from 'lodash/maxBy'
 
 import RoomPlanner from 'room-planner'
 import RoomSnapshot from 'snapshot'
-import { includes, times, range, random, sortBy, reverse, uniqBy } from 'lodash'
+import { includes, times, range, random, sortBy, reverse, uniqBy, flatten } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition, Position } from 'types'
@@ -100,6 +100,10 @@ export class ImmutableRoomItem
 
     public get pos(): RoomPosition {
         return new RoomPosition(this.x, this.y, this.roomName)
+    }
+
+    public static unique(roomItems: ImmutableRoomItem[]): ImmutableRoomItem[] {
+        return uniqBy(roomItems, (ri) => `${ri.x},${ri.y}`)
     }
 }
 
@@ -657,14 +661,18 @@ export class ImmutableRoom implements ValueObject {
 
     public sortedLinkPositions(): Position[] {
         const containerInfo = this.getSourceContainerInfo()
-        const sourceContainerLinks = reverse(this.sortByCentroidDistance(
+        const sourceContainers = reverse(this.sortByCentroidDistance(
             containerInfo.map(({ container }) => container).filter((ri) => ri !== null) as ImmutableRoomItem[]
         ))
+        const sourceContainerLinks = ImmutableRoomItem.unique(flatten(sourceContainers.map((ri) => {
+            const neighbors = this.getClosestNeighbors(ri.x, ri.y)
+            return neighbors.filter((ri) => ri.obstacle === 'link')
+        })))
         const controllerLink = this.controllerLinkPos()
         const storageLink = this.storageLinkPos()
         const links = uniqBy(
             [sourceContainerLinks[0], controllerLink, storageLink, ...sourceContainerLinks.slice(1)],
-            (ri) => `${ri.x},${ri.y}`
+            (ri) => `${ri.x},${ri.y}`,
         )
 
         const possibleLinks = this.getObstacles('link')

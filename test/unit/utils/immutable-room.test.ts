@@ -76,12 +76,12 @@ describe('immutable-room module', () => {
             it('picks a spot in the center of relevant buildings', () => {
                 let immutableRoom = new ImmutableRoom('test')
                 immutableRoom = immutableRoom.setObstacle(3, 3, 'controller')
-                immutableRoom = immutableRoom.setObstacle(5, 5, 'spawn')
+                immutableRoom = immutableRoom.setObstacle(7, 7, 'spawn')
 
                 const pos = immutableRoom.nextExtensionPos()
 
-                expect(pos.x).to.equal(4)
-                expect(pos.y).to.equal(4)
+                expect(pos.x).to.equal(5)
+                expect(pos.y).to.equal(5)
             })
 
             it("picks a nearby spot if there's an obstacle there", () => {
@@ -93,7 +93,7 @@ describe('immutable-room module', () => {
                 const pos = immutableRoom.nextExtensionPos()
 
                 expect(pos.x).to.equal(2)
-                expect(pos.y).to.equal(2)
+                expect(pos.y).to.equal(5)
             })
 
             it('picks a nearby spot if the terrain is a wall', () => {
