@@ -6,7 +6,7 @@ import maxBy from 'lodash/maxBy'
 
 import RoomPlanner from 'room-planner'
 import RoomSnapshot from 'snapshot'
-import { includes, times, range, random, sortBy } from 'lodash'
+import { includes, times, range, random, sortBy, reverse, uniqBy } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition, Position } from 'types'
@@ -642,9 +642,24 @@ export class ImmutableRoom implements ValueObject {
 
     public sortedLinkPositions(): Position[] {
         const containerInfo = this.getSourceContainerInfo()
-        const sourceContainers = containerInfo.map(({ container }) => container).filter((ri) => ri !== null) as ImmutableRoomItem[]
-        const storageLink = 
+        const sourceContainerLinks = reverse(this.sortByCentroidDistance(
+            containerInfo.map(({ container }) => container).filter((ri) => ri !== null) as ImmutableRoomItem[]
+        ))
+        const controllerLink = this.controllerLinkPos()
+        const storageLink = this.storageLinkPos()
+        const links = uniqBy(
+            [sourceContainerLinks[0], controllerLink, storageLink, ...sourceContainerLinks.slice(1)],
+            (ri) => `${ri.x},${ri.y}`
+        )
+
+        const possibleLinks = this.getObstacles('link')
+        if (possibleLinks.length != links.length) {
+            Logger.error('immutable-room:sortedLinkPositions:link-mismatch', possibleLinks, links)
+            return []
+        }
+        return links.map((ri) => ({ x: ri.x, y: ri.y }));
     }
+
 }
 
 interface RoomCache {

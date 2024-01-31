@@ -129,20 +129,20 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     iroom = iroom.setTowers()
 
     const features = {
-        [STRUCTURE_EXTENSION]: iroom.getObstacles('extension').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_TOWER]: iroom.getObstacles('tower').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
+        [STRUCTURE_TOWER]: iroom.sortedTowerPositions(),
         [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_LINK]: iroom.getObstacles('link').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_LINK]: iroom.sortedContainerPositions(),
         [STRUCTURE_CONTAINER]: iroom.getNonObstacles('container').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_RAMPART]: [] as { x: number, y: number }[],
+        [STRUCTURE_RAMPART]: [] as Position[],
     }
-    const positions = Object.values(features).reduce((acc, val) => acc.concat(val), [])
+    const positions = (Object.values(features) as Position[][]).reduce(
+        (acc: Position[], val: Position[]) => acc.concat(val), [] as Position[])
     features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
     return features
 }
 
-function getRampartPositions(room: Room, features: { x: number, y: number }[]): { x: number, y: number }[] {
+function getRampartPositions(room: Room, features: Position[]): Position[] {
     type Position = [number, number]
     const isCenter = (pos: Position): boolean => {
         return features.some((feature) => feature.x === pos[0] && feature.y === pos[1])
