@@ -9,7 +9,7 @@ import { randomElement } from 'utils/utilities'
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
 export const SPAWN_COUNTS = [1, 1, 1, 1, 1, 1, 1, 2, 3]
-export const LINK_COUNTS = [0, 0, 0, 0, 2, 3, 4, 6]
+export const LINK_COUNTS = [0, 0, 0, 0, 0, 2, 3, 4, 6]
 
 const STRONG_WALL_HITS = 1000000
 const FRAGILE_WALL_HITS = 100000

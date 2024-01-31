@@ -379,9 +379,18 @@ export class ImmutableRoom implements ValueObject {
     public controllerLinkPos(): FlatRoomPosition {
         const room = Game.rooms[this.name]
         const pos = room.controller!.pos
+        this.getClosestNeighbors(pos.x, pos.y)
         const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter(
-            (ri) => !ri.isObstacle(),
+            (ri) => !ri.isObstacle() || ri.obstacle === 'link',
         )
+        const link = neighbors.find((ri) => ri.obstacle === 'link')
+        if (link) {
+            return link
+        }
+        if (neighbors.length === 0) {
+            Logger.error('immutable-room:controllerLinkPos:no-neighbors', pos.x, pos.y)
+            throw new Error('No neighbors found.')
+        }
         const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
         return new RoomPosition(x, y, this.name)
     }
