@@ -5,6 +5,7 @@ import {
     getConstructionSites,
     getContainers,
     getLinks,
+    getRamparts,
     hasConstructionSite,
     hasStorage,
     isAtExtensionCap,
@@ -163,7 +164,7 @@ export default class BuildManager {
             return !structures.some((structure) => structure.pos.x === x && structure.pos.y === y)
         })
         if (toBuild === undefined) {
-            Logger.error('buildNextBuilding:toBuild:error', this.room.name)
+            Logger.error('buildNextBuilding:toBuild:error', type, this.room.name)
             return false
         }
         return makeConstructionSite(new RoomPosition(toBuild.x, toBuild.y, this.room.name), type) === OK
@@ -206,9 +207,9 @@ export default class BuildManager {
 
     private canBuildWall = wrap((): boolean => {
         const constructionFeatures = getConstructionFeatures(this.room)
-        return constructionFeatures[STRUCTURE_RAMPART] !== undefined
+        const ramparts = getRamparts(this.room)
+        return ramparts.length < constructionFeatures[STRUCTURE_RAMPART]!.length
     }, 'BuildManager:canBuildWall')
-
 }
 
 export function getBuildManager(room: Room) {

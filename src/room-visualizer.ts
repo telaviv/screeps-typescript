@@ -31,7 +31,7 @@ function drawStorage(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawLink(visual: RoomVisual, pos: RoomPosition): void {
-    visual.text('♦️', pos, { color: 'yellow', font: 0.95 })
+    visual.text('♦️', pos.x, pos.y + .25, { color: 'yellow', font: 0.95 })
 }
 
 function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
@@ -39,6 +39,7 @@ function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawExtension(visual: RoomVisual, pos: RoomPosition): void {
+    { }
     visual.circle(pos, { fill: 'yellow', radius: 0.45 })
 }
 

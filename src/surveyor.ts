@@ -132,7 +132,7 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
         [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
         [STRUCTURE_TOWER]: iroom.sortedTowerPositions(),
         [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_LINK]: iroom.sortedContainerPositions(),
+        [STRUCTURE_LINK]: iroom.getObstacles('link').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_CONTAINER]: iroom.getNonObstacles('container').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_RAMPART]: [] as Position[],
     }

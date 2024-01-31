@@ -396,6 +396,7 @@ export class ImmutableRoom implements ValueObject {
         const room = Game.rooms[this.name]
         const storage = room.storage
         if (!storage) {
+            Logger.error('immutable-room:hasStorageLink:no-storage', this.name)
             return true
         }
         return this.hasNearbyLink(storage.pos.x, storage.pos.y)
@@ -538,7 +539,7 @@ export class ImmutableRoom implements ValueObject {
         if (this.hasControllerLink()) {
             return this
         }
-        const pos = this.storageLinkPos()
+        const pos = this.controllerLinkPos()
         return this.setObstacle(pos.x, pos.y, 'link')
     }
 
@@ -590,6 +591,11 @@ export class ImmutableRoom implements ValueObject {
 
         for (const ri of this.getCardinalNeighbors(roomItem.x, roomItem.y)) {
             if (!ri.canBuild()) {
+                return false
+            }
+        }
+        for (const ri of this.getClosestNeighbors(roomItem.x, roomItem.y)) {
+            if (['controller', 'spawn', 'storage'].includes(ri.obstacle)) {
                 return false
             }
         }
@@ -742,11 +748,20 @@ export const fromRoom = wrap(
 
         for (const constructionSite of constructionSites) {
             const pos = constructionSite.pos
-            immutableRoom = immutableRoom.setConstructionSite(
-                pos.x,
-                pos.y,
-                true,
-            )
+            if (isObstacle(constructionSite.structureType)) {
+                immutableRoom = immutableRoom.setObstacle(
+                    pos.x,
+                    pos.y,
+                    constructionSite.structureType,
+                )
+            } else {
+                immutableRoom = immutableRoom.setNonObstacle(
+                    pos.x,
+                    pos.y,
+                    constructionSite.structureType as NonObstacle,
+                    true
+                )
+            }
         }
 
         updateCache(room, immutableRoom)
