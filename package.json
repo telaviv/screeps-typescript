@@ -59,15 +59,16 @@
     "rollup-plugin-clear": "^2.0.7",
     "rollup-plugin-screeps": "^1.0.1",
     "rollup-plugin-typescript2": "^0.31.0",
-    "screeps-jest": "^2.0.2",
     "screeps-min-cut-wall": "^1.0.0",
     "sinon": "^6.3.5",
     "sinon-chai": "^3.2.0",
     "ts-node": "^10.2.0",
     "tsconfig-paths": "^3.10.1",
-    "typescript": "^4.3.5"
+    "typescript": "^4.3.5",
+    "typescript-algorithms": "^0.0.10"
   },
   "dependencies": {
-    "source-map": "~0.6.1"
+    "source-map": "~0.6.1",
+    "ts-priority-queue": "^0.1.1"
   }
 }

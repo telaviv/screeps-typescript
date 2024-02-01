@@ -74,6 +74,10 @@ export function getSources(room: Room): Source[] {
     return room.find(FIND_SOURCES)
 }
 
+export function getMinerals(room: Room): Mineral[] {
+    return room.find(FIND_MINERALS)
+}
+
 export function getLinks(room: Room): StructureLink[] {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_LINK },
