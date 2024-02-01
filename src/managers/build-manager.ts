@@ -2,6 +2,7 @@ import includes from 'lodash/includes'
 import { Record as IRecord, OrderedSet } from 'immutable'
 import {
     LINK_COUNTS,
+    MIN_STORAGE_LEVEL,
     getConstructionSites,
     getContainers,
     getLinks,
@@ -183,6 +184,9 @@ export default class BuildManager {
     }, 'BuildManager:canBuildLinks')
 
     private canBuildStorage = wrap((): boolean => {
+        if (this.room.controller!.level < MIN_STORAGE_LEVEL) {
+            return false
+        }
         return !hasStorage(this.room)
     }, 'BuildManager:canBuildStorage')
 
