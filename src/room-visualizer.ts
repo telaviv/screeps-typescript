@@ -44,7 +44,7 @@ function drawExtension(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawRoad(visual: RoomVisual, pos: RoomPosition): void {
-    visual.line(pos.x, pos.y, pos.x + 1, pos.y + 1)
+    visual.text('🧱', pos.x, pos.y + .25, { color: 'red', font: 0.95 })
 }
 
 function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {

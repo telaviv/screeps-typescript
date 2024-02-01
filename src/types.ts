@@ -16,3 +16,7 @@ export interface SourceMemory extends CreepMemory {
 export interface SourceCreep extends Creep {
     memory: SourceMemory
 }
+
+export type ConstructionFeatures = {
+    [K in BuildableStructureConstant]?: Position[]
+}
