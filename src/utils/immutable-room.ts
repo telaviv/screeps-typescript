@@ -6,7 +6,7 @@ import maxBy from 'lodash/maxBy'
 
 import RoomPlanner from 'room-planner'
 import RoomSnapshot from 'snapshot'
-import { includes, times, range, random, sortBy, reverse, uniqBy, flatten } from 'lodash'
+import { includes, times, range, random, sortBy, reverse, uniqBy, flatten, some } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition, Position } from 'types'
@@ -681,6 +681,11 @@ export class ImmutableRoom implements ValueObject {
             return []
         }
         return links.map((ri) => ({ x: ri.x, y: ri.y }));
+    }
+
+    public isGoodRoadPosition(x: number, y: number): boolean {
+        const ipos = this.get(x, y)
+        return !ipos.isObstacle() && !ipos.nonObstacles.road
     }
 
 }

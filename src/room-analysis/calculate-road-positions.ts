@@ -1,10 +1,18 @@
 import * as RoomUtils from '../utils/room'
 import { ConstructionFeatures, FlatRoomPosition, Position } from '../types'
-import { flatten } from 'lodash'
+import { flatten, uniqBy } from 'lodash'
 import prim from '../data-structures/prim'
 import { Graph, GraphEdge, GraphVertex } from '../data-structures/graph'
 import * as Profiling from '../utils/profiling'
+import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 
+const SURROUNDED_BUILDING_TYPES = [
+    STRUCTURE_EXTENSION,
+    STRUCTURE_TOWER,
+    STRUCTURE_STORAGE,
+    STRUCTURE_LINK,
+    STRUCTURE_CONTAINER,
+]
 
 export type PositionEdge = {
     a: string
@@ -12,7 +20,36 @@ export type PositionEdge = {
     weight: number
 }
 
-export default function calculateRoadPositions(room: Room, features: ConstructionFeatures): Position[] {
+export default function calculateRoadPositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
+    const surroundingRoadPositions = calculateSurroundingRoadPositions(room, iroom, features)
+    const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
+    return uniqBy([...surroundingRoadPositions, ...roadSpinePositions], (pos) => `${pos.x}:${pos.y}`)
+}
+
+function calculateSurroundingRoadPositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
+    const roadPositions: Position[] = []
+    const spawn = RoomUtils.getSpawns(room)
+    for (const pos of spawn.map((spawn) => spawn.pos)) {
+        for (const neighbor of iroom.getClosestNeighbors(pos.x, pos.y)) {
+            if (iroom.isGoodRoadPosition(neighbor.x, neighbor.y)) {
+                roadPositions.push(neighbor)
+            }
+        }
+    }
+
+    for (const structureType of SURROUNDED_BUILDING_TYPES) {
+        for (const pos of features[structureType] || []) {
+            for (const neighbor of iroom.getClosestNeighbors(pos.x, pos.y)) {
+                if (iroom.isGoodRoadPosition(neighbor.x, neighbor.y)) {
+                    roadPositions.push(neighbor)
+                }
+            }
+        }
+    }
+    return roadPositions
+}
+
+function calculateRoadSpinePositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
     const roomCallback = (roomName: string): CostMatrix | false => {
         if (roomName !== room.name) {
             return false
@@ -32,7 +69,9 @@ export default function calculateRoadPositions(room: Room, features: Constructio
     const positions = [controllerPos, storagePos, ...sourcesPos, ...mineralsPos]
     const flatPositions = positions.map((pos) => ({ x: pos.x, y: pos.y, roomName: pos.roomName }))
     const roadPositions = calculateMinPathPositions(flatPositions, roomCallback)
-    return roadPositions.map((pos) => ({ x: pos.x, y: pos.y }))
+    return roadPositions
+        .filter((pos) => iroom.isGoodRoadPosition(pos.x, pos.y))
+        .map((pos) => ({ x: pos.x, y: pos.y }))
 }
 
 export const calculateMinPathPositions = (

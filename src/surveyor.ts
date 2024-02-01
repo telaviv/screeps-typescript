@@ -134,7 +134,7 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     const positions = (Object.values(features) as Position[][]).reduce(
         (acc: Position[], val: Position[]) => acc.concat(val), [] as Position[])
     features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
-    features[STRUCTURE_ROAD] = calculateRoadPositions(room, features)
+    features[STRUCTURE_ROAD] = calculateRoadPositions(room, iroom, features)
     return features
 }
 
