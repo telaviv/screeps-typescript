@@ -157,9 +157,14 @@ export default class BuildManager {
             return false
         }
         const constructionFeatures = getConstructionFeatures(this.room)
-        const structures = this.room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: type },
-        })
+        let structures: Structure[] = []
+        if (type === STRUCTURE_CONTAINER) {
+            structures = getContainers(this.room)
+        } else {
+            structures = this.room.find(FIND_MY_STRUCTURES, {
+                filter: { structureType: type },
+            })
+        }
         const toBuild = constructionFeatures[type]!.find(({ x, y }) => {
             return !structures.some((structure) => structure.pos.x === x && structure.pos.y === y)
         })
