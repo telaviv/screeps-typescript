@@ -14,7 +14,6 @@ import {
 import roleHarvester from 'roles/harvester'
 import EnergyManager from 'managers/energy-manager'
 import { RoomManager } from 'managers/room-manager'
-import SourceManager from 'managers/source-manager'
 import SourcesManager from 'managers/sources-manager'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 

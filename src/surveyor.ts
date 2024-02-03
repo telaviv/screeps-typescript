@@ -1,11 +1,9 @@
 /* eslint @typescript-eslint/no-unused-vars: ['off'] */
 import { minCutWalls } from 'screeps-min-cut-wall'
 
-import RoomPlanner from 'room-planner'
 import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 import * as RoomUtils from 'utils/room'
 import { each } from 'lodash'
-import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
 import { ConstructionFeatures, Position } from 'types';
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
@@ -42,46 +40,6 @@ function saveConstructionFeatures(room: Room) {
 
 export function getConstructionFeatures(room: Room): ConstructionFeatures {
     return room.memory.constructionFeatures!;
-}
-
-function getLinkSpot(pos: RoomPosition, ignore?: RoomPosition): RoomPosition {
-    const room = Game.rooms[pos.roomName]
-    const iroom = fromRoom(room)
-    const neighbors = iroom.getClosestNeighbors(pos.x, pos.y)
-    let linkSpots = neighbors.filter((npos) => !npos.isObstacle())
-
-    if (ignore) {
-        linkSpots = linkSpots.filter(
-            (npos) => !(npos.x === ignore.x && npos.y === ignore.y),
-        )
-    }
-    if (linkSpots.length === 0) {
-        Logger.debug('surveyor:getLinkSpot:failure', pos, neighbors)
-        throw new Error(
-            `Couldn't find a link spot (${pos.x}, ${pos.y}, ${pos.roomName})`,
-        )
-    }
-    const linkSpot = linkSpots[Math.floor(Math.random() * linkSpots.length)]
-    return new RoomPosition(linkSpot.x, linkSpot.y, pos.roomName)
-}
-
-function planRoom(room: Room) {
-    Logger.info('surveyor:planRoom', room.name)
-    const roomPlanner = new RoomPlanner(room)
-    const iroom = fromRoom(room)
-    const storageiPos = iroom.nextStoragePos()
-    const storagePos = new RoomPosition(storageiPos.x, storageiPos.y, room.name)
-    const linkSpot = getLinkSpot(storagePos)
-    const controllerLink = iroom.controllerLinkPos()
-
-    roomPlanner.setStoragePosition(storagePos)
-    roomPlanner.setStorageLink(linkSpot)
-    roomPlanner.setControllerLink(controllerLink)
-
-
-    if (!roomPlanner.planIsFinished()) {
-        throw new Error(`somehow didn't finish the plan for ${room.name}`)
-    }
 }
 
 function calculateConstructionFeatures(room: Room): ConstructionFeatures {
@@ -132,10 +90,6 @@ const assignRoomFeatures = Profiling.wrap(() => {
     each(Game.rooms, (room: Room) => {
         if (room.controller && room.controller.my && !RoomUtils.hasNoSpawns(room)) {
             saveConstructionFeatures(room)
-            const roomPlanner = new RoomPlanner(room)
-            if (!roomPlanner.planIsFinished()) {
-                planRoom(room)
-            }
         }
     })
 }, 'assignRoomFeatures')

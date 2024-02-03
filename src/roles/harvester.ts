@@ -38,7 +38,7 @@ export class HarvesterCreep {
     }
 
     @profile
-    run() {
+    public run(): void {
         if (this.creep.spawning) {
             return
         }
@@ -60,24 +60,24 @@ export class HarvesterCreep {
         return new RoomPosition(this.creep.memory.pos.x, this.creep.memory.pos.y, this.creep.memory.pos.roomName)
     }
 
-    get room() {
+    get room(): Room {
         return this.creep.room
     }
 
-    private isAtHarvestPos() {
+    private isAtHarvestPos(): boolean {
         return (
             this.creep.pos.x === this.harvestPos.x &&
             this.creep.pos.y === this.harvestPos.y
         )
     }
 
-    private moveToHarvestPos() {
+    private moveToHarvestPos(): void {
         this.creep.moveTo(this.harvestPos.x, this.harvestPos.y, {
             visualizePathStyle: { stroke: '#ffaa00' },
         })
     }
 
-    private harvestSource() {
+    private harvestSource(): void {
         const source = Game.getObjectById(this.creep.memory.source)!
         const err = this.creep.harvest(source)
         if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
@@ -90,7 +90,7 @@ export class HarvesterCreep {
         }
     }
 
-    canTransferEnergy() {
+    private canTransferEnergy(): boolean {
         return (
             this.creep.getActiveBodyparts(CARRY) > 5 &&
             this.hasLink() &&
@@ -99,28 +99,27 @@ export class HarvesterCreep {
         )
     }
 
-    transferEnergyToLink() {
+    private transferEnergyToLink(): void {
         this.creep.transfer(this.getLink()!, RESOURCE_ENERGY)
     }
 
-    isFullOfEnergy() {
+    private isFullOfEnergy(): boolean {
         return isFullOfEnergy(this.creep)
     }
 
-    linkHasCapacity() {
+    private linkHasCapacity(): boolean {
         const link = this.getLink()!
         return link.store.getFreeCapacity(RESOURCE_ENERGY) > 0
     }
 
-    getLink() {
-        const linkPos =
-            this.room.memory.plan.links.sources[this.creep.memory.source]
-
+    private getLink(): StructureLink | null {
+        const left = Math.max(this.harvestPos.x - 1, 0)
+        const right = Math.min(this.harvestPos.x + 1, 49)
+        const top = Math.max(this.harvestPos.y - 1, 0)
+        const bottom = Math.min(this.harvestPos.y + 1, 49)
         const links = this.room
-            .lookForAt<LOOK_STRUCTURES>(LOOK_STRUCTURES, linkPos.x, linkPos.y)
-            .filter(
-                (s) => s.structureType === STRUCTURE_LINK,
-            ) as StructureLink[]
+            .lookForAtArea<LOOK_STRUCTURES>(
+                LOOK_STRUCTURES, top, left, bottom, right, true) as unknown as StructureLink[]
 
         if (links.length === 0) {
             return null
@@ -129,7 +128,7 @@ export class HarvesterCreep {
         return links[0]
     }
 
-    hasLink() {
+    private hasLink(): boolean {
         return this.getLink() !== null
     }
 }
