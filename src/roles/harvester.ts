@@ -6,7 +6,6 @@ import * as Logger from 'utils/logger'
 import { spawnCreep } from 'utils/spawn'
 import { isFullOfEnergy } from 'utils/energy-harvesting'
 import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
-import { RoomSourceMemory } from 'managers/types'
 
 const ROLE = 'harvester'
 
@@ -25,6 +24,10 @@ export interface Harvester extends SourceCreep {
 interface HarvesterMemory extends SourceMemory {
     role: 'harvester'
     pos: FlatRoomPosition
+}
+
+export function isHarvester(creep: Creep): creep is Harvester {
+    return creep.memory.role === ROLE
 }
 
 export class HarvesterCreep {
@@ -61,33 +64,21 @@ export class HarvesterCreep {
         return this.creep.room
     }
 
-    private getSourceMemory(): RoomSourceMemory {
-        const roomMemory = Memory.rooms[this.creep.room.name]
-        const sourceMemory = roomMemory.sources.find(
-            (s) => s.id === this.creep.memory.source,
-        )
-        if (!sourceMemory) {
-            throw Error(`source memory isn't real ${roomMemory.sources}`)
-        }
-        return sourceMemory
-    }
-
-    isAtHarvestPos() {
+    private isAtHarvestPos() {
         return (
             this.creep.pos.x === this.harvestPos.x &&
             this.creep.pos.y === this.harvestPos.y
         )
     }
 
-    moveToHarvestPos() {
+    private moveToHarvestPos() {
         this.creep.moveTo(this.harvestPos.x, this.harvestPos.y, {
             visualizePathStyle: { stroke: '#ffaa00' },
         })
     }
 
-    harvestSource() {
-        const sourceMemory = this.getSourceMemory()
-        const source = Game.getObjectById(sourceMemory.id)!
+    private harvestSource() {
+        const source = Game.getObjectById(this.creep.memory.source)!
         const err = this.creep.harvest(source)
         if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
             Logger.warning(
@@ -149,7 +140,13 @@ const roleHarvester = {
         harvester.run()
     },
 
-    create(spawn: StructureSpawn, pos: RoomPosition, source: Id<Source>, rescue = false): number {
+    create(spawn: StructureSpawn, sourceId: Id<Source>, rescue = false): number {
+        const source = Game.getObjectById(sourceId)
+        if (!source) {
+            Logger.error('harvester:create:source:not-found', sourceId)
+            return ERR_NOT_FOUND
+        }
+        const pos = source.room.memory.stationaryPoints.sources[sourceId]
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
@@ -160,8 +157,8 @@ const roleHarvester = {
                 home: spawn.room.name,
                 waitTime: 0,
                 tasks: [],
-                pos: { x: pos.x, y: pos.y, roomName: pos.roomName },
-                source,
+                pos: { x: pos.x, y: pos.y, roomName: spawn.room.name },
+                source: sourceId,
             } as HarvesterMemory,
         })
         return err

@@ -2,6 +2,7 @@ import minBy from 'lodash/minBy'
 import { LogisticsMemory, TASK_HAULING } from 'roles/logistics-constants'
 
 import SourceManager from './source-manager'
+import { getSources } from 'utils/room'
 
 type SourceCounts = Map<Id<Source>, number>
 
@@ -12,20 +13,10 @@ export default class EnergyManager {
         this.sources = sources
     }
 
-    static create(memory: RoomMemory) {
-        if (!memory.sources) {
-            return new EnergyManager([])
-        }
-
-        const sources: SourceManager[] = memory.sources.map((source) =>
-            SourceManager.get(source),
-        )
-
-        return new EnergyManager(sources)
-    }
-
     public static get(room: Room): EnergyManager {
-        return EnergyManager.create(room.memory)
+        const sources = getSources(room)
+        const sourceManagers = sources.map((source) => SourceManager.createFromSource(source))
+        return new EnergyManager(sourceManagers)
     }
 
     public forceSourceAssignment(role: string): Id<Source> {

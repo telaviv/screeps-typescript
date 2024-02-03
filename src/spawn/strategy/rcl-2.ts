@@ -18,7 +18,6 @@ import SourceManager from 'managers/source-manager'
 import SourcesManager from 'managers/sources-manager'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 
-const HARVESTERS_PER_SOURCE = 1
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
 const MASON_COUNT = 1
@@ -127,23 +126,22 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment) {
 function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
     const roomMemory = room.memory
-    const sourceCount = roomMemory.sources.length
+    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
     const energyManager = EnergyManager.get(spawn.room)
-    const harvesterSource = energyManager.forceSourceAssignment('harvester')
-    const sourceManager = SourceManager.createFromSourceId(harvesterSource)
+    const sourceId = energyManager.forceSourceAssignment('harvester')
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
     if (workers.length < RESCUE_WORKER_COUNT) {
         RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, true)
     } else if (harvesters.length < sourceCount) {
-        roleHarvester.create(spawn, sourceManager.containerPosition, harvesterSource, true)
+        roleHarvester.create(spawn, sourceId, true)
     }
 }
 
 function updateRescueStatus(room: Room) {
     const roomMemory = room.memory
-    const sourceCount = roomMemory.sources.length
+    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
     const haulerCount = haulers.length + workers.length

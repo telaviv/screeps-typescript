@@ -4,15 +4,20 @@ import { minCutWalls } from 'screeps-min-cut-wall'
 import RoomPlanner from 'room-planner'
 import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 import * as RoomUtils from 'utils/room'
-import { each, flatten } from 'lodash'
+import { each } from 'lodash'
 import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
 import { ConstructionFeatures, Position } from 'types';
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 
+type StationaryPoints = {
+    sources: { [id: string]: Position }
+}
+
 declare global {
     interface RoomMemory {
         constructionFeatures?: ConstructionFeatures;
+        stationaryPoints: StationaryPoints;
     }
 
     namespace NodeJS {
@@ -39,38 +44,6 @@ export function getConstructionFeatures(room: Room): ConstructionFeatures {
     return room.memory.constructionFeatures!;
 }
 
-const getSpawn = (room: Room): StructureSpawn => {
-    return room.find(FIND_MY_SPAWNS)[0]
-}
-
-function assignSources(roomPlanner: RoomPlanner) {
-    const room = roomPlanner.room
-    const sources = room.find(FIND_SOURCES)
-    const spawn = getSpawn(room)
-    if (!spawn) {
-        return
-    }
-
-    room.memory.sources = []
-    for (const source of sources) {
-        const path = PathFinder.search(
-            spawn.pos,
-            { pos: source.pos, range: 1 },
-            { swampCost: 1 },
-        ).path
-        const pos = path[path.length - 1]
-        const ppos = path[path.length - 2]
-        room.memory.sources.push({
-            id: source.id,
-            dropSpot: {
-                pos,
-            },
-        })
-        const linkSpot = getLinkSpot(pos, ppos)
-        roomPlanner.setSourceLink(source.id, linkSpot)
-    }
-}
-
 function getLinkSpot(pos: RoomPosition, ignore?: RoomPosition): RoomPosition {
     const room = Game.rooms[pos.roomName]
     const iroom = fromRoom(room)
@@ -95,7 +68,6 @@ function getLinkSpot(pos: RoomPosition, ignore?: RoomPosition): RoomPosition {
 function planRoom(room: Room) {
     Logger.info('surveyor:planRoom', room.name)
     const roomPlanner = new RoomPlanner(room)
-    assignSources(roomPlanner)
     const iroom = fromRoom(room)
     const storageiPos = iroom.nextStoragePos()
     const storagePos = new RoomPosition(storageiPos.x, storageiPos.y, room.name)
@@ -135,6 +107,12 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
         (acc: Position[], val: Position[]) => acc.concat(val), [] as Position[])
     features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
     features[STRUCTURE_ROAD] = calculateRoadPositions(room, iroom, features)
+
+    if (!room.memory.stationaryPoints) {
+        room.memory.stationaryPoints = {
+            sources: iroom.getMappedSourceContainers(),
+        }
+    }
     return features
 }
 

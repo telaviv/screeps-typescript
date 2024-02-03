@@ -93,7 +93,7 @@ export default class SourcesManager {
         }
         const { pos, source } = target
         const sourceManager = SourceManager.getById(source)
-        return roleHarvester.create(spawn, pos, sourceManager.id);
+        return roleHarvester.create(spawn, sourceManager.id);
     }
 
     private verifyPositionAvailable(pos: RoomPosition, source: Id<Source>): boolean {

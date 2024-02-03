@@ -4,11 +4,10 @@ import some from 'lodash/some'
 import DroppedEnergyManager from './dropped-energy-manager'
 import { fromRoom } from 'utils/immutable-room'
 import { getHarvesters, getLogisticsCreeps } from 'utils/creep'
-import { Harvester } from 'roles/harvester'
+import { Harvester, isHarvester } from 'roles/harvester'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { isMiningTask } from 'tasks/mining/utils'
 import { MiningTask } from 'tasks/mining/types'
-import { RoomSourceMemory } from './types'
 
 const MAX_WORK_PARTS = 5
 
@@ -35,16 +34,6 @@ export default class SourceManager {
         const source = Game.getObjectById(id)!
         const droppedEnergy = DroppedEnergyManager.createFromSourceId(id)
         return new SourceManager(source, droppedEnergy)
-    }
-
-    public static create(memory: RoomSourceMemory) {
-        const droppedEnergy = DroppedEnergyManager.get(memory.dropSpot)
-        const source = Game.getObjectById(memory.id)!
-        return new SourceManager(source, droppedEnergy)
-    }
-
-    public static get(memory: RoomSourceMemory): SourceManager {
-        return SourceManager.create(memory)
     }
 
     public get room(): Room {
@@ -101,22 +90,13 @@ export default class SourceManager {
     }
 
     static getById(sourceId: Id<Source>): SourceManager {
-        const source = Game.getObjectById(sourceId)
-        const sourceMemory = source!.room.memory.sources.find(
-            (s) => s.id === sourceId,
-        )
-        if (!sourceMemory) {
-            throw Error(`not a real source ${sourceId}`)
-        }
-        return SourceManager.get(sourceMemory)
+        return SourceManager.createFromSourceId(sourceId)
     }
 
     public hasStaticHarvester(): boolean {
         return some(
             this.harvesters,
-            (harvester: Creep) =>
-                harvester.pos.x === this.droppedEnergy.pos.x &&
-                harvester.pos.y === this.droppedEnergy.pos.y,
+            (harvester: Creep) => isHarvester(harvester) && harvester.memory.source === this.id,
         )
     }
 

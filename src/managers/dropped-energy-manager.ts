@@ -1,29 +1,17 @@
 import { getContainerAtPosition, hasContainerAtPosition } from 'utils/room'
-import { DroppedEnergyMemory } from './types'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()
     pos: RoomPosition
-    memory: DroppedEnergyMemory
 
-    public constructor(pos: RoomPosition, memory: DroppedEnergyMemory) {
+    public constructor(pos: RoomPosition) {
         this.pos = pos
-        this.memory = memory
     }
 
     public static createFromSourceId(id: Id<Source>): DroppedEnergyManager {
         const source = Game.getObjectById(id)!
-        return DroppedEnergyManager.get(source.room.memory.sources.find((s) => s.id === id)!.dropSpot)
-    }
-
-    public static create(memory: DroppedEnergyMemory): DroppedEnergyManager {
-        const { x, y, roomName } = memory.pos
-        const pos = new RoomPosition(x, y, roomName)
-        return new DroppedEnergyManager(pos, memory)
-    }
-
-    public static get(memory: DroppedEnergyMemory): DroppedEnergyManager {
-        return DroppedEnergyManager.create(memory)
+        const { x, y } = source.room.memory.stationaryPoints.sources[id]!
+        return new DroppedEnergyManager(new RoomPosition(x, y, source.room.name))
     }
 
     public get room(): Room {

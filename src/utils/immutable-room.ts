@@ -4,13 +4,11 @@
 import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
 import maxBy from 'lodash/maxBy'
 
-import RoomPlanner from 'room-planner'
-import RoomSnapshot from 'snapshot'
-import { includes, times, range, random, sortBy, reverse, uniqBy, flatten, some } from 'lodash'
+import { includes, times, range, random, sortBy, reverse, uniqBy, flatten } from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition, Position } from 'types'
-import { EXTENSION_COUNTS, TOWER_COUNTS } from './room'
+import { EXTENSION_COUNTS, TOWER_COUNTS, getSources } from './room'
 
 type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
 type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
@@ -406,12 +404,12 @@ export class ImmutableRoom implements ValueObject {
     }
 
     public hasStorageLink(): boolean {
-        const room = Game.rooms[this.name]
-        const storage = room.storage
-        if (!storage) {
+        const storages = this.getObstacles('storage')
+        if (storages.length === 0) {
             Logger.error('immutable-room:hasStorageLink:no-storage', this.name)
             return true
         }
+        const storage = storages[0]
         return this.hasNearbyLink(storage.pos.x, storage.pos.y)
     }
 
@@ -515,6 +513,24 @@ export class ImmutableRoom implements ValueObject {
             }
         }
         return iroom
+    }
+
+    public getMappedSourceContainers(): { [key in Id<Source>]: Position } {
+        const info = this.getSourceContainerInfo()
+        const sources = getSources(Game.rooms[this.name]);
+        const map: { [key in Id<Source>]: Position } = {} as { [key in Id<Source>]: Position }
+        for (const { source, container } of info) {
+            if (container === null) {
+                Logger.error('immutable-room:getMappedSourceContainers:no-container', source)
+                continue
+            }
+            const sourceId = sources.find((s) => s.pos.x === source.x && s.pos.y === source.y)!.id
+            map[sourceId] = container
+        }
+        if (Object.keys(map).length !== sources.length) {
+            Logger.error('immutable-room:getMappedSourceContainers:source-mismatch', map, sources)
+        }
+        return map
     }
 
     private sortByCentroidDistance(roomItems: ImmutableRoomItem[]): ImmutableRoomItem[] {
