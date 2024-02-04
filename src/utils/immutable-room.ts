@@ -410,7 +410,7 @@ export class ImmutableRoom implements ValueObject {
             return true
         }
         const storage = storages[0]
-        return this.hasNearbyLink(storage.pos.x, storage.pos.y)
+        return this.hasNearbyLink(storage.x, storage.y)
     }
 
     public setStorageLink(): ImmutableRoom {

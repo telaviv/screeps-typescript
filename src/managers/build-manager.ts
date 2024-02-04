@@ -2,6 +2,7 @@ import includes from 'lodash/includes'
 import { Record as IRecord, OrderedSet } from 'immutable'
 import {
     LINK_COUNTS,
+    MIN_RAMPART_LEVEL,
     MIN_STORAGE_LEVEL,
     getConstructionSites,
     getContainers,
@@ -16,6 +17,8 @@ import {
 import * as Logger from 'utils/logger'
 import { profile, wrap } from 'utils/profiling'
 import { getConstructionFeatures } from 'surveyor'
+import { fromRoom } from 'utils/immutable-room'
+import { Position } from 'types'
 
 declare global {
     interface RoomMemory {
@@ -99,6 +102,10 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_TOWER)
         }
 
+        if (this.canBuildSwampRoad()) {
+            return this.buildNextStructure(STRUCTURE_ROAD)
+        }
+
         if (this.canBuildContainer()) {
             return this.buildNextStructure(STRUCTURE_CONTAINER)
         }
@@ -118,6 +125,7 @@ export default class BuildManager {
         return (
             this.hasImportantConstructionSite() ||
             this.canBuildExtension() ||
+            this.canBuildSwampRoad() ||
             this.canBuildTower() ||
             this.canBuildContainer() ||
             this.canBuildStorage() ||
@@ -210,11 +218,31 @@ export default class BuildManager {
         return !isAtTowerCap(this.room)
     }, 'BuildManager:canBuildTower')
 
+    private canBuildSwampRoad = wrap((): boolean => {
+        const iroom = fromRoom(this.room)
+        const pos = this.getNextRoad()
+        if (pos === undefined) {
+            return false
+        }
+        return iroom.get(pos!.x, pos!.y).terrain === TERRAIN_MASK_SWAMP
+    }, 'BuildManager:canBuildSwampRoad')
+
+    private getNextRoad(): Position | undefined {
+        const constructionFeatures = getConstructionFeatures(this.room)
+        const iroom = fromRoom(this.room)
+        return constructionFeatures[STRUCTURE_ROAD]!.find((pos) => {
+            return !iroom.get(pos.x, pos.y).nonObstacles.road
+        })
+    }
+
     private canBuildExtension = wrap(() => {
         return !isAtExtensionCap(this.room)
     }, 'BuildManager:canBuildExtension')
 
     private canBuildWall = wrap((): boolean => {
+        if (this.room.controller!.level < MIN_RAMPART_LEVEL) {
+            return false
+        }
         const constructionFeatures = getConstructionFeatures(this.room)
         const ramparts = getRamparts(this.room)
         return ramparts.length < constructionFeatures[STRUCTURE_RAMPART]!.length

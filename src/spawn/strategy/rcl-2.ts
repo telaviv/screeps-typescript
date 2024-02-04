@@ -35,9 +35,7 @@ export default function (spawn: StructureSpawn) {
         return
     }
     const room = spawn.room
-    const roomMemory = room.memory
     const masons = getCreeps('mason', room)
-    const energyManager = EnergyManager.get(spawn.room)
     const roomManager = new RoomManager(room);
     const sourcesManager = new SourcesManager(room)
     const warDepartment = new WarDepartment(spawn.room)

@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { minimumSpanningTree } from '../../../src/room-analysis/calculate-road-positions';
 
 describe('minimumSpanningTree', () => {
-    it.only('should return the minimum spanning tree of a graph', () => {
+    it('should return the minimum spanning tree of a graph', () => {
         // Define the input graph
         const edges = [
             { a: 'A', b: 'B', weight: 5 },
