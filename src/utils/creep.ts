@@ -40,7 +40,7 @@ export function moveTo(pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): 
 
 export function moveToRoom(roomName: string, creep: Creep) {
     creep.moveTo(new RoomPosition(25, 25, roomName), {
-        range: 23,
+        range: 18,
         visualizePathStyle: { stroke: '#ffaa00' },
     })
 }

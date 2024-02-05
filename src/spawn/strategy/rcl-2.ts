@@ -106,7 +106,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     const remoteUpgraders = getCreeps('remote-upgrade', room)
     const remoteBuilders = getCreeps('remote-build', room)
 
-    if (warDepartment.targetRoom === undefined && scouts.length === 0) {
+    if (warDepartment.targetRoom === undefined) {
         if (scouts.length === 0) {
             return roleScout.create(spawn, warDepartment.target)
         }

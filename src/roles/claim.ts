@@ -23,6 +23,11 @@ const roleClaimer = {
             Logger.warning('claimer:no-controller', creep.name)
             return
         }
+        if (targetRoom.controller.my) {
+            Logger.info('claimer:room-is-mine', creep.name, targetRoom.name)
+            creep.suicide()
+            return
+        }
 
         if (targetRoom.controller.owner || targetRoom.controller.reservation) {
             const err = creep.attackController(targetRoom.controller)

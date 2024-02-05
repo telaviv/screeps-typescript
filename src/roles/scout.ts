@@ -36,9 +36,6 @@ class ScoutCreep {
     @profile
     run() {
         RoomStatus.recordStatus(this.creep.room)
-        if (this.isAtRoom()) {
-            return
-        }
         moveToRoom(this.destination, this.creep)
     }
 

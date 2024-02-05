@@ -104,8 +104,9 @@ class RemoteUpgradeCreep {
                 range: 3,
             })
         } else if (err !== OK) {
-            Logger.warning(
+            Logger.error(
                 'remote-upgrade:upgrade:failure',
+                controller,
                 err,
                 this.creep.name,
             )
