@@ -9,6 +9,7 @@ import {
     getLinks,
     getRamparts,
     hasConstructionSite,
+    hasNoSpawns,
     hasStorage,
     isAtExtensionCap,
     isAtTowerCap,
@@ -56,13 +57,7 @@ export default class BuildManager {
 
     @profile
     ensureConstructionSites(): boolean {
-        const nonWall = this.ensureNonWallSite()
-        const wall = this.ensureWallSite()
-        return nonWall || wall
-    }
-
-    private ensureWallSite(): boolean {
-        if (!this.room.controller) {
+        if (!this.room.controller || !this.room.controller.my) {
             return false
         }
 
@@ -70,6 +65,29 @@ export default class BuildManager {
             return false
         }
 
+        if (hasNoSpawns(this.room)) {
+            return this.ensureSpawnSite();
+        }
+
+        const nonWall = this.ensureNonWallSite()
+        const wall = this.ensureWallSite()
+        return nonWall || wall
+    }
+
+    private ensureSpawnSite(): boolean {
+        const sites = getConstructionSites(this.room)
+        if (sites.length > 0) {
+            return false
+        }
+        const iroom = fromRoom(this.room)
+        const pos = iroom.nextSpawnPos()
+        return makeConstructionSite(
+            new RoomPosition(pos.x, pos.y, this.room.name),
+            STRUCTURE_SPAWN,
+        ) === OK
+    }
+
+    private ensureWallSite(): boolean {
         if (this.hasWallSite()) {
             return false
         }
@@ -82,14 +100,6 @@ export default class BuildManager {
     }
 
     private ensureNonWallSite(): boolean {
-        if (!this.room.controller) {
-            return false
-        }
-
-        if (this.room.memory.construction.paused) {
-            return false
-        }
-
         if (this.hasNonWallSite()) {
             return false
         }

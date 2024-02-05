@@ -2,6 +2,9 @@ import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 import WarDepartment, { WarStatus } from 'war-department'
+import { getIn } from 'immutable'
+import { getInvaderCores } from 'utils/room'
+import { moveTo } from 'utils/creep'
 
 const ROLE = 'attack'
 
@@ -17,14 +20,6 @@ interface AttackerMemory extends CreepMemory {
 
 const roleAttacker = {
     run: wrap((creep: Attacker) => {
-        if (creep.room.name !== creep.memory.roomName) {
-            creep.moveTo(new RoomPosition(25, 25, creep.memory.roomName), {
-                range: 23,
-                visualizePathStyle: { stroke: '#ffaa00' },
-            })
-            return
-        }
-
         if (!creep.room.controller) {
             Logger.warning('attacker:no-controller', creep.name)
             return
@@ -39,48 +34,25 @@ const roleAttacker = {
             )
             return
         }
+        const structures = getInvaderCores(creep.room)
+        const hostiles = creep.room.find(FIND_HOSTILE_CREEPS)
+        const targets = [...structures, ...hostiles]
 
-        const structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
-            filter: (structure) => structure.structureType === 'invaderCore',
-        })
-
-        const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
-
-        if (structures.length === 0 && hostiles.length === 0) {
-            const warDepartment = WarDepartment.create(creep.memory.home)
-            if (warDepartment.status === WarStatus.ATTACK) {
-                warDepartment.status = WarStatus.CLAIM
-            }
-
-            creep.suicide()
-        }
-
-        if (hostiles.length > 0) {
-            const hostile = hostiles[0];
-            const err = creep.attack(hostile);
+        if (targets.length > 0) {
+            const target = targets[0];
+            const err = creep.attack(target)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(hostile, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
+                const err = moveTo(target.pos, creep, { range: 1 })
+                if (err !== OK) {
+                    Logger.error('attacker:moveTo:target:failed', creep.name, JSON.stringify(target.pos), err)
+                }
+            } else if (err !== OK) {
+                Logger.error('attacker:attack:failed', creep.name, err)
             }
             return
-        }
-
-        const structure = structures[0]
-        const err = creep.attack(structure)
-        if (err === ERR_NOT_IN_RANGE) {
-            creep.moveTo(structure, {
-                visualizePathStyle: { stroke: '#ffaa00' },
-            })
-        } else if (err !== OK) {
-            Logger.warning(
-                'attacker:dismantle:failed',
-                creep.name,
-                creep.pos,
-                creep.room.name,
-                structure,
-                err,
-            )
+        } else {
+            creep.suicide()
+            Logger.info('attacker:no-targets', creep.name)
         }
     }, 'runAttacker'),
 
@@ -101,7 +73,7 @@ const roleAttacker = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan(capacity, [RANGED_ATTACK, MOVE])
+    return fromBodyPlan(capacity, [ATTACK, MOVE])
 }
 
 export default roleAttacker

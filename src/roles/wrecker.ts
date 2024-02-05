@@ -1,6 +1,7 @@
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
+import { getInvaderCores } from 'utils/room'
 
 const ROLE = 'wrecker'
 
@@ -18,7 +19,7 @@ const roleWrecker = {
     run: wrap((creep: Wrecker) => {
         if (creep.room.name !== creep.memory.roomName) {
             creep.moveTo(new RoomPosition(25, 25, creep.memory.roomName), {
-                range: 25,
+                range: 20,
                 visualizePathStyle: { stroke: '#ffaa00' },
             })
             return
@@ -39,18 +40,14 @@ const roleWrecker = {
             return
         }
 
-        const spawns = creep.room.find(FIND_HOSTILE_SPAWNS)
+        const targets = creep.room.find(FIND_HOSTILE_SPAWNS)
 
-        if (spawns.length === 0) {
-            // we should probably let the attack know to send a claimer
-            creep.suicide()
-        }
-
-        const spawn = spawns[0]
-        const err = creep.dismantle(spawn)
+        const target = targets[0]
+        const err = creep.dismantle(target)
         if (err === ERR_NOT_IN_RANGE) {
-            creep.moveTo(spawn, {
+            creep.moveTo(target, {
                 visualizePathStyle: { stroke: '#ffaa00' },
+                range: 1,
             })
         } else if (err !== OK) {
             Logger.warning(
@@ -58,6 +55,7 @@ const roleWrecker = {
                 creep.name,
                 creep.pos,
                 creep.room.name,
+                target,
                 err,
             )
         }

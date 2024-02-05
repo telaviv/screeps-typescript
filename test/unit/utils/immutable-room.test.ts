@@ -181,6 +181,25 @@ describe('immutable-room module', () => {
             })
         })
 
+        describe('#setSpawns', () => {
+            it('adds spawns to the room up to the specified limit', () => {
+                const room = new ImmutableRoom('test')
+                const updatedRoom = room.setSpawns()
+
+                expect(updatedRoom.getObstacles('spawn')).to.have.lengthOf(3)
+            })
+
+            it('includes existing spawns in the count', () => {
+                let room = new ImmutableRoom('test')
+                room = room.setObstacle(1, 1, 'spawn')
+                room = room.setObstacle(2, 2, 'spawn')
+
+                const updatedRoom = room.setSpawns()
+
+                expect(updatedRoom.getObstacles('spawn')).to.have.lengthOf(3)
+            })
+        })
+
         describe('#setStorage', () => {
             it('sets the storage position', () => {
                 const room = new ImmutableRoom('test')

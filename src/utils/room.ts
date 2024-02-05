@@ -140,6 +140,12 @@ export function getExtractors(room: Room): StructureExtractor[] {
     })
 }
 
+export function getInvaderCores(room: Room): StructureInvaderCore[] {
+    return room.find(FIND_STRUCTURES, {
+        filter: { structureType: STRUCTURE_INVADER_CORE },
+    })
+}
+
 export function hasStructureAt(
     structureType: StructureConstant,
     room: Room,

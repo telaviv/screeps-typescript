@@ -49,6 +49,7 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     iroom = iroom.setStorageLink()
     iroom = iroom.setSourceContainerLinks()
     iroom = iroom.setControllerLink()
+    iroom = iroom.setSpawns()
     iroom = iroom.setExtensions()
     iroom = iroom.setTowers()
 
@@ -58,6 +59,7 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
         [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_LINK]: iroom.sortedLinkPositions(),
         [STRUCTURE_CONTAINER]: iroom.getNonObstacles('container').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_RAMPART]: [] as Position[],
         [STRUCTURE_ROAD]: [] as Position[],
     }

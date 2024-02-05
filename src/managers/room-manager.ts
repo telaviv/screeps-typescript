@@ -66,6 +66,10 @@ export class RoomManager {
     }
 
     public canClaimRoom(): boolean {
+        const roomsOwned = Object.keys(Game.rooms).filter(roomName => Game.rooms[roomName].controller?.my)
+        if (roomsOwned.length >= Game.gcl.level) {
+            return false
+        }
         return this.hasClaimRoomTask() &&
             roleClaimer.canCreate(this.room.find(FIND_MY_SPAWNS)[0])
     }
@@ -87,7 +91,7 @@ export class RoomManager {
         }
         const err = roleClaimer.create(spawns[0], destination, true)
         if (err === OK) {
-            const warDepartment = new WarDepartment(Game.rooms[destination])
+            const warDepartment = new WarDepartment(this.room)
             warDepartment.claimRoom(destination)
             Logger.info('RoomManager:claimRoom:success', destination)
             this.roomTasks = this.roomTasks.filter(task => task.id !== claimTask.id)

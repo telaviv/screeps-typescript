@@ -18,33 +18,25 @@ interface ClaimerMemory extends CreepMemory {
 
 const roleClaimer = {
     run: wrap((creep: Claimer) => {
-        if (creep.room.name !== creep.memory.roomName) {
-            creep.moveTo(new RoomPosition(25, 25, creep.memory.roomName), {
-                range: 20,
-                visualizePathStyle: { stroke: '#ffaa00' },
-            })
-            return
-        }
-
-        if (!creep.room.controller) {
+        const targetRoom = Game.rooms[creep.memory.roomName]
+        if (!targetRoom || !targetRoom.controller) {
             Logger.warning('claimer:no-controller', creep.name)
             return
         }
 
-        let err
-        if (creep.room.controller.owner || creep.room.controller.reservation) {
-            err = creep.attackController(creep.room.controller)
+        if (targetRoom.controller.owner || targetRoom.controller.reservation) {
+            const err = creep.attackController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(creep.room.controller, {
+                creep.moveTo(targetRoom.controller, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
             } else if (!includes([OK, ERR_TIRED], err)) {
                 Logger.warning('claimer:attack:failed', creep.name, err)
             }
         } else {
-            err = creep.claimController(creep.room.controller)
+            const err = creep.claimController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(creep.room.controller, {
+                creep.moveTo(targetRoom.controller, {
                     visualizePathStyle: { stroke: '#ffaa00' },
                 })
             } else if (err !== OK) {

@@ -5,6 +5,7 @@ import RoleLogistics from 'roles/logistics'
 import roleMason, { MasonCreep } from 'roles/mason'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
 import roleRemoteBuild from 'roles/remote-build'
+import roleWrecker from 'roles/wrecker'
 import {
     PREFERENCE_WORKER,
     TASK_BUILDING,
@@ -16,6 +17,7 @@ import EnergyManager from 'managers/energy-manager'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
+import roleScout from 'roles/scout'
 
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
@@ -49,13 +51,15 @@ export default function (spawn: StructureSpawn) {
         return
     }
 
-    if (warDepartment.status !== WarStatus.NONE) {
-        createWarCreeps(spawn, warDepartment)
+    if (room.energyAvailable < 0.95 * spawn.room.energyCapacityAvailable) {
         return
     }
 
-    if (room.energyAvailable < 0.95 * spawn.room.energyCapacityAvailable) {
-        return
+    if (warDepartment.status !== WarStatus.NONE) {
+        const err = createWarCreeps(spawn, warDepartment)
+        if (err === OK) {
+            return
+        }
     }
 
     if (RoleLogistics.shouldCreateCreep(spawn)) {
@@ -93,31 +97,46 @@ export default function (spawn: StructureSpawn) {
     }
 }
 
-function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment) {
+function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): number | null {
     const room = spawn.room
     const status = warDepartment.status
     const attackers = getCreeps('attack', room)
     const claimers = getCreeps('claimer', room)
+    const scouts = getCreeps('scout', room)
     const remoteUpgraders = getCreeps('remote-upgrade', room)
     const remoteBuilders = getCreeps('remote-build', room)
 
+    if (warDepartment.targetRoom === undefined && scouts.length === 0) {
+        if (scouts.length === 0) {
+            return roleScout.create(spawn, warDepartment.target)
+        }
+        return null
+    }
+
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
-        roleAttacker.create(spawn, warDepartment.target)
+        return roleAttacker.create(spawn, warDepartment.target)
     }
 
     if (warDepartment.hasHostiles()) {
-        return;
+        return null
     }
 
-    if (status === WarStatus.CLAIM && claimers.length < CLAIMERS_COUNT) {
-        roleClaimer.create(spawn, warDepartment.target)
+    if ([WarStatus.CLAIM, WarStatus.MINIMAL_CLAIM].includes(status)) {
+        if (warDepartment.hasInvaderCore()) {
+            return roleAttacker.create(spawn, warDepartment.target)
+        } else if (claimers.length < CLAIMERS_COUNT) {
+            if (warDepartment.targetRoom!.controller!.upgradeBlocked < 20) {
+                return roleClaimer.create(spawn, warDepartment.target)
+            }
+        }
     } else if (status === WarStatus.SPAWN) {
         if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
-            roleRemoteUpgrade.create(spawn, warDepartment.target)
+            return roleRemoteUpgrade.create(spawn, warDepartment.target)
         } else if (remoteBuilders.length < REMOTE_BUILD_COUNT) {
-            roleRemoteBuild.create(spawn, warDepartment.target)
+            return roleRemoteBuild.create(spawn, warDepartment.target)
         }
     }
+    return null
 }
 
 function createRescueCreeps(spawn: StructureSpawn) {

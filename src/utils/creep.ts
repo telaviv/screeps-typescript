@@ -22,6 +22,22 @@ export function calculateBodyCost(parts: BodyPartConstant[]): number {
     return sum
 }
 
+export function moveTo(pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): number {
+    let err = creep.moveTo(pos, {
+        ...opts,
+        visualizePathStyle: { stroke: '#ffaa00' },
+    })
+    if (err === ERR_NO_PATH) {
+        Logger.error('moveTo:noPath', creep.name, pos)
+        return creep.moveTo(pos, {
+            ...opts,
+            visualizePathStyle: { stroke: '#ffaa00' },
+            swampCost: 1,
+        })
+    }
+    return err
+}
+
 export function moveToRoom(roomName: string, creep: Creep) {
     creep.moveTo(new RoomPosition(25, 25, roomName), {
         range: 23,

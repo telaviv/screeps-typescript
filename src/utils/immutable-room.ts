@@ -8,7 +8,7 @@ import { includes, times, range, random, sortBy, reverse, uniqBy, flatten } from
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition, Position } from 'types'
-import { EXTENSION_COUNTS, TOWER_COUNTS, getSources } from './room'
+import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
 
 type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
 type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
@@ -349,11 +349,11 @@ export class ImmutableRoom implements ValueObject {
         return iroom
     }
 
-    public nextSpawnPos(): RoomPosition {
+    public nextSpawnPos(): FlatRoomPosition {
         const centroid = this.findCentroid()
         for (const roomItem of this.breadthFirst(centroid.x, centroid.y)) {
             if (this.canPlaceSpawn(roomItem)) {
-                return new RoomPosition(roomItem.x, roomItem.y, this.name)
+                return { x: roomItem.x, y: roomItem.y, roomName: this.name }
             }
         }
         throw new Error('No eligible spawn spot.')
@@ -376,6 +376,19 @@ export class ImmutableRoom implements ValueObject {
         }
         const pos = this.nextStoragePos()
         return this.setObstacle(pos.x, pos.y, 'storage')
+    }
+
+    public setSpawns(limit = SPAWN_COUNTS[8]): ImmutableRoom {
+        const spawns = this.getObstacles('spawn')
+        if (spawns.length >= limit) {
+            return this
+        }
+        let iroom: ImmutableRoom = this
+        for (let i = 0; i < SPAWN_COUNTS[8] - spawns.length; i++) {
+            const pos = iroom.nextSpawnPos()
+            iroom = iroom.setObstacle(pos.x, pos.y, 'spawn')
+        }
+        return iroom
     }
 
     public controllerLinkPos(): FlatRoomPosition {
@@ -714,18 +727,8 @@ interface TimeCache {
 }
 let cache: TimeCache = {}
 
-export const fromRoom = wrap(
+export const fromRoomUncached = wrap(
     (room: Room): ImmutableRoom => {
-        if (cache.hasOwnProperty(Game.time)) {
-            const timeCache = cache[Game.time]
-            if (timeCache.hasOwnProperty(room.name)) {
-                return timeCache[room.name]
-            }
-        } else if (!cache.hasOwnProperty(Game.time)) {
-            cache = {}
-            cache[Game.time] = {} as RoomCache
-        }
-
         let immutableRoom = new ImmutableRoom(room.name)
         const terrain = room.getTerrain()
         for (let x = 0; x < 50; ++x) {
@@ -806,7 +809,23 @@ export const fromRoom = wrap(
 
         return immutableRoom
     },
-    'immutable-room:fromRoom',
+    'immutable-room:fromRoomUncached',
+)
+
+export const fromRoom = wrap(
+    (room: Room): ImmutableRoom => {
+        if (cache.hasOwnProperty(Game.time)) {
+            const timeCache = cache[Game.time]
+            if (timeCache.hasOwnProperty(room.name)) {
+                return timeCache[room.name]
+            }
+        } else if (!cache.hasOwnProperty(Game.time)) {
+            cache = {}
+            cache[Game.time] = {} as RoomCache
+        }
+        return fromRoomUncached(room)
+    },
+    'immutable-room:fromRoom'
 )
 
 export function updateCache(room: Room, immutableRoom: ImmutableRoom) {

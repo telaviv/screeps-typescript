@@ -24,9 +24,13 @@ export default class WarDepartment {
 
     public constructor(room: Room) {
         this.room = room
-        if (!this.room.memory.war) {
+        if (!this.room.memory || !this.room.memory.war) {
             this.room.memory.war = { status: WarStatus.NONE, target: '' }
         }
+    }
+
+    public get targetRoom(): Room | undefined {
+        return Game.rooms[this.target]
     }
 
     public static create(roomName: string): WarDepartment {
@@ -57,8 +61,15 @@ export default class WarDepartment {
         return this.warMemory.target
     }
 
+    public hasInvaderCore(): boolean {
+        const invaderCores = this.targetRoom!.find(FIND_STRUCTURES, {
+            filter: { structureType: STRUCTURE_INVADER_CORE },
+        })
+        return invaderCores.length > 0
+    }
+
     public hasHostiles(): boolean {
-        const hostiles = this.room.find(FIND_HOSTILE_CREEPS)
+        const hostiles = this.targetRoom!.find(FIND_HOSTILE_CREEPS)
         return hostiles.length > 0;
     }
 
@@ -66,17 +77,16 @@ export default class WarDepartment {
         if (this.status === WarStatus.NONE) {
             return
         }
-        const targetRoom = Game.rooms[this.target]
         if ([WarStatus.CLAIM, WarStatus.MINIMAL_CLAIM].includes(this.status)) {
             if (
-                targetRoom &&
-                targetRoom.controller &&
-                targetRoom.controller.my
+                this.targetRoom &&
+                this.targetRoom.controller &&
+                this.targetRoom.controller.my
             ) {
                 this.status = WarStatus.SPAWN
             }
         } else if (this.status === WarStatus.SPAWN) {
-            if (targetRoom && !hasNoSpawns(targetRoom)) {
+            if (this.targetRoom && !hasNoSpawns(this.targetRoom)) {
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
         }
