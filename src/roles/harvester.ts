@@ -7,6 +7,8 @@ import { spawnCreep } from 'utils/spawn'
 import { isFullOfEnergy } from 'utils/energy-harvesting'
 import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
 
+const MAX_WORK_PARTS = 5
+
 const ROLE = 'harvester'
 
 const BODY_PLANS = [
@@ -64,6 +66,16 @@ export class HarvesterCreep {
         return this.creep.room
     }
 
+    get source(): Source {
+        return Game.getObjectById(this.creep.memory.source)!
+    }
+
+    private isHarvestTick(): boolean {
+        const workParts = this.creep.getActiveBodyparts(WORK)
+        return this.creep.ticksToLive! % (workParts / MAX_WORK_PARTS) === 0 ||
+            this.source.energy === 0
+    }
+
     private isAtHarvestPos(): boolean {
         return (
             this.creep.pos.x === this.harvestPos.x &&
@@ -78,8 +90,7 @@ export class HarvesterCreep {
     }
 
     private harvestSource(): void {
-        const source = Game.getObjectById(this.creep.memory.source)!
-        const err = this.creep.harvest(source)
+        const err = this.creep.harvest(this.source)
         if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
             Logger.warning(
                 'harvester:harvest:failure',
@@ -91,41 +102,46 @@ export class HarvesterCreep {
     }
 
     private canTransferEnergy(): boolean {
-        return (
-            this.creep.getActiveBodyparts(CARRY) > 5 &&
-            this.hasLink() &&
-            this.linkHasCapacity() &&
-            this.isFullOfEnergy()
-        )
+        if (this.creep.getActiveBodyparts(CARRY) === 0 ||
+            !this.isFullOfEnergy() ||
+            this.isHarvestTick()) {
+            return false
+        }
+
+        const link = this.getLink()
+        if (link === null) {
+            return false
+        }
+        return link.store.getFreeCapacity(RESOURCE_ENERGY) > 0
     }
 
     private transferEnergyToLink(): void {
-        this.creep.transfer(this.getLink()!, RESOURCE_ENERGY)
+        const err = this.creep.transfer(this.getLink()!, RESOURCE_ENERGY)
+        if (err !== OK) {
+            Logger.error(
+                'harvester:transfer:failure',
+                this.creep.name,
+                "couldn't transfer energy",
+                err,
+            )
+        }
     }
 
     private isFullOfEnergy(): boolean {
         return isFullOfEnergy(this.creep)
     }
 
-    private linkHasCapacity(): boolean {
-        const link = this.getLink()!
-        return link.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-    }
-
     private getLink(): StructureLink | null {
-        const left = Math.max(this.harvestPos.x - 1, 0)
-        const right = Math.min(this.harvestPos.x + 1, 49)
-        const top = Math.max(this.harvestPos.y - 1, 0)
-        const bottom = Math.min(this.harvestPos.y + 1, 49)
-        const links = this.room
-            .lookForAtArea<LOOK_STRUCTURES>(
-                LOOK_STRUCTURES, top, left, bottom, right, true) as unknown as StructureLink[]
-
-        if (links.length === 0) {
+        const link = this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_LINK,
+        }) as StructureLink | null
+        if (link === null) {
             return null
         }
-
-        return links[0]
+        if (link.pos.inRangeTo(this.harvestPos, 1)) {
+            return link
+        }
+        return null
     }
 
     private hasLink(): boolean {

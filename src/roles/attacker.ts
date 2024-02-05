@@ -20,22 +20,23 @@ interface AttackerMemory extends CreepMemory {
 
 const roleAttacker = {
     run: wrap((creep: Attacker) => {
-        if (!creep.room.controller) {
+        const targetRoom = Game.rooms[creep.memory.roomName]!
+        if (!targetRoom.controller) {
             Logger.warning('attacker:no-controller', creep.name)
             return
         }
 
-        if (creep.room.controller.safeMode) {
+        if (targetRoom.controller.safeMode) {
             Logger.warning(
                 'attacker:safeMode',
                 creep.name,
-                creep.room.name,
-                creep.room.controller.safeMode,
+                targetRoom.name,
+                targetRoom.controller.safeMode,
             )
             return
         }
-        const structures = getInvaderCores(creep.room)
-        const hostiles = creep.room.find(FIND_HOSTILE_CREEPS)
+        const structures = getInvaderCores(targetRoom)
+        const hostiles = targetRoom.find(FIND_HOSTILE_CREEPS)
         const targets = [...structures, ...hostiles]
 
         if (targets.length > 0) {
