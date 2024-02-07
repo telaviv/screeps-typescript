@@ -102,8 +102,8 @@ export function getHarvesters(room: Room): Harvester[] {
 }
 
 export function getLogisticsCreeps(options: {
+    room: Room,
     preference?: LogisticsPreference,
-    room?: Room,
     taskType?: string
 }): LogisticsCreep[] {
     return Object.values(Game.creeps).filter(isLogisticsCreep)

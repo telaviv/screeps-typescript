@@ -6,4 +6,19 @@ declare global {
     interface CreepMemory {
         tasks: Task<any>[]
     }
+
+    namespace NodeJS {
+        interface Global {
+            deleteAllTasks: () => void
+        }
+    }
 }
+
+function deleteAllTasks() {
+    for (const creep of Object.values(Game.creeps)) {
+        creep.memory.tasks = []
+    }
+}
+
+global.deleteAllTasks = deleteAllTasks
+

@@ -142,16 +142,15 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
     const roomMemory = room.memory
+    const sourcesManager = new SourcesManager(room)
     const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
-    const energyManager = EnergyManager.get(spawn.room)
-    const sourceId = energyManager.forceSourceAssignment('harvester')
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
     if (workers.length < RESCUE_WORKER_COUNT) {
         RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, true)
     } else if (harvesters.length < sourceCount) {
-        roleHarvester.create(spawn, sourceId, true)
+        sourcesManager.createHarvester(spawn, true)
     }
 }
 

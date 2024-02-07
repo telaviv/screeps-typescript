@@ -155,13 +155,15 @@ const roleHarvester = {
         harvester.run()
     },
 
-    create(spawn: StructureSpawn, sourceId: Id<Source>, rescue = false): number {
+    create(spawn: StructureSpawn, sourceId: Id<Source>, pos: RoomPosition | null = null, rescue = false): number {
         const source = Game.getObjectById(sourceId)
         if (!source) {
             Logger.error('harvester:create:source:not-found', sourceId)
             return ERR_NOT_FOUND
         }
-        const pos = source.room.memory.stationaryPoints.sources[sourceId]
+        if (pos === null) {
+            const pos = source.room.memory.stationaryPoints.sources[sourceId]
+        }
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
@@ -172,7 +174,7 @@ const roleHarvester = {
                 home: spawn.room.name,
                 waitTime: 0,
                 tasks: [],
-                pos: { x: pos.x, y: pos.y, roomName: spawn.room.name },
+                pos: { x: pos!.x, y: pos!.y, roomName: spawn.room.name },
                 source: sourceId,
             } as HarvesterMemory,
         })

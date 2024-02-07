@@ -22,6 +22,7 @@ export default class SourcesManager {
     public hasEnoughHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughHarvesters()) {
+                Logger.info('sources-manager:hasEnoughHarvesters:notEnoughHarvesters', this.room.name, sourceManager.id);
                 return false;
             }
         }
@@ -60,6 +61,7 @@ export default class SourcesManager {
                 source = sourceManager.id
             }
         }
+        Logger.error('getNextHarvesterMiningTarget', pos, source)
         if (pos && source) {
             if (this.verifyPositionAvailable(pos, source)) {
                 return { source, pos }
@@ -86,14 +88,14 @@ export default class SourcesManager {
         return null
     }
 
-    public createHarvester(spawn: StructureSpawn): number {
+    public createHarvester(spawn: StructureSpawn, rescue = false): number {
         const target = this.getNextHarvesterMiningTarget()
         if (!target) {
             throw new Error("no available positions for harvester")
         }
         const { pos, source } = target
         const sourceManager = SourceManager.getById(source)
-        return roleHarvester.create(spawn, sourceManager.id);
+        return roleHarvester.create(spawn, sourceManager.id, pos, rescue);
     }
 
     private verifyPositionAvailable(pos: RoomPosition, source: Id<Source>): boolean {

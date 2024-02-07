@@ -9,6 +9,8 @@ import { LogisticsCreep } from 'roles/logistics-constants'
 import { isMiningTask } from 'tasks/mining/utils'
 import { MiningTask } from 'tasks/mining/types'
 
+import * as Logger from 'utils/logger'
+
 const MAX_WORK_PARTS = 5
 
 export default class SourceManager {
@@ -53,7 +55,7 @@ export default class SourceManager {
 
     public get auxHarvesters(): LogisticsCreep[] {
         return filter(
-            getLogisticsCreeps({ taskType: 'mining' }),
+            getLogisticsCreeps({ room: this.room, taskType: 'mining' }),
             (creep: LogisticsCreep) => {
                 if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
                     return false
@@ -105,6 +107,14 @@ export default class SourceManager {
     }
 
     public hasEnoughHarvesters(): boolean {
+        Logger.info(
+            'hasEnoughHarvesters',
+            this.room.name,
+            this.id,
+            this.harvesters.length,
+            this.getAvailableHarvesterPositions().length,
+            this.hasStaticHarvester())
+
         if (!this.hasStaticHarvester()) {
             return false
         }
