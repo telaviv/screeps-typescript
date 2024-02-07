@@ -12,6 +12,7 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_EXTENSION, drawExtension],
     [STRUCTURE_ROAD, drawRoad],
     [STRUCTURE_TOWER, drawTower],
+    [STRUCTURE_SPAWN, drawSpawn],
 ])
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
@@ -34,6 +35,10 @@ function drawLink(visual: RoomVisual, pos: RoomPosition): void {
     visual.text('♦️', pos.x, pos.y + .25, { color: 'yellow', font: 0.95 })
 }
 
+function drawSpawn(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('🏭', pos.x, pos.y + .25, { color: 'green', font: 0.95 })
+}
+
 function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
     visual.circle(pos, { fill: 'grey', radius: 0.45 })
 }
@@ -52,6 +57,11 @@ function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
     return filter(structures, { structureType }).length > 0
 }
 
+function hasConstructionSiteAt(structureType: BuildableStructureConstant, pos: RoomPosition) {
+    const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES)
+    return filter(sites, { structureType }).length > 0
+}
+
 export default class RoomVisualizer {
     readonly room: Room
 
@@ -66,7 +76,7 @@ export default class RoomVisualizer {
         return this.room.memory.visuals
     }
 
-    render() {
+    render(roads = false) {
         if (!this.visuals.snapshot) {
             return
         }
@@ -74,9 +84,13 @@ export default class RoomVisualizer {
             return
         }
         for (const [structureType, positions] of Object.entries(this.room.memory.constructionFeatures)) {
+            if (structureType === STRUCTURE_ROAD && !roads) {
+                continue
+            }
             for (const pos of positions) {
                 const roomPos = new RoomPosition(pos.x, pos.y, this.room.name)
-                if (hasStructureAt(structureType as BuildableStructureConstant, roomPos)) {
+                if (hasStructureAt(structureType as BuildableStructureConstant, roomPos) ||
+                    hasConstructionSiteAt(structureType as BuildableStructureConstant, roomPos)) {
                     continue
                 }
                 const drawFunction = STRUCTURE_VISUALS.get(structureType as BuildableStructureConstant)

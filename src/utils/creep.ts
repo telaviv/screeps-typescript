@@ -106,5 +106,7 @@ export function getLogisticsCreeps(options: {
     room?: Room,
     taskType?: string
 }): LogisticsCreep[] {
-    return Object.values(Game.creeps).filter(isLogisticsCreep);
+    return Object.values(Game.creeps).filter(isLogisticsCreep)
+        .filter((creep: LogisticsCreep) => creep.memory.home === options.room?.name)
 }
+

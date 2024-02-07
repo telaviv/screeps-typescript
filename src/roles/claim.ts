@@ -18,6 +18,9 @@ interface ClaimerMemory extends CreepMemory {
 
 const roleClaimer = {
     run: wrap((creep: Claimer) => {
+        if (creep.spawning) {
+            return
+        }
         const targetRoom = Game.rooms[creep.memory.roomName]
         if (!targetRoom || !targetRoom.controller) {
             Logger.warning('claimer:no-controller', creep.name)
