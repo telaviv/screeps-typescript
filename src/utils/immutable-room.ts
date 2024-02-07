@@ -434,6 +434,15 @@ export class ImmutableRoom implements ValueObject {
         return this.setObstacle(pos.x, pos.y, 'link')
     }
 
+    public getStorageLink(): FlatRoomPosition {
+        const storages = this.getObstacles('storage')
+        const links = this.getNearbyLinks(storages[0].x, storages[0].y)
+        if (links.length === 0) {
+            throw new Error('No storage link found.')
+        }
+        return links[0]
+    }
+
     public storageLinkPos(): FlatRoomPosition {
         const storages = this.getObstacles('storage')
         if (storages.length === 0) {
@@ -448,14 +457,13 @@ export class ImmutableRoom implements ValueObject {
     }
 
     private hasNearbyLink(x: number, y: number): boolean {
+        return this.getNearbyLinks(x, y).length > 0
+    }
+
+    private getNearbyLinks(x: number, y: number): ImmutableRoomItem[] {
         const links = this.getObstacles('link')
         const neighbors = this.getClosestNeighbors(x, y)
-        for (const link of links) {
-            if (neighbors.includes(link)) {
-                return true
-            }
-        }
-        return false
+        return links.filter((link) => neighbors.includes(link))
     }
 
     /**
@@ -698,7 +706,7 @@ export class ImmutableRoom implements ValueObject {
             return neighbors.filter((ri) => ri.obstacle === 'link')
         })))
         const controllerLink = this.controllerLinkPos()
-        const storageLink = this.storageLinkPos()
+        const storageLink = this.getStorageLink()
         const links = uniqBy(
             [sourceContainerLinks[0], controllerLink, storageLink, ...sourceContainerLinks.slice(1)],
             (ri) => `${ri.x},${ri.y}`,
@@ -706,7 +714,11 @@ export class ImmutableRoom implements ValueObject {
 
         const possibleLinks = this.getObstacles('link')
         if (possibleLinks.length != links.length) {
-            Logger.error('immutable-room:sortedLinkPositions:link-mismatch', possibleLinks, links)
+            Logger.error('immutable-room:sortedLinkPositions:link-mismatch',
+                possibleLinks.map((ri) => `(${ri.x}, ${ri.y})`),
+                links.map((ri) => `(${ri.x}, ${ri.y})`),
+                this.get(39, 10),
+            )
             return []
         }
         return links.map((ri) => ({ x: ri.x, y: ri.y }));
