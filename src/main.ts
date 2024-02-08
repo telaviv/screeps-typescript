@@ -1,6 +1,5 @@
 import migrate from 'migrations'
 import RoomVisualizer from 'room-visualizer'
-import WarDepartment from 'war-department'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import RoleLogistics from 'roles/logistics'
 import roleClaimer, { Claimer } from 'roles/claim'
@@ -21,6 +20,7 @@ import { runSpawn } from './spawn'
 import updateStrategy, { StrategyPhase } from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
+import Empire from 'empire'
 
 
 declare global {
@@ -79,14 +79,13 @@ function unwrappedLoop() {
         visualizer.render()
 
         updateStrategy(room)
+        const empire = new Empire()
+        empire.run()
 
         if (room.controller && room.controller.my) {
             recordRoomStats(room)
 
             BuildManager.get(room).ensureConstructionSites()
-
-            const warDepartment = new WarDepartment(room)
-            warDepartment.update()
 
             const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
                 filter: (s) => {
@@ -134,6 +133,7 @@ function unwrappedLoop() {
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
-const loop = ErrorMapper.wrap(unwrappedLoop)
+
+const loop = Game.cpu.tickLimit < 30 ? unwrappedLoop : ErrorMapper.wrap(unwrappedLoop)
 
 export { loop, unwrappedLoop }

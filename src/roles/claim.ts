@@ -23,7 +23,7 @@ const roleClaimer = {
         }
         const targetRoom = Game.rooms[creep.memory.roomName]
         if (!targetRoom || !targetRoom.controller) {
-            Logger.warning('claimer:no-controller', creep.name)
+            Logger.info('claimer:no-controller', creep.name)
             return
         }
         if (targetRoom.controller.my) {

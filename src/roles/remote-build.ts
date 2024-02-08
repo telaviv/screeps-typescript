@@ -53,15 +53,7 @@ class RemoteBuildCreep {
             return
         }
 
-        if (this.isAtHome()) {
-            if (this.shouldRecycle()) {
-                recycle(this.creep)
-            } else if (!this.isFullOfEnergy()) {
-                getEnergy(this.creep)
-            } else {
-                this.goToDestination()
-            }
-        } else if (this.isAtDestination()) {
+        else if (this.isAtDestination()) {
             if (this.hasNoEnergy()) {
                 this.goHome()
             } else {
@@ -129,10 +121,6 @@ class RemoteBuildCreep {
 
     private goToDestination() {
         moveToRoom(this.destination, this.creep)
-    }
-
-    private isAtHome() {
-        return this.creep.room.name === this.home
     }
 
     private isAtDestination() {

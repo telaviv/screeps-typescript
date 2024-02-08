@@ -106,7 +106,17 @@ export function getLogisticsCreeps(options: {
     preference?: LogisticsPreference,
     taskType?: string
 }): LogisticsCreep[] {
-    return Object.values(Game.creeps).filter(isLogisticsCreep)
-        .filter((creep: LogisticsCreep) => creep.memory.home === options.room?.name)
+    const check = (creep: LogisticsCreep): boolean => {
+        if (options.preference && creep.memory.preference !== options.preference) {
+            return false
+        }
+        if (options.taskType) {
+            if (!creep.memory.tasks.some((task) => task.type === options.taskType)) {
+                return false
+            }
+        }
+        return creep.memory.home === options.room.name
+    }
+    return Object.values(Game.creeps).filter(isLogisticsCreep).filter(check)
 }
 

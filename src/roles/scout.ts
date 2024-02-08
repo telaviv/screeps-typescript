@@ -50,13 +50,14 @@ const roleScout = {
         scout.run()
     },
 
-    create(spawn: StructureSpawn, destination: string): number {
+    create(spawn: StructureSpawn, destination: string, opts: SpawnOptions = {}): number {
         return spawn.spawnCreep([MOVE], `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
                 destination,
             } as ScoutMemory,
+            ...opts,
         })
     },
 }

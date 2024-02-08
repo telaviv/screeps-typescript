@@ -1,5 +1,4 @@
 import includes from 'lodash/includes'
-import { Record as IRecord, OrderedSet } from 'immutable'
 import {
     LINK_COUNTS,
     MIN_RAMPART_LEVEL,
@@ -14,30 +13,20 @@ import {
     isAtExtensionCap,
     isAtTowerCap,
     makeConstructionSite,
+    makeSpawnConstructionSite,
 } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { profile, wrap } from 'utils/profiling'
 import { getConstructionFeatures } from 'surveyor'
 import { fromRoom } from 'utils/immutable-room'
 import { Position } from 'types'
+import pokemon from 'pokemon'
 
 declare global {
     interface RoomMemory {
         construction: { paused: boolean }
     }
 }
-
-interface IImutableRoomItem {
-    x: number
-    y: number
-}
-const CoordinateRecord = IRecord({ x: 0, y: 0 })
-class Coordinate extends CoordinateRecord implements IImutableRoomItem {
-    readonly x!: number
-    readonly y!: number
-}
-
-type Roads = OrderedSet<Coordinate>
 
 export default class BuildManager {
     static cache = new Map<string, BuildManager>()
@@ -80,11 +69,7 @@ export default class BuildManager {
             return false
         }
         const iroom = fromRoom(this.room)
-        const pos = iroom.nextSpawnPos()
-        return makeConstructionSite(
-            new RoomPosition(pos.x, pos.y, this.room.name),
-            STRUCTURE_SPAWN,
-        ) === OK
+        return this.buildNextSpawn()
     }
 
     private ensureWallSite(): boolean {
@@ -170,10 +155,10 @@ export default class BuildManager {
         return containers.length < constructionFeatures[STRUCTURE_CONTAINER].length
     }, 'BuildManager:canBuildContainer')
 
-    private buildNextStructure(type: BuildableStructureConstant): boolean {
+    private nextBuildPosition(type: BuildableStructureConstant): RoomPosition | null {
         if (this.room.controller === undefined) {
-            Logger.error('buildNextBuilding:controller:error:no-controller', this.room.name)
-            return false
+            Logger.error('nextBuildPosition:controller:error:no-controller', this.room.name)
+            return null
         }
         const constructionFeatures = getConstructionFeatures(this.room)
         let structures: Structure[] = []
@@ -188,10 +173,26 @@ export default class BuildManager {
             return !structures.some((structure) => structure.pos.x === x && structure.pos.y === y)
         })
         if (toBuild === undefined) {
-            Logger.error('buildNextBuilding:toBuild:error', type, this.room.name)
+            Logger.error('nextBuildPosition:toBuild:error', type, this.room.name)
+            return null
+        }
+        return new RoomPosition(toBuild.x, toBuild.y, this.room.name)
+    }
+
+    private buildNextStructure(type: BuildableStructureConstant): boolean {
+        const toBuild = this.nextBuildPosition(type)
+        if (toBuild === null) {
             return false
         }
         return makeConstructionSite(new RoomPosition(toBuild.x, toBuild.y, this.room.name), type) === OK
+    }
+
+    private buildNextSpawn(): boolean {
+        const toBuild = this.nextBuildPosition(STRUCTURE_SPAWN)
+        if (toBuild === null) {
+            return false
+        }
+        return makeSpawnConstructionSite(toBuild, pokemon()) === OK
     }
 
     private canBuildLinks = wrap(() => {

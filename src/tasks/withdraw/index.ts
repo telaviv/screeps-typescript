@@ -7,6 +7,8 @@ import { WithdrawObject } from './object'
 import { WithdrawTask, Withdrawable } from './types'
 import { isWithdrawTask } from './utils'
 import { ResourceCreep } from '../types'
+import { get } from 'lodash'
+import { getHome } from 'roles/utils'
 
 export function makeRequest(creep: ResourceCreep): boolean {
     const capacity = creep.store.getFreeCapacity()
@@ -19,7 +21,12 @@ export function makeRequest(creep: ResourceCreep): boolean {
         return true
     }
 
-    const withdrawTargets = getEligibleTargets(creep.room, capacity)
+    const home = getHome(creep)
+    if (!home) {
+        Logger.error('withdraw::makeRequest:failure:no-home', creep.name)
+        return false
+    }
+    const withdrawTargets = getEligibleTargets(home, capacity)
     if (withdrawTargets.length > 0) {
         const target = creep.pos.findClosestByRange(withdrawTargets)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

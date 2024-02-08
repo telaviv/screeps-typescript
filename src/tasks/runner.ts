@@ -5,14 +5,22 @@ import TransferRunner from 'tasks/transfer'
 import WithdrawRunner from 'tasks/withdraw'
 import PickupRunner from 'tasks/pickup'
 import MiningRunner from 'tasks/mining'
+import SignRunner from 'tasks/sign'
 import * as Logger from 'utils/logger'
 
-const runners: Runner<any>[] = [TransferRunner, WithdrawRunner, PickupRunner, MiningRunner]
+const runners: Runner<any>[] = [
+    TransferRunner,
+    WithdrawRunner,
+    PickupRunner,
+    MiningRunner,
+    SignRunner,
+]
 
 export function run(task: Task<any>, creep: ResourceCreep): boolean {
     if (task === undefined) {
         throw new Error(`undefined task: ${creep.name}`)
     }
+
     if (!creep.memory.tasks) {
         throw new Error(`This creep has no tasks: ${creep.name}`)
     }
@@ -42,9 +50,7 @@ function cleanupCreepTask(creep: ResourceCreep) {
     if (!creepMemory.tasks || creepMemory.tasks.length === 0) {
         return
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const task = creepMemory.tasks[0]
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (task.complete) {
         creepMemory.tasks.shift()
         cleanupCreepTask(creep)

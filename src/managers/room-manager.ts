@@ -1,5 +1,6 @@
 import { extend } from "lodash";
 import roleClaimer from 'roles/claim'
+import roleScout from "roles/scout";
 import autoIncrement from 'utils/autoincrement'
 import * as Logger from 'utils/logger'
 import WarDepartment from "war-department";
@@ -89,7 +90,7 @@ export class RoomManager {
             Logger.error('no spawn in starting room')
             return false;
         }
-        const err = roleClaimer.create(spawns[0], destination, true)
+        const err = roleScout.create(spawns[0], destination, { dryRun: true })
         if (err === OK) {
             const warDepartment = new WarDepartment(this.room)
             warDepartment.claimRoom(destination)

@@ -19,6 +19,7 @@ import * as TransferTask from 'tasks/transfer'
 import * as MiningTask from 'tasks/mining'
 import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
+import * as SignTask from 'tasks/sign'
 import {
     LogisticsCreep,
     LogisticsMemory,
@@ -36,6 +37,8 @@ import {
 } from './logistics-constants'
 import { fromRoom } from 'utils/immutable-room'
 import { isMiningTask } from 'tasks/mining/utils'
+import { findTaskByType } from 'tasks/utils'
+import { addEnergyTask } from "tasks/usage-utils"
 
 const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -65,7 +68,6 @@ const PREFERENCE_EMOJIS = {
 }
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
-const watchedScreep = 'logistics:worker:W8N3:25120'
 
 class RoleLogistics {
     private creep: LogisticsCreep;
@@ -102,6 +104,8 @@ class RoleLogistics {
 
         if (tasks.length > 0) {
             this.runTask();
+        } else if (this.canSign()) {
+            SignTask.makeRequest(this.creep)
         } else if (currentTask === TASK_COLLECTING) {
             this.getEnergy()
         } else if (currentTask === TASK_HAULING) {
@@ -120,28 +124,22 @@ class RoleLogistics {
         }
     }
 
+    private canSign() {
+        if (this.creep.room.memory.signed) {
+            return false
+        }
+        const task = findTaskByType('sign')
+        return task === undefined
+    }
+
     public static staticRun(creep: LogisticsCreep) {
         return (new RoleLogistics(creep)).run();
     }
 
     private getEnergy(): void {
-        const taskMap = [
-            { tasker: PickupTask, name: 'pickup' },
-            { tasker: WithdrawTask, name: 'withdraw' },
-            { tasker: MiningTask, name: 'mining' }
-        ]
-        for (const { tasker, name } of taskMap) {
-            const ret = tasker.makeRequest(this.creep)
-            if (ret) {
-                if (this.creep.memory.tasks.length === 0) {
-                    Logger.error('logistics:getEnergy:failureToMakeTask', name, this.creep.name)
-                } else {
-                    return
-                }
-            }
+        if (!addEnergyTask(this.creep)) {
+            this.setToNoTask('no tasks could be made')
         }
-        Logger.debug('logistics:getEnergy:failure', 'no tasks could be made', this.creep.name)
-        this.setToNoTask('no tasks could be made')
     }
 
     private setToNoTask(reason: string): void {

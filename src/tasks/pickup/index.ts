@@ -6,8 +6,6 @@ import { PickupTask } from './types'
 import { isPickupTask } from './utils'
 import { ResourceCreep } from '../types'
 
-/* eslint @typescript-eslint/no-unsafe-assignment: "off" */
-/* eslint @typescript-eslint/no-unsafe-member-access: "off" */
 
 export function makeRequest(creep: ResourceCreep): boolean {
     const capacity = creep.store.getFreeCapacity()
@@ -19,8 +17,13 @@ export function makeRequest(creep: ResourceCreep): boolean {
     if (currentRequest !== null) {
         return true
     }
+    if (!creep.memory.home) {
+        Logger.error('task:pickup::makeRequest:failure:no-home', creep.name)
+        return false
+    }
 
-    const resources = getDroppedResources(creep.room, capacity, RESOURCE_ENERGY)
+    const home = Game.rooms[creep.memory.home]!
+    const resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
     if (resources.length > 0) {
         const resource = creep.pos.findClosestByRange(resources)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

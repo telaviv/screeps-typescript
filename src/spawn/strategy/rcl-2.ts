@@ -5,15 +5,12 @@ import RoleLogistics from 'roles/logistics'
 import roleMason, { MasonCreep } from 'roles/mason'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
 import roleRemoteBuild from 'roles/remote-build'
-import roleWrecker from 'roles/wrecker'
 import {
     PREFERENCE_WORKER,
     TASK_BUILDING,
     TASK_HAULING,
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
-import roleHarvester from 'roles/harvester'
-import EnergyManager from 'managers/energy-manager'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
@@ -121,7 +118,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         return null
     }
 
-    if ([WarStatus.CLAIM, WarStatus.MINIMAL_CLAIM].includes(status)) {
+    if (status === WarStatus.CLAIM) {
         if (warDepartment.hasInvaderCore()) {
             return roleAttacker.create(spawn, warDepartment.target)
         } else if (claimers.length < CLAIMERS_COUNT) {

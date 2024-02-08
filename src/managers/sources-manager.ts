@@ -61,7 +61,6 @@ export default class SourcesManager {
                 source = sourceManager.id
             }
         }
-        Logger.error('getNextHarvesterMiningTarget', pos, source)
         if (pos && source) {
             if (this.verifyPositionAvailable(pos, source)) {
                 return { source, pos }

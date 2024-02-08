@@ -8,6 +8,8 @@ import * as Profiling from 'utils/profiling'
 import { ConstructionFeatures, Position } from 'types';
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 
+const CPU_MIN = 50
+
 type StationaryPoints = {
     sources: { [id: string]: Position }
 }
@@ -32,7 +34,7 @@ function clearConstructionFeatures(roomName: string) {
 }
 
 function saveConstructionFeatures(room: Room) {
-    if (!room.memory.constructionFeatures) {
+    if (!room.memory.constructionFeatures && Game.cpu.tickLimit > CPU_MIN) {
         const features = calculateConstructionFeatures(room)
         room.memory.constructionFeatures = features
     }
@@ -90,7 +92,7 @@ function getRampartPositions(room: Room, features: Position[]): Position[] {
 
 const assignRoomFeatures = Profiling.wrap(() => {
     each(Game.rooms, (room: Room) => {
-        if (room.controller && room.controller.my && !RoomUtils.hasNoSpawns(room)) {
+        if (room.controller) {
             saveConstructionFeatures(room)
         }
     })
