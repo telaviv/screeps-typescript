@@ -29,7 +29,6 @@ export function makeRequest(creep: ResourceCreep): boolean {
     const withdrawTargets = getEligibleTargets(home, capacity)
     if (withdrawTargets.length > 0) {
         const target = creep.pos.findClosestByRange(withdrawTargets)
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         addWithdrawTask(creep, target!)
         return true
     }
@@ -155,7 +154,10 @@ function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const bestTarget = maxBy(nonEmpties, (t) =>
         t.resourcesAvailable(RESOURCE_ENERGY),
     )
-    return [bestTarget!.withdrawable]
+    if (!bestTarget) {
+        return []
+    }
+    return [bestTarget.withdrawable]
 }
 
 export default {
