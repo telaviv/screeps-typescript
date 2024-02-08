@@ -26,7 +26,6 @@ export function makeRequest(creep: ResourceCreep): boolean {
     const resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
     if (resources.length > 0) {
         const resource = creep.pos.findClosestByRange(resources)
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         addPickupTask(creep, resource!)
         return true
     }

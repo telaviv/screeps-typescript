@@ -16,9 +16,6 @@ import { spawnCreep } from 'utils/spawn'
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
-import * as MiningTask from 'tasks/mining'
-import * as WithdrawTask from 'tasks/withdraw'
-import * as PickupTask from 'tasks/pickup'
 import * as SignTask from 'tasks/sign'
 import {
     LogisticsCreep,
