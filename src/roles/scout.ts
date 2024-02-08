@@ -1,4 +1,3 @@
-import * as RoomStatus from 'room-status'
 import { moveToRoom } from 'utils/creep'
 import { profile } from 'utils/profiling'
 
@@ -35,7 +34,6 @@ class ScoutCreep {
 
     @profile
     run() {
-        RoomStatus.recordStatus(this.creep.room)
         moveToRoom(this.destination, this.creep)
     }
 }

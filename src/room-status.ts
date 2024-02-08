@@ -1,8 +1,11 @@
 import { FlatRoomPosition } from './types'
-import { compress } from 'lz-string'
+import {
+    compressToBase64 as compress,
+    decompressFromBase64 as decompress,
+} from 'lz-string'
 
 const SCOUT_TTL = 1000
-const VERSION = '1.0.0'
+const VERSION = '1.0.2'
 
 interface SimpleStructure {
     structureType: StructureConstant
@@ -34,7 +37,39 @@ declare global {
     interface RoomMemory {
         scout?: ScoutStatus
     }
+
+    namespace NodeJS {
+        interface Global {
+            compress: (uncompressed: string) => string
+            decompress: (compressed: string) => string
+        }
+    }
 }
+
+global.compress = compress
+global.decompress = decompress
+
+export function run() {
+    for (const roomName in Game.rooms) {
+        const room = Game.rooms[roomName]
+        if (room.memory.scout && room.memory.scout.version !== VERSION) {
+            delete room.memory.scout
+        }
+    }
+
+    const roomToRecord = Object.values(Game.rooms).find(
+        (room) =>
+            !room.memory.scout ||
+            room.memory.scout &&
+            room.memory.scout.timestamp + SCOUT_TTL < Game.time
+    )
+
+    // we only record 1 room per tick to prevent a thundering herd situation
+    if (roomToRecord) {
+        recordStatus(roomToRecord)
+    }
+}
+
 
 export function recordStatus(room: Room) {
     if (room.memory.scout &&
@@ -58,8 +93,8 @@ export function recordStatus(room: Room) {
 function serializeTerrain(room: Room): string {
     const terrain = room.getTerrain()
     const serialized = []
-    for (let x = 0; x < 50; x++) {
-        for (let y = 0; y < 50; y++) {
+    for (let y = 0; y < 50; y++) {
+        for (let x = 0; x < 50; x++) {
             serialized.push(terrain.get(x, y))
         }
     }

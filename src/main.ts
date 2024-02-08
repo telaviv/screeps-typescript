@@ -22,6 +22,7 @@ import updateStrategy, { StrategyPhase } from './strategy'
 import survey from './surveyor'
 import { runTower } from './tower'
 import Empire from 'empire'
+import { run as scout } from 'room-status'
 
 const ROOM_TTL = 30000
 
@@ -78,6 +79,7 @@ function unwrappedLoop() {
     }
 
     survey()
+    scout()
     TaskRunner.cleanup()
 
     Object.values(Game.rooms).forEach((room) => {

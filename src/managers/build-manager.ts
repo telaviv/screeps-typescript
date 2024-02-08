@@ -7,6 +7,7 @@ import {
     getContainers,
     getLinks,
     getRamparts,
+    hasBuildingAt,
     hasConstructionSite,
     hasNoSpawns,
     hasStorage,
@@ -18,7 +19,6 @@ import {
 import * as Logger from 'utils/logger'
 import { profile, wrap } from 'utils/profiling'
 import { getConstructionFeatures } from 'surveyor'
-import { fromRoom } from 'utils/immutable-room'
 import { Position } from 'types'
 import pokemon from 'pokemon'
 
@@ -68,7 +68,6 @@ export default class BuildManager {
         if (sites.length > 0) {
             return false
         }
-        const iroom = fromRoom(this.room)
         return this.buildNextSpawn()
     }
 
@@ -230,19 +229,17 @@ export default class BuildManager {
     }, 'BuildManager:canBuildTower')
 
     private canBuildSwampRoad = wrap((): boolean => {
-        const iroom = fromRoom(this.room)
         const pos = this.getNextRoad()
         if (pos === undefined) {
             return false
         }
-        return iroom.get(pos!.x, pos!.y).terrain === TERRAIN_MASK_SWAMP
+        return this.room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_SWAMP
     }, 'BuildManager:canBuildSwampRoad')
 
     private getNextRoad(): Position | undefined {
         const constructionFeatures = getConstructionFeatures(this.room)
-        const iroom = fromRoom(this.room)
         return constructionFeatures[STRUCTURE_ROAD]!.find((pos) => {
-            return !iroom.get(pos.x, pos.y).nonObstacles.road
+            return hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
         })
     }
 

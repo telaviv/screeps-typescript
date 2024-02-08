@@ -106,6 +106,11 @@ export function getRoads(room: Room): StructureRoad[] {
     })
 }
 
+export function hasBuildingAt(pos: RoomPosition, type: StructureConstant): boolean {
+    const structures = pos.lookFor(LOOK_STRUCTURES)
+    return structures.some((s) => s.structureType === type)
+}
+
 export function getLabs(room: Room): StructureLab[] {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_LAB },
