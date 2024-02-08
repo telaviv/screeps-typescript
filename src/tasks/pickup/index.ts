@@ -26,8 +26,13 @@ export function makeRequest(creep: ResourceCreep): boolean {
     const resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
     if (resources.length > 0) {
         const resource = creep.pos.findClosestByRange(resources)
-        addPickupTask(creep, resource!)
-        return true
+        if (resource) {
+            addPickupTask(creep, resource!)
+            return true
+        } else {
+            Logger.error('task:pickup::makeRequest:failure:no-resource', creep.name, resources)
+            return false
+        }
     }
     return false
 }

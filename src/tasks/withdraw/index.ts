@@ -29,6 +29,10 @@ export function makeRequest(creep: ResourceCreep): boolean {
     const withdrawTargets = getEligibleTargets(home, capacity)
     if (withdrawTargets.length > 0) {
         const target = creep.pos.findClosestByRange(withdrawTargets)
+        if (!target) {
+            Logger.error('withdraw::makeRequest:failure:no-target', creep.name)
+            return false
+        }
         addWithdrawTask(creep, target!)
         return true
     }

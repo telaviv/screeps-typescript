@@ -17,10 +17,6 @@ function isObstacle(x: any): x is Obstacle {
     return OBSTACLE_OBJECT_TYPES.includes(x)
 }
 
-function isNonObstacle(x: any): x is NonObstacle {
-    return ['road', 'constructionSite', 'rampart', 'container'].includes(x)
-}
-
 interface NonObstacles {
     road: boolean
     constructionSite: boolean

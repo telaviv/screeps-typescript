@@ -1,9 +1,3 @@
-/* eslint @typescript-eslint/no-unsafe-assignment: ["off"] */
-/* eslint @typescript-eslint/no-unsafe-member-access: ["off"] */
-/* eslint @typescript-eslint/no-unsafe-call: ["off"] */
-/* eslint @typescript-eslint/no-unsafe-return: ["off"] */
-/* eslint @typescript-eslint/restrict-template-expressions: ["off"] */
-/* eslint func-names: "off" */
 interface ProfilerData {
     [key: string]: { total: number; calls: number }
 }

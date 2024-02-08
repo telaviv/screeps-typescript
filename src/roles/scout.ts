@@ -38,10 +38,6 @@ class ScoutCreep {
         RoomStatus.recordStatus(this.creep.room)
         moveToRoom(this.destination, this.creep)
     }
-
-    private isAtRoom() {
-        return this.creep.room.name === this.destination
-    }
 }
 
 const roleScout = {

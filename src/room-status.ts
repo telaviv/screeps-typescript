@@ -1,6 +1,8 @@
 import { FlatRoomPosition } from './types'
+import { compress } from 'lz-string'
 
-type spawn = 'spawn'
+const SCOUT_TTL = 1000
+const VERSION = '1.0.0'
 
 interface SimpleStructure {
     structureType: StructureConstant
@@ -22,8 +24,10 @@ interface SimpleController {
 
 interface ScoutStatus {
     timestamp: number
+    version: string
     controller?: SimpleController
     structures: SimpleStructure[]
+    terrain: string
 }
 
 declare global {
@@ -33,15 +37,33 @@ declare global {
 }
 
 export function recordStatus(room: Room) {
+    if (room.memory.scout &&
+        room.memory.scout.timestamp + SCOUT_TTL < Game.time &&
+        room.memory.scout.version === VERSION) {
+        return
+    }
     const controllerStatus = room.controller
         ? getControllerStatus(room.controller)
         : undefined
     const structureStatus = getStructuresStatus(room)
     room.memory.scout = {
         timestamp: Game.time,
+        version: VERSION,
         controller: controllerStatus,
         structures: structureStatus,
+        terrain: serializeTerrain(room),
     }
+}
+
+function serializeTerrain(room: Room): string {
+    const terrain = room.getTerrain()
+    const serialized = []
+    for (let x = 0; x < 50; x++) {
+        for (let y = 0; y < 50; y++) {
+            serialized.push(terrain.get(x, y))
+        }
+    }
+    return compress(serialized.join(''))
 }
 
 function getControllerStatus(

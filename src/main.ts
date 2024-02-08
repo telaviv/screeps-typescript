@@ -14,6 +14,7 @@ import ErrorMapper from 'utils/ErrorMapper'
 import assignGlobals from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import * as TaskRunner from 'tasks/runner'
+import * as Logger from 'utils/logger'
 import BuildManager from 'managers/build-manager'
 
 import { runSpawn } from './spawn'
@@ -22,6 +23,7 @@ import survey from './surveyor'
 import { runTower } from './tower'
 import Empire from 'empire'
 
+const ROOM_TTL = 30000
 
 declare global {
     /*
@@ -39,6 +41,7 @@ declare global {
         strategy: StrategyPhase
         collapsed: boolean
         visuals: { snapshot: boolean }
+        updated: number
     }
 
     interface CreepMemory {
@@ -67,13 +70,18 @@ function unwrappedLoop() {
         }
     }
 
+    for (const [name, memory] of Object.entries(Memory.rooms)) {
+        if (!memory.updated || memory.updated + ROOM_TTL < Game.time) {
+            Logger.info('room:expired', name, memory.updated, Game.time)
+            delete Memory.rooms[name]
+        }
+    }
+
     survey()
     TaskRunner.cleanup()
 
     Object.values(Game.rooms).forEach((room) => {
-        if (!room.memory.snapshot) {
-            room.memory.snapshot = []
-        }
+        room.memory.updated = Game.time
 
         const visualizer = new RoomVisualizer(room)
         visualizer.render()
