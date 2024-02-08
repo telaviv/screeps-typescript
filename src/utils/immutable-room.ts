@@ -76,8 +76,19 @@ export class ImmutableRoomItem
         )
     }
 
+    public isNearEdge(): boolean {
+        return this.isBetween(this.x, 0, 2) ||
+            this.isBetween(this.y, 0, 2) ||
+            this.isBetween(this.x, 47, 49) ||
+            this.isBetween(this.y, 47, 49)
+    }
+
+    private isBetween(num: number, a: number, b: number): boolean {
+        return num >= a && num <= b
+    }
+
     public canBuild(): boolean {
-        return !(this.isObstacle() || this.isAtEdge() || this.nonObstacles.constructionSite)
+        return !(this.isObstacle() || this.isNearEdge() || this.nonObstacles.constructionSite)
     }
 
     public terrainString(): string {

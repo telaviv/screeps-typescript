@@ -2,7 +2,6 @@
 import { minCutWalls } from 'screeps-min-cut-wall'
 
 import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
-import * as RoomUtils from 'utils/room'
 import { each } from 'lodash'
 import * as Profiling from 'utils/profiling'
 import { ConstructionFeatures, Position } from 'types';
