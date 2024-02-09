@@ -134,7 +134,7 @@ class RoleLogistics {
     }
 
     private getEnergy(): void {
-        if (!addEnergyTask(this.creep)) {
+        if (!addEnergyTask(this.creep, { includeMining: true })) {
             this.setToNoTask('no tasks could be made')
         }
     }

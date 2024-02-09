@@ -24,7 +24,7 @@ const RESCUE_WORKER_COUNT = 3
 const CLAIMERS_COUNT = 3
 const ATTACKERS_COUNT = 2
 const REMOTE_UPGRADE_COUNT = 1
-const REMOTE_BUILD_COUNT = 2
+const REMOTE_BUILD_COUNT = 4
 
 export default function (spawn: StructureSpawn) {
     updateRescueStatus(spawn.room)
@@ -122,7 +122,9 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         if (warDepartment.hasInvaderCore()) {
             return roleAttacker.create(spawn, warDepartment.target)
         } else if (claimers.length < CLAIMERS_COUNT) {
-            if (warDepartment.targetRoom!.controller!.upgradeBlocked < 20) {
+            if (claimers.length === 0) {
+                return roleClaimer.create(spawn, warDepartment.target)
+            } else if (warDepartment.targetRoom!.controller!.upgradeBlocked < 20) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }
         }

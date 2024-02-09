@@ -9,6 +9,7 @@ import { isWithdrawTask } from './utils'
 import { ResourceCreep } from '../types'
 import { get } from 'lodash'
 import { getHome } from 'roles/utils'
+import { findClosestByRange } from 'utils/room-position'
 
 export function makeRequest(creep: ResourceCreep): boolean {
     const capacity = creep.store.getFreeCapacity()
@@ -26,9 +27,13 @@ export function makeRequest(creep: ResourceCreep): boolean {
         Logger.error('withdraw::makeRequest:failure:no-home', creep.name)
         return false
     }
-    const withdrawTargets = getEligibleTargets(home, capacity)
+    let withdrawTargets = getEligibleTargets(home, capacity)
+    if (creep.memory.home !== creep.room.name) {
+        const remoteTargets = getEligibleTargets(creep.room, capacity)
+        withdrawTargets = withdrawTargets.concat(remoteTargets)
+    }
     if (withdrawTargets.length > 0) {
-        const target = creep.pos.findClosestByRange(withdrawTargets)
+        const target = findClosestByRange(creep.pos, withdrawTargets, { range: 1 }) as Withdrawable
         if (!target) {
             Logger.error('withdraw::makeRequest:failure:no-target', creep.name)
             return false
@@ -148,6 +153,7 @@ function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const eligibles = nonEmpties.filter(
         (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
     )
+
     if (eligibles.length > 0) {
         return eligibles.map((eligible) => eligible.withdrawable)
     }

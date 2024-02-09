@@ -5,6 +5,7 @@ import { PickupTarget } from './target'
 import { PickupTask } from './types'
 import { isPickupTask } from './utils'
 import { ResourceCreep } from '../types'
+import { findClosestByRange } from 'utils/room-position'
 
 
 export function makeRequest(creep: ResourceCreep): boolean {
@@ -23,9 +24,12 @@ export function makeRequest(creep: ResourceCreep): boolean {
     }
 
     const home = Game.rooms[creep.memory.home]!
-    const resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
+    let resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
+    if (creep.memory.home !== creep.room.name) {
+        resources = resources.concat(getDroppedResources(creep.room, capacity, RESOURCE_ENERGY))
+    }
     if (resources.length > 0) {
-        const resource = creep.pos.findClosestByRange(resources)
+        const resource = findClosestByRange(creep.pos, resources) as Resource
         if (resource) {
             addPickupTask(creep, resource!)
             return true
