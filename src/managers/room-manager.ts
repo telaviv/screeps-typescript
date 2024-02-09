@@ -81,7 +81,8 @@ export class RoomManager {
 
     public claimRoom(): boolean {
         const claimTask = this.getClaimRoomTask()
-        if (!claimTask) {
+        const warDepartment = new WarDepartment(this.room)
+        if (!claimTask || warDepartment.status !== 'none') {
             return false;
         }
         const destination = claimTask.data.name
@@ -92,7 +93,6 @@ export class RoomManager {
         }
         const err = roleScout.create(spawns[0], destination, { dryRun: true })
         if (err === OK) {
-            const warDepartment = new WarDepartment(this.room)
             warDepartment.claimRoom(destination)
             Logger.info('RoomManager:claimRoom:success', destination)
             this.roomTasks = this.roomTasks.filter(task => task.id !== claimTask.id)

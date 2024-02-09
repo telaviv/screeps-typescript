@@ -907,5 +907,5 @@ const names = [
 ]
 
 export default function (): string {
-    return names[Math.floor(Math.random() * names.length)]
+    return names[Math.floor(Math.random() * names.length)].toLowerCase()
 }

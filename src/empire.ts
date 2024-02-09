@@ -8,12 +8,18 @@ export default class Empire {
     }
 
     public run(): void {
-        for (const room of Object.values(this.rooms)) {
+        for (const room of this.rooms) {
             if (room.controller && room.controller.my && hasNoSpawns(room)) {
-                const savior = this.rooms.find((r) => !hasNoSpawns(r) && r.memory.war.status === WarStatus.NONE)
-                if (savior) {
-                    savior.memory.war = { status: WarStatus.SPAWN, target: room.name }
+                if (this.rooms.some((r) => r.memory.war.status === WarStatus.SPAWN && r.memory.war.target === room.name)) {
+                    continue
                 }
+                const saviors = this.rooms.filter((r) => !hasNoSpawns(r) && r.memory.war.status === WarStatus.NONE)
+                if (saviors.length === 0) {
+                    continue
+                }
+                const savior = saviors.sort(
+                    (a, b) => Game.map.getRoomLinearDistance(a.name, room.name) - Game.map.getRoomLinearDistance(b.name, room.name))[0]
+                savior.memory.war = { status: WarStatus.SPAWN, target: room.name }
             }
         }
         for (const room of this.rooms) {

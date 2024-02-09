@@ -6,6 +6,7 @@ import * as Logger from 'utils/logger'
 import { spawnCreep } from 'utils/spawn'
 import { isFullOfEnergy } from 'utils/energy-harvesting'
 import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
+import { moveTo } from 'utils/creep'
 
 const MAX_WORK_PARTS = 5
 
@@ -50,11 +51,6 @@ export class HarvesterCreep {
             return
         }
 
-        if (!this.isAtHarvestPos()) {
-            this.moveToHarvestPos()
-            return
-        }
-
         this.harvestSource()
     }
 
@@ -79,19 +75,23 @@ export class HarvesterCreep {
     private isAtHarvestPos(): boolean {
         return (
             this.creep.pos.x === this.harvestPos.x &&
-            this.creep.pos.y === this.harvestPos.y
+            this.creep.pos.y === this.harvestPos.y &&
+            this.creep.pos.roomName === this.harvestPos.roomName
         )
     }
 
     private moveToHarvestPos(): void {
-        this.creep.moveTo(this.harvestPos.x, this.harvestPos.y, {
-            visualizePathStyle: { stroke: '#ffaa00' },
-        })
+        const err = moveTo(this.harvestPos, this.creep)
+        if (err !== OK) {
+            Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.harvestPos, err)
+        }
     }
 
     private harvestSource(): void {
         const err = this.creep.harvest(this.source)
-        if (!includes([OK, ERR_NOT_ENOUGH_RESOURCES], err)) {
+        if (err === ERR_NOT_IN_RANGE) {
+            this.moveToHarvestPos()
+        } else if (err !== OK && err !== ERR_NOT_ENOUGH_RESOURCES) {
             Logger.warning(
                 'harvester:harvest:failure',
                 this.creep.name,
@@ -161,9 +161,7 @@ const roleHarvester = {
             Logger.error('harvester:create:source:not-found', sourceId)
             return ERR_NOT_FOUND
         }
-        if (pos === null) {
-            const pos = source.room.memory.stationaryPoints.sources[sourceId]
-        }
+        const stationaryPosition = pos === null ? source.room.memory.stationaryPoints.sources[sourceId] : pos
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
@@ -174,7 +172,7 @@ const roleHarvester = {
                 home: spawn.room.name,
                 waitTime: 0,
                 tasks: [],
-                pos: { x: pos!.x, y: pos!.y, roomName: spawn.room.name },
+                pos: { x: stationaryPosition.x, y: stationaryPosition.y, roomName: source.room.name },
                 source: sourceId,
             } as HarvesterMemory,
         })

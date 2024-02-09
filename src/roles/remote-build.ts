@@ -3,14 +3,13 @@
 import * as TaskRunner from 'tasks/runner'
 import { moveTo, moveToRoom, recycle } from 'utils/creep'
 import { profile } from 'utils/profiling'
-import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { getConstructionSites } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 import autoIncrement from 'utils/autoincrement'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { addEnergyTask } from 'tasks/usage-utils'
-import { getHome } from './utils'
 
 const ROLE = 'remote-build'
 
@@ -78,11 +77,11 @@ class RemoteBuildCreep {
     }
 
     private collectEnergy(): void {
+        this.creep.say('⚡')
         if (!addEnergyTask(this.creep)) {
             this.creep.say('🤔')
             return
         }
-        this.creep.say('⚡')
     }
 
     private shouldRecycle() {

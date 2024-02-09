@@ -24,7 +24,7 @@ const RESCUE_WORKER_COUNT = 3
 const CLAIMERS_COUNT = 3
 const ATTACKERS_COUNT = 2
 const REMOTE_UPGRADE_COUNT = 1
-const REMOTE_BUILD_COUNT = 4
+const REMOTE_BUILD_MINIMUM = 1
 
 export default function (spawn: StructureSpawn) {
     updateRescueStatus(spawn.room)
@@ -102,6 +102,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     const scouts = getCreeps('scout', room)
     const remoteUpgraders = getCreeps('remote-upgrade', room)
     const remoteBuilders = getCreeps('remote-build', room)
+    const sourcesManager = new SourcesManager(warDepartment.targetRoom!)
 
     if (warDepartment.targetRoom === undefined) {
         if (scouts.length === 0) {
@@ -131,7 +132,11 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     } else if (status === WarStatus.SPAWN) {
         if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
             return roleRemoteUpgrade.create(spawn, warDepartment.target)
-        } else if (remoteBuilders.length < REMOTE_BUILD_COUNT) {
+        } else if (remoteBuilders.length < REMOTE_BUILD_MINIMUM) {
+            return roleRemoteBuild.create(spawn, warDepartment.target)
+        } else if (!sourcesManager.hasAllContainerHarvesters()) {
+            return sourcesManager.createHarvester(spawn)
+        } else {
             return roleRemoteBuild.create(spawn, warDepartment.target)
         }
     }

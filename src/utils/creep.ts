@@ -23,17 +23,15 @@ export function calculateBodyCost(parts: BodyPartConstant[]): number {
 }
 
 export function moveTo(pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): number {
+    const original = pos
     let err = creep.moveTo(pos, {
         ...opts,
         visualizePathStyle: { stroke: '#ffaa00' },
     })
     if (err === ERR_NO_PATH) {
-        Logger.error('moveTo:noPath', creep.name, pos)
-        return creep.moveTo(pos, {
-            ...opts,
-            visualizePathStyle: { stroke: '#ffaa00' },
-            swampCost: 1,
-        })
+        Logger.warning('moveTo:noPath', creep.name, original, pos)
+        const path = PathFinder.search(original, pos, { maxRooms: 6, swampCost: 1 }).path
+        return creep.moveByPath(path)
     }
     return err
 }
@@ -98,6 +96,12 @@ export function getHarvesters(room: Room): Harvester[] {
             ((creep.memory.home && creep.memory.home === room.name) ||
                 creep.room.name === room.name)
         )
+    }) as Harvester[];
+}
+
+export function getAllHarvesters(): Harvester[] {
+    return Object.values(Game.creeps).filter((creep: Creep) => {
+        return creep.memory.role === 'harvester'
     }) as Harvester[];
 }
 

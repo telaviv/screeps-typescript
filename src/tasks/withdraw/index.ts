@@ -10,6 +10,7 @@ import { ResourceCreep } from '../types'
 import { get } from 'lodash'
 import { getHome } from 'roles/utils'
 import { findClosestByRange } from 'utils/room-position'
+import { is } from 'immutable'
 
 export function makeRequest(creep: ResourceCreep): boolean {
     const capacity = creep.store.getFreeCapacity()
@@ -144,11 +145,34 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
     return Game.getObjectById(task.withdrawId) as Withdrawable
 }
 
+function isRuin(obj: any): boolean {
+    return !!(obj.structure && obj.ticksToDecay)
+}
+
+function isTombstone(obj: any): boolean {
+    return !!(obj.creep && obj.ticksToDecay)
+}
+
+function isTemporary(withdrawable: WithdrawObject): boolean {
+    const object = Game.getObjectById(withdrawable.withdrawable.id)
+    const id = object?.id
+    const ruin = isRuin(object)
+    const tombstone = isTombstone(object)
+    return isRuin(object) || isTombstone(object)
+}
+
 function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
     const nonEmpties = withdrawObjects.filter(
-        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= 50,
+        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
+            target.resourcesAvailable(RESOURCE_ENERGY) > 0 && isTemporary(target),
     )
+
+    const temporaries = nonEmpties.filter(isTemporary)
+
+    if (temporaries.length > 0) {
+        return temporaries.map((eligible) => eligible.withdrawable)
+    }
 
     const eligibles = nonEmpties.filter(
         (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,

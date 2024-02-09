@@ -9,9 +9,10 @@ export function spawnCreep(
     room: string,
     opts?: SpawnOptions,
 ): ScreepsReturnCode {
-    const err = spawn.spawnCreep(body, createName(name, room), opts)
+    const uniqueName = createName(name, room)
+    const err = spawn.spawnCreep(body, uniqueName, opts)
     if (!includes([OK, ERR_BUSY, ERR_NOT_ENOUGH_ENERGY], err)) {
-        Logger.warning('spawnCreep:failed', err, JSON.stringify(body), name)
+        Logger.warning('spawnCreep:failed', err, JSON.stringify(body), uniqueName)
     }
     return err
 }

@@ -3,7 +3,7 @@ import some from 'lodash/some'
 
 import DroppedEnergyManager from './dropped-energy-manager'
 import { fromRoom } from 'utils/immutable-room'
-import { getHarvesters, getLogisticsCreeps } from 'utils/creep'
+import { getAllHarvesters, getHarvesters, getLogisticsCreeps } from 'utils/creep'
 import { Harvester, isHarvester } from 'roles/harvester'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { isMiningTask } from 'tasks/mining/utils'
@@ -48,7 +48,7 @@ export default class SourceManager {
 
     public get harvesters(): Harvester[] {
         return filter(
-            getHarvesters(this.room),
+            getAllHarvesters(),
             (creep: Harvester) => creep.memory.source === this.id,
         )
     }
