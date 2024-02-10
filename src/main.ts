@@ -125,14 +125,14 @@ const runCreep = wrap((creepName: string) => {
     }
 }, 'main:runCreep')
 
-function unwrappedLoop() {
-    // Automatically delete memory of missing creeps
-
+const initialize = wrap(() => {
     clearMemory()
     survey()
     scout()
     TaskRunner.cleanup()
+}, 'main:initialize')
 
+const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
         room.memory.updated = Game.time
 
@@ -147,10 +147,19 @@ function unwrappedLoop() {
             runMyRoom(room)
         }
     })
+}, 'main:runAllRooms')
 
+const runAllCreeps = wrap(() => {
     for (const name of Object.keys(Game.creeps)) {
         runCreep(name)
     }
+}, 'main:runAllCreeps')
+
+function unwrappedLoop() {
+    // Automatically delete memory of missing creeps
+    initialize()
+    runAllRooms()
+    runAllCreeps()
     recordGameStats()
 }
 

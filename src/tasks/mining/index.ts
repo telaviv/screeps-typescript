@@ -5,8 +5,9 @@ import { isMiningTask } from './utils'
 import SourcesManager from 'managers/sources-manager'
 import autoIncrement from 'utils/autoincrement'
 import { ResourceCreep } from '../types'
+import { wrap } from 'utils/profiling'
 
-export function makeRequest(creep: ResourceCreep): boolean {
+export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity(RESOURCE_ENERGY)
     if (capacity <= 0) {
         return false
@@ -24,7 +25,7 @@ export function makeRequest(creep: ResourceCreep): boolean {
         return true
     }
     return false
-}
+}, 'mining:makeRequest')
 
 export function run(task: MiningTask, creep: ResourceCreep): boolean {
     const source = Game.getObjectById<Source>(task.source)!

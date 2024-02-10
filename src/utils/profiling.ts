@@ -126,9 +126,9 @@ export function output() {
     const dataArray = Object.entries(Memory.profiler.data)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     dataArray.sort(([_, dataa], [__, datab]) => datab.total - dataa.total)
-    for (const [key, data] of dataArray.slice(0, 10)) {
+    for (const [key, data] of dataArray.slice(0, 20)) {
         console.log(
-            `${key}: ${data.total} ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks}`,
+            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks} ${data.total}`,
         )
     }
 }

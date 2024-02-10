@@ -2,7 +2,7 @@
 
 import * as TaskRunner from 'tasks/runner'
 import { moveToRoom, recycle } from 'utils/creep'
-import { profile } from 'utils/profiling'
+import { profile, wrap } from 'utils/profiling'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
@@ -129,10 +129,10 @@ class RemoteUpgradeCreep {
 }
 
 export default {
-    run: (creep: RemoteUpgrade) => {
+    run: wrap((creep: RemoteUpgrade) => {
         const remoteUpgrade = new RemoteUpgradeCreep(creep)
         remoteUpgrade.run()
-    },
+    }, 'roleRemoteUpgrade:run'),
 
     create(spawn: StructureSpawn, destination: string): number {
         const capacity = spawn.room.energyCapacityAvailable

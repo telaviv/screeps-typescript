@@ -9,13 +9,7 @@ import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition, Position } from 'types'
 import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
-
-type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
-type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
-
-function isObstacle(x: any): x is Obstacle {
-    return OBSTACLE_OBJECT_TYPES.includes(x)
-}
+import { Obstacle, NonObstacle, isObstacle } from 'types'
 
 interface NonObstacles {
     road: boolean
@@ -546,7 +540,6 @@ export class ImmutableRoom implements ValueObject {
     public getMappedSourceContainers(): { [key in Id<Source>]: Position } {
         const info = this.getSourceContainerInfo()
         const sources = getSources(Game.rooms[this.name]);
-        console.log('sourceContainerInfo', this.name, JSON.stringify(info))
         const map: { [key in Id<Source>]: Position } = {} as { [key in Id<Source>]: Position }
         for (const { source, container } of info) {
             if (container === null) {

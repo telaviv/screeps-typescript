@@ -15,6 +15,7 @@ import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleScout from 'roles/scout'
+import { hasWeakWall } from 'utils/room'
 
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
@@ -49,6 +50,11 @@ export default function (spawn: StructureSpawn) {
     }
 
     if (room.energyAvailable < 0.95 * spawn.room.energyCapacityAvailable) {
+        return
+    }
+
+    if (hasWeakWall(room) && masons.length < MASON_COUNT) {
+        roleMason.create(spawn)
         return
     }
 
@@ -148,7 +154,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
     const roomMemory = room.memory
     const sourcesManager = new SourcesManager(room)
-    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
+    const sourceCount = Object.keys(roomMemory.stationaryPoints!.sources).length
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
@@ -161,7 +167,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
 
 function updateRescueStatus(room: Room) {
     const roomMemory = room.memory
-    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
+    const sourceCount = Object.keys(roomMemory.stationaryPoints!.sources).length
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
     const haulerCount = haulers.length + workers.length

@@ -1,4 +1,4 @@
-import * as Logger from 'utils/logger';
+import { isObstacle } from 'types';
 
 interface HasRoomPosition {
     pos: RoomPosition;
@@ -39,4 +39,29 @@ export function findClosestByRange(
     }
 
     return closestPosition;
+}
+
+export function getNeighbors(pos: RoomPosition, range: number = 1): RoomPosition[] {
+    const positions = [];
+    for (let x = Math.max(0, pos.x - range); x < Math.max(50, pos.x - range); x++) {
+        for (let y = Math.max(0, pos.x - range); y < Math.max(50, pos.x - range); y++) {
+            if (x === pos.x && y === pos.y) {
+                continue;
+            }
+            positions.push(new RoomPosition(x, y, pos.roomName));
+        }
+    }
+    return positions;
+}
+
+export function hasObstacle(pos: RoomPosition): boolean {
+    if (Game.rooms[pos.roomName].getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
+        return true
+    }
+    return pos.lookFor(LOOK_STRUCTURES).some((s) => isObstacle(s.structureType))
+}
+
+
+export function getNonObstacleNeighbors(pos: RoomPosition, range: number = 1): RoomPosition[] {
+    return getNeighbors(pos, range).filter((pos) => !hasObstacle(pos))
 }

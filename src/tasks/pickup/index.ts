@@ -6,9 +6,10 @@ import { PickupTask } from './types'
 import { isPickupTask } from './utils'
 import { ResourceCreep } from '../types'
 import { findClosestByRange } from 'utils/room-position'
+import { wrap } from 'utils/profiling'
 
 
-export function makeRequest(creep: ResourceCreep): boolean {
+export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -39,7 +40,7 @@ export function makeRequest(creep: ResourceCreep): boolean {
         }
     }
     return false
-}
+}, 'pickup:makeRequest')
 
 export function run(task: PickupTask, creep: ResourceCreep): boolean {
     const resource = getResource(task)

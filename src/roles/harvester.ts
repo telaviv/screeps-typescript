@@ -1,7 +1,7 @@
 import includes from 'lodash/includes'
 
 import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
-import { profile } from 'utils/profiling'
+import { profile, wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { spawnCreep } from 'utils/spawn'
 import { isFullOfEnergy } from 'utils/energy-harvesting'
@@ -150,10 +150,10 @@ export class HarvesterCreep {
 }
 
 const roleHarvester = {
-    run: (creep: Harvester) => {
+    run: wrap((creep: Harvester) => {
         const harvester = new HarvesterCreep(creep)
         harvester.run()
-    },
+    }, 'harvester:run'),
 
     create(spawn: StructureSpawn, sourceId: Id<Source>, pos: RoomPosition | null = null, rescue = false): number {
         const source = Game.getObjectById(sourceId)
@@ -161,7 +161,7 @@ const roleHarvester = {
             Logger.error('harvester:create:source:not-found', sourceId)
             return ERR_NOT_FOUND
         }
-        const stationaryPosition = pos === null ? source.room.memory.stationaryPoints.sources[sourceId] : pos
+        const stationaryPosition = pos === null ? source.room.memory.stationaryPoints!.sources[sourceId] : pos
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable

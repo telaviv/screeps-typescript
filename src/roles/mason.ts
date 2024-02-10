@@ -2,7 +2,7 @@
 
 import * as TaskRunner from 'tasks/runner'
 import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
-import { profile } from 'utils/profiling'
+import { profile, wrap } from 'utils/profiling'
 import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import {
     getWallSites,
@@ -184,10 +184,10 @@ export class MasonCreep {
 }
 
 export default {
-    run: (creep: Mason) => {
+    run: wrap((creep: Mason) => {
         const mason = new MasonCreep(creep)
         mason.run()
-    },
+    }, `mason:run`),
 
     create(spawn: StructureSpawn): number {
         const capacity = spawn.room.energyCapacityAvailable

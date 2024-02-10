@@ -5,6 +5,7 @@ import { LogisticsPreference, LogisticsCreep } from 'roles/logistics-constants'
 import { Harvester, HarvesterCreep } from 'roles/harvester'
 import { ResourceCreep, isResourceCreep } from '../tasks/types'
 import { isLogisticsCreep } from '../roles/logistics-constants'
+import { wrap } from './profiling'
 
 export function freeEnergyCapacity(creep: Creep) {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
@@ -24,7 +25,7 @@ export function calculateBodyCost(parts: BodyPartConstant[]): number {
 
 type MoveToReturnCode = CreepMoveReturnCode | ERR_NOT_FOUND | ERR_INVALID_ARGS | ERR_NO_PATH | ERR_INVALID_TARGET
 
-export function moveTo(pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): MoveToReturnCode {
+export const moveTo = wrap((pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): MoveToReturnCode => {
     const original = pos
     let err: MoveToReturnCode = creep.moveTo(pos, {
         ...opts,
@@ -36,7 +37,7 @@ export function moveTo(pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): 
         return creep.moveByPath(path)
     }
     return err
-}
+}, 'creep:moveTo')
 
 export function moveToRoom(roomName: string, creep: Creep) {
     creep.moveTo(new RoomPosition(25, 25, roomName), {
@@ -101,11 +102,11 @@ export function getHarvesters(room: Room): Harvester[] {
     }) as Harvester[];
 }
 
-export function getAllHarvesters(): Harvester[] {
+export const getAllHarvesters = wrap((): Harvester[] => {
     return Object.values(Game.creeps).filter((creep: Creep) => {
         return creep.memory.role === 'harvester'
     }) as Harvester[];
-}
+}, 'creep:getAllHarvesters')
 
 export function getLogisticsCreeps(options: {
     room: Room,

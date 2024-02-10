@@ -7,12 +7,11 @@ import { WithdrawObject } from './object'
 import { WithdrawTask, Withdrawable } from './types'
 import { isWithdrawTask } from './utils'
 import { ResourceCreep } from '../types'
-import { get } from 'lodash'
 import { getHome } from 'roles/utils'
 import { findClosestByRange } from 'utils/room-position'
-import { is } from 'immutable'
+import { wrap } from 'utils/profiling'
 
-export function makeRequest(creep: ResourceCreep): boolean {
+export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -43,7 +42,7 @@ export function makeRequest(creep: ResourceCreep): boolean {
         return true
     }
     return false
-}
+}, 'withdraw:makeRequest')
 
 export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     const storeable = getWithdrawable(task)

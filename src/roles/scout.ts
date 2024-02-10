@@ -1,5 +1,5 @@
 import { moveToRoom } from 'utils/creep'
-import { profile } from 'utils/profiling'
+import { profile, wrap } from 'utils/profiling'
 
 const ROLE = 'scout'
 
@@ -39,10 +39,10 @@ class ScoutCreep {
 }
 
 const roleScout = {
-    run: (creep: Scout) => {
+    run: wrap((creep: Scout) => {
         const scout = new ScoutCreep(creep)
         scout.run()
-    },
+    }, 'roleScout:run'),
 
     create(spawn: StructureSpawn, destination: string, opts: SpawnOptions = {}): number {
         return spawn.spawnCreep([MOVE], `${ROLE}:${Game.time}`, {
