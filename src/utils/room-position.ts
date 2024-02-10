@@ -65,3 +65,15 @@ export function hasObstacle(pos: RoomPosition): boolean {
 export function getNonObstacleNeighbors(pos: RoomPosition, range: number = 1): RoomPosition[] {
     return getNeighbors(pos, range).filter((pos) => !hasObstacle(pos))
 }
+
+export function getRandomWalkablePosition(pos: RoomPosition): RoomPosition | null {
+    const positions = getNonObstacleNeighbors(pos).filter((pos) => !isAtEdge(pos))
+    if (positions.length === 0) {
+        return null
+    }
+    return positions[Math.floor(Math.random() * positions.length)]
+}
+
+export function isAtEdge(pos: RoomPosition): boolean {
+    return pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49
+}

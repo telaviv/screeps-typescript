@@ -36,6 +36,7 @@ import { fromRoom } from 'utils/immutable-room'
 import { isMiningTask } from 'tasks/mining/utils'
 import { findTaskByType } from 'tasks/utils'
 import { addEnergyTask } from "tasks/usage-utils"
+import { getRandomWalkablePosition } from 'utils/room-position'
 
 const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -330,8 +331,7 @@ class RoleLogistics {
 
     @profile
     private wander() {
-        const iroom = fromRoom(this.creep.room)
-        const pos = iroom.getRandomWalkablePosition(this.creep.pos.x, this.creep.pos.y)
+        const pos = getRandomWalkablePosition(this.creep.pos)
         if (pos !== null) {
             this.creep.moveTo(pos)
         }
