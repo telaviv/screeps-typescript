@@ -119,6 +119,7 @@ class RemoteBuildCreep {
                     'remote-build:build:failure',
                     err,
                     this.creep.name,
+                    targets[0].pos,
                 )
             }
         } else {

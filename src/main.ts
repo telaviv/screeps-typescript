@@ -23,6 +23,7 @@ import survey from './surveyor'
 import { runTower } from './tower'
 import Empire from 'empire'
 import { run as scout } from 'room-status'
+import { wrap } from 'utils/profiling'
 
 const ROOM_TTL = 30000
 
@@ -63,8 +64,7 @@ if (!Memory.creeps) {
     Memory.creeps = {}
 }
 
-function unwrappedLoop() {
-    // Automatically delete memory of missing creeps
+const clearMemory = wrap(() => {
     for (const name in Memory.creeps) {
         if (!(name in Game.creeps)) {
             delete Memory.creeps[name]
@@ -77,7 +77,58 @@ function unwrappedLoop() {
             delete Memory.rooms[name]
         }
     }
+}, 'main:clearMemory')
 
+const runMyRoom = wrap((room: Room) => {
+    recordRoomStats(room)
+
+    BuildManager.get(room).ensureConstructionSites()
+
+    const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
+        filter: (s) => {
+            return (
+                s.structureType === STRUCTURE_TOWER ||
+                s.structureType === STRUCTURE_SPAWN
+            )
+        },
+    })
+
+    for (const structure of structures) {
+        if (structure.structureType === STRUCTURE_TOWER) {
+            runTower(structure as StructureTower)
+        } else if (structure.structureType === STRUCTURE_SPAWN) {
+            runSpawn(structure as StructureSpawn)
+        }
+    }
+}, 'main:runMyRoom')
+
+const runCreep = wrap((creepName: string) => {
+    const creep = Game.creeps[creepName]
+    if (creep.memory.role === 'harvester') {
+        roleHarvester.run(creep as unknown as Harvester)
+    } else if (creep.memory.role === 'logistics') {
+        RoleLogistics.staticRun(creep as LogisticsCreep)
+    } else if (creep.memory.role === 'claimer') {
+        roleClaimer.run(creep as Claimer)
+    } else if (creep.memory.role === 'wrecker') {
+        roleWrecker.run(creep as Wrecker)
+    } else if (creep.memory.role === 'attack') {
+        roleAttacker.run(creep as Attacker)
+    } else if (creep.memory.role === 'scout') {
+        roleScout.run(creep as Scout)
+    } else if (creep.memory.role === 'remote-upgrade') {
+        roleRemoteUpgrade.run(creep as RemoteUpgrade)
+    } else if (creep.memory.role === 'remote-build') {
+        roleRemoteBuild.run(creep as RemoteBuild)
+    } else if (creep.memory.role === 'mason') {
+        roleMason.run(creep as Mason)
+    }
+}, 'main:runCreep')
+
+function unwrappedLoop() {
+    // Automatically delete memory of missing creeps
+
+    clearMemory()
     survey()
     scout()
     TaskRunner.cleanup()
@@ -93,50 +144,12 @@ function unwrappedLoop() {
         empire.run()
 
         if (room.controller && room.controller.my) {
-            recordRoomStats(room)
-
-            BuildManager.get(room).ensureConstructionSites()
-
-            const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
-                filter: (s) => {
-                    return (
-                        s.structureType === STRUCTURE_TOWER ||
-                        s.structureType === STRUCTURE_SPAWN
-                    )
-                },
-            })
-
-            for (const structure of structures) {
-                if (structure.structureType === STRUCTURE_TOWER) {
-                    runTower(structure as StructureTower)
-                } else if (structure.structureType === STRUCTURE_SPAWN) {
-                    runSpawn(structure as StructureSpawn)
-                }
-            }
+            runMyRoom(room)
         }
     })
 
     for (const name of Object.keys(Game.creeps)) {
-        const creep = Game.creeps[name]
-        if (creep.memory.role === 'harvester') {
-            roleHarvester.run(creep as unknown as Harvester)
-        } else if (creep.memory.role === 'logistics') {
-            RoleLogistics.staticRun(creep as LogisticsCreep)
-        } else if (creep.memory.role === 'claimer') {
-            roleClaimer.run(creep as Claimer)
-        } else if (creep.memory.role === 'wrecker') {
-            roleWrecker.run(creep as Wrecker)
-        } else if (creep.memory.role === 'attack') {
-            roleAttacker.run(creep as Attacker)
-        } else if (creep.memory.role === 'scout') {
-            roleScout.run(creep as Scout)
-        } else if (creep.memory.role === 'remote-upgrade') {
-            roleRemoteUpgrade.run(creep as RemoteUpgrade)
-        } else if (creep.memory.role === 'remote-build') {
-            roleRemoteBuild.run(creep as RemoteBuild)
-        } else if (creep.memory.role === 'mason') {
-            roleMason.run(creep as Mason)
-        }
+        runCreep(name)
     }
     recordGameStats()
 }
@@ -144,6 +157,9 @@ function unwrappedLoop() {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 
-const loop = Game.cpu.tickLimit < 30 ? unwrappedLoop : ErrorMapper.wrap(unwrappedLoop)
+const loop = wrap(
+    Game.cpu.tickLimit < 30 ? unwrappedLoop : ErrorMapper.wrap(unwrappedLoop),
+    'main:loop',
+)
 
 export { loop, unwrappedLoop }

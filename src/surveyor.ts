@@ -16,20 +16,23 @@ type StationaryPoints = {
 declare global {
     interface RoomMemory {
         constructionFeatures?: ConstructionFeatures;
-        stationaryPoints: StationaryPoints;
+        stationaryPoints?: StationaryPoints;
     }
 
     namespace NodeJS {
         interface Global {
             clearConstructionFeatures(roomName: string): void;
+            calculateSurveyImmutableRoom(room: Room): ImmutableRoom;
         }
     }
 }
 
 global.clearConstructionFeatures = clearConstructionFeatures
+global.calculateSurveyImmutableRoom = calculateSurveyImmutableRoom
 
 function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeatures = undefined
+    Memory.rooms[roomName].stationaryPoints = undefined
 }
 
 function saveConstructionFeatures(room: Room) {
@@ -44,15 +47,7 @@ export function getConstructionFeatures(room: Room): ConstructionFeatures {
 }
 
 function calculateConstructionFeatures(room: Room): ConstructionFeatures {
-    let iroom: ImmutableRoom = fromRoom(room)
-    iroom = iroom.setStorage()
-    iroom = iroom.setSourceContainers()
-    iroom = iroom.setSourceContainerLinks()
-    iroom = iroom.setStorageLink()
-    iroom = iroom.setControllerLink()
-    iroom = iroom.setSpawns()
-    iroom = iroom.setExtensions()
-    iroom = iroom.setTowers()
+    let iroom = calculateSurveyImmutableRoom(room)
 
     const features = {
         [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
@@ -77,6 +72,19 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     return features
 }
 
+function calculateSurveyImmutableRoom(room: Room): ImmutableRoom {
+    let iroom: ImmutableRoom = fromRoom(room)
+    iroom = iroom.setStorage()
+    iroom = iroom.setSourceContainers()
+    iroom = iroom.setSourceContainerLinks()
+    iroom = iroom.setStorageLink()
+    iroom = iroom.setControllerLink()
+    iroom = iroom.setSpawns()
+    iroom = iroom.setExtensions()
+    iroom = iroom.setTowers()
+    return iroom
+}
+
 function getRampartPositions(room: Room, features: Position[]): Position[] {
     type Position = [number, number]
     const isCenter = (pos: Position): boolean => {
@@ -97,8 +105,8 @@ const assignRoomFeatures = Profiling.wrap(() => {
     })
 }, 'assignRoomFeatures')
 
-const survey = () => {
+const survey = Profiling.wrap(() => {
     assignRoomFeatures();
-}
+}, 'survey')
 
 export default survey;

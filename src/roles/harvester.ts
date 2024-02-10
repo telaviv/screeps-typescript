@@ -82,7 +82,7 @@ export class HarvesterCreep {
 
     private moveToHarvestPos(): void {
         const err = moveTo(this.harvestPos, this.creep)
-        if (err !== OK) {
+        if (err !== OK && err !== ERR_TIRED) {
             Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.harvestPos, err)
         }
     }

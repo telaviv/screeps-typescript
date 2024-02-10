@@ -546,6 +546,7 @@ export class ImmutableRoom implements ValueObject {
     public getMappedSourceContainers(): { [key in Id<Source>]: Position } {
         const info = this.getSourceContainerInfo()
         const sources = getSources(Game.rooms[this.name]);
+        console.log('sourceContainerInfo', this.name, JSON.stringify(info))
         const map: { [key in Id<Source>]: Position } = {} as { [key in Id<Source>]: Position }
         for (const { source, container } of info) {
             if (container === null) {
@@ -643,6 +644,10 @@ export class ImmutableRoom implements ValueObject {
 
     private canPlaceExtension(roomItem: ImmutableRoomItem): boolean {
         if (!roomItem.canBuild()) {
+            return false
+        }
+
+        if (roomItem.nonObstacles.container) {
             return false
         }
 

@@ -7,6 +7,7 @@ import PickupRunner from 'tasks/pickup'
 import MiningRunner from 'tasks/mining'
 import SignRunner from 'tasks/sign'
 import * as Logger from 'utils/logger'
+import { wrap } from 'utils/profiling'
 
 const runners: Runner<any>[] = [
     TransferRunner,
@@ -37,13 +38,13 @@ export function isResourceCreep(creep: Creep): creep is ResourceCreep {
     return creep.memory.hasOwnProperty('tasks') && creep.memory.hasOwnProperty('idleTimestamp')
 }
 
-export function cleanup() {
+export const cleanup = wrap(() => {
     for (const creep of Object.values(Game.creeps)) {
         if (isResourceCreep(creep)) {
             cleanupCreepTask(creep)
         }
     }
-}
+}, 'TaskRunner:cleanup')
 
 function cleanupCreepTask(creep: ResourceCreep) {
     const creepMemory = creep.memory

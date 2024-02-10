@@ -1,7 +1,6 @@
 import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
-import { getInvaderCores } from 'utils/room'
 
 const ROLE = 'wrecker'
 

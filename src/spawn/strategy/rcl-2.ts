@@ -102,7 +102,6 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     const scouts = getCreeps('scout', room)
     const remoteUpgraders = getCreeps('remote-upgrade', room)
     const remoteBuilders = getCreeps('remote-build', room)
-    const sourcesManager = new SourcesManager(warDepartment.targetRoom!)
 
     if (warDepartment.targetRoom === undefined) {
         if (scouts.length === 0) {
@@ -110,6 +109,8 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         }
         return null
     }
+
+    const sourcesManager = new SourcesManager(warDepartment.targetRoom!)
 
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
         return roleAttacker.create(spawn, warDepartment.target)

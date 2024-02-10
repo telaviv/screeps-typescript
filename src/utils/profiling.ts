@@ -125,10 +125,10 @@ export function output() {
     const totalTicks = Game.time - Memory.profiler.start
     const dataArray = Object.entries(Memory.profiler.data)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    dataArray.sort(([keya, dataa], [keyb, datab]) => datab.total - dataa.total)
+    dataArray.sort(([_, dataa], [__, datab]) => datab.total - dataa.total)
     for (const [key, data] of dataArray.slice(0, 10)) {
         console.log(
-            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks}`,
+            `${key}: ${data.total} ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks}`,
         )
     }
 }

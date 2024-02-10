@@ -12,7 +12,7 @@ declare global {
     }
 }
 
-interface RoomTask {
+export interface RoomTask {
     id: number;
     type: "claim" | "long-distance-mine";
     data: object;
@@ -26,6 +26,10 @@ interface ClaimRoomTask extends RoomTask {
         name: string
     }
     timestamp: number
+}
+
+export const isClaimRoomTask = (task: RoomTask): task is ClaimRoomTask => {
+    return task.type === "claim"
 }
 
 export class RoomManager {

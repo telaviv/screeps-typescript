@@ -22,9 +22,11 @@ export function calculateBodyCost(parts: BodyPartConstant[]): number {
     return sum
 }
 
-export function moveTo(pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): number {
+type MoveToReturnCode = CreepMoveReturnCode | ERR_NOT_FOUND | ERR_INVALID_ARGS | ERR_NO_PATH | ERR_INVALID_TARGET
+
+export function moveTo(pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): MoveToReturnCode {
     const original = pos
-    let err = creep.moveTo(pos, {
+    let err: MoveToReturnCode = creep.moveTo(pos, {
         ...opts,
         visualizePathStyle: { stroke: '#ffaa00' },
     })
