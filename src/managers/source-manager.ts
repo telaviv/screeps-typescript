@@ -145,8 +145,11 @@ export default class SourceManager {
             for (const harvester of harvesters) {
                 if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
                     isAvailable = false;
-                    break;
+                    break
                 }
+            }
+            if (!isAvailable) {
+                continue
             }
             for (const task of this.getAuxTasks()) {
                 if (pos.isEqualTo(task.pos.x, task.pos.y)) {
