@@ -7,6 +7,7 @@ import {
     getContainers,
     getLinks,
     getRamparts,
+    getRoads,
     hasBuildingAt,
     hasConstructionSite,
     hasNoSpawns,
@@ -42,6 +43,13 @@ export default class BuildManager {
 
     static get(room: Room): BuildManager {
         return new BuildManager(room)
+    }
+
+    removeEnemyConstructionSites() {
+        const sites = this.room.find(FIND_HOSTILE_CONSTRUCTION_SITES)
+        for (const site of sites) {
+            site.remove()
+        }
     }
 
     @profile
@@ -163,6 +171,8 @@ export default class BuildManager {
         let structures: Structure[] = []
         if (type === STRUCTURE_CONTAINER) {
             structures = getContainers(this.room)
+        } else if (type === STRUCTURE_ROAD) {
+            structures = getRoads(this.room)
         } else {
             structures = this.room.find(FIND_MY_STRUCTURES, {
                 filter: { structureType: type },
@@ -239,7 +249,7 @@ export default class BuildManager {
     private getNextRoad(): Position | undefined {
         const constructionFeatures = getConstructionFeatures(this.room)
         return constructionFeatures[STRUCTURE_ROAD]!.find((pos) => {
-            return hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
+            return !hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
         })
     }
 

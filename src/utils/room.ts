@@ -361,7 +361,7 @@ export function makeSpawnConstructionSite(pos: RoomPosition, name?: string) {
     Logger.debug('spawn:construction', pos, name)
     const ret = room.createConstructionSite(pos.x, pos.y, STRUCTURE_SPAWN, name)
     if (ret !== OK) {
-        Logger.warning('construction:failed', pos, STRUCTURE_SPAWN, ret, name)
+        Logger.warning('construction:spawn:failed', pos, STRUCTURE_SPAWN, ret, name)
     }
     return ret
 }

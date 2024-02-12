@@ -17,7 +17,7 @@ const runners: Runner<any>[] = [
     SignRunner,
 ]
 
-export function run(task: Task<any>, creep: ResourceCreep): boolean {
+export const run = wrap((task: Task<any>, creep: ResourceCreep): boolean => {
     if (task === undefined) {
         throw new Error(`undefined task: ${creep.name}`)
     }
@@ -32,7 +32,7 @@ export function run(task: Task<any>, creep: ResourceCreep): boolean {
         }
     }
     throw new Error(`TaskRunner type not found ${JSON.stringify(task)}`)
-}
+}, 'TaskRunner:run')
 
 export function isResourceCreep(creep: Creep): creep is ResourceCreep {
     return creep.memory.hasOwnProperty('tasks') && creep.memory.hasOwnProperty('idleTimestamp')

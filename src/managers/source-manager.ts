@@ -10,40 +10,35 @@ import { MiningTask } from 'tasks/mining/types'
 
 import { profile } from 'utils/profiling'
 import { getNonObstacleNeighbors } from 'utils/room-position'
+import { Position } from 'types'
 
 const MAX_WORK_PARTS = 5
 
 export default class SourceManager {
     public readonly id: Id<Source>
     public readonly source: Source
-    public readonly droppedEnergy: DroppedEnergyManager
+    public readonly containerPosition: RoomPosition;
 
     private constructor(
         source: Source,
-        droppedEnergy: DroppedEnergyManager,
     ) {
         this.id = source.id
         this.source = source
-        this.droppedEnergy = droppedEnergy
+        const containerPosition = this.source.room.memory.stationaryPoints!.sources[this.id]
+        this.containerPosition = new RoomPosition(containerPosition.x, containerPosition.y, source.room.name)
     }
 
     public static createFromSource(source: Source) {
-        const droppedEnergy = DroppedEnergyManager.createFromSourceId(source.id)
-        return new SourceManager(source, droppedEnergy)
+        return new SourceManager(source)
     }
 
     public static createFromSourceId(id: Id<Source>) {
         const source = Game.getObjectById(id)!
-        const droppedEnergy = DroppedEnergyManager.createFromSourceId(id)
-        return new SourceManager(source, droppedEnergy)
+        return new SourceManager(source)
     }
 
     public get room(): Room {
         return this.source.room
-    }
-
-    public get containerPosition(): RoomPosition {
-        return this.droppedEnergy.pos
     }
 
     public get harvesters(): Harvester[] {
@@ -85,7 +80,7 @@ export default class SourceManager {
     }
 
     public getPositions(): RoomPosition[] {
-        return getNonObstacleNeighbors(this.containerPosition)
+        return getNonObstacleNeighbors(this.source.pos)
     }
 
     static getById(sourceId: Id<Source>): SourceManager {
@@ -97,10 +92,6 @@ export default class SourceManager {
             this.harvesters,
             (harvester: Creep) => isHarvester(harvester) && harvester.memory.source === this.id,
         )
-    }
-
-    public isContainerMining(): boolean {
-        return this.droppedEnergy.getContainer() !== null
     }
 
     public hasEnoughHarvesters(): boolean {
@@ -178,3 +169,4 @@ function totalWorkCount(creeps: Creep[]): number {
 function hasEnoughWorkParts(creeps: Creep[]): boolean {
     return totalWorkCount(creeps) >= MAX_WORK_PARTS
 }
+1

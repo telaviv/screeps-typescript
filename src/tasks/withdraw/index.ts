@@ -101,7 +101,7 @@ export function completeRequest(creep: ResourceCreep) {
 
 export function cleanup(task: WithdrawTask, creep: Creep): boolean {
     if (Game.getObjectById(task.withdrawId) === null) {
-        Logger.warning(
+        Logger.info(
             'withdraw:cleanup:failure',
             task.withdrawId,
             creep.name,

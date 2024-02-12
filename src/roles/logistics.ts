@@ -92,11 +92,6 @@ class RoleLogistics {
             return;
         }
 
-        if (this.creep.room.name !== this.creep.memory.home) {
-            moveToRoom(this.creep.memory.home, this.creep);
-            return;
-        }
-
         const currentTask = this.creep.memory.currentTask;
         const tasks = this.creep.memory.tasks
 
@@ -124,7 +119,8 @@ class RoleLogistics {
 
     @profile
     private canSign() {
-        if (this.creep.room.memory.signed) {
+        const home = Game.rooms[this.creep.memory.home]
+        if (home.memory.signed) {
             return false
         }
         const task = findTaskByType('sign')
@@ -306,14 +302,15 @@ class RoleLogistics {
 
     @mprofile('logistics:upgrade')
     upgrade() {
-        if (!this.creep.room.controller) {
+        const home = Game.rooms[this.creep.memory.home]
+        if (!home.controller) {
             this.creep.say('???');
             return;
         }
         if (
-            this.creep.upgradeController(this.creep.room.controller) === ERR_NOT_IN_RANGE
+            this.creep.upgradeController(home.controller) === ERR_NOT_IN_RANGE
         ) {
-            this.creep.moveTo(this.creep.room.controller, {
+            this.creep.moveTo(home.controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
                 range: 3,
             });

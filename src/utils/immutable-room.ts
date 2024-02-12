@@ -299,7 +299,9 @@ export class ImmutableRoom implements ValueObject {
                 roomItem.x,
                 roomItem.y,
             )) {
-                queue.push(neighbor)
+                if (neighbor.terrain !== TERRAIN_MASK_WALL) {
+                    queue.push(neighbor)
+                }
             }
         }
     }

@@ -124,9 +124,11 @@ class RemoteBuildCreep {
             }
         } else {
             Logger.warning(
-                'remote-build:build',
+                'remote-build:build:failure',
                 'nothing to build',
+                this.creep.memory.home,
                 this.creep.room.name,
+                destination,
             )
         }
     }

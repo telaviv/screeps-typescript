@@ -22,6 +22,7 @@ declare global {
     namespace NodeJS {
         interface Global {
             clearConstructionFeatures(roomName: string): void;
+            clearAllConstructionFeatures(): void;
             calculateSurveyImmutableRoom(room: Room): ImmutableRoom;
         }
     }
@@ -29,10 +30,17 @@ declare global {
 
 global.clearConstructionFeatures = clearConstructionFeatures
 global.calculateSurveyImmutableRoom = calculateSurveyImmutableRoom
+global.clearAllConstructionFeatures = clearAllConstructionFeatures
 
 function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeatures = undefined
     Memory.rooms[roomName].stationaryPoints = undefined
+}
+
+function clearAllConstructionFeatures() {
+    each(Game.rooms, (room: Room) => {
+        clearConstructionFeatures(room.name)
+    })
 }
 
 function saveConstructionFeatures(room: Room) {

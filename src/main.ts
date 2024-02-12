@@ -81,8 +81,9 @@ const clearMemory = wrap(() => {
 
 const runMyRoom = wrap((room: Room) => {
     recordRoomStats(room)
-
-    BuildManager.get(room).ensureConstructionSites()
+    const buildManager = BuildManager.get(room)
+    buildManager.removeEnemyConstructionSites()
+    buildManager.ensureConstructionSites()
 
     const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
         filter: (s) => {
