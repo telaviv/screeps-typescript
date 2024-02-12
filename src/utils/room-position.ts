@@ -43,8 +43,8 @@ export function findClosestByRange(
 
 export function getNeighbors(pos: RoomPosition, range: number = 1): RoomPosition[] {
     const positions = [];
-    for (let x = Math.max(0, pos.x - range); x < Math.max(50, pos.x - range); x++) {
-        for (let y = Math.max(0, pos.y - range); y < Math.max(50, pos.y - range); y++) {
+    for (let x = Math.max(0, pos.x - range); x < Math.min(50, pos.x + range); x++) {
+        for (let y = Math.max(0, pos.y - range); y < Math.min(50, pos.y + range); y++) {
             if (x === pos.x && y === pos.y) {
                 continue;
             }

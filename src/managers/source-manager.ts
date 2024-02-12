@@ -11,6 +11,7 @@ import { MiningTask } from 'tasks/mining/types'
 import { profile } from 'utils/profiling'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { Position } from 'types'
+import * as Logger from 'utils/logger'
 
 const MAX_WORK_PARTS = 5
 
@@ -101,14 +102,15 @@ export default class SourceManager {
         if (hasEnoughWorkParts(this.harvesters)) {
             return true
         }
-        return this.getNextAvailableHarvesterPosition() !== null
+        const nextAvailable = this.getNextAvailableHarvesterPosition()
+        return this.getNextAvailableHarvesterPosition() === null
     }
 
     public hasEnoughAuxHarvesters(): boolean {
         if (hasEnoughWorkParts(this.allHarvesters)) {
             return true
         }
-        return this.getNextAvailableAuxHarvestPosition() !== null
+        return this.getNextAvailableAuxHarvestPosition() === null
     }
 
     @profile
@@ -158,6 +160,12 @@ export default class SourceManager {
                 }
             }
             if (isAvailable) {
+                if (!pos.inRangeTo(this.source.pos, 1)) {
+                    Logger.error(
+                        `source-manager:getNextAvailableAuxHarvesterPosition:failed`,
+                        `position ${pos} is not in range of source ${this.id}`, this.getPositions())
+                    return null
+                }
                 return pos
             }
         }

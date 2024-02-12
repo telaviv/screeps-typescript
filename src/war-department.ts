@@ -11,6 +11,11 @@ export interface WarMemory {
     target: string
 }
 
+export interface SpawnWarMemory extends WarMemory {
+    status: WarStatus.SPAWN
+    type?: 'savior'
+}
+
 export enum WarStatus {
     NONE = 'none',
     ATTACK = 'attack',

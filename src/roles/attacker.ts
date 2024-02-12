@@ -52,7 +52,6 @@ const roleAttacker = {
             }
             return
         } else {
-            creep.suicide()
             Logger.info('attacker:no-targets', creep.name)
         }
     }, 'runAttacker'),

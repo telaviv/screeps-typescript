@@ -6,6 +6,7 @@ import { each } from 'lodash'
 import * as Profiling from 'utils/profiling'
 import { ConstructionFeatures, Position } from 'types';
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
+import { hasBuildingAt } from 'utils/room';
 
 const CPU_MIN = 50
 
@@ -99,7 +100,8 @@ function getRampartPositions(room: Room, features: Position[]): Position[] {
         return features.some((feature) => feature.x === pos[0] && feature.y === pos[1])
     }
     const isWall = (pos: Position): boolean => {
-        return room.getTerrain().get(pos[0], pos[1]) === TERRAIN_MASK_WALL
+        return room.getTerrain().get(pos[0], pos[1]) === TERRAIN_MASK_WALL ||
+        hasBuildingAt(new RoomPosition(pos[0], pos[1], room.name), STRUCTURE_WALL)
     }
     const positions = minCutWalls({ isCenter, isWall })
     return positions.map((pos) => ({ x: pos[0], y: pos[1] }))

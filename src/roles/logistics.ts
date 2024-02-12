@@ -8,6 +8,7 @@ import { profile, mprofile } from 'utils/profiling'
 import {
     getConstructionSites,
     getOwnWeakestWall,
+    hasHostileCreeps,
     hasOwnFragileWall,
     hasTunnelSite,
     isAtExtensionCap,
@@ -32,7 +33,6 @@ import {
     TASK_UPGRADING,
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
-import { fromRoom } from 'utils/immutable-room'
 import { isMiningTask } from 'tasks/mining/utils'
 import { findTaskByType } from 'tasks/utils'
 import { addEnergyTask } from "tasks/usage-utils"
@@ -321,6 +321,8 @@ class RoleLogistics {
     haulEnergy() {
         if (TransferTask.makeRequest(this.creep)) {
             this.runTask();
+        } else if (hasHostileCreeps(this.creep.room)) {
+            this.creep.memory.currentTask = TASK_REPAIRING
         } else {
             this.switchTask();
         }
