@@ -13,8 +13,8 @@ export const LINK_COUNTS = [0, 0, 0, 0, 0, 2, 3, 4, 6]
 export const MIN_STORAGE_LEVEL = 4
 export const MIN_RAMPART_LEVEL = 2
 
-const STRONG_WALL_HITS = 1000000
-const FRAGILE_WALL_HITS = 100000
+const STRONG_WALL_HITS = 10000000
+const FRAGILE_WALL_HITS = [1, 1, 1000, 10000, 30000, 100000, 100000, 100000, 1000000]
 
 export function isAtExtensionCap(room: Room): boolean {
     if (!room.controller) {
@@ -92,6 +92,10 @@ export function getWalls(room: Room): StructureWall[] {
     })
 }
 
+export function hasHostileCreeps(room: Room): boolean {
+    return room.find(FIND_HOSTILE_CREEPS).length > 0
+}
+
 export function getRamparts(room: Room): StructureRampart[] {
     return room.find(FIND_STRUCTURES, {
         filter: { structureType: STRUCTURE_RAMPART },
@@ -102,6 +106,11 @@ export function getRoads(room: Room): StructureRoad[] {
     return room.find(FIND_STRUCTURES, {
         filter: { structureType: STRUCTURE_ROAD },
     })
+}
+
+export function hasBuildingAt(pos: RoomPosition, type: StructureConstant): boolean {
+    const structures = pos.lookFor(LOOK_STRUCTURES)
+    return structures.some((s) => s.structureType === type)
 }
 
 export function getLabs(room: Room): StructureLab[] {
@@ -236,7 +245,7 @@ function isFragileWall(structure: Structure): boolean {
         includes(
             [STRUCTURE_RAMPART, STRUCTURE_WALL],
             structure.structureType,
-        ) && structure.hits < FRAGILE_WALL_HITS
+        ) && structure.hits < FRAGILE_WALL_HITS[structure.room.controller!.level]
     )
 }
 
@@ -354,7 +363,7 @@ export function makeSpawnConstructionSite(pos: RoomPosition, name?: string) {
     Logger.debug('spawn:construction', pos, name)
     const ret = room.createConstructionSite(pos.x, pos.y, STRUCTURE_SPAWN, name)
     if (ret !== OK) {
-        Logger.warning('construction:failed', pos, STRUCTURE_SPAWN, ret, name)
+        Logger.warning('construction:spawn:failed', pos, STRUCTURE_SPAWN, ret, name)
     }
     return ret
 }

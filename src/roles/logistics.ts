@@ -4,10 +4,11 @@ import { getBuildManager } from 'managers/build-manager'
 import { moveToRoom } from 'utils/creep'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
-import { mprofile } from 'utils/profiling'
+import { profile, mprofile } from 'utils/profiling'
 import {
     getConstructionSites,
     getOwnWeakestWall,
+    hasHostileCreeps,
     hasOwnFragileWall,
     hasTunnelSite,
     isAtExtensionCap,
@@ -16,9 +17,7 @@ import { spawnCreep } from 'utils/spawn'
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
-import * as MiningTask from 'tasks/mining'
-import * as WithdrawTask from 'tasks/withdraw'
-import * as PickupTask from 'tasks/pickup'
+import * as SignTask from 'tasks/sign'
 import {
     LogisticsCreep,
     LogisticsMemory,
@@ -34,8 +33,10 @@ import {
     TASK_UPGRADING,
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
-import { fromRoom } from 'utils/immutable-room'
 import { isMiningTask } from 'tasks/mining/utils'
+import { findTaskByType } from 'tasks/utils'
+import { addEnergyTask } from "tasks/usage-utils"
+import { getRandomWalkablePosition } from 'utils/room-position'
 
 const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -65,7 +66,6 @@ const PREFERENCE_EMOJIS = {
 }
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
-const watchedScreep = 'logistics:worker:W8N3:25120'
 
 class RoleLogistics {
     private creep: LogisticsCreep;
@@ -74,7 +74,7 @@ class RoleLogistics {
         this.creep = creep;
     }
 
-    @mprofile('runLogistics')
+    @profile
     public run() {
         if (this.creep.spawning) {
             return
@@ -92,16 +92,13 @@ class RoleLogistics {
             return;
         }
 
-        if (this.creep.room.name !== this.creep.memory.home) {
-            moveToRoom(this.creep.memory.home, this.creep);
-            return;
-        }
-
         const currentTask = this.creep.memory.currentTask;
         const tasks = this.creep.memory.tasks
 
         if (tasks.length > 0) {
             this.runTask();
+        } else if (this.canSign()) {
+            SignTask.makeRequest(this.creep)
         } else if (currentTask === TASK_COLLECTING) {
             this.getEnergy()
         } else if (currentTask === TASK_HAULING) {
@@ -120,30 +117,28 @@ class RoleLogistics {
         }
     }
 
+    @profile
+    private canSign() {
+        const home = Game.rooms[this.creep.memory.home]
+        if (home.memory.signed) {
+            return false
+        }
+        const task = findTaskByType('sign')
+        return task === undefined
+    }
+
     public static staticRun(creep: LogisticsCreep) {
         return (new RoleLogistics(creep)).run();
     }
 
+    @profile
     private getEnergy(): void {
-        const taskMap = [
-            { tasker: PickupTask, name: 'pickup' },
-            { tasker: WithdrawTask, name: 'withdraw' },
-            { tasker: MiningTask, name: 'mining' }
-        ]
-        for (const { tasker, name } of taskMap) {
-            const ret = tasker.makeRequest(this.creep)
-            if (ret) {
-                if (this.creep.memory.tasks.length === 0) {
-                    Logger.error('logistics:getEnergy:failureToMakeTask', name, this.creep.name)
-                } else {
-                    return
-                }
-            }
+        if (!addEnergyTask(this.creep, { includeMining: true })) {
+            this.setToNoTask('no tasks could be made')
         }
-        Logger.debug('logistics:getEnergy:failure', 'no tasks could be made', this.creep.name)
-        this.setToNoTask('no tasks could be made')
     }
 
+    @profile
     private setToNoTask(reason: string): void {
         if (this.creep.memory.tasks.length > 0) {
             Logger.warning('logistics:setToNoTask:failure:hasTasks', this.creep.name, reason)
@@ -152,7 +147,7 @@ class RoleLogistics {
         this.creep.memory.currentTask = NO_TASK
     }
 
-    @mprofile('logistics:updateMemory')
+    @profile
     private updateMemory() {
         const memory = this.creep.memory;
         const currentTask = memory.currentTask;
@@ -168,7 +163,7 @@ class RoleLogistics {
         }
     }
 
-
+    @profile
     private assignWorkerPreference() {
         const memory = this.creep.memory;
         const buildManager = getBuildManager(this.creep.room);
@@ -185,6 +180,7 @@ class RoleLogistics {
         }
     }
 
+    @profile
     say() {
         if (this.idleTime() > SLEEP_SAY_TIME) {
             this.creep.say('😴')
@@ -220,7 +216,7 @@ class RoleLogistics {
         this.creep.memory.idleTimestamp = null;
     }
 
-    @mprofile('logistics:build')
+    @profile
     build() {
         const targets = this.getNonWallSites(this.creep.room);
         const target = this.creep.pos.findClosestByRange(targets);
@@ -238,6 +234,7 @@ class RoleLogistics {
         }
     }
 
+    @profile
     getNonWallSites(room: Room) {
         return getConstructionSites(room, {
             filter: (site: ConstructionSite) =>
@@ -246,7 +243,7 @@ class RoleLogistics {
         });
     }
 
-    @mprofile('logistics:repairWalls')
+    @profile
     repairWalls() {
         let structure = null;
         if (this.creep.memory.currentTarget) {
@@ -305,14 +302,15 @@ class RoleLogistics {
 
     @mprofile('logistics:upgrade')
     upgrade() {
-        if (!this.creep.room.controller) {
+        const home = Game.rooms[this.creep.memory.home]
+        if (!home.controller) {
             this.creep.say('???');
             return;
         }
         if (
-            this.creep.upgradeController(this.creep.room.controller) === ERR_NOT_IN_RANGE
+            this.creep.upgradeController(home.controller) === ERR_NOT_IN_RANGE
         ) {
-            this.creep.moveTo(this.creep.room.controller, {
+            this.creep.moveTo(home.controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
                 range: 3,
             });
@@ -323,25 +321,28 @@ class RoleLogistics {
     haulEnergy() {
         if (TransferTask.makeRequest(this.creep)) {
             this.runTask();
+        } else if (hasHostileCreeps(this.creep.room)) {
+            this.creep.memory.currentTask = TASK_REPAIRING
         } else {
             this.switchTask();
         }
     }
 
-
+    @profile
     private wander() {
-        const iroom = fromRoom(this.creep.room)
-        const pos = iroom.getRandomWalkablePosition(this.creep.pos.x, this.creep.pos.y)
+        const pos = getRandomWalkablePosition(this.creep.pos)
         if (pos !== null) {
             this.creep.moveTo(pos)
         }
     }
 
+    @profile
     private runTask() {
         const task = this.creep.memory.tasks[0];
         TaskRunner.run(task, this.creep);
     }
 
+    @profile
     switchTask() {
         let task: LogisticsTask = this.creep.memory.currentTask;
         if (!isAtExtensionCap(this.creep.room) || hasTunnelSite(this.creep.room)) {
@@ -375,6 +376,7 @@ class RoleLogistics {
         return carrys.length * 50;
     }
 
+    @profile
     public static createCreep(
         spawn: StructureSpawn,
         preference: LogisticsPreference = TASK_HAULING,
@@ -402,10 +404,12 @@ class RoleLogistics {
         );
     }
 
+    @profile
     public static canCreateCreep(capacity: number): boolean {
         return fromBodyPlanSafe(capacity, BODY_PLAN_UNIT) !== null;
     }
 
+    @profile
     public static shouldCreateCreep(spawn: StructureSpawn): boolean {
         const logistics = filter(Object.keys(Memory.creeps), (creepName: string) => {
             const creep = Game.creeps[creepName] as LogisticsCreep
