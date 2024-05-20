@@ -1,9 +1,3 @@
-/* eslint @typescript-eslint/no-unsafe-assignment: ["off"] */
-/* eslint @typescript-eslint/no-unsafe-member-access: ["off"] */
-/* eslint @typescript-eslint/no-unsafe-call: ["off"] */
-/* eslint @typescript-eslint/no-unsafe-return: ["off"] */
-/* eslint @typescript-eslint/restrict-template-expressions: ["off"] */
-/* eslint func-names: "off" */
 interface ProfilerData {
     [key: string]: { total: number; calls: number }
 }
@@ -113,7 +107,7 @@ export function profile(
     descriptor: PropertyDescriptor,
 ) {
     const originalMethod = descriptor.value
-    const key = `${target.constructor.name}.${propertyKey}`
+    const key = `${target.constructor.name}:${propertyKey}`
     descriptor.value = function (...args: any) {
         const startCpu = Game.cpu.getUsed()
         const ret = originalMethod.apply(this, args)
@@ -131,10 +125,10 @@ export function output() {
     const totalTicks = Game.time - Memory.profiler.start
     const dataArray = Object.entries(Memory.profiler.data)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    dataArray.sort(([keya, dataa], [keyb, datab]) => datab.total - dataa.total)
-    for (const [key, data] of dataArray.slice(0, 10)) {
+    dataArray.sort(([_, dataa], [__, datab]) => datab.total - dataa.total)
+    for (const [key, data] of dataArray.slice(0, 30)) {
         console.log(
-            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks}`,
+            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${data.calls / totalTicks} ${data.total}`,
         )
     }
 }

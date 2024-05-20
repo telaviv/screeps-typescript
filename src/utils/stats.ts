@@ -1,3 +1,5 @@
+import { wrap } from "utils/profiling"
+
 if (!Memory.stats) {
     Memory.stats = {}
 }
@@ -21,7 +23,7 @@ export function recordRoomStats(room: Room) {
     recordStatistic(`${prefix}.controller.level`, room.controller.level)
 }
 
-export function recordGameStats() {
+export const recordGameStats = wrap(() => {
     recordStatistic('Game.cpu.limit', Game.cpu.limit)
     recordStatistic('Game.cpu.tickLimit', Game.cpu.tickLimit)
     recordStatistic('Game.cpu.bucket', Game.cpu.bucket)
@@ -43,7 +45,7 @@ export function recordGameStats() {
     for (const [k, v] of Object.entries(Game.cpu.getHeapStatistics())) {
         recordStatistic(`Game.heap.${k}`, v)
     }
-}
+}, 'recordGameStats')
 
 export function recordStatistic(key: string, value: number) {
     Memory.stats[key] = value
@@ -54,3 +56,4 @@ declare global {
         stats: { [key: string]: number }
     }
 }
+
