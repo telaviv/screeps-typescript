@@ -19,10 +19,11 @@ export const Game: {
 export const Memory: {
   creeps: { [name: string]: any };
   stats: any;
+  rooms: any[];
 } = {
+  rooms: [],
   creeps: {},
   stats: {},
 };
 
-export const RoomPosition = 3;
 

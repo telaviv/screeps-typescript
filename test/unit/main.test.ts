@@ -10,9 +10,9 @@ describe("main", () => {
   beforeEach(() => {
     // runs before each test in this block
     // @ts-ignore : allow adding Game to global
-    global.Game = _.clone(Game);
+    global.Game = { ...Game }
     // @ts-ignore : allow adding Memory to global
-    global.Memory = _.clone(Memory);
+    global.Memory = { ...Memory }
   });
 
   it("should export a loop function", () => {
