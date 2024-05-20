@@ -1,5 +1,6 @@
 import { extend } from "lodash";
 import roleClaimer from 'roles/claim'
+import roleScout from "roles/scout";
 import autoIncrement from 'utils/autoincrement'
 import * as Logger from 'utils/logger'
 import WarDepartment from "war-department";
@@ -11,7 +12,7 @@ declare global {
     }
 }
 
-interface RoomTask {
+export interface RoomTask {
     id: number;
     type: "claim" | "long-distance-mine";
     data: object;
@@ -25,6 +26,10 @@ interface ClaimRoomTask extends RoomTask {
         name: string
     }
     timestamp: number
+}
+
+export const isClaimRoomTask = (task: RoomTask): task is ClaimRoomTask => {
+    return task.type === "claim"
 }
 
 export class RoomManager {
@@ -80,7 +85,8 @@ export class RoomManager {
 
     public claimRoom(): boolean {
         const claimTask = this.getClaimRoomTask()
-        if (!claimTask) {
+        const warDepartment = new WarDepartment(this.room)
+        if (!claimTask || warDepartment.status !== 'none') {
             return false;
         }
         const destination = claimTask.data.name
@@ -89,9 +95,8 @@ export class RoomManager {
             Logger.error('no spawn in starting room')
             return false;
         }
-        const err = roleClaimer.create(spawns[0], destination, true)
+        const err = roleScout.create(spawns[0], destination, { dryRun: true })
         if (err === OK) {
-            const warDepartment = new WarDepartment(this.room)
             warDepartment.claimRoom(destination)
             Logger.info('RoomManager:claimRoom:success', destination)
             this.roomTasks = this.roomTasks.filter(task => task.id !== claimTask.id)

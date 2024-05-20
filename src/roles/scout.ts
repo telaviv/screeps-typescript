@@ -1,6 +1,5 @@
-import * as RoomStatus from 'room-status'
 import { moveToRoom } from 'utils/creep'
-import { profile } from 'utils/profiling'
+import { profile, wrap } from 'utils/profiling'
 
 const ROLE = 'scout'
 
@@ -35,28 +34,24 @@ class ScoutCreep {
 
     @profile
     run() {
-        RoomStatus.recordStatus(this.creep.room)
         moveToRoom(this.destination, this.creep)
-    }
-
-    private isAtRoom() {
-        return this.creep.room.name === this.destination
     }
 }
 
 const roleScout = {
-    run: (creep: Scout) => {
+    run: wrap((creep: Scout) => {
         const scout = new ScoutCreep(creep)
         scout.run()
-    },
+    }, 'roleScout:run'),
 
-    create(spawn: StructureSpawn, destination: string): number {
+    create(spawn: StructureSpawn, destination: string, opts: SpawnOptions = {}): number {
         return spawn.spawnCreep([MOVE], `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
                 destination,
             } as ScoutMemory,
+            ...opts,
         })
     },
 }
