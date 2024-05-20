@@ -5,11 +5,11 @@ import { PickupTarget } from './target'
 import { PickupTask } from './types'
 import { isPickupTask } from './utils'
 import { ResourceCreep } from '../types'
+import { findClosestByRange } from 'utils/room-position'
+import { wrap } from 'utils/profiling'
 
-/* eslint @typescript-eslint/no-unsafe-assignment: "off" */
-/* eslint @typescript-eslint/no-unsafe-member-access: "off" */
 
-export function makeRequest(creep: ResourceCreep): boolean {
+export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -19,16 +19,28 @@ export function makeRequest(creep: ResourceCreep): boolean {
     if (currentRequest !== null) {
         return true
     }
+    if (!creep.memory.home) {
+        Logger.error('task:pickup::makeRequest:failure:no-home', creep.name)
+        return false
+    }
 
-    const resources = getDroppedResources(creep.room, capacity, RESOURCE_ENERGY)
+    const home = Game.rooms[creep.memory.home]!
+    let resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
+    if (creep.memory.home !== creep.room.name) {
+        resources = resources.concat(getDroppedResources(creep.room, capacity, RESOURCE_ENERGY))
+    }
     if (resources.length > 0) {
-        const resource = creep.pos.findClosestByRange(resources)
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        addPickupTask(creep, resource!)
-        return true
+        const resource = findClosestByRange(creep.pos, resources) as Resource
+        if (resource) {
+            addPickupTask(creep, resource!)
+            return true
+        } else {
+            Logger.error('task:pickup::makeRequest:failure:no-resource', creep.name, resources)
+            return false
+        }
     }
     return false
-}
+}, 'pickup:makeRequest')
 
 export function run(task: PickupTask, creep: ResourceCreep): boolean {
     const resource = getResource(task)

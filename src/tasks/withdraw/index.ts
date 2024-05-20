@@ -7,8 +7,11 @@ import { WithdrawObject } from './object'
 import { WithdrawTask, Withdrawable } from './types'
 import { isWithdrawTask } from './utils'
 import { ResourceCreep } from '../types'
+import { getHome } from 'roles/utils'
+import { findClosestByRange } from 'utils/room-position'
+import { wrap } from 'utils/profiling'
 
-export function makeRequest(creep: ResourceCreep): boolean {
+export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -19,15 +22,27 @@ export function makeRequest(creep: ResourceCreep): boolean {
         return true
     }
 
-    const withdrawTargets = getEligibleTargets(creep.room, capacity)
+    const home = getHome(creep)
+    if (!home) {
+        Logger.error('withdraw::makeRequest:failure:no-home', creep.name)
+        return false
+    }
+    let withdrawTargets = getEligibleTargets(home, capacity)
+    if (creep.memory.home !== creep.room.name) {
+        const remoteTargets = getEligibleTargets(creep.room, capacity)
+        withdrawTargets = withdrawTargets.concat(remoteTargets)
+    }
     if (withdrawTargets.length > 0) {
-        const target = creep.pos.findClosestByRange(withdrawTargets)
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const target = findClosestByRange(creep.pos, withdrawTargets, { range: 1 }) as Withdrawable
+        if (!target) {
+            Logger.error('withdraw::makeRequest:failure:no-target', creep.name)
+            return false
+        }
         addWithdrawTask(creep, target!)
         return true
     }
     return false
-}
+}, 'withdraw:makeRequest')
 
 export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     const storeable = getWithdrawable(task)
@@ -49,7 +64,7 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     return false
 }
 
-function addWithdrawTask(creep: ResourceCreep, withdrawable: Withdrawable) {
+const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
     const withdrawObject = WithdrawObject.get(withdrawable.id)
     const task = withdrawObject.makeRequest(creep)
     Logger.info(
@@ -61,7 +76,7 @@ function addWithdrawTask(creep: ResourceCreep, withdrawable: Withdrawable) {
     )
     creep.memory.tasks.push(task)
     return task
-}
+}, 'withdraw:addWithdrawTask')
 
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
@@ -86,7 +101,7 @@ export function completeRequest(creep: ResourceCreep) {
 
 export function cleanup(task: WithdrawTask, creep: Creep): boolean {
     if (Game.getObjectById(task.withdrawId) === null) {
-        Logger.warning(
+        Logger.info(
             'withdraw:cleanup:failure',
             task.withdrawId,
             creep.name,
@@ -129,15 +144,39 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
     return Game.getObjectById(task.withdrawId) as Withdrawable
 }
 
+function isRuin(obj: any): boolean {
+    return !!(obj.structure && obj.ticksToDecay)
+}
+
+function isTombstone(obj: any): boolean {
+    return !!(obj.creep && obj.ticksToDecay)
+}
+
+function isTemporary(withdrawable: WithdrawObject): boolean {
+    const object = Game.getObjectById(withdrawable.withdrawable.id)
+    const id = object?.id
+    const ruin = isRuin(object)
+    const tombstone = isTombstone(object)
+    return isRuin(object) || isTombstone(object)
+}
+
 function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
     const nonEmpties = withdrawObjects.filter(
-        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= 50,
+        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
+            target.resourcesAvailable(RESOURCE_ENERGY) > 0 && isTemporary(target),
     )
+
+    const temporaries = nonEmpties.filter(isTemporary)
+
+    if (temporaries.length > 0) {
+        return temporaries.map((eligible) => eligible.withdrawable)
+    }
 
     const eligibles = nonEmpties.filter(
         (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
     )
+
     if (eligibles.length > 0) {
         return eligibles.map((eligible) => eligible.withdrawable)
     }
@@ -148,7 +187,10 @@ function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const bestTarget = maxBy(nonEmpties, (t) =>
         t.resourcesAvailable(RESOURCE_ENERGY),
     )
-    return [bestTarget!.withdrawable]
+    if (!bestTarget) {
+        return []
+    }
+    return [bestTarget.withdrawable]
 }
 
 export default {

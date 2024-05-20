@@ -5,8 +5,9 @@ import { isMiningTask } from './utils'
 import SourcesManager from 'managers/sources-manager'
 import autoIncrement from 'utils/autoincrement'
 import { ResourceCreep } from '../types'
+import { wrap } from 'utils/profiling'
 
-export function makeRequest(creep: ResourceCreep): boolean {
+export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity(RESOURCE_ENERGY)
     if (capacity <= 0) {
         return false
@@ -24,7 +25,7 @@ export function makeRequest(creep: ResourceCreep): boolean {
         return true
     }
     return false
-}
+}, 'mining:makeRequest')
 
 export function run(task: MiningTask, creep: ResourceCreep): boolean {
     const source = Game.getObjectById<Source>(task.source)!
@@ -35,7 +36,7 @@ export function run(task: MiningTask, creep: ResourceCreep): boolean {
     }
     const err = creep.harvest(source)
     if (err === ERR_NOT_IN_RANGE) {
-        const err = creep.moveTo(task.pos.x, task.pos.y, {
+        const err = creep.moveTo(new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName), {
             visualizePathStyle: { stroke: '#ffaa00' },
         })
     } else if (err !== OK) {
@@ -73,6 +74,10 @@ export function completeRequest(creep: ResourceCreep) {
 
 export function cleanup(task: MiningTask, creep: ResourceCreep): boolean {
     const source = Game.getObjectById<Source>(task.source)!
+    if (!source) {
+        Logger.error('task:mining:cleanup:sourceNotFound', task);
+        return true
+    }
     if (source.energy === 0) {
         Logger.info('task:mining:cleanup:empty', creep.name, JSON.stringify(task.pos))
         return true
