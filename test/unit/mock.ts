@@ -24,3 +24,5 @@ export const Memory: {
   stats: {},
 };
 
+export const RoomPosition = 3;
+

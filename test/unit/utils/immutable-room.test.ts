@@ -92,8 +92,8 @@ describe('immutable-room module', () => {
 
                 const pos = immutableRoom.nextExtensionPos()
 
-                expect(pos.x).to.equal(2)
-                expect(pos.y).to.equal(5)
+                expect(pos.x).to.equal(4)
+                expect(pos.y).to.equal(6)
             })
 
             it('picks a nearby spot if the terrain is a wall', () => {
@@ -104,8 +104,8 @@ describe('immutable-room module', () => {
 
                 const pos = immutableRoom.nextExtensionPos()
 
-                expect(pos.x).to.equal(3)
-                expect(pos.y).to.equal(5)
+                expect(pos.x).to.equal(4)
+                expect(pos.y).to.equal(7)
             })
 
             it("picks a nearby spot if the there's a construction site", () => {
@@ -116,8 +116,8 @@ describe('immutable-room module', () => {
 
                 const pos = immutableRoom.nextExtensionPos()
 
-                expect(pos.x).to.equal(3)
-                expect(pos.y).to.equal(5)
+                expect(pos.x).to.equal(4)
+                expect(pos.y).to.equal(7)
             })
 
             it("can't have cardinal obstacle neighbors", () => {
@@ -128,8 +128,8 @@ describe('immutable-room module', () => {
 
                 const pos = immutableRoom.nextExtensionPos()
 
-                expect(pos.x).to.equal(3)
-                expect(pos.y).to.equal(5)
+                expect(pos.x).to.equal(4)
+                expect(pos.y).to.equal(7)
             })
         })
 
@@ -401,8 +401,8 @@ describe('immutable-room module', () => {
         describe("#canBuild", () => {
             it("is true if there's no obstacle", () => {
                 const roomItem = new ImmutableRoomItem({
-                    x: 1,
-                    y: 1,
+                    x: 4,
+                    y: 4,
                     roomName: 'name',
                     terrain: 0,
                 })

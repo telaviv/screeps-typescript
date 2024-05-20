@@ -9,17 +9,7 @@ import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition, Position } from 'types'
 import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
-
-type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
-type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
-
-function isObstacle(x: any): x is Obstacle {
-    return OBSTACLE_OBJECT_TYPES.includes(x)
-}
-
-function isNonObstacle(x: any): x is NonObstacle {
-    return ['road', 'constructionSite', 'rampart', 'container'].includes(x)
-}
+import { Obstacle, NonObstacle, isObstacle } from 'types'
 
 interface NonObstacles {
     road: boolean
@@ -76,8 +66,19 @@ export class ImmutableRoomItem
         )
     }
 
+    public isNearEdge(): boolean {
+        return this.isBetween(this.x, 0, 2) ||
+            this.isBetween(this.y, 0, 2) ||
+            this.isBetween(this.x, 47, 49) ||
+            this.isBetween(this.y, 47, 49)
+    }
+
+    private isBetween(num: number, a: number, b: number): boolean {
+        return num >= a && num <= b
+    }
+
     public canBuild(): boolean {
-        return !(this.isObstacle() || this.isAtEdge() || this.nonObstacles.constructionSite)
+        return !(this.isObstacle() || this.isNearEdge() || this.nonObstacles.constructionSite)
     }
 
     public terrainString(): string {
@@ -98,6 +99,10 @@ export class ImmutableRoomItem
 
     public get pos(): RoomPosition {
         return new RoomPosition(this.x, this.y, this.roomName)
+    }
+
+    public get flatPos(): FlatRoomPosition {
+        return { x: this.x, y: this.y, roomName: this.roomName }
     }
 
     public static unique(roomItems: ImmutableRoomItem[]): ImmutableRoomItem[] {
@@ -285,7 +290,11 @@ export class ImmutableRoom implements ValueObject {
         x: number,
         y: number,
     ): Generator<ImmutableRoomItem, void, unknown> {
-        const queue = [this.get(x, y)]
+        let start = this.get(x, y)
+        if (start.terrain === TERRAIN_MASK_WALL) {
+            start = this.getClosestWalkable(start)
+        }
+        const queue = [start]
         const visited = new Set<ImmutableRoomItem>()
         while (queue.length > 0) {
             const roomItem = queue.shift()!
@@ -298,9 +307,33 @@ export class ImmutableRoom implements ValueObject {
                 roomItem.x,
                 roomItem.y,
             )) {
+                if (neighbor.terrain !== TERRAIN_MASK_WALL) {
+                    queue.push(neighbor)
+                }
+            }
+        }
+    }
+
+    private getClosestWalkable = (ri: ImmutableRoomItem): ImmutableRoomItem => {
+        const queue = [this.get(ri.x, ri.y)]
+        const visited = new Set<ImmutableRoomItem>()
+        while (queue.length > 0) {
+            const roomItem = queue.shift()!
+            if (visited.has(roomItem)) {
+                continue
+            }
+            visited.add(roomItem)
+            for (const neighbor of this.getClosestNeighbors(
+                roomItem.x,
+                roomItem.y,
+            )) {
+                if (neighbor.terrain !== TERRAIN_MASK_WALL) {
+                    return neighbor
+                }
                 queue.push(neighbor)
             }
         }
+        return ri
     }
 
     public nextExtensionPos(): FlatRoomPosition {
@@ -364,9 +397,11 @@ export class ImmutableRoom implements ValueObject {
         for (const roomItem of this.breadthFirst(centroid.x, centroid.y)) {
             if (this.canPlaceStorage(roomItem)) {
                 return { x: roomItem.x, y: roomItem.y, roomName: this.name }
+            } else {
+                Logger.error('immutable-room:nextStoragePos:cannot-place-storage', roomItem.x, roomItem.y)
             }
         }
-        throw new Error('No eligible storage spot.')
+        throw new Error(`No eligible storage spot. ${this.name}`)
     }
 
     public setStorage(): ImmutableRoom {
@@ -612,6 +647,7 @@ export class ImmutableRoom implements ValueObject {
         let xAcc = 0
         let yAcc = 0
         let count = 0
+        let pos: FlatRoomPosition | null = null
         for (const x of range(50)) {
             for (const y of range(50)) {
                 if (
@@ -627,15 +663,24 @@ export class ImmutableRoom implements ValueObject {
             }
         }
         if (count === 0) {
-            return { x: 25, y: 25, roomName: this.name }
+            pos = { x: 25, y: 25, roomName: this.name }
+        } else {
+            const nx = Math.floor(xAcc / count)
+            const ny = Math.floor(yAcc / count)
+            pos = { x: nx, y: ny, roomName: this.name }
         }
-        const nx = Math.floor(xAcc / count)
-        const ny = Math.floor(yAcc / count)
-        return { x: nx, y: ny, roomName: this.name }
+        if (this.get(pos.x, pos.y).terrain === TERRAIN_MASK_WALL) {
+            return this.getClosestWalkable(this.get(pos.x, pos.y)).flatPos
+        }
+        return pos
     }
 
     private canPlaceExtension(roomItem: ImmutableRoomItem): boolean {
         if (!roomItem.canBuild()) {
+            return false
+        }
+
+        if (roomItem.nonObstacles.container) {
             return false
         }
 
