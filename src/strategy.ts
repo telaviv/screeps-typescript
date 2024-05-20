@@ -1,3 +1,5 @@
+import { wrap } from "utils/profiling"
+
 export enum StrategyPhase {
     RCL_0 = 'rcl-0',
     RCL_1 = 'rcl-1',
@@ -22,10 +24,10 @@ const RCL_TO_STRATEGY = [
     StrategyPhase.RCL_8,
 ]
 
-export default function (room: Room) {
+export default wrap((room: Room) => {
     if (!room.controller) {
         room.memory.strategy = StrategyPhase.RCL_0
     } else {
         room.memory.strategy = RCL_TO_STRATEGY[room.controller.level]
     }
-}
+}, 'updateStrategy')
