@@ -161,6 +161,10 @@ const roleHarvester = {
             Logger.error('harvester:create:source:not-found', sourceId)
             return ERR_NOT_FOUND
         }
+        if (!source.room.memory.stationaryPoints) {
+            Logger.error('harvester:create:stationaryPoints:not-found', sourceId)
+            return ERR_NOT_FOUND
+        }
         if (pos === null) {
             const pos = source.room.memory.stationaryPoints.sources[sourceId]
         }
