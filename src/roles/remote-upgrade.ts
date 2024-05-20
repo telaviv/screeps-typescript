@@ -2,11 +2,12 @@
 
 import * as TaskRunner from 'tasks/runner'
 import { moveToRoom, recycle } from 'utils/creep'
-import { profile } from 'utils/profiling'
-import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { profile, wrap } from 'utils/profiling'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { addEnergyTask } from 'tasks/usage-utils'
 
 const ROLE = 'remote-upgrade'
 
@@ -18,6 +19,7 @@ interface RemoteUpgradeMemory extends ResourceCreepMemory {
     role: 'remote-upgrade'
     destination: string
     home: string
+    collecting: boolean
 }
 
 class RemoteUpgradeCreep {
@@ -31,6 +33,10 @@ class RemoteUpgradeCreep {
         return this.memory.destination
     }
 
+    get destinationRoom(): Room {
+        return Game.rooms[this.destination]
+    }
+
     get home(): string {
         return this.memory.home
     }
@@ -39,37 +45,44 @@ class RemoteUpgradeCreep {
         return this.creep.memory
     }
 
+    get collecting(): boolean {
+        return this.memory.collecting
+    }
+
     @profile
     run() {
         if (this.creep.spawning) {
             return
         }
+
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
             TaskRunner.run(task, this.creep)
             return
         }
 
-        if (this.isAtHome()) {
-            if (this.shouldRecycle()) {
-                recycle(this.creep)
-            } else if (!this.isFullOfEnergy()) {
-                getEnergy(this.creep)
-            } else {
-                this.goToDestination()
-            }
-        } else if (this.isAtDestination()) {
-            if (this.hasNoEnergy()) {
-                this.goHome()
-            } else {
+        if (this.collecting) {
+            if (this.isFullOfEnergy()) {
+                this.memory.collecting = false
                 this.upgradeController()
+            } else {
+                this.collectEnergy()
             }
         } else {
             if (this.hasNoEnergy()) {
-                this.goHome()
+                this.memory.collecting = true
+                this.collectEnergy()
             } else {
-                this.goToDestination()
+                this.upgradeController()
             }
+        }
+    }
+
+    private collectEnergy(): void {
+        this.creep.say('⚡')
+        if (!addEnergyTask(this.creep)) {
+            this.creep.say('🤔')
+            return
         }
     }
 
@@ -96,7 +109,8 @@ class RemoteUpgradeCreep {
     }
 
     private upgradeController() {
-        const controller = this.creep.room.controller
+        this.creep.say('🌃')
+        const controller = this.destinationRoom.controller
         const err = this.creep.upgradeController(controller!)
         if (err === ERR_NOT_IN_RANGE) {
             this.creep.moveTo(controller!, {
@@ -112,29 +126,13 @@ class RemoteUpgradeCreep {
             )
         }
     }
-
-    private goHome() {
-        moveToRoom(this.home, this.creep)
-    }
-
-    private goToDestination() {
-        moveToRoom(this.destination, this.creep)
-    }
-
-    private isAtHome() {
-        return this.creep.room.name === this.home
-    }
-
-    private isAtDestination() {
-        return this.creep.room.name === this.destination
-    }
 }
 
 export default {
-    run: (creep: RemoteUpgrade) => {
+    run: wrap((creep: RemoteUpgrade) => {
         const remoteUpgrade = new RemoteUpgradeCreep(creep)
         remoteUpgrade.run()
-    },
+    }, 'roleRemoteUpgrade:run'),
 
     create(spawn: StructureSpawn, destination: string): number {
         const capacity = spawn.room.energyCapacityAvailable
@@ -146,6 +144,7 @@ export default {
                 destination,
                 tasks: [],
                 idleTimestamp: null,
+                collecting: true,
             } as RemoteUpgradeMemory,
         })
     },

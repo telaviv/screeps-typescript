@@ -1,14 +1,15 @@
 /* eslint no-lonely-if: ["off"] */
 
 import * as TaskRunner from 'tasks/runner'
-import { moveToRoom, recycle } from 'utils/creep'
-import { profile } from 'utils/profiling'
-import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { moveTo, moveToRoom, recycle } from 'utils/creep'
+import { profile, wrap } from 'utils/profiling'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { getConstructionSites } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 import autoIncrement from 'utils/autoincrement'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { addEnergyTask } from 'tasks/usage-utils'
 
 const ROLE = 'remote-build'
 
@@ -20,6 +21,7 @@ interface RemoteBuildMemory extends ResourceCreepMemory {
     role: 'remote-build'
     destination: string
     home: string
+    collecting: boolean
 }
 
 class RemoteBuildCreep {
@@ -41,6 +43,10 @@ class RemoteBuildCreep {
         return this.creep.memory
     }
 
+    get collecting(): boolean {
+        return this.memory.collecting
+    }
+
     @profile
     run() {
         if (this.creep.spawning) {
@@ -53,26 +59,28 @@ class RemoteBuildCreep {
             return
         }
 
-        if (this.isAtHome()) {
-            if (this.shouldRecycle()) {
-                recycle(this.creep)
-            } else if (!this.isFullOfEnergy()) {
-                getEnergy(this.creep)
-            } else {
-                this.goToDestination()
-            }
-        } else if (this.isAtDestination()) {
-            if (this.hasNoEnergy()) {
-                this.goHome()
-            } else {
+        if (this.collecting) {
+            if (this.isFullOfEnergy()) {
+                this.memory.collecting = false
                 this.build()
+            } else {
+                this.collectEnergy()
             }
         } else {
             if (this.hasNoEnergy()) {
-                this.goHome()
+                this.memory.collecting = true
+                this.collectEnergy()
             } else {
-                this.goToDestination()
+                this.build()
             }
+        }
+    }
+
+    private collectEnergy(): void {
+        this.creep.say('⚡')
+        if (!addEnergyTask(this.creep)) {
+            this.creep.say('🤔')
+            return
         }
     }
 
@@ -99,52 +107,39 @@ class RemoteBuildCreep {
     }
 
     private build() {
-        const targets = getConstructionSites(this.creep.room)
+        this.creep.say('🏗️')
+        const destination = Game.rooms[this.destination]
+        const targets = getConstructionSites(destination)
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(targets[0], {
-                    visualizePathStyle: { stroke: '#ffffff' },
-                    range: 3,
-                })
+                moveTo(targets[0].pos, this.creep, { range: 3 })
             } else if (err !== OK) {
                 Logger.warning(
                     'remote-build:build:failure',
                     err,
                     this.creep.name,
+                    targets[0].pos,
                 )
             }
         } else {
             Logger.warning(
-                'remote-build:build',
+                'remote-build:build:failure',
                 'nothing to build',
+                this.creep.memory.home,
                 this.creep.room.name,
+                destination,
             )
         }
     }
-
-    private goHome() {
-        moveToRoom(this.home, this.creep)
-    }
-
-    private goToDestination() {
-        moveToRoom(this.destination, this.creep)
-    }
-
-    private isAtHome() {
-        return this.creep.room.name === this.home
-    }
-
-    private isAtDestination() {
-        return this.creep.room.name === this.destination
-    }
 }
 
+
 export default {
-    run: (creep: RemoteBuild) => {
+    run: wrap((creep: RemoteBuild) => {
         const remoteBuild = new RemoteBuildCreep(creep)
         remoteBuild.run()
-    },
+    }, 'roleRemoteBuild:run'),
 
     create(spawn: StructureSpawn, destination: string): number {
         const capacity = spawn.room.energyCapacityAvailable
@@ -156,6 +151,7 @@ export default {
                 destination,
                 tasks: [],
                 idleTimestamp: null,
+                collecting: false,
             } as RemoteBuildMemory,
         })
     },
