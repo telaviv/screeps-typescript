@@ -1,23 +1,5 @@
 import { hasNoSpawns } from 'utils/room'
-
-declare global {
-    interface RoomMemory {
-        war: WarMemory
-    }
-}
-
-interface WarMemory {
-    status: WarStatus
-    target: string
-}
-
-export enum WarStatus {
-    NONE = 'none',
-    ATTACK = 'attack',
-    CLAIM = 'claim',
-    MINIMAL_CLAIM = 'minimal-claim',
-    SPAWN = 'spawn',
-}
+import { WarMemory, WarStatus } from 'war-department'
 
 export default class WarDepartment {
     readonly room: Room
@@ -62,7 +44,7 @@ export default class WarDepartment {
             return
         }
         const targetRoom = Game.rooms[this.target]
-        if ([WarStatus.CLAIM, WarStatus.MINIMAL_CLAIM].includes(this.status)) {
+        if (this.status === WarStatus.CLAIM) {
             if (
                 targetRoom &&
                 targetRoom.controller &&
@@ -82,6 +64,6 @@ export default class WarDepartment {
     }
 
     claimRoom(target: string) {
-        this.warMemory = { status: WarStatus.MINIMAL_CLAIM, target }
+        this.warMemory = { status: WarStatus.CLAIM, target }
     }
 }

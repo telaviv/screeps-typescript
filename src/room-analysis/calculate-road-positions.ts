@@ -23,7 +23,15 @@ export type PositionEdge = {
 export default function calculateRoadPositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
     const surroundingRoadPositions = calculateSurroundingRoadPositions(room, iroom, features)
     const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
-    return uniqBy([...surroundingRoadPositions, ...roadSpinePositions], (pos) => `${pos.x}:${pos.y}`)
+    const uniquePositions = uniqBy([...surroundingRoadPositions, ...roadSpinePositions], (pos) => `${pos.x}:${pos.y}`)
+    uniquePositions.sort(roadSortOrder(room))
+    return uniquePositions
+}
+
+const roadSortOrder = (room: Room) => (a: Position, b: Position): number => {
+    const terrain = room.getTerrain()
+    const terrainValue = (pos: Position) => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP ? 0 : 1
+    return terrainValue(a) - terrainValue(b)
 }
 
 function calculateSurroundingRoadPositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
@@ -46,7 +54,7 @@ function calculateSurroundingRoadPositions(room: Room, iroom: ImmutableRoom, fea
             }
         }
     }
-    return roadPositions
+    return roadPositions.map((pos) => ({ x: pos.x, y: pos.y }))
 }
 
 function calculateRoadSpinePositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
