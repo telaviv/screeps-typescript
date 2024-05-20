@@ -2,6 +2,7 @@ import roleHarvester from "roles/harvester";
 import SourceManager from "./source-manager";
 import { getHarvesters } from "utils/creep";
 import * as Logger from 'utils/logger';
+import { profile } from "utils/profiling";
 
 export default class SourcesManager {
     private room: Room;
@@ -55,13 +56,13 @@ export default class SourcesManager {
             return { source, pos }
         }
         for (const sourceManager of this.sourceManagers) {
-            const positions = sourceManager.getAvailableHarvesterPositions()
-            for (const position of positions) {
+            const position = sourceManager.getNextAvailableHarvesterPosition()
+            if (position !== null) {
                 pos = position
                 source = sourceManager.id
+                break
             }
         }
-        Logger.error('getNextHarvesterMiningTarget', pos, source)
         if (pos && source) {
             if (this.verifyPositionAvailable(pos, source)) {
                 return { source, pos }
@@ -72,14 +73,16 @@ export default class SourcesManager {
         return null;
     }
 
+    @profile
     public getNextAuxHarvesterMiningTarget(): { source: Id<Source>, pos: RoomPosition } | null {
         let source: Id<Source> | null = null
         let pos: RoomPosition | null = null;
         for (const sourceManager of this.sourceManagers) {
-            const positions = sourceManager.getAvailableAuxHarvesterPositions()
-            for (const position of positions) {
+            const position = sourceManager.getNextAvailableAuxHarvestPosition()
+            if (position !== null) {
                 pos = position
                 source = sourceManager.id
+                break
             }
         }
         if (pos && source) {

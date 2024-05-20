@@ -11,7 +11,6 @@ interface StatsMemory {
 interface Memory {
     uuid: number
     log: any
-    profiler: ProfilerMemory
     logLevel: string
     stats: StatsMemory
 }

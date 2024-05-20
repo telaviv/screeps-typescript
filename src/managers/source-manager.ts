@@ -1,14 +1,14 @@
 import filter from 'lodash/filter'
 import some from 'lodash/some'
 
-import DroppedEnergyManager from './dropped-energy-manager'
-import { fromRoom } from 'utils/immutable-room'
-import { getHarvesters, getLogisticsCreeps } from 'utils/creep'
+import { getAllHarvesters, getLogisticsCreeps } from 'utils/creep'
 import { Harvester, isHarvester } from 'roles/harvester'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { isMiningTask } from 'tasks/mining/utils'
 import { MiningTask } from 'tasks/mining/types'
 
+import { profile } from 'utils/profiling'
+import { getNonObstacleNeighbors } from 'utils/room-position'
 import * as Logger from 'utils/logger'
 
 const MAX_WORK_PARTS = 5
@@ -16,39 +16,33 @@ const MAX_WORK_PARTS = 5
 export default class SourceManager {
     public readonly id: Id<Source>
     public readonly source: Source
-    public readonly droppedEnergy: DroppedEnergyManager
+    public readonly containerPosition: RoomPosition;
 
     private constructor(
         source: Source,
-        droppedEnergy: DroppedEnergyManager,
     ) {
         this.id = source.id
         this.source = source
-        this.droppedEnergy = droppedEnergy
+        const containerPosition = this.source.room.memory.stationaryPoints!.sources[this.id]
+        this.containerPosition = new RoomPosition(containerPosition.x, containerPosition.y, source.room.name)
     }
 
     public static createFromSource(source: Source) {
-        const droppedEnergy = DroppedEnergyManager.createFromSourceId(source.id)
-        return new SourceManager(source, droppedEnergy)
+        return new SourceManager(source)
     }
 
     public static createFromSourceId(id: Id<Source>) {
         const source = Game.getObjectById(id)!
-        const droppedEnergy = DroppedEnergyManager.createFromSourceId(id)
-        return new SourceManager(source, droppedEnergy)
+        return new SourceManager(source)
     }
 
     public get room(): Room {
         return this.source.room
     }
 
-    public get containerPosition(): RoomPosition {
-        return this.droppedEnergy.pos
-    }
-
     public get harvesters(): Harvester[] {
         return filter(
-            getHarvesters(this.room),
+            getAllHarvesters(),
             (creep: Harvester) => creep.memory.source === this.id,
         )
     }
@@ -80,15 +74,12 @@ export default class SourceManager {
         return tasks
     }
 
-
     public get allHarvesters(): Creep[] {
         return [...this.harvesters, ...this.auxHarvesters]
     }
 
-    public get positions(): RoomPosition[] {
-        const iroom = fromRoom(this.room)
-        const neighbors = iroom.getClosestNeighbors(this.source.pos.x, this.source.pos.y)
-        return neighbors.filter((npos) => !npos.isObstacle()).map((ipos) => ipos.pos)
+    public getPositions(): RoomPosition[] {
+        return getNonObstacleNeighbors(this.source.pos)
     }
 
     static getById(sourceId: Id<Source>): SourceManager {
@@ -102,41 +93,32 @@ export default class SourceManager {
         )
     }
 
-    public isContainerMining(): boolean {
-        return this.droppedEnergy.getContainer() !== null
-    }
-
     public hasEnoughHarvesters(): boolean {
-        Logger.info(
-            'hasEnoughHarvesters',
-            this.room.name,
-            this.id,
-            this.harvesters.length,
-            this.getAvailableHarvesterPositions().length,
-            this.hasStaticHarvester())
-
         if (!this.hasStaticHarvester()) {
             return false
         }
-        const works = this.harvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
-        if (works >= MAX_WORK_PARTS) {
+        if (hasEnoughWorkParts(this.harvesters)) {
             return true
         }
-        return this.getAvailableHarvesterPositions().length === 0
+        const nextAvailable = this.getNextAvailableHarvesterPosition()
+        return this.getNextAvailableHarvesterPosition() === null
     }
 
     public hasEnoughAuxHarvesters(): boolean {
-        const works = this.allHarvesters.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
-        if (works >= MAX_WORK_PARTS) {
+        if (hasEnoughWorkParts(this.allHarvesters)) {
             return true
         }
-        return this.getAvailableAuxHarvesterPositions().length === 0
+        return this.getNextAvailableAuxHarvestPosition() === null
     }
 
-    public getAvailableHarvesterPositions(): RoomPosition[] {
+    @profile
+    public getNextAvailableHarvesterPosition(): RoomPosition | null {
+        if (this.source.energy === 0 || hasEnoughWorkParts(this.harvesters)) {
+            return null
+        }
         const harvesters = this.harvesters
-        const available: RoomPosition[] = [];
-        for (const pos of this.positions) {
+
+        for (const pos of this.getPositions()) {
             let isAvailable = true;
             for (const harvester of harvesters) {
                 if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
@@ -145,26 +127,30 @@ export default class SourceManager {
                 }
             }
             if (isAvailable) {
-                available.push(pos);
+                return pos
             }
         }
-        return available;
+        return null
     }
 
-    public getAvailableAuxHarvesterPositions(): RoomPosition[] {
-        if (this.source.energy === 0) {
-            return []
+    @profile
+    public getNextAvailableAuxHarvestPosition(): RoomPosition | null {
+        if (this.source.energy === 0 || hasEnoughWorkParts(this.allHarvesters)) {
+            return null
         }
 
         const harvesters = this.harvesters
-        const available: RoomPosition[] = [];
-        for (const pos of this.positions) {
+
+        for (const pos of this.getPositions()) {
             let isAvailable = true;
             for (const harvester of harvesters) {
                 if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
                     isAvailable = false;
-                    break;
+                    break
                 }
+            }
+            if (!isAvailable) {
+                continue
             }
             for (const task of this.getAuxTasks()) {
                 if (pos.isEqualTo(task.pos.x, task.pos.y)) {
@@ -173,9 +159,24 @@ export default class SourceManager {
                 }
             }
             if (isAvailable) {
-                available.push(pos);
+                if (!pos.inRangeTo(this.source.pos, 1)) {
+                    Logger.error(
+                        `source-manager:getNextAvailableAuxHarvesterPosition:failed`,
+                        `position ${pos} is not in range of source ${this.id}`, this.getPositions())
+                    return null
+                }
+                return pos
             }
         }
-        return available;
+        return null;
     }
 }
+
+function totalWorkCount(creeps: Creep[]): number {
+    return creeps.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
+}
+
+function hasEnoughWorkParts(creeps: Creep[]): boolean {
+    return totalWorkCount(creeps) >= MAX_WORK_PARTS
+}
+1
