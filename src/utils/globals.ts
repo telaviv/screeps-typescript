@@ -50,6 +50,11 @@ function declareWar(endRoom: string, warRoom: string) {
     warDepartment.declareWar(endRoom)
 }
 
+function cancelWar(warRoom: string) {
+    const warDepartment = new WarDepartment(Game.rooms[warRoom])
+    warDepartment.cancelWar()
+}
+
 function pauseConstruction(room: string) {
     Game.rooms[room].memory.construction.paused = true
 }
@@ -80,6 +85,7 @@ export default function assignGlobals() {
     global.assignGlobals = assignGlobals
     global.sendWrecker = sendWrecker
     global.declareWar = declareWar
+    global.cancelWar = cancelWar
     global.pauseConstruction = pauseConstruction
     global.unpauseConstruction = unpauseConstruction
     global.resetSnapshot = resetSnapshot
@@ -94,11 +100,12 @@ declare global {
             killAllCreeps: (roomName: string) => void,
             setLogLevel: (level: string) => void,
             saveSnapshot: (roomName: string) => void,
-            claimRoom: (destination: string, startRoom: string) => void,
+            claimRoom: (destination: string, startRoom: string) => void
             visualizeRoom: (roomName: string) => void,
             assignGlobals: () => void,
             sendWrecker: (endRoom: string, startRoom: string) => void,
             declareWar: (endRoom: string, warRoom: string) => void,
+            cancelWar: (warRoom: string) => void,
             pauseConstruction: (room: string) => void,
             unpauseConstruction: (room: string) => void,
             resetSnapshot: (roomName: string) => void,

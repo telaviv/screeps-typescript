@@ -6,16 +6,20 @@ declare global {
     }
 }
 
-interface WarMemory {
+export interface WarMemory {
     status: WarStatus
     target: string
+}
+
+export interface SpawnWarMemory extends WarMemory {
+    status: WarStatus.SPAWN
+    type?: 'savior'
 }
 
 export enum WarStatus {
     NONE = 'none',
     ATTACK = 'attack',
     CLAIM = 'claim',
-    MINIMAL_CLAIM = 'minimal-claim',
     SPAWN = 'spawn',
 }
 
@@ -77,7 +81,7 @@ export default class WarDepartment {
         if (this.status === WarStatus.NONE) {
             return
         }
-        if ([WarStatus.CLAIM, WarStatus.MINIMAL_CLAIM].includes(this.status)) {
+        if (this.status === WarStatus.CLAIM) {
             if (
                 this.targetRoom &&
                 this.targetRoom.controller &&
@@ -96,7 +100,11 @@ export default class WarDepartment {
         this.warMemory = { status: WarStatus.ATTACK, target }
     }
 
+    public cancelWar() {
+        this.warMemory = { status: WarStatus.NONE, target: '' }
+    }
+
     public claimRoom(target: string) {
-        this.warMemory = { status: WarStatus.MINIMAL_CLAIM, target }
+        this.warMemory = { status: WarStatus.CLAIM, target }
     }
 }

@@ -5,19 +5,17 @@ import RoleLogistics from 'roles/logistics'
 import roleMason, { MasonCreep } from 'roles/mason'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
 import roleRemoteBuild from 'roles/remote-build'
-import roleWrecker from 'roles/wrecker'
 import {
     PREFERENCE_WORKER,
     TASK_BUILDING,
     TASK_HAULING,
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
-import roleHarvester from 'roles/harvester'
-import EnergyManager from 'managers/energy-manager'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleScout from 'roles/scout'
+import { hasWeakWall } from 'utils/room'
 
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
@@ -27,7 +25,7 @@ const RESCUE_WORKER_COUNT = 3
 const CLAIMERS_COUNT = 3
 const ATTACKERS_COUNT = 2
 const REMOTE_UPGRADE_COUNT = 1
-const REMOTE_BUILD_COUNT = 2
+const REMOTE_BUILD_MINIMUM = 1
 
 export default function (spawn: StructureSpawn) {
     updateRescueStatus(spawn.room)
@@ -52,6 +50,11 @@ export default function (spawn: StructureSpawn) {
     }
 
     if (room.energyAvailable < 0.95 * spawn.room.energyCapacityAvailable) {
+        return
+    }
+
+    if (hasWeakWall(room) && masons.length < MASON_COUNT) {
+        roleMason.create(spawn)
         return
     }
 
@@ -113,6 +116,8 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         return null
     }
 
+    const sourcesManager = new SourcesManager(warDepartment.targetRoom!)
+
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
         return roleAttacker.create(spawn, warDepartment.target)
     }
@@ -121,18 +126,24 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         return null
     }
 
-    if ([WarStatus.CLAIM, WarStatus.MINIMAL_CLAIM].includes(status)) {
+    if (status === WarStatus.CLAIM) {
         if (warDepartment.hasInvaderCore()) {
             return roleAttacker.create(spawn, warDepartment.target)
         } else if (claimers.length < CLAIMERS_COUNT) {
-            if (warDepartment.targetRoom!.controller!.upgradeBlocked < 20) {
+            if (claimers.length === 0) {
+                return roleClaimer.create(spawn, warDepartment.target)
+            } else if (warDepartment.targetRoom!.controller!.upgradeBlocked < 20) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }
         }
     } else if (status === WarStatus.SPAWN) {
         if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
             return roleRemoteUpgrade.create(spawn, warDepartment.target)
-        } else if (remoteBuilders.length < REMOTE_BUILD_COUNT) {
+        } else if (remoteBuilders.length < REMOTE_BUILD_MINIMUM) {
+            return roleRemoteBuild.create(spawn, warDepartment.target)
+        } else if (!sourcesManager.hasAllContainerHarvesters()) {
+            return sourcesManager.createHarvester(spawn)
+        } else {
             return roleRemoteBuild.create(spawn, warDepartment.target)
         }
     }
@@ -143,7 +154,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
     const roomMemory = room.memory
     const sourcesManager = new SourcesManager(room)
-    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
+    const sourceCount = Object.keys(roomMemory.stationaryPoints!.sources).length
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
@@ -156,7 +167,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
 
 function updateRescueStatus(room: Room) {
     const roomMemory = room.memory
-    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
+    const sourceCount = Object.keys(roomMemory.stationaryPoints!.sources).length
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
     const haulerCount = haulers.length + workers.length
