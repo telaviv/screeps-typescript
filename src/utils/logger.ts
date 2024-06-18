@@ -1,6 +1,5 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
 
-
 const LOG_LEVELS = ['error', 'warning', 'info', 'debug']
 
 declare global {
@@ -8,7 +7,6 @@ declare global {
         logLevel: string
     }
 }
-
 
 export function error(...args: any[]) {
     logForLevel('error', 'red', ...args)

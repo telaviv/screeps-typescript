@@ -74,7 +74,7 @@ export default class ErrorMapper {
     public static wrap(fn: (...args: any) => void): (...args: any) => void {
         return (...args: any) => {
             try {
-                fn.apply(this, args);
+                fn.apply(this, args)
             } catch (e) {
                 if (e instanceof Error) {
                     if ('sim' in Game.rooms) {
@@ -110,5 +110,3 @@ export const trace = (
         ErrorMapper.wrap(originalMethod.bind(this))(...args)
     }
 }
-
-

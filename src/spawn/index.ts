@@ -1,7 +1,6 @@
 import { StrategyPhase } from 'strategy'
 import RCL_2 from './strategy/rcl-2'
 
-
 type SpawnRunner = (spawn: StructureSpawn) => void
 
 const SPAWN_STRATEGIES: { [k: string]: SpawnRunner } = {

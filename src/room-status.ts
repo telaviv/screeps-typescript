@@ -61,8 +61,8 @@ export const run = wrap(() => {
     const roomToRecord = Object.values(Game.rooms).find(
         (room) =>
             !room.memory.scout ||
-            room.memory.scout &&
-            room.memory.scout.timestamp + SCOUT_TTL < Game.time
+            (room.memory.scout &&
+                room.memory.scout.timestamp + SCOUT_TTL < Game.time),
     )
 
     // we only record 1 room per tick to prevent a thundering herd situation
@@ -71,11 +71,12 @@ export const run = wrap(() => {
     }
 }, 'room-status:scout')
 
-
 export function recordStatus(room: Room) {
-    if (room.memory.scout &&
+    if (
+        room.memory.scout &&
         room.memory.scout.timestamp + SCOUT_TTL < Game.time &&
-        room.memory.scout.version === VERSION) {
+        room.memory.scout.version === VERSION
+    ) {
         return
     }
     const controllerStatus = room.controller

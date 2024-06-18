@@ -32,11 +32,11 @@ function drawStorage(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawLink(visual: RoomVisual, pos: RoomPosition): void {
-    visual.text('♦️', pos.x, pos.y + .25, { color: 'yellow', font: 0.95 })
+    visual.text('♦️', pos.x, pos.y + 0.25, { color: 'yellow', font: 0.95 })
 }
 
 function drawSpawn(visual: RoomVisual, pos: RoomPosition): void {
-    visual.text('🏭', pos.x, pos.y + .25, { color: 'green', font: 0.95 })
+    visual.text('🏭', pos.x, pos.y + 0.25, { color: 'green', font: 0.95 })
 }
 
 function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
@@ -44,12 +44,13 @@ function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawExtension(visual: RoomVisual, pos: RoomPosition): void {
-    { }
+    {
+    }
     visual.circle(pos, { fill: 'yellow', radius: 0.45 })
 }
 
 function drawRoad(visual: RoomVisual, pos: RoomPosition): void {
-    visual.text('🧱', pos.x, pos.y + .25, { color: 'red', font: 0.95 })
+    visual.text('🧱', pos.x, pos.y + 0.25, { color: 'red', font: 0.95 })
 }
 
 function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
@@ -57,7 +58,10 @@ function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
     return filter(structures, { structureType }).length > 0
 }
 
-function hasConstructionSiteAt(structureType: BuildableStructureConstant, pos: RoomPosition) {
+function hasConstructionSiteAt(
+    structureType: BuildableStructureConstant,
+    pos: RoomPosition,
+) {
     const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES)
     return filter(sites, { structureType }).length > 0
 }
@@ -83,21 +87,36 @@ export default class RoomVisualizer {
         if (!this.room.memory.constructionFeatures) {
             return
         }
-        for (const [structureType, positions] of Object.entries(this.room.memory.constructionFeatures)) {
+        for (const [structureType, positions] of Object.entries(
+            this.room.memory.constructionFeatures,
+        )) {
             if (structureType === STRUCTURE_ROAD && !roads) {
                 continue
             }
             for (const pos of positions) {
                 const roomPos = new RoomPosition(pos.x, pos.y, this.room.name)
-                if (hasStructureAt(structureType as BuildableStructureConstant, roomPos) ||
-                    hasConstructionSiteAt(structureType as BuildableStructureConstant, roomPos)) {
+                if (
+                    hasStructureAt(
+                        structureType as BuildableStructureConstant,
+                        roomPos,
+                    ) ||
+                    hasConstructionSiteAt(
+                        structureType as BuildableStructureConstant,
+                        roomPos,
+                    )
+                ) {
                     continue
                 }
-                const drawFunction = STRUCTURE_VISUALS.get(structureType as BuildableStructureConstant)
+                const drawFunction = STRUCTURE_VISUALS.get(
+                    structureType as BuildableStructureConstant,
+                )
                 if (drawFunction) {
                     drawFunction(this.room.visual, roomPos)
                 } else {
-                    Logger.warning('room-visualizer:render:missing', structureType)
+                    Logger.warning(
+                        'room-visualizer:render:missing',
+                        structureType,
+                    )
                 }
             }
         }

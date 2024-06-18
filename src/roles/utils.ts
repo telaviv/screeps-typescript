@@ -1,4 +1,4 @@
-import { ResourceCreep } from "tasks/types";
+import { ResourceCreep } from 'tasks/types'
 import * as Logger from 'utils/logger'
 
 export function getHome(creep: ResourceCreep): Room | null {

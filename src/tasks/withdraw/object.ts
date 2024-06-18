@@ -60,7 +60,7 @@ export class WithdrawObject {
     ): number {
         return Math.max(
             getUsedCapacity(this.withdrawable, resource) -
-            this.sumOfWithdraws(resource),
+                this.sumOfWithdraws(resource),
             0,
         )
     }
@@ -72,7 +72,8 @@ export class WithdrawObject {
         const creepCapacity = creep.store.getFreeCapacity(resource)
         if (creepCapacity <= 0) {
             throw new Error(
-                `creep ${creep.name
+                `creep ${
+                    creep.name
                 } was trying to make request: ${JSON.stringify(creep)}`,
             )
         }

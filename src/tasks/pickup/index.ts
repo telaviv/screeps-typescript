@@ -8,7 +8,6 @@ import { ResourceCreep } from '../types'
 import { findClosestByRange } from 'utils/room-position'
 import { wrap } from 'utils/profiling'
 
-
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
@@ -27,15 +26,21 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const home = Game.rooms[creep.memory.home]!
     let resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
     if (creep.memory.home !== creep.room.name) {
-        resources = resources.concat(getDroppedResources(creep.room, capacity, RESOURCE_ENERGY))
+        resources = resources.concat(
+            getDroppedResources(creep.room, capacity, RESOURCE_ENERGY),
+        )
     }
     if (resources.length > 0) {
         const resource = findClosestByRange(creep.pos, resources) as Resource
         if (resource) {
-            addPickupTask(creep, resource!)
+            addPickupTask(creep, resource)
             return true
         } else {
-            Logger.error('task:pickup::makeRequest:failure:no-resource', creep.name, resources)
+            Logger.error(
+                'task:pickup::makeRequest:failure:no-resource',
+                creep.name,
+                resources,
+            )
             return false
         }
     }

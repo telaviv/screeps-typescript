@@ -4,12 +4,31 @@
 import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
 import maxBy from 'lodash/maxBy'
 
-import { includes, times, range, random, sortBy, reverse, uniqBy, flatten } from 'lodash'
+import {
+    flatten,
+    includes,
+    random,
+    range,
+    reverse,
+    sortBy,
+    times,
+    uniqBy,
+} from 'lodash'
 import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
-import { FlatRoomPosition, Position } from 'types'
-import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
-import { Obstacle, NonObstacle, isObstacle } from 'types'
+import {
+    FlatRoomPosition,
+    NonObstacle,
+    Obstacle,
+    Position,
+    isObstacle,
+} from 'types'
+import {
+    EXTENSION_COUNTS,
+    SPAWN_COUNTS,
+    TOWER_COUNTS,
+    getSources,
+} from './room'
 
 interface NonObstacles {
     road: boolean
@@ -45,7 +64,8 @@ const ImmutableRoomItemRecord = Record({
 
 export class ImmutableRoomItem
     extends ImmutableRoomItemRecord
-    implements IImmutableRoomItem {
+    implements IImmutableRoomItem
+{
     public readonly x!: number
     public readonly y!: number
     public readonly terrain!: number
@@ -58,19 +78,16 @@ export class ImmutableRoomItem
     }
 
     public isAtEdge(): boolean {
-        return (
-            this.x === 0 ||
-            this.x === 49 ||
-            this.y === 0 ||
-            this.y === 49
-        )
+        return this.x === 0 || this.x === 49 || this.y === 0 || this.y === 49
     }
 
     public isNearEdge(): boolean {
-        return this.isBetween(this.x, 0, 2) ||
+        return (
+            this.isBetween(this.x, 0, 2) ||
             this.isBetween(this.y, 0, 2) ||
             this.isBetween(this.x, 47, 49) ||
             this.isBetween(this.y, 47, 49)
+        )
     }
 
     private isBetween(num: number, a: number, b: number): boolean {
@@ -78,7 +95,11 @@ export class ImmutableRoomItem
     }
 
     public canBuild(): boolean {
-        return !(this.isObstacle() || this.isNearEdge() || this.nonObstacles.constructionSite)
+        return !(
+            this.isObstacle() ||
+            this.isNearEdge() ||
+            this.nonObstacles.constructionSite
+        )
     }
 
     public terrainString(): string {
@@ -398,7 +419,11 @@ export class ImmutableRoom implements ValueObject {
             if (this.canPlaceStorage(roomItem)) {
                 return { x: roomItem.x, y: roomItem.y, roomName: this.name }
             } else {
-                Logger.error('immutable-room:nextStoragePos:cannot-place-storage', roomItem.x, roomItem.y)
+                Logger.error(
+                    'immutable-room:nextStoragePos:cannot-place-storage',
+                    roomItem.x,
+                    roomItem.y,
+                )
             }
         }
         throw new Error(`No eligible storage spot. ${this.name}`)
@@ -438,7 +463,11 @@ export class ImmutableRoom implements ValueObject {
             return link
         }
         if (neighbors.length === 0) {
-            Logger.error('immutable-room:controllerLinkPos:no-neighbors', pos.x, pos.y)
+            Logger.error(
+                'immutable-room:controllerLinkPos:no-neighbors',
+                pos.x,
+                pos.y,
+            )
             throw new Error('No neighbors found.')
         }
         const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
@@ -509,35 +538,46 @@ export class ImmutableRoom implements ValueObject {
      *  it's sorted by the number of neighbors each source has from least to most.
      */
     private getSourceContainerInfo(): {
-        source: ImmutableRoomItem,
-        container: ImmutableRoomItem | null,
+        source: ImmutableRoomItem
+        container: ImmutableRoomItem | null
         neighbors: ImmutableRoomItem[]
     }[] {
         const sources = this.getObstacles('source')
-        const neighborPairs: [ImmutableRoomItem, ImmutableRoomItem[]][] = sortBy(sources.map(
-            (source) => [
-                source,
-                this.getClosestNeighbors(source.x, source.y).filter((ri) => !ri.isObstacle()),
-            ]
-        ), ([_, neighbors]) => neighbors.length)
+        const neighborPairs: [ImmutableRoomItem, ImmutableRoomItem[]][] =
+            sortBy(
+                sources.map((source) => [
+                    source,
+                    this.getClosestNeighbors(source.x, source.y).filter(
+                        (ri) => !ri.isObstacle(),
+                    ),
+                ]),
+                ([_, neighbors]) => neighbors.length,
+            )
         const usedPositions = new Set<ImmutableRoomItem>()
         const sourceContainerInfo: {
-            source: ImmutableRoomItem,
-            container: ImmutableRoomItem | null,
-            neighbors: ImmutableRoomItem[],
+            source: ImmutableRoomItem
+            container: ImmutableRoomItem | null
+            neighbors: ImmutableRoomItem[]
         }[] = []
         for (const [source, neighbors] of neighborPairs) {
             if (neighbors.length === 0) {
-                Logger.error('immutable-room:getSourceContainerPairs:source-without-neighbors', source)
+                Logger.error(
+                    'immutable-room:getSourceContainerPairs:source-without-neighbors',
+                    source,
+                )
                 return []
             }
-            const containers = neighbors.filter((ri) => ri.nonObstacles.container && !usedPositions.has(ri))
-            const nonContainers = neighbors.filter((ri) => !ri.nonObstacles.container)
+            const containers = neighbors.filter(
+                (ri) => ri.nonObstacles.container && !usedPositions.has(ri),
+            )
+            const nonContainers = neighbors.filter(
+                (ri) => !ri.nonObstacles.container,
+            )
             if (containers.length === 0) {
                 sourceContainerInfo.push({
                     source,
                     container: null,
-                    neighbors: nonContainers
+                    neighbors: nonContainers,
                 })
             } else {
                 const container = containers[0]
@@ -558,14 +598,24 @@ export class ImmutableRoom implements ValueObject {
         const usedPositions = new Set<ImmutableRoomItem>()
         for (const { source, container, neighbors } of info) {
             if (container === null) {
-                const available = neighbors.filter((ri) => !usedPositions.has(ri))
+                const available = neighbors.filter(
+                    (ri) => !usedPositions.has(ri),
+                )
                 if (available.length === 0) {
-                    Logger.error('immutable-room:setSourceContainers:no-available-positions', source)
+                    Logger.error(
+                        'immutable-room:setSourceContainers:no-available-positions',
+                        source,
+                    )
                     return iroom
                 }
                 const ncontainer = this.sortByCentroidDistance(available)[0]
                 usedPositions.add(ncontainer)
-                iroom = iroom.setNonObstacle(ncontainer.x, ncontainer.y, 'container', true)
+                iroom = iroom.setNonObstacle(
+                    ncontainer.x,
+                    ncontainer.y,
+                    'container',
+                    true,
+                )
             }
         }
         return iroom
@@ -573,23 +623,36 @@ export class ImmutableRoom implements ValueObject {
 
     public getMappedSourceContainers(): { [key in Id<Source>]: Position } {
         const info = this.getSourceContainerInfo()
-        const sources = getSources(Game.rooms[this.name]);
-        const map: { [key in Id<Source>]: Position } = {} as { [key in Id<Source>]: Position }
+        const sources = getSources(Game.rooms[this.name])
+        const map: { [key in Id<Source>]: Position } = {} as {
+            [key in Id<Source>]: Position
+        }
         for (const { source, container } of info) {
             if (container === null) {
-                Logger.error('immutable-room:getMappedSourceContainers:no-container', source)
+                Logger.error(
+                    'immutable-room:getMappedSourceContainers:no-container',
+                    source,
+                )
                 continue
             }
-            const sourceId = sources.find((s) => s.pos.x === source.x && s.pos.y === source.y)!.id
+            const sourceId = sources.find(
+                (s) => s.pos.x === source.x && s.pos.y === source.y,
+            )!.id
             map[sourceId] = container
         }
         if (Object.keys(map).length !== sources.length) {
-            Logger.error('immutable-room:getMappedSourceContainers:source-mismatch', map, sources)
+            Logger.error(
+                'immutable-room:getMappedSourceContainers:source-mismatch',
+                map,
+                sources,
+            )
         }
         return map
     }
 
-    private sortByCentroidDistance(roomItems: ImmutableRoomItem[]): ImmutableRoomItem[] {
+    private sortByCentroidDistance(
+        roomItems: ImmutableRoomItem[],
+    ): ImmutableRoomItem[] {
         const centroid = this.findCentroid()
         return sortBy(roomItems, (ri) => ri.distanceTo(centroid))
     }
@@ -605,19 +668,31 @@ export class ImmutableRoom implements ValueObject {
             if (links.length > 0) {
                 continue
             }
-            const available = neighbors.filter((ri) => !ri.isObstacle() && !ri.nonObstacles.container)
+            const available = neighbors.filter(
+                (ri) => !ri.isObstacle() && !ri.nonObstacles.container,
+            )
             const containerCountMap = available.map((ri) => {
                 const neighbors = this.getClosestNeighbors(ri.x, ri.y)
-                const containers = neighbors.filter((ri) => ri.nonObstacles.container)
+                const containers = neighbors.filter(
+                    (ri) => ri.nonObstacles.container,
+                )
                 return { container: ri, count: containers.length }
             })
             const sorted = sortBy(containerCountMap, ({ count }) => count)
             const maxCount = sorted[sorted.length - 1].count
-            const maxCountContainers = sorted.filter(({ count }) => count === maxCount)
-            const pos = this.sortByCentroidDistance(maxCountContainers.map(({ container }) => container))[0]
-            return this.setObstacle(pos.x, pos.y, 'link').setSourceContainerLinks()
+            const maxCountContainers = sorted.filter(
+                ({ count }) => count === maxCount,
+            )
+            const pos = this.sortByCentroidDistance(
+                maxCountContainers.map(({ container }) => container),
+            )[0]
+            return this.setObstacle(
+                pos.x,
+                pos.y,
+                'link',
+            ).setSourceContainerLinks()
         }
-        return this;
+        return this
     }
 
     public setControllerLink(): ImmutableRoom {
@@ -730,9 +805,9 @@ export class ImmutableRoom implements ValueObject {
     }
 
     public sortedContainerPositions(): Position[] {
-        return this.sortByCentroidDistance(this.getNonObstacles('container')).map(
-            (ri) => ({ x: ri.x, y: ri.y }),
-        )
+        return this.sortByCentroidDistance(
+            this.getNonObstacles('container'),
+        ).map((ri) => ({ x: ri.x, y: ri.y }))
     }
 
     public sortedTowerPositions(): Position[] {
@@ -743,37 +818,50 @@ export class ImmutableRoom implements ValueObject {
 
     public sortedLinkPositions(): Position[] {
         const containerInfo = this.getSourceContainerInfo()
-        const sourceContainers = reverse(this.sortByCentroidDistance(
-            containerInfo.map(({ container }) => container).filter((ri) => ri !== null) as ImmutableRoomItem[]
-        ))
-        const sourceContainerLinks = ImmutableRoomItem.unique(flatten(sourceContainers.map((ri) => {
-            const neighbors = this.getClosestNeighbors(ri.x, ri.y)
-            return neighbors.filter((ri) => ri.obstacle === 'link')
-        })))
+        const sourceContainers = reverse(
+            this.sortByCentroidDistance(
+                containerInfo
+                    .map(({ container }) => container)
+                    .filter((ri) => ri !== null) as ImmutableRoomItem[],
+            ),
+        )
+        const sourceContainerLinks = ImmutableRoomItem.unique(
+            flatten(
+                sourceContainers.map((ri) => {
+                    const neighbors = this.getClosestNeighbors(ri.x, ri.y)
+                    return neighbors.filter((ri) => ri.obstacle === 'link')
+                }),
+            ),
+        )
         const controllerLink = this.controllerLinkPos()
         const storageLink = this.getStorageLink()
         const links = uniqBy(
-            [sourceContainerLinks[0], controllerLink, storageLink, ...sourceContainerLinks.slice(1)],
+            [
+                sourceContainerLinks[0],
+                controllerLink,
+                storageLink,
+                ...sourceContainerLinks.slice(1),
+            ],
             (ri) => `${ri.x},${ri.y}`,
         )
 
         const possibleLinks = this.getObstacles('link')
         if (possibleLinks.length != links.length) {
-            Logger.error('immutable-room:sortedLinkPositions:link-mismatch',
+            Logger.error(
+                'immutable-room:sortedLinkPositions:link-mismatch',
                 possibleLinks.map((ri) => `(${ri.x}, ${ri.y})`),
                 links.map((ri) => `(${ri.x}, ${ri.y})`),
                 this.get(39, 10),
             )
             return []
         }
-        return links.map((ri) => ({ x: ri.x, y: ri.y }));
+        return links.map((ri) => ({ x: ri.x, y: ri.y }))
     }
 
     public isGoodRoadPosition(x: number, y: number): boolean {
         const ipos = this.get(x, y)
         return !ipos.isObstacle() && !ipos.nonObstacles.road
     }
-
 }
 
 interface RoomCache {
@@ -784,106 +872,98 @@ interface TimeCache {
 }
 let cache: TimeCache = {}
 
-export const fromRoomUncached = wrap(
-    (room: Room): ImmutableRoom => {
-        let immutableRoom = new ImmutableRoom(room.name)
-        const terrain = room.getTerrain()
-        for (let x = 0; x < 50; ++x) {
-            for (let y = 0; y < 50; ++y) {
-                const terrainItem = terrain.get(x, y)
-                if (terrainItem !== 0) {
-                    immutableRoom = immutableRoom.setTerrain(x, y, terrainItem)
-                }
+export const fromRoomUncached = wrap((room: Room): ImmutableRoom => {
+    let immutableRoom = new ImmutableRoom(room.name)
+    const terrain = room.getTerrain()
+    for (let x = 0; x < 50; ++x) {
+        for (let y = 0; y < 50; ++y) {
+            const terrainItem = terrain.get(x, y)
+            if (terrainItem !== 0) {
+                immutableRoom = immutableRoom.setTerrain(x, y, terrainItem)
             }
         }
+    }
 
-        interface StructureMap {
-            [index: string]: Obstacle
-        }
+    interface StructureMap {
+        [index: string]: Obstacle
+    }
 
-        const STRUCTURE_INFO: StructureMap = {
-            [STRUCTURE_LINK]: 'link',
-            [STRUCTURE_STORAGE]: 'storage',
-            [STRUCTURE_EXTENSION]: 'extension',
-            [STRUCTURE_SPAWN]: 'spawn',
-            [STRUCTURE_TOWER]: 'tower',
-            [STRUCTURE_WALL]: 'constructedWall',
-        }
+    const STRUCTURE_INFO: StructureMap = {
+        [STRUCTURE_LINK]: 'link',
+        [STRUCTURE_STORAGE]: 'storage',
+        [STRUCTURE_EXTENSION]: 'extension',
+        [STRUCTURE_SPAWN]: 'spawn',
+        [STRUCTURE_TOWER]: 'tower',
+        [STRUCTURE_WALL]: 'constructedWall',
+    }
 
-        const controller = room.controller
-        const structures = room.find(FIND_STRUCTURES)
-        const sources = room.find(FIND_SOURCES)
-        const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
+    const controller = room.controller
+    const structures = room.find(FIND_STRUCTURES)
+    const sources = room.find(FIND_SOURCES)
+    const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
 
-        if (controller) {
+    if (controller) {
+        immutableRoom = immutableRoom.setObstacle(
+            controller.pos.x,
+            controller.pos.y,
+            'controller',
+        )
+    }
+
+    for (const structure of structures) {
+        if (includes(Object.keys(STRUCTURE_INFO), structure.structureType)) {
+            const pos = structure.pos
             immutableRoom = immutableRoom.setObstacle(
-                controller.pos.x,
-                controller.pos.y,
-                'controller',
+                pos.x,
+                pos.y,
+                STRUCTURE_INFO[structure.structureType],
+            )
+        } else if (structure.structureType === STRUCTURE_ROAD) {
+            const pos = structure.pos
+            immutableRoom = immutableRoom.setRoad(pos.x, pos.y, true)
+        }
+    }
+
+    for (const source of sources) {
+        const pos = source.pos
+        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
+    }
+
+    for (const constructionSite of constructionSites) {
+        const pos = constructionSite.pos
+        if (isObstacle(constructionSite.structureType)) {
+            immutableRoom = immutableRoom.setObstacle(
+                pos.x,
+                pos.y,
+                constructionSite.structureType,
+            )
+        } else {
+            immutableRoom = immutableRoom.setNonObstacle(
+                pos.x,
+                pos.y,
+                constructionSite.structureType as NonObstacle,
+                true,
             )
         }
+    }
 
-        for (const structure of structures) {
-            if (
-                includes(Object.keys(STRUCTURE_INFO), structure.structureType)
-            ) {
-                const pos = structure.pos
-                immutableRoom = immutableRoom.setObstacle(
-                    pos.x,
-                    pos.y,
-                    STRUCTURE_INFO[structure.structureType],
-                )
-            } else if (structure.structureType === STRUCTURE_ROAD) {
-                const pos = structure.pos
-                immutableRoom = immutableRoom.setRoad(pos.x, pos.y, true)
-            }
+    updateCache(room, immutableRoom)
+
+    return immutableRoom
+}, 'immutable-room:fromRoomUncached')
+
+export const fromRoom = wrap((room: Room): ImmutableRoom => {
+    if (cache.hasOwnProperty(Game.time)) {
+        const timeCache = cache[Game.time]
+        if (timeCache.hasOwnProperty(room.name)) {
+            return timeCache[room.name]
         }
-
-        for (const source of sources) {
-            const pos = source.pos
-            immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
-        }
-
-        for (const constructionSite of constructionSites) {
-            const pos = constructionSite.pos
-            if (isObstacle(constructionSite.structureType)) {
-                immutableRoom = immutableRoom.setObstacle(
-                    pos.x,
-                    pos.y,
-                    constructionSite.structureType,
-                )
-            } else {
-                immutableRoom = immutableRoom.setNonObstacle(
-                    pos.x,
-                    pos.y,
-                    constructionSite.structureType as NonObstacle,
-                    true
-                )
-            }
-        }
-
-        updateCache(room, immutableRoom)
-
-        return immutableRoom
-    },
-    'immutable-room:fromRoomUncached',
-)
-
-export const fromRoom = wrap(
-    (room: Room): ImmutableRoom => {
-        if (cache.hasOwnProperty(Game.time)) {
-            const timeCache = cache[Game.time]
-            if (timeCache.hasOwnProperty(room.name)) {
-                return timeCache[room.name]
-            }
-        } else if (!cache.hasOwnProperty(Game.time)) {
-            cache = {}
-            cache[Game.time] = {} as RoomCache
-        }
-        return fromRoomUncached(room)
-    },
-    'immutable-room:fromRoom'
-)
+    } else if (!cache.hasOwnProperty(Game.time)) {
+        cache = {}
+        cache[Game.time] = {} as RoomCache
+    }
+    return fromRoomUncached(room)
+}, 'immutable-room:fromRoom')
 
 export function updateCache(room: Room, immutableRoom: ImmutableRoom) {
     cache[Game.time][room.name] = immutableRoom

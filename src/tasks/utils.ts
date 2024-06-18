@@ -1,5 +1,5 @@
-import autoIncrement from "utils/autoincrement";
-import { Task, isResourceCreep } from "./types";
+import autoIncrement from 'utils/autoincrement'
+import { Task, isResourceCreep } from './types'
 
 export function* getAllTasks() {
     for (const creep of Object.values(Game.creeps)) {
@@ -32,5 +32,3 @@ export function findTaskByType<T>(type: T): Task<T> | undefined {
     }
     return undefined
 }
-
-

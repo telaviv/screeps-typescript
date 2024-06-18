@@ -21,4 +21,3 @@ function deleteAllTasks() {
 }
 
 global.deleteAllTasks = deleteAllTasks
-

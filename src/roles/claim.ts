@@ -56,7 +56,7 @@ const roleClaimer = {
     canCreate(spawn: StructureSpawn): boolean {
         const energyAvailable = spawn.room.energyAvailable
         const parts = calculateParts(energyAvailable)
-        return parts !== null;
+        return parts !== null
     },
 
     create(spawn: StructureSpawn, roomName: string, minimal = false): number {

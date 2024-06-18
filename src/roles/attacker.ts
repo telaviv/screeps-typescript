@@ -40,12 +40,17 @@ const roleAttacker = {
         const targets = [...structures, ...hostiles]
 
         if (targets.length > 0) {
-            const target = targets[0];
+            const target = targets[0]
             const err = creep.attack(target)
             if (err === ERR_NOT_IN_RANGE) {
                 const err = moveTo(target.pos, creep, { range: 1 })
                 if (err !== OK) {
-                    Logger.error('attacker:moveTo:target:failed', creep.name, JSON.stringify(target.pos), err)
+                    Logger.error(
+                        'attacker:moveTo:target:failed',
+                        creep.name,
+                        JSON.stringify(target.pos),
+                        err,
+                    )
                 }
             } else if (err !== OK) {
                 Logger.error('attacker:attack:failed', creep.name, err)

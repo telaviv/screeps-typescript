@@ -1,10 +1,14 @@
 import { getSpawns } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { filter } from 'lodash'
-import { LogisticsPreference, LogisticsCreep } from 'roles/logistics-constants'
+import {
+    LogisticsCreep,
+    LogisticsPreference,
+    isLogisticsCreep,
+} from 'roles/logistics-constants'
 import { Harvester, HarvesterCreep } from 'roles/harvester'
 import { ResourceCreep, isResourceCreep } from '../tasks/types'
-import { isLogisticsCreep } from '../roles/logistics-constants'
+
 import { wrap } from './profiling'
 import { time } from 'console'
 
@@ -24,21 +28,36 @@ export function calculateBodyCost(parts: BodyPartConstant[]): number {
     return sum
 }
 
-type MoveToReturnCode = CreepMoveReturnCode | ERR_NOT_FOUND | ERR_INVALID_ARGS | ERR_NO_PATH | ERR_INVALID_TARGET
+type MoveToReturnCode =
+    | CreepMoveReturnCode
+    | ERR_NOT_FOUND
+    | ERR_INVALID_ARGS
+    | ERR_NO_PATH
+    | ERR_INVALID_TARGET
 
-export const moveTo = wrap((pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): MoveToReturnCode => {
-    const original = pos
-    let err: MoveToReturnCode = creep.moveTo(pos, {
-        ...opts,
-        visualizePathStyle: { stroke: '#ffaa00' },
-    })
-    if (err === ERR_NO_PATH) {
-        Logger.warning('moveTo:noPath', creep.name, original, pos)
-        const path = PathFinder.search(original, pos, { maxRooms: 6, swampCost: 1 }).path
-        return creep.moveByPath(path)
-    }
-    return err
-}, 'creep:moveTo')
+export const moveTo = wrap(
+    (
+        pos: RoomPosition,
+        creep: Creep,
+        opts: MoveToOpts = {},
+    ): MoveToReturnCode => {
+        const original = pos
+        const err: MoveToReturnCode = creep.moveTo(pos, {
+            ...opts,
+            visualizePathStyle: { stroke: '#ffaa00' },
+        })
+        if (err === ERR_NO_PATH) {
+            Logger.warning('moveTo:noPath', creep.name, original, pos)
+            const path = PathFinder.search(original, pos, {
+                maxRooms: 6,
+                swampCost: 1,
+            }).path
+            return creep.moveByPath(path)
+        }
+        return err
+    },
+    'creep:moveTo',
+)
 
 export function moveToRoom(roomName: string, creep: Creep) {
     creep.moveTo(new RoomPosition(25, 25, roomName), {
@@ -100,7 +119,7 @@ export function getHarvesters(room: Room): Harvester[] {
             ((creep.memory.home && creep.memory.home === room.name) ||
                 creep.room.name === room.name)
         )
-    }) as Harvester[];
+    }) as Harvester[]
 }
 
 const harvesterCache: { [time: number]: Harvester[] } = {}
@@ -117,16 +136,23 @@ export const getAllHarvesters = wrap((): Harvester[] => {
 }, 'creep:getAllHarvesters')
 
 export function getLogisticsCreeps(options: {
-    room: Room,
-    preference?: LogisticsPreference,
+    room: Room
+    preference?: LogisticsPreference
     taskType?: string
 }): LogisticsCreep[] {
     const check = (creep: LogisticsCreep): boolean => {
-        if (options.preference && creep.memory.preference !== options.preference) {
+        if (
+            options.preference &&
+            creep.memory.preference !== options.preference
+        ) {
             return false
         }
         if (options.taskType) {
-            if (!creep.memory.tasks.some((task) => task.type === options.taskType)) {
+            if (
+                !creep.memory.tasks.some(
+                    (task) => task.type === options.taskType,
+                )
+            ) {
                 return false
             }
         }
@@ -134,4 +160,3 @@ export function getLogisticsCreeps(options: {
     }
     return Object.values(Game.creeps).filter(isLogisticsCreep).filter(check)
 }
-

@@ -20,7 +20,7 @@ function killAllCreeps(roomName: string) {
 function claimRoom(destination: string, startRoom: string) {
     const room = Game.rooms[startRoom]
     if (!room) {
-        throw Error(`Couldn't find room ${startRoom}`);
+        throw Error(`Couldn't find room ${startRoom}`)
     }
     const roomManager = new RoomManager(Game.rooms[startRoom])
     roomManager.addClaimRoomTask(destination)
@@ -93,24 +93,23 @@ export default function assignGlobals() {
     global.sendScout = sendScout
 }
 
-
 declare global {
     namespace NodeJS {
         interface Global {
-            killAllCreeps: (roomName: string) => void,
-            setLogLevel: (level: string) => void,
-            saveSnapshot: (roomName: string) => void,
+            killAllCreeps: (roomName: string) => void
+            setLogLevel: (level: string) => void
+            saveSnapshot: (roomName: string) => void
             claimRoom: (destination: string, startRoom: string) => void
-            visualizeRoom: (roomName: string) => void,
-            assignGlobals: () => void,
-            sendWrecker: (endRoom: string, startRoom: string) => void,
-            declareWar: (endRoom: string, warRoom: string) => void,
-            cancelWar: (warRoom: string) => void,
-            pauseConstruction: (room: string) => void,
-            unpauseConstruction: (room: string) => void,
-            resetSnapshot: (roomName: string) => void,
-            printTasks: (type?: Task<any>) => void,
-            sendScout: (destination: string, startRoom: string) => void,
+            visualizeRoom: (roomName: string) => void
+            assignGlobals: () => void
+            sendWrecker: (endRoom: string, startRoom: string) => void
+            declareWar: (endRoom: string, warRoom: string) => void
+            cancelWar: (warRoom: string) => void
+            pauseConstruction: (room: string) => void
+            unpauseConstruction: (room: string) => void
+            resetSnapshot: (roomName: string) => void
+            printTasks: (type?: Task<any>) => void
+            sendScout: (destination: string, startRoom: string) => void
         }
     }
 }

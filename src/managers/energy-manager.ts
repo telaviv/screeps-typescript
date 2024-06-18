@@ -15,7 +15,9 @@ export default class EnergyManager {
 
     public static get(room: Room): EnergyManager {
         const sources = getSources(room)
-        const sourceManagers = sources.map((source) => SourceManager.createFromSource(source))
+        const sourceManagers = sources.map((source) =>
+            SourceManager.createFromSource(source),
+        )
         return new EnergyManager(sourceManagers)
     }
 

@@ -1,4 +1,4 @@
-import { wrap } from "utils/profiling"
+import { wrap } from 'utils/profiling'
 
 if (!Memory.stats) {
     Memory.stats = {}
@@ -56,4 +56,3 @@ declare global {
         stats: { [key: string]: number }
     }
 }
-

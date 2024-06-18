@@ -134,7 +134,6 @@ class RemoteBuildCreep {
     }
 }
 
-
 export default {
     run: wrap((creep: RemoteBuild) => {
         const remoteBuild = new RemoteBuildCreep(creep)

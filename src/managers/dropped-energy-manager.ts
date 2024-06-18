@@ -12,10 +12,16 @@ export default class DroppedEnergyManager {
         const source = Game.getObjectById(id)
         if (!source) throw new Error(`Invalid source id: ${id}`)
         const point = source.room.memory.stationaryPoints.sources[id]
-        if (!point) throw new Error(
-            `Invalid source id: ${id}. We have ${JSON.stringify(source.room.memory.stationaryPoints.sources)} in room ${source.room.name}`)
+        if (!point)
+            throw new Error(
+                `Invalid source id: ${id}. We have ${JSON.stringify(
+                    source.room.memory.stationaryPoints.sources,
+                )} in room ${source.room.name}`,
+            )
         const { x, y } = point
-        return new DroppedEnergyManager(new RoomPosition(x, y, source.room.name))
+        return new DroppedEnergyManager(
+            new RoomPosition(x, y, source.room.name),
+        )
     }
 
     public get room(): Room {

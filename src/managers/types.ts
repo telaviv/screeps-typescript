@@ -1,4 +1,4 @@
-import { FlatRoomPosition } from "types"
+import { FlatRoomPosition } from 'types'
 
 export interface DroppedEnergyMemory {
     pos: FlatRoomPosition

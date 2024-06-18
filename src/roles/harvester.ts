@@ -55,7 +55,11 @@ export class HarvesterCreep {
     }
 
     get harvestPos(): RoomPosition {
-        return new RoomPosition(this.creep.memory.pos.x, this.creep.memory.pos.y, this.creep.memory.pos.roomName)
+        return new RoomPosition(
+            this.creep.memory.pos.x,
+            this.creep.memory.pos.y,
+            this.creep.memory.pos.roomName,
+        )
     }
 
     get room(): Room {
@@ -68,8 +72,10 @@ export class HarvesterCreep {
 
     private isHarvestTick(): boolean {
         const workParts = this.creep.getActiveBodyparts(WORK)
-        return this.creep.ticksToLive! % (workParts / MAX_WORK_PARTS) === 0 ||
+        return (
+            this.creep.ticksToLive! % (workParts / MAX_WORK_PARTS) === 0 ||
             this.source.energy === 0
+        )
     }
 
     private isAtHarvestPos(): boolean {
@@ -83,7 +89,12 @@ export class HarvesterCreep {
     private moveToHarvestPos(): void {
         const err = moveTo(this.harvestPos, this.creep)
         if (err !== OK && err !== ERR_TIRED) {
-            Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.harvestPos, err)
+            Logger.error(
+                'harvester:moveToHarvestPos:failure',
+                this.creep.name,
+                this.harvestPos,
+                err,
+            )
         }
     }
 
@@ -103,9 +114,11 @@ export class HarvesterCreep {
 
     @profile
     private canTransferEnergy(): boolean {
-        if (this.creep.getActiveBodyparts(CARRY) === 0 ||
+        if (
+            this.creep.getActiveBodyparts(CARRY) === 0 ||
             !this.isFullOfEnergy() ||
-            this.isHarvestTick()) {
+            this.isHarvestTick()
+        ) {
             return false
         }
 
@@ -136,7 +149,7 @@ export class HarvesterCreep {
     @profile
     private getLink(): StructureLink | null {
         const link = this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: s => s.structureType === STRUCTURE_LINK,
+            filter: (s) => s.structureType === STRUCTURE_LINK,
         }) as StructureLink | null
         if (link === null) {
             return null
@@ -154,13 +167,21 @@ const roleHarvester = {
         harvester.run()
     }, 'harvester:run'),
 
-    create(spawn: StructureSpawn, sourceId: Id<Source>, pos: RoomPosition | null = null, rescue = false): number {
+    create(
+        spawn: StructureSpawn,
+        sourceId: Id<Source>,
+        pos: RoomPosition | null = null,
+        rescue = false,
+    ): number {
         const source = Game.getObjectById(sourceId)
         if (!source) {
             Logger.error('harvester:create:source:not-found', sourceId)
             return ERR_NOT_FOUND
         }
-        const stationaryPosition = pos === null ? source.room.memory.stationaryPoints!.sources[sourceId] : pos
+        const stationaryPosition =
+            pos === null
+                ? source.room.memory.stationaryPoints!.sources[sourceId]
+                : pos
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
@@ -171,7 +192,11 @@ const roleHarvester = {
                 home: spawn.room.name,
                 waitTime: 0,
                 tasks: [],
-                pos: { x: stationaryPosition.x, y: stationaryPosition.y, roomName: source.room.name },
+                pos: {
+                    x: stationaryPosition.x,
+                    y: stationaryPosition.y,
+                    roomName: source.room.name,
+                },
                 source: sourceId,
             } as HarvesterMemory,
         })

@@ -30,29 +30,42 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
 export function run(task: MiningTask, creep: ResourceCreep): boolean {
     const source = Game.getObjectById<Source>(task.source)!
     if (creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-        Logger.info('task:mining:complete', creep.name, JSON.stringify(task.pos))
+        Logger.info(
+            'task:mining:complete',
+            creep.name,
+            JSON.stringify(task.pos),
+        )
         completeRequest(creep)
         return true
     }
     const err = creep.harvest(source)
     if (err === ERR_NOT_IN_RANGE) {
-        const err = creep.moveTo(new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName), {
-            visualizePathStyle: { stroke: '#ffaa00' },
-        })
+        const err = creep.moveTo(
+            new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName),
+            {
+                visualizePathStyle: { stroke: '#ffaa00' },
+            },
+        )
     } else if (err !== OK) {
         Logger.warning(`task:mining:run:harvest:failed ${creep.name}: ${err}`)
     }
     return false
 }
 
-
-function addMiningTask(creep: ResourceCreep, target: { source: Id<Source>; pos: RoomPosition }): MiningTask {
+function addMiningTask(
+    creep: ResourceCreep,
+    target: { source: Id<Source>; pos: RoomPosition },
+): MiningTask {
     const task = {
         type: 'mining' as const,
         id: autoIncrement().toString(),
         creep: creep.name,
         source: target.source,
-        pos: { x: target.pos.x, y: target.pos.y, roomName: target.pos.roomName },
+        pos: {
+            x: target.pos.x,
+            y: target.pos.y,
+            roomName: target.pos.roomName,
+        },
         timestamp: Game.time,
         complete: false,
     }
@@ -75,11 +88,15 @@ export function completeRequest(creep: ResourceCreep) {
 export function cleanup(task: MiningTask, creep: ResourceCreep): boolean {
     const source = Game.getObjectById<Source>(task.source)!
     if (!source) {
-        Logger.error('task:mining:cleanup:sourceNotFound', task);
+        Logger.error('task:mining:cleanup:sourceNotFound', task)
         return true
     }
     if (source.energy === 0) {
-        Logger.info('task:mining:cleanup:empty', creep.name, JSON.stringify(task.pos))
+        Logger.info(
+            'task:mining:cleanup:empty',
+            creep.name,
+            JSON.stringify(task.pos),
+        )
         return true
     }
 

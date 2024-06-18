@@ -1,4 +1,4 @@
-import { wrap } from "utils/profiling"
+import { wrap } from 'utils/profiling'
 
 export enum StrategyPhase {
     RCL_0 = 'rcl-0',

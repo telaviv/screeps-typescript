@@ -14,27 +14,49 @@ const SURROUNDED_BUILDING_TYPES = [
     STRUCTURE_CONTAINER,
 ]
 
-export type PositionEdge = {
+export interface PositionEdge {
     a: string
     b: string
     weight: number
 }
 
-export default function calculateRoadPositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
-    const surroundingRoadPositions = calculateSurroundingRoadPositions(room, iroom, features)
-    const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
-    const uniquePositions = uniqBy([...surroundingRoadPositions, ...roadSpinePositions], (pos) => `${pos.x}:${pos.y}`)
+export default function calculateRoadPositions(
+    room: Room,
+    iroom: ImmutableRoom,
+    features: ConstructionFeatures,
+): Position[] {
+    const surroundingRoadPositions = calculateSurroundingRoadPositions(
+        room,
+        iroom,
+        features,
+    )
+    const roadSpinePositions = calculateRoadSpinePositions(
+        room,
+        iroom,
+        features,
+    )
+    const uniquePositions = uniqBy(
+        [...surroundingRoadPositions, ...roadSpinePositions],
+        (pos) => `${pos.x}:${pos.y}`,
+    )
     uniquePositions.sort(roadSortOrder(room))
     return uniquePositions
 }
 
-const roadSortOrder = (room: Room) => (a: Position, b: Position): number => {
-    const terrain = room.getTerrain()
-    const terrainValue = (pos: Position) => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP ? 0 : 1
-    return terrainValue(a) - terrainValue(b)
-}
+const roadSortOrder =
+    (room: Room) =>
+    (a: Position, b: Position): number => {
+        const terrain = room.getTerrain()
+        const terrainValue = (pos: Position) =>
+            terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP ? 0 : 1
+        return terrainValue(a) - terrainValue(b)
+    }
 
-function calculateSurroundingRoadPositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
+function calculateSurroundingRoadPositions(
+    room: Room,
+    iroom: ImmutableRoom,
+    features: ConstructionFeatures,
+): Position[] {
     const roadPositions: Position[] = []
     const spawn = RoomUtils.getSpawns(room)
     for (const pos of spawn.map((spawn) => spawn.pos)) {
@@ -57,7 +79,11 @@ function calculateSurroundingRoadPositions(room: Room, iroom: ImmutableRoom, fea
     return roadPositions.map((pos) => ({ x: pos.x, y: pos.y }))
 }
 
-function calculateRoadSpinePositions(room: Room, iroom: ImmutableRoom, features: ConstructionFeatures): Position[] {
+function calculateRoadSpinePositions(
+    room: Room,
+    iroom: ImmutableRoom,
+    features: ConstructionFeatures,
+): Position[] {
     const roomCallback = (roomName: string): CostMatrix | false => {
         if (roomName !== room.name) {
             return false
@@ -71,11 +97,20 @@ function calculateRoadSpinePositions(room: Room, iroom: ImmutableRoom, features:
         return costs
     }
     const controllerPos = room.controller!.pos
-    const storagePos = { ...features[STRUCTURE_STORAGE]![0], roomName: room.name }
+    const storagePos = {
+        ...features[STRUCTURE_STORAGE]![0],
+        roomName: room.name,
+    }
     const sourcesPos = RoomUtils.getSources(room).map((source) => source.pos)
-    const mineralsPos = RoomUtils.getMinerals(room).map((mineral) => mineral.pos)
+    const mineralsPos = RoomUtils.getMinerals(room).map(
+        (mineral) => mineral.pos,
+    )
     const positions = [controllerPos, storagePos, ...sourcesPos, ...mineralsPos]
-    const flatPositions = positions.map((pos) => ({ x: pos.x, y: pos.y, roomName: pos.roomName }))
+    const flatPositions = positions.map((pos) => ({
+        x: pos.x,
+        y: pos.y,
+        roomName: pos.roomName,
+    }))
     const roadPositions = calculateMinPathPositions(flatPositions, roomCallback)
     return roadPositions
         .filter((pos) => iroom.isGoodRoadPosition(pos.x, pos.y))
@@ -84,8 +119,8 @@ function calculateRoadSpinePositions(room: Room, iroom: ImmutableRoom, features:
 
 export const calculateMinPathPositions = (
     positions: FlatRoomPosition[],
-    roomCallback: (roomName: string) => CostMatrix | false): RoomPosition[] => {
-
+    roomCallback: (roomName: string) => CostMatrix | false,
+): RoomPosition[] => {
     const pathMap: { [key: string]: RoomPosition[] } = {}
     const edges: PositionEdge[] = []
     for (let i = 0; i < positions.length; i++) {
@@ -99,12 +134,20 @@ export const calculateMinPathPositions = (
             )
             const weight = solution.cost
             pathMap[posPairToString(a, b)] = solution.path
-            edges.push({ a: positionToString(a), b: positionToString(b), weight })
+            edges.push({
+                a: positionToString(a),
+                b: positionToString(b),
+                weight,
+            })
         }
     }
     const vertices = positions.map(positionToString)
     const minPosEdges = profiledMinimumSpanningTree(edges, vertices)
-    return flatten(minPosEdges.map((edge) => pathMap[posStringPairToString(edge.a, edge.b)]))
+    return flatten(
+        minPosEdges.map(
+            (edge) => pathMap[posStringPairToString(edge.a, edge.b)],
+        ),
+    )
 }
 
 const posStringPairToString = (a: string, b: string): string => {
@@ -124,7 +167,10 @@ const positionToString = (pos: FlatRoomPosition): string => {
     return `${pos.x}:${pos.y}:${pos.roomName}`
 }
 
-export const minimumSpanningTree = (edges: PositionEdge[], vertices: string[]): PositionEdge[] => {
+export const minimumSpanningTree = (
+    edges: PositionEdge[],
+    vertices: string[],
+): PositionEdge[] => {
     const graph = createGraph(edges, vertices)
     const mst = prim(graph)
     const minPosEdge: PositionEdge[] = []
@@ -136,7 +182,10 @@ export const minimumSpanningTree = (edges: PositionEdge[], vertices: string[]): 
     return minPosEdge
 }
 
-const profiledMinimumSpanningTree = Profiling.wrap(minimumSpanningTree, 'minimumSpanningTree')
+const profiledMinimumSpanningTree = Profiling.wrap(
+    minimumSpanningTree,
+    'minimumSpanningTree',
+)
 
 const createGraph = (edges: PositionEdge[], vertices: string[]): Graph => {
     const graph = new Graph(false)

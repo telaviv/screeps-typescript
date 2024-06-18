@@ -63,7 +63,7 @@ export default class BuildManager {
         }
 
         if (hasNoSpawns(this.room)) {
-            return this.ensureSpawnSite();
+            return this.ensureSpawnSite()
         }
 
         const nonWall = this.ensureNonWallSite()
@@ -88,7 +88,7 @@ export default class BuildManager {
         if (this.canBuildWall()) {
             return this.buildNextStructure(STRUCTURE_RAMPART)
         }
-        
+
         return false
     }
 
@@ -155,17 +155,24 @@ export default class BuildManager {
     }, 'BuildManager:hasImportantConstructionSite')
 
     private canBuildContainer = wrap(() => {
-        const containers = getContainers(this.room);
+        const containers = getContainers(this.room)
         const constructionFeatures = getConstructionFeatures(this.room)
         if (constructionFeatures[STRUCTURE_CONTAINER] === undefined) {
             return false
         }
-        return containers.length < constructionFeatures[STRUCTURE_CONTAINER].length
+        return (
+            containers.length < constructionFeatures[STRUCTURE_CONTAINER].length
+        )
     }, 'BuildManager:canBuildContainer')
 
-    private nextBuildPosition(type: BuildableStructureConstant): RoomPosition | null {
+    private nextBuildPosition(
+        type: BuildableStructureConstant,
+    ): RoomPosition | null {
         if (this.room.controller === undefined) {
-            Logger.error('nextBuildPosition:controller:error:no-controller', this.room.name)
+            Logger.error(
+                'nextBuildPosition:controller:error:no-controller',
+                this.room.name,
+            )
             return null
         }
         const constructionFeatures = getConstructionFeatures(this.room)
@@ -180,10 +187,16 @@ export default class BuildManager {
             })
         }
         const toBuild = constructionFeatures[type]!.find(({ x, y }) => {
-            return !structures.some((structure) => structure.pos.x === x && structure.pos.y === y)
+            return !structures.some(
+                (structure) => structure.pos.x === x && structure.pos.y === y,
+            )
         })
         if (toBuild === undefined) {
-            Logger.error('nextBuildPosition:toBuild:error', type, this.room.name)
+            Logger.error(
+                'nextBuildPosition:toBuild:error',
+                type,
+                this.room.name,
+            )
             return null
         }
         return new RoomPosition(toBuild.x, toBuild.y, this.room.name)
@@ -194,7 +207,12 @@ export default class BuildManager {
         if (toBuild === null) {
             return false
         }
-        return makeConstructionSite(new RoomPosition(toBuild.x, toBuild.y, this.room.name), type) === OK
+        return (
+            makeConstructionSite(
+                new RoomPosition(toBuild.x, toBuild.y, this.room.name),
+                type,
+            ) === OK
+        )
     }
 
     private buildNextSpawn(): boolean {
@@ -209,7 +227,13 @@ export default class BuildManager {
         const constructionFeatures = getConstructionFeatures(this.room)
         const links = getLinks(this.room)
         const possibleLinkCount = LINK_COUNTS[this.room.controller!.level]!
-        return links.length < Math.min(possibleLinkCount, constructionFeatures[STRUCTURE_LINK]!.length)
+        return (
+            links.length <
+            Math.min(
+                possibleLinkCount,
+                constructionFeatures[STRUCTURE_LINK]!.length,
+            )
+        )
     }, 'BuildManager:canBuildLinks')
 
     private canBuildStorage = wrap((): boolean => {
@@ -250,7 +274,10 @@ export default class BuildManager {
     private getNextRoad(): Position | undefined {
         const constructionFeatures = getConstructionFeatures(this.room)
         return constructionFeatures[STRUCTURE_ROAD]!.find((pos) => {
-            return !hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
+            return !hasBuildingAt(
+                new RoomPosition(pos.x, pos.y, this.room.name),
+                STRUCTURE_ROAD,
+            )
         })
     }
 
@@ -260,16 +287,18 @@ export default class BuildManager {
 
     private canBuildWall = wrap((): boolean => {
         if (this.room.controller!.level < MIN_RAMPART_LEVEL) {
-            return false;
+            return false
         }
-        const constructionFeatures = getConstructionFeatures(this.room);
-        const ramparts = getRamparts(this.room);
-        const rampartPositions = constructionFeatures[STRUCTURE_RAMPART] || [];
+        const constructionFeatures = getConstructionFeatures(this.room)
+        const ramparts = getRamparts(this.room)
+        const rampartPositions = constructionFeatures[STRUCTURE_RAMPART] || []
         const missingRamparts = rampartPositions.filter((pos) => {
-            return !ramparts.some((rampart) => rampart.pos.x === pos.x && rampart.pos.y === pos.y);
-        });
-        return missingRamparts.length > 0;
-    }, 'BuildManager:canBuildWall');
+            return !ramparts.some(
+                (rampart) => rampart.pos.x === pos.x && rampart.pos.y === pos.y,
+            )
+        })
+        return missingRamparts.length > 0
+    }, 'BuildManager:canBuildWall')
 }
 
 export function getBuildManager(room: Room) {

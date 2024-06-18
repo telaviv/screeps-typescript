@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/no-explicit-any: "off" */
 
-import { LogisticsCreep } from "roles/logistics-constants"
+import { LogisticsCreep } from 'roles/logistics-constants'
 
 export interface Task<T> {
     readonly id: string
@@ -23,7 +23,7 @@ export interface ResourceCreep extends Creep {
 }
 
 export function isResourceCreep(creep: Creep): creep is ResourceCreep {
-    return creep.memory.hasOwnProperty('tasks');
+    return creep.memory.hasOwnProperty('tasks')
 }
 
 export interface Runner<T extends Task<any>> {

@@ -47,7 +47,7 @@ declare global {
     }
 
     interface CreepMemory {
-        role: string;
+        role: string
         home: string | undefined
     }
 
@@ -71,9 +71,9 @@ const clearMemory = wrap(() => {
         }
     }
 
-    for (const [name, memory] of Object.entries(Memory.rooms)) {
+    for (const [name, memory] of Object.entries(Memory.rooms || [])) {
         if (!memory.updated || memory.updated + ROOM_TTL < Game.time) {
-            //Logger.info('room:expired', name, memory.updated, Game.time)
+            // Logger.info('room:expired', name, memory.updated, Game.time)
             delete Memory.rooms[name]
         }
     }
@@ -84,7 +84,7 @@ const runMyRoom = wrap((room: Room) => {
     const buildManager = BuildManager.get(room)
     buildManager.removeEnemyConstructionSites()
     buildManager.ensureConstructionSites()
-    ensureSafeMode(room);
+    ensureSafeMode(room)
 
     const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
         filter: (s) => {
@@ -109,7 +109,10 @@ const ensureSafeMode = wrap((room: Room) => {
         return
     }
     for (const event of room.getEventLog()) {
-        if (event.event === EVENT_OBJECT_DESTROYED && event.data.type === STRUCTURE_RAMPART) {
+        if (
+            event.event === EVENT_OBJECT_DESTROYED &&
+            event.data.type === STRUCTURE_RAMPART
+        ) {
             room.controller.activateSafeMode()
             return
         }
@@ -180,7 +183,7 @@ function unwrappedLoop() {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 
-const loop = () => wrap(
+const loop = wrap(
     // @ts-ignore : global trickery in tests
     !Game || Game.cpu.tickLimit < 30 ? unwrappedLoop : ErrorMapper.wrap(unwrappedLoop),
     'main:loop',

@@ -33,12 +33,14 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
         withdrawTargets = withdrawTargets.concat(remoteTargets)
     }
     if (withdrawTargets.length > 0) {
-        const target = findClosestByRange(creep.pos, withdrawTargets, { range: 1 }) as Withdrawable
+        const target = findClosestByRange(creep.pos, withdrawTargets, {
+            range: 1,
+        }) as Withdrawable
         if (!target) {
             Logger.error('withdraw::makeRequest:failure:no-target', creep.name)
             return false
         }
-        addWithdrawTask(creep, target!)
+        addWithdrawTask(creep, target)
         return true
     }
     return false
@@ -64,19 +66,22 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     return false
 }
 
-const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
-    const withdrawObject = WithdrawObject.get(withdrawable.id)
-    const task = withdrawObject.makeRequest(creep)
-    Logger.info(
-        'withdraw:create',
-        creep.name,
-        task.id,
-        task.withdrawId,
-        task.amount,
-    )
-    creep.memory.tasks.push(task)
-    return task
-}, 'withdraw:addWithdrawTask')
+const addWithdrawTask = wrap(
+    (creep: ResourceCreep, withdrawable: Withdrawable) => {
+        const withdrawObject = WithdrawObject.get(withdrawable.id)
+        const task = withdrawObject.makeRequest(creep)
+        Logger.info(
+            'withdraw:create',
+            creep.name,
+            task.id,
+            task.withdrawId,
+            task.amount,
+        )
+        creep.memory.tasks.push(task)
+        return task
+    },
+    'withdraw:addWithdrawTask',
+)
 
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
@@ -163,8 +168,10 @@ function isTemporary(withdrawable: WithdrawObject): boolean {
 function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
     const nonEmpties = withdrawObjects.filter(
-        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
-            target.resourcesAvailable(RESOURCE_ENERGY) > 0 && isTemporary(target),
+        (target) =>
+            target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
+            (target.resourcesAvailable(RESOURCE_ENERGY) > 0 &&
+                isTemporary(target)),
     )
 
     const temporaries = nonEmpties.filter(isTemporary)

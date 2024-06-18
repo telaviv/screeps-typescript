@@ -36,7 +36,7 @@ export default function (spawn: StructureSpawn) {
     }
     const room = spawn.room
     const masons = getCreeps('mason', room)
-    const roomManager = new RoomManager(room);
+    const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
     const warDepartment = new WarDepartment(spawn.room)
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
@@ -100,7 +100,10 @@ export default function (spawn: StructureSpawn) {
     }
 }
 
-function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): number | null {
+function createWarCreeps(
+    spawn: StructureSpawn,
+    warDepartment: WarDepartment,
+): number | null {
     const room = spawn.room
     const status = warDepartment.status
     const attackers = getCreeps('attack', room)
@@ -116,7 +119,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         return null
     }
 
-    const sourcesManager = new SourcesManager(warDepartment.targetRoom!)
+    const sourcesManager = new SourcesManager(warDepartment.targetRoom)
 
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
         return roleAttacker.create(spawn, warDepartment.target)
@@ -132,7 +135,9 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         } else if (claimers.length < CLAIMERS_COUNT) {
             if (claimers.length === 0) {
                 return roleClaimer.create(spawn, warDepartment.target)
-            } else if (warDepartment.targetRoom!.controller!.upgradeBlocked < 20) {
+            } else if (
+                warDepartment.targetRoom.controller!.upgradeBlocked < 20
+            ) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }
         }

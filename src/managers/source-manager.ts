@@ -16,15 +16,18 @@ const MAX_WORK_PARTS = 5
 export default class SourceManager {
     public readonly id: Id<Source>
     public readonly source: Source
-    public readonly containerPosition: RoomPosition;
+    public readonly containerPosition: RoomPosition
 
-    private constructor(
-        source: Source,
-    ) {
+    private constructor(source: Source) {
         this.id = source.id
         this.source = source
-        const containerPosition = this.source.room.memory.stationaryPoints!.sources[this.id]
-        this.containerPosition = new RoomPosition(containerPosition.x, containerPosition.y, source.room.name)
+        const containerPosition =
+            this.source.room.memory.stationaryPoints!.sources[this.id]
+        this.containerPosition = new RoomPosition(
+            containerPosition.x,
+            containerPosition.y,
+            source.room.name,
+        )
     }
 
     public static createFromSource(source: Source) {
@@ -89,7 +92,8 @@ export default class SourceManager {
     public hasStaticHarvester(): boolean {
         return some(
             this.harvesters,
-            (harvester: Creep) => isHarvester(harvester) && harvester.memory.source === this.id,
+            (harvester: Creep) =>
+                isHarvester(harvester) && harvester.memory.source === this.id,
         )
     }
 
@@ -119,11 +123,16 @@ export default class SourceManager {
         const harvesters = this.harvesters
 
         for (const pos of this.getPositions()) {
-            let isAvailable = true;
+            let isAvailable = true
             for (const harvester of harvesters) {
-                if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
-                    isAvailable = false;
-                    break;
+                if (
+                    pos.isEqualTo(
+                        harvester.memory.pos.x,
+                        harvester.memory.pos.y,
+                    )
+                ) {
+                    isAvailable = false
+                    break
                 }
             }
             if (isAvailable) {
@@ -135,17 +144,25 @@ export default class SourceManager {
 
     @profile
     public getNextAvailableAuxHarvestPosition(): RoomPosition | null {
-        if (this.source.energy === 0 || hasEnoughWorkParts(this.allHarvesters)) {
+        if (
+            this.source.energy === 0 ||
+            hasEnoughWorkParts(this.allHarvesters)
+        ) {
             return null
         }
 
         const harvesters = this.harvesters
 
         for (const pos of this.getPositions()) {
-            let isAvailable = true;
+            let isAvailable = true
             for (const harvester of harvesters) {
-                if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
-                    isAvailable = false;
+                if (
+                    pos.isEqualTo(
+                        harvester.memory.pos.x,
+                        harvester.memory.pos.y,
+                    )
+                ) {
+                    isAvailable = false
                     break
                 }
             }
@@ -154,26 +171,30 @@ export default class SourceManager {
             }
             for (const task of this.getAuxTasks()) {
                 if (pos.isEqualTo(task.pos.x, task.pos.y)) {
-                    isAvailable = false;
-                    break;
+                    isAvailable = false
+                    break
                 }
             }
             if (isAvailable) {
                 if (!pos.inRangeTo(this.source.pos, 1)) {
                     Logger.error(
                         `source-manager:getNextAvailableAuxHarvesterPosition:failed`,
-                        `position ${pos} is not in range of source ${this.id}`, this.getPositions())
+                        `position ${pos} is not in range of source ${this.id}`,
+                        this.getPositions(),
+                    )
                     return null
                 }
                 return pos
             }
         }
-        return null;
+        return null
     }
 }
 
 function totalWorkCount(creeps: Creep[]): number {
-    return creeps.reduce((works, creep) => { return creep.getActiveBodyparts(WORK) + works }, 0)
+    return creeps.reduce((works, creep) => {
+        return creep.getActiveBodyparts(WORK) + works
+    }, 0)
 }
 
 function hasEnoughWorkParts(creeps: Creep[]): boolean {
