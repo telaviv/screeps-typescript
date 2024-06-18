@@ -185,7 +185,7 @@ function unwrappedLoop() {
 
 const loop = wrap(
     // @ts-ignore : global trickery in tests
-    !Game || Game.cpu.tickLimit < 30 ? unwrappedLoop : ErrorMapper.wrap(unwrappedLoop),
+    !global.Game || global.Game.cpu.tickLimit < 30 ? unwrappedLoop : ErrorMapper.wrap(unwrappedLoop),
     'main:loop',
 )
 
