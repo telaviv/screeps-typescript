@@ -57,7 +57,6 @@ export function wrap<T extends (...args: any[]) => any>(
     fn: T,
     key: string,
 ): (...funcArgs: Parameters<T>) => ReturnType<T> {
-    console.log('creating function')
     return (...args: Parameters<T>): ReturnType<T> => {
         const startCpu = Game.cpu.getUsed()
         const ret = fn(...args)
