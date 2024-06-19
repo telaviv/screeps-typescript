@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
 import sizeof from 'object-sizeof'
 
 interface ProfilerData {
@@ -66,9 +71,11 @@ export function wrap<T extends (...args: any[]) => any>(
 ): (...funcArgs: Parameters<T>) => ReturnType<T> {
     return (...args: Parameters<T>): ReturnType<T> => {
         const startCpu = Game.cpu.getUsed()
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const ret = fn(...args)
         const stopCpu = Game.cpu.getUsed()
         markProfileMemory(key, stopCpu - startCpu)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return ret
     }
 }
@@ -105,6 +112,7 @@ function markProfileMemory(key: string, time: number) {
 
 export function profile(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     const key = `${target.constructor.name}:${propertyKey}`
     descriptor.value = function (...args: any) {
         const startCpu = Game.cpu.getUsed()

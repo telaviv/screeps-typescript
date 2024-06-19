@@ -23,7 +23,7 @@ export interface ResourceCreep extends Creep {
 }
 
 export function isResourceCreep(creep: Creep): creep is ResourceCreep {
-    return creep.memory.hasOwnProperty('tasks')
+    return Object.prototype.hasOwnProperty.call(creep.memory, 'tasks')
 }
 
 export interface Runner<T extends Task<any>> {

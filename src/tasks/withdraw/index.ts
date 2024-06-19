@@ -11,6 +11,14 @@ import { getHome } from 'roles/utils'
 import { findClosestByRange } from 'utils/room-position'
 import { wrap } from 'utils/profiling'
 
+const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
+    const withdrawObject = WithdrawObject.get(withdrawable.id)
+    const task = withdrawObject.makeRequest(creep)
+    Logger.info('withdraw:create', creep.name, task.id, task.withdrawId, task.amount)
+    creep.memory.tasks.push(task)
+    return task
+}, 'withdraw:addWithdrawTask')
+
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
@@ -66,14 +74,6 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     return false
 }
 
-const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
-    const withdrawObject = WithdrawObject.get(withdrawable.id)
-    const task = withdrawObject.makeRequest(creep)
-    Logger.info('withdraw:create', creep.name, task.id, task.withdrawId, task.amount)
-    creep.memory.tasks.push(task)
-    return task
-}, 'withdraw:addWithdrawTask')
-
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning('withdraw::complete:failure', creep.name, creep.memory.tasks)
@@ -128,18 +128,16 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
 }
 
 function isRuin(obj: any): boolean {
-    return !!(obj.structure && obj.ticksToDecay)
+    return Object.prototype.hasOwnProperty.call(obj, 'structure') &&
+        Object.prototype.hasOwnProperty.call(obj, 'ticksToDecay')
 }
 
 function isTombstone(obj: any): boolean {
-    return !!(obj.creep && obj.ticksToDecay)
+    return Object.prototype.hasOwnProperty.call(obj, 'deathTime')
 }
 
 function isTemporary(withdrawable: WithdrawObject): boolean {
     const object = Game.getObjectById(withdrawable.withdrawable.id)
-    const id = object?.id
-    const ruin = isRuin(object)
-    const tombstone = isTombstone(object)
     return isRuin(object) || isTombstone(object)
 }
 

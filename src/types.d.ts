@@ -1,4 +1,3 @@
-/* eslint @typescript-eslint/no-explicit-any: ["off"] */
 interface CreepMemory {
     role: string
     home: string | undefined

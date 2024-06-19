@@ -52,7 +52,7 @@ export function completeRequest(creep: ResourceCreep) {
     const task = creep.memory.tasks[0]
     task.complete = true
 }
-0
+
 export function cleanup(task: SignTask, creep: ResourceCreep): boolean {
     const room = Game.rooms[task.roomName]
     if (!room) {

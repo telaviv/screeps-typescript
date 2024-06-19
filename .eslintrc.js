@@ -40,6 +40,7 @@ module.exports = {
             },
         ],
         '@typescript-eslint/no-explicit-any': 'off',
+        "@typescript-eslint/no-namespace": "off",
         '@typescript-eslint/no-parameter-properties': 'off',
         '@typescript-eslint/no-shadow': [
             'error',

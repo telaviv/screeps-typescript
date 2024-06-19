@@ -44,8 +44,6 @@ function drawContainer(visual: RoomVisual, pos: RoomPosition): void {
 }
 
 function drawExtension(visual: RoomVisual, pos: RoomPosition): void {
-    {
-    }
     visual.circle(pos, { fill: 'yellow', radius: 0.45 })
 }
 

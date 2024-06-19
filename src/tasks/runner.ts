@@ -35,7 +35,10 @@ export const run = wrap((task: Task<any>, creep: ResourceCreep): boolean => {
 }, 'TaskRunner:run')
 
 export function isResourceCreep(creep: Creep): creep is ResourceCreep {
-    return creep.memory.hasOwnProperty('tasks') && creep.memory.hasOwnProperty('idleTimestamp')
+    return (
+        Object.prototype.hasOwnProperty.call(creep.memory, 'tasks') &&
+        Object.prototype.hasOwnProperty.call(creep.memory, 'idleTimestamp')
+    )
 }
 
 export const cleanup = wrap(() => {

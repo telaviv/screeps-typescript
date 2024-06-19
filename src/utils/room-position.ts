@@ -84,7 +84,7 @@ export function getNonObstacleNeighbors(pos: RoomPosition, range = 1): RoomPosit
 }
 
 export function getRandomWalkablePosition(pos: RoomPosition): RoomPosition | null {
-    const positions = getNonObstacleNeighbors(pos).filter((pos) => !isAtEdge(pos))
+    const positions = getNonObstacleNeighbors(pos).filter((p) => !isAtEdge(p))
     if (positions.length === 0) {
         return null
     }

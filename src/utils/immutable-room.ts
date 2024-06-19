@@ -1,5 +1,6 @@
-/* eslint @typescript-eslint/no-explicit-any: "off" */
-/* eslint no-prototype-builtins: "off" */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-prototype-builtins */
+/* eslint-disable @typescript-eslint/no-this-alias */
 
 import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
 import maxBy from 'lodash/maxBy'
@@ -308,6 +309,7 @@ export class ImmutableRoom implements ValueObject {
             return this
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         let iroom: ImmutableRoom = this
         while (count < limit) {
             const pos = iroom.nextExtensionPos()
@@ -578,15 +580,15 @@ export class ImmutableRoom implements ValueObject {
                 (ri) => !ri.isObstacle() && !ri.nonObstacles.container,
             )
             const containerCountMap = available.map((ri) => {
-                const neighbors = this.getClosestNeighbors(ri.x, ri.y)
-                const containers = neighbors.filter((ri) => ri.nonObstacles.container)
+                const nb = this.getClosestNeighbors(ri.x, ri.y)
+                const containers = nb.filter((r) => r.nonObstacles.container)
                 return { container: ri, count: containers.length }
             })
             const sorted = sortBy(containerCountMap, ({ count }) => count)
             const maxCount = sorted[sorted.length - 1].count
             const maxCountContainers = sorted.filter(({ count }) => count === maxCount)
             const pos = this.sortByCentroidDistance(
-                maxCountContainers.map(({ container }) => container),
+                maxCountContainers.map(({ container: c }) => c),
             )[0]
             return this.setObstacle(pos.x, pos.y, 'link').setSourceContainerLinks()
         }
@@ -715,7 +717,7 @@ export class ImmutableRoom implements ValueObject {
             flatten(
                 sourceContainers.map((ri) => {
                     const neighbors = this.getClosestNeighbors(ri.x, ri.y)
-                    return neighbors.filter((ri) => ri.obstacle === 'link')
+                    return neighbors.filter((r) => r.obstacle === 'link')
                 }),
             ),
         )
@@ -732,7 +734,7 @@ export class ImmutableRoom implements ValueObject {
         )
 
         const possibleLinks = this.getObstacles('link')
-        if (possibleLinks.length != links.length) {
+        if (possibleLinks.length !== links.length) {
             Logger.error(
                 'immutable-room:sortedLinkPositions:link-mismatch',
                 possibleLinks.map((ri) => `(${ri.x}, ${ri.y})`),

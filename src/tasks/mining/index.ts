@@ -36,9 +36,13 @@ export function run(task: MiningTask, creep: ResourceCreep): boolean {
     }
     const err = creep.harvest(source)
     if (err === ERR_NOT_IN_RANGE) {
-        const err = creep.moveTo(new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName), {
-            visualizePathStyle: { stroke: '#ffaa00' },
-        })
+        const moveToError = creep.moveTo(
+            new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName),
+            {
+                visualizePathStyle: { stroke: '#ffaa00' },
+            },
+        )
+        return moveToError === OK
     } else if (err !== OK) {
         Logger.warning(`task:mining:run:harvest:failed ${creep.name}: ${err}`)
     }

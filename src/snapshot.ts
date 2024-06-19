@@ -2,6 +2,10 @@ import { Map, Record, RecordOf, Set } from 'immutable'
 import { STRUCTURE_COLORS, getConstructionFlags } from 'utils/flags'
 import { profile, wrap } from 'utils/profiling'
 
+interface RoomCache {
+    [roomName: string]: RoomSnapshot
+}
+
 type RoomSnapshotMemory = {
     pos: FlatRoomPosition
     structureType: StructureConstant
@@ -26,6 +30,8 @@ const FlatRoomPositionRecord = Record<FlatRoomPosition>({
 })
 
 type ImmutableSnapshot = Map<RecordOf<FlatRoomPosition>, Set<StructureConstant>>
+
+const cache: RoomCache = {}
 
 export default class RoomSnapshot {
     public readonly roomName: string
@@ -126,7 +132,7 @@ export default class RoomSnapshot {
 
     @profile
     public static get(room: Room): RoomSnapshot {
-        if (!cache.hasOwnProperty(room.name)) {
+        if (!Object.prototype.hasOwnProperty.call(cache, room.name)) {
             const snapshot = RoomSnapshot.create(room)
             updateCache(room, snapshot)
         }
@@ -148,12 +154,6 @@ export function resetSnapshot(roomName: string) {
     roomSnapshot.loadFromRoom()
     roomSnapshot.saveToMemory()
 }
-
-interface RoomCache {
-    [roomName: string]: RoomSnapshot
-}
-
-const cache: RoomCache = {}
 
 export function updateCache(room: Room, snapshot: RoomSnapshot) {
     cache[room.name] = snapshot

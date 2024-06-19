@@ -14,7 +14,7 @@ export function* getAllTasks() {
     }
 }
 
-export function makeTask<T>(type: T, data: Object): Task<T> {
+export function makeTask<T>(type: T, data: Record<string, unknown>): Task<T> {
     return {
         type,
         id: autoIncrement().toString(),
