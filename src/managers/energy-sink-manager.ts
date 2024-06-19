@@ -21,7 +21,7 @@ export default class EnergySinkManager {
         return creep.pos.findClosestByRange(targets) as Structure
     }
 
-    private static isRepairableNonWall(structure: Structure): boolean {
+    private static isRepairableNonWall(this: void, structure: Structure): boolean {
         if (
             includes([STRUCTURE_RAMPART, STRUCTURE_WALL, STRUCTURE_ROAD], structure.structureType)
         ) {

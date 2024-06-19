@@ -14,7 +14,7 @@ declare global {
 export interface RoomTask {
     id: number
     type: 'claim' | 'long-distance-mine'
-    data: object
+    data: Record<string, unknown>
     timestamp: number
 }
 

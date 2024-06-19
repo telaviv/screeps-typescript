@@ -182,4 +182,3 @@ function totalWorkCount(creeps: Creep[]): number {
 function hasEnoughWorkParts(creeps: Creep[]): boolean {
     return totalWorkCount(creeps) >= MAX_WORK_PARTS
 }
-1

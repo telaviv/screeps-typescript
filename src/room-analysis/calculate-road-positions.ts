@@ -20,6 +20,23 @@ export interface PositionEdge {
     weight: number
 }
 
+const posStringPairToString = (a: string, b: string): string => {
+    if (a < b) {
+        return `${a}:${b}`
+    }
+    return `${b}:${a}`
+}
+
+const positionToString = (pos: FlatRoomPosition): string => {
+    return `${pos.x}:${pos.y}:${pos.roomName}`
+}
+
+const posPairToString = (a: FlatRoomPosition, b: FlatRoomPosition): string => {
+    const aString = positionToString(a)
+    const bString = positionToString(b)
+    return posStringPairToString(aString, bString)
+}
+
 const roadSortOrder =
     (room: Room) =>
     (a: Position, b: Position): number => {
@@ -51,7 +68,7 @@ function calculateSurroundingRoadPositions(
 ): Position[] {
     const roadPositions: Position[] = []
     const spawn = RoomUtils.getSpawns(room)
-    for (const pos of spawn.map((spawn) => spawn.pos)) {
+    for (const pos of spawn.map((s) => s.pos)) {
         for (const neighbor of iroom.getClosestNeighbors(pos.x, pos.y)) {
             if (iroom.isGoodRoadPosition(neighbor.x, neighbor.y)) {
                 roadPositions.push(neighbor)
@@ -69,42 +86,6 @@ function calculateSurroundingRoadPositions(
         }
     }
     return roadPositions.map((pos) => ({ x: pos.x, y: pos.y }))
-}
-
-function calculateRoadSpinePositions(
-    room: Room,
-    iroom: ImmutableRoom,
-    features: ConstructionFeatures,
-): Position[] {
-    const roomCallback = (roomName: string): CostMatrix | false => {
-        if (roomName !== room.name) {
-            return false
-        }
-        const costs = new PathFinder.CostMatrix()
-        for (const positions of Object.values(features)) {
-            for (const pos of positions) {
-                costs.set(pos.x, pos.y, 5)
-            }
-        }
-        return costs
-    }
-    const controllerPos = room.controller!.pos
-    const storagePos = {
-        ...features[STRUCTURE_STORAGE]![0],
-        roomName: room.name,
-    }
-    const sourcesPos = RoomUtils.getSources(room).map((source) => source.pos)
-    const mineralsPos = RoomUtils.getMinerals(room).map((mineral) => mineral.pos)
-    const positions = [controllerPos, storagePos, ...sourcesPos, ...mineralsPos]
-    const flatPositions = positions.map((pos) => ({
-        x: pos.x,
-        y: pos.y,
-        roomName: pos.roomName,
-    }))
-    const roadPositions = calculateMinPathPositions(flatPositions, roomCallback)
-    return roadPositions
-        .filter((pos) => iroom.isGoodRoadPosition(pos.x, pos.y))
-        .map((pos) => ({ x: pos.x, y: pos.y }))
 }
 
 export const calculateMinPathPositions = (
@@ -136,21 +117,40 @@ export const calculateMinPathPositions = (
     return flatten(minPosEdges.map((edge) => pathMap[posStringPairToString(edge.a, edge.b)]))
 }
 
-const posStringPairToString = (a: string, b: string): string => {
-    if (a < b) {
-        return `${a}:${b}`
+function calculateRoadSpinePositions(
+    room: Room,
+    iroom: ImmutableRoom,
+    features: ConstructionFeatures,
+): Position[] {
+    const roomCallback = (roomName: string): CostMatrix | false => {
+        if (roomName !== room.name) {
+            return false
+        }
+        const costs = new PathFinder.CostMatrix()
+        for (const poss of Object.values(features)) {
+            for (const pos of poss) {
+                costs.set(pos.x, pos.y, 5)
+            }
+        }
+        return costs
     }
-    return `${b}:${a}`
-}
-
-const posPairToString = (a: FlatRoomPosition, b: FlatRoomPosition): string => {
-    const aString = positionToString(a)
-    const bString = positionToString(b)
-    return posStringPairToString(aString, bString)
-}
-
-const positionToString = (pos: FlatRoomPosition): string => {
-    return `${pos.x}:${pos.y}:${pos.roomName}`
+    const controllerPos = room.controller!.pos
+    const storagePos = {
+        ...features[STRUCTURE_STORAGE]![0],
+        roomName: room.name,
+    }
+    const sourcesPos = RoomUtils.getSources(room).map((source) => source.pos)
+    const mineralsPos = RoomUtils.getMinerals(room).map((mineral) => mineral.pos)
+    const positions = [controllerPos, storagePos, ...sourcesPos, ...mineralsPos]
+    const flatPositions = positions.map((pos) => ({
+        x: pos.x,
+        y: pos.y,
+        roomName: pos.roomName,
+    }))
+    const roadPositions = calculateMinPathPositions(flatPositions, roomCallback)
+    return roadPositions
+        .filter((pos) => iroom.isGoodRoadPosition(pos.x, pos.y))
+        .map((pos) => ({ x: pos.x, y: pos.y }))
 }
 
 export const minimumSpanningTree = (edges: PositionEdge[], vertices: string[]): PositionEdge[] => {

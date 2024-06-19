@@ -128,8 +128,10 @@ function getWithdrawable(task: WithdrawTask): Withdrawable {
 }
 
 function isRuin(obj: any): boolean {
-    return Object.prototype.hasOwnProperty.call(obj, 'structure') &&
+    return (
+        Object.prototype.hasOwnProperty.call(obj, 'structure') &&
         Object.prototype.hasOwnProperty.call(obj, 'ticksToDecay')
+    )
 }
 
 function isTombstone(obj: any): boolean {

@@ -43,6 +43,7 @@ const roleAttacker = {
             const target = targets[0]
             const err = creep.attack(target)
             if (err === ERR_NOT_IN_RANGE) {
+                // eslint-disable-next-line @typescript-eslint/no-shadow
                 const err = moveTo(target.pos, creep, { range: 1 })
                 if (err !== OK) {
                     Logger.error(

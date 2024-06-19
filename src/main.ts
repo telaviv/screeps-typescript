@@ -37,6 +37,7 @@ declare global {
       Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
     */
     // Memory extension samples
+    // eslint-disable-next-line @typescript-eslint/no-empty-interface
     interface Memory {}
 
     interface RoomMemory {
@@ -53,6 +54,7 @@ declare global {
 
     // Syntax for adding proprties to `global` (ex "global.log")
     namespace NodeJS {
+        // eslint-disable-next-line @typescript-eslint/no-empty-interface
         interface Global {}
     }
 }
@@ -178,6 +180,7 @@ function unwrappedLoop() {
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 
 const loop = wrap(
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore : global trickery in tests
     !global.Game || global.Game.cpu.tickLimit < 30
         ? unwrappedLoop
