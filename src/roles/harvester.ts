@@ -144,7 +144,7 @@ export class HarvesterCreep {
     private getLink(): StructureLink | null {
         const link = this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_LINK,
-        }) as StructureLink | null
+        })
         if (link === null) {
             return null
         }

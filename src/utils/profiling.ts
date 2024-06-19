@@ -1,3 +1,5 @@
+import sizeof from 'object-sizeof'
+
 interface ProfilerData {
     [key: string]: { total: number; calls: number }
 }
@@ -11,6 +13,11 @@ interface ProfilerMemory {
 declare global {
     interface Memory {
         profiler: ProfilerMemory
+    }
+    namespace NodeJS {
+        interface Global {
+            calculateMemory: () => void
+        }
     }
 }
 
@@ -125,3 +132,8 @@ export function output() {
         )
     }
 }
+
+const calculateMemory = () => {
+    console.log(`Memory used: ${sizeof(Memory) / 1024} KB`)
+}
+global.calculateMemory = calculateMemory
