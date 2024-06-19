@@ -47,11 +47,7 @@ export default class RoomSnapshot {
         for (const [pos, structureTypes] of this.snapshot) {
             for (const structureType of structureTypes) {
                 if (structureType === testStructureType) {
-                    const roomPosition = new RoomPosition(
-                        pos.x,
-                        pos.y,
-                        pos.roomName,
-                    )
+                    const roomPosition = new RoomPosition(pos.x, pos.y, pos.roomName)
                     const lookStructures = roomPosition.lookFor(LOOK_STRUCTURES)
                     const hasStructure = lookStructures.some(
                         (ls) => ls.structureType === structureType,
@@ -70,10 +66,7 @@ export default class RoomSnapshot {
         return this.getStructurePos(structureType) !== null
     }
 
-    public addStructure(
-        structureType: StructureConstant,
-        pos: FlatRoomPosition,
-    ) {
+    public addStructure(structureType: StructureConstant, pos: FlatRoomPosition) {
         const immPos = new FlatRoomPositionRecord({
             x: pos.x,
             y: pos.y,
@@ -98,9 +91,7 @@ export default class RoomSnapshot {
 
     public loadFromFlags() {
         for (const flag of getConstructionFlags(this.room)) {
-            const structureType = STRUCTURE_COLORS.get(
-                flag.color,
-            ) as BuildableStructureConstant
+            const structureType = STRUCTURE_COLORS.get(flag.color) as BuildableStructureConstant
             this.addStructure(structureType, flag.pos)
             flag.remove()
         }

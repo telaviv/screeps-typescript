@@ -20,7 +20,7 @@ export interface SourceCreep extends Creep {
 export type ConstructionFeatures = {
     [K in BuildableStructureConstant]?: Position[]
 }
-export type Obstacle = (typeof OBSTACLE_OBJECT_TYPES)[number]
+export type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
 export type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
 export function isObstacle(x: any): x is Obstacle {
     return OBSTACLE_OBJECT_TYPES.includes(x)

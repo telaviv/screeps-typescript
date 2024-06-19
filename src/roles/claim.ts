@@ -63,12 +63,7 @@ const roleClaimer = {
         const energyAvailable = spawn.room.energyAvailable
         let parts = calculateParts(energyAvailable)
         if (!parts) {
-            Logger.warning(
-                'claimer:create:failed',
-                spawn.room.name,
-                parts,
-                energyAvailable,
-            )
+            Logger.warning('claimer:create:failed', spawn.room.name, parts, energyAvailable)
         }
         if (minimal) {
             parts = [CLAIM, MOVE]

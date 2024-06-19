@@ -1,7 +1,4 @@
-export const STRUCTURE_COLORS = new Map<
-    ColorConstant,
-    BuildableStructureConstant
->([
+export const STRUCTURE_COLORS = new Map<ColorConstant, BuildableStructureConstant>([
     [COLOR_GREEN, STRUCTURE_RAMPART],
     [COLOR_GREY, STRUCTURE_WALL],
     [COLOR_YELLOW, STRUCTURE_STORAGE],
@@ -12,8 +9,6 @@ export const STRUCTURE_COLORS = new Map<
 
 export function getConstructionFlags(room: Room): Flag[] {
     return room.find(FIND_FLAGS, {
-        filter: (flag) =>
-            flag.secondaryColor === COLOR_PURPLE &&
-            STRUCTURE_COLORS.has(flag.color),
+        filter: (flag) => flag.secondaryColor === COLOR_PURPLE && STRUCTURE_COLORS.has(flag.color),
     })
 }

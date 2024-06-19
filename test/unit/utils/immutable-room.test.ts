@@ -1,4 +1,4 @@
-import { expect } from "chai";
+import { expect } from 'chai'
 
 import { ImmutableRoom, ImmutableRoomItem, fromRoom } from '../../../src/utils/immutable-room'
 
@@ -20,7 +20,7 @@ describe('immutable-room module', () => {
             it('returns 4 cardinal neighbors', () => {
                 const room = new ImmutableRoom('test')
                 const genNeighbors = room.getCardinalNeighbors(1, 1)
-                let neighbor: ImmutableRoomItem;
+                let neighbor: ImmutableRoomItem
 
                 neighbor = genNeighbors.next().value as ImmutableRoomItem
                 expect(neighbor).to.not.be.undefined
@@ -270,8 +270,7 @@ describe('immutable-room module', () => {
                 expect(positions[0].y).to.equal(2)
             })
 
-
-            it("adds a container even two sources share a container", () => {
+            it('adds a container even two sources share a container', () => {
                 let iroom = new ImmutableRoom('test')
                 iroom = iroom.setObstacle(1, 1, 'source')
                 iroom = iroom.setObstacle(2, 1, 'source')
@@ -398,7 +397,7 @@ describe('immutable-room module', () => {
     })
 
     describe('ImmutableRoomItem', () => {
-        describe("#canBuild", () => {
+        describe('#canBuild', () => {
             it("is true if there's no obstacle", () => {
                 const roomItem = new ImmutableRoomItem({
                     x: 4,

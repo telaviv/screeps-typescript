@@ -58,10 +58,7 @@ function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
     return filter(structures, { structureType }).length > 0
 }
 
-function hasConstructionSiteAt(
-    structureType: BuildableStructureConstant,
-    pos: RoomPosition,
-) {
+function hasConstructionSiteAt(structureType: BuildableStructureConstant, pos: RoomPosition) {
     const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES)
     return filter(sites, { structureType }).length > 0
 }
@@ -96,14 +93,8 @@ export default class RoomVisualizer {
             for (const pos of positions) {
                 const roomPos = new RoomPosition(pos.x, pos.y, this.room.name)
                 if (
-                    hasStructureAt(
-                        structureType as BuildableStructureConstant,
-                        roomPos,
-                    ) ||
-                    hasConstructionSiteAt(
-                        structureType as BuildableStructureConstant,
-                        roomPos,
-                    )
+                    hasStructureAt(structureType as BuildableStructureConstant, roomPos) ||
+                    hasConstructionSiteAt(structureType as BuildableStructureConstant, roomPos)
                 ) {
                     continue
                 }
@@ -113,10 +104,7 @@ export default class RoomVisualizer {
                 if (drawFunction) {
                     drawFunction(this.room.visual, roomPos)
                 } else {
-                    Logger.warning(
-                        'room-visualizer:render:missing',
-                        structureType,
-                    )
+                    Logger.warning('room-visualizer:render:missing', structureType)
                 }
             }
         }

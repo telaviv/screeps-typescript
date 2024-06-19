@@ -61,16 +61,12 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     const features = {
         [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
         [STRUCTURE_TOWER]: iroom.sortedTowerPositions(),
-        [STRUCTURE_STORAGE]: iroom
-            .getObstacles('storage')
-            .map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_LINK]: iroom.sortedLinkPositions(),
         [STRUCTURE_CONTAINER]: iroom
             .getNonObstacles('container')
             .map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_SPAWN]: iroom
-            .getObstacles('spawn')
-            .map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_RAMPART]: [] as Position[],
         [STRUCTURE_ROAD]: [] as Position[],
     }
@@ -105,17 +101,12 @@ function calculateSurveyImmutableRoom(room: Room): ImmutableRoom {
 function getRampartPositions(room: Room, features: Position[]): Position[] {
     type Position = [number, number]
     const isCenter = (pos: Position): boolean => {
-        return features.some(
-            (feature) => feature.x === pos[0] && feature.y === pos[1],
-        )
+        return features.some((feature) => feature.x === pos[0] && feature.y === pos[1])
     }
     const isWall = (pos: Position): boolean => {
         return (
             room.getTerrain().get(pos[0], pos[1]) === TERRAIN_MASK_WALL ||
-            hasBuildingAt(
-                new RoomPosition(pos[0], pos[1], room.name),
-                STRUCTURE_WALL,
-            )
+            hasBuildingAt(new RoomPosition(pos[0], pos[1], room.name), STRUCTURE_WALL)
         )
     }
     const positions = minCutWalls({ isCenter, isWall })

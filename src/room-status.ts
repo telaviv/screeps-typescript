@@ -1,9 +1,6 @@
 import { wrap } from 'utils/profiling'
 import { FlatRoomPosition } from './types'
-import {
-    compressToBase64 as compress,
-    decompressFromBase64 as decompress,
-} from 'lz-string'
+import { compressToBase64 as compress, decompressFromBase64 as decompress } from 'lz-string'
 
 const SCOUT_TTL = 1000
 const VERSION = '1.0.2'
@@ -61,8 +58,7 @@ export const run = wrap(() => {
     const roomToRecord = Object.values(Game.rooms).find(
         (room) =>
             !room.memory.scout ||
-            (room.memory.scout &&
-                room.memory.scout.timestamp + SCOUT_TTL < Game.time),
+            (room.memory.scout && room.memory.scout.timestamp + SCOUT_TTL < Game.time),
     )
 
     // we only record 1 room per tick to prevent a thundering herd situation
@@ -79,9 +75,7 @@ export function recordStatus(room: Room) {
     ) {
         return
     }
-    const controllerStatus = room.controller
-        ? getControllerStatus(room.controller)
-        : undefined
+    const controllerStatus = room.controller ? getControllerStatus(room.controller) : undefined
     const structureStatus = getStructuresStatus(room)
     room.memory.scout = {
         timestamp: Game.time,
@@ -103,9 +97,7 @@ function serializeTerrain(room: Room): string {
     return compress(serialized.join(''))
 }
 
-function getControllerStatus(
-    controller: StructureController,
-): SimpleController {
+function getControllerStatus(controller: StructureController): SimpleController {
     const {
         my,
         isPowerEnabled,

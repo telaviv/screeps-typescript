@@ -1,15 +1,10 @@
 import { RoomTask, isClaimRoomTask } from 'managers/room-manager'
 import { profile } from 'utils/profiling'
 import { hasNoSpawns } from 'utils/room'
-import WarDepartment, {
-    SpawnWarMemory,
-    WarMemory,
-    WarStatus,
-} from 'war-department'
+import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
 import * as Logger from 'utils/logger'
 
-const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory =>
-    mem.status === WarStatus.SPAWN
+const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
 
 export default class Empire {
     private rooms: Room[]
@@ -78,8 +73,7 @@ export default class Empire {
         if (
             this.rooms.some(
                 (r) =>
-                    r.memory.war?.status === WarStatus.SPAWN &&
-                    r.memory.war?.target === room.name,
+                    r.memory.war?.status === WarStatus.SPAWN && r.memory.war?.target === room.name,
             )
         ) {
             return

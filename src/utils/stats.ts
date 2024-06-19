@@ -4,26 +4,20 @@ if (!Memory.stats) {
     Memory.stats = {}
 }
 
-export function recordRoomStats(room: Room) {
+export function recordRoomStats(room: Room): void {
     const prefix = `room.${room.name}`
     recordStatistic(`${prefix}.energyAvailable`, room.energyAvailable)
-    recordStatistic(
-        `${prefix}.energyCapacityAvailable`,
-        room.energyCapacityAvailable,
-    )
+    recordStatistic(`${prefix}.energyCapacityAvailable`, room.energyCapacityAvailable)
     if (!room.controller) {
         return
     }
 
     recordStatistic(`${prefix}.controller.progress`, room.controller.progress)
-    recordStatistic(
-        `${prefix}.controller.progressTotal`,
-        room.controller.progressTotal,
-    )
+    recordStatistic(`${prefix}.controller.progressTotal`, room.controller.progressTotal)
     recordStatistic(`${prefix}.controller.level`, room.controller.level)
 }
 
-export const recordGameStats = wrap(() => {
+export const recordGameStats = wrap((): void => {
     recordStatistic('Game.cpu.limit', Game.cpu.limit)
     recordStatistic('Game.cpu.tickLimit', Game.cpu.tickLimit)
     recordStatistic('Game.cpu.bucket', Game.cpu.bucket)
@@ -47,7 +41,7 @@ export const recordGameStats = wrap(() => {
     }
 }, 'recordGameStats')
 
-export function recordStatistic(key: string, value: number) {
+export function recordStatistic(key: string, value: number): void {
     Memory.stats[key] = value
 }
 

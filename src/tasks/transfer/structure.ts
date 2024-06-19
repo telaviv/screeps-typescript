@@ -33,9 +33,7 @@ export class TransferStructure {
         return TransferStructure.create(id)
     }
 
-    public remainingCapacity(
-        resource: ResourceConstant = RESOURCE_ENERGY,
-    ): number {
+    public remainingCapacity(resource: ResourceConstant = RESOURCE_ENERGY): number {
         if (this.structure.store === null) {
             return 0
         }
@@ -52,10 +50,7 @@ export class TransferStructure {
             throw new Error(`creep ${creep.name} was trying to make request`)
         }
         const structureCapacity = this.remainingCapacity(resource)
-        const amountToTransfer = Math.min(
-            creepEnergyAvailable,
-            structureCapacity,
-        )
+        const amountToTransfer = Math.min(creepEnergyAvailable, structureCapacity)
         const task = {
             type: 'transfer' as const,
             id: autoIncrement().toString(),

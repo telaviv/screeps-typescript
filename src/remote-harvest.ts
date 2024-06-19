@@ -45,11 +45,7 @@ export default class WarDepartment {
         }
         const targetRoom = Game.rooms[this.target]
         if (this.status === WarStatus.CLAIM) {
-            if (
-                targetRoom &&
-                targetRoom.controller &&
-                targetRoom.controller.my
-            ) {
+            if (targetRoom && targetRoom.controller && targetRoom.controller.my) {
                 this.status = WarStatus.SPAWN
             }
         } else if (this.status === WarStatus.SPAWN) {

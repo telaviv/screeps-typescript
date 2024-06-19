@@ -4,10 +4,9 @@ function runTower(tower: StructureTower) {
     if (closestHostile) {
         tower.attack(closestHostile)
     } else {
-        const closestDamagedStructure = tower.pos.findClosestByRange(
-            FIND_STRUCTURES,
-            { filter: isDamaged },
-        )
+        const closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: isDamaged,
+        })
         if (closestDamagedStructure) {
             tower.repair(closestDamagedStructure)
         }
@@ -15,10 +14,7 @@ function runTower(tower: StructureTower) {
 }
 
 function isDamaged(structure: Structure): boolean {
-    return (
-        structure.hitsMax - structure.hits > 50 &&
-        structure.structureType === STRUCTURE_ROAD
-    )
+    return structure.hitsMax - structure.hits > 50 && structure.structureType === STRUCTURE_ROAD
 }
 
 export { isDamaged, runTower }

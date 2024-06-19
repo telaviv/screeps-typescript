@@ -21,8 +21,7 @@ export default class SourceManager {
     private constructor(source: Source) {
         this.id = source.id
         this.source = source
-        const containerPosition =
-            this.source.room.memory.stationaryPoints!.sources[this.id]
+        const containerPosition = this.source.room.memory.stationaryPoints!.sources[this.id]
         this.containerPosition = new RoomPosition(
             containerPosition.x,
             containerPosition.y,
@@ -44,10 +43,7 @@ export default class SourceManager {
     }
 
     public get harvesters(): Harvester[] {
-        return filter(
-            getAllHarvesters(),
-            (creep: Harvester) => creep.memory.source === this.id,
-        )
+        return filter(getAllHarvesters(), (creep: Harvester) => creep.memory.source === this.id)
     }
 
     public get auxHarvesters(): LogisticsCreep[] {
@@ -92,8 +88,7 @@ export default class SourceManager {
     public hasStaticHarvester(): boolean {
         return some(
             this.harvesters,
-            (harvester: Creep) =>
-                isHarvester(harvester) && harvester.memory.source === this.id,
+            (harvester: Creep) => isHarvester(harvester) && harvester.memory.source === this.id,
         )
     }
 
@@ -125,12 +120,7 @@ export default class SourceManager {
         for (const pos of this.getPositions()) {
             let isAvailable = true
             for (const harvester of harvesters) {
-                if (
-                    pos.isEqualTo(
-                        harvester.memory.pos.x,
-                        harvester.memory.pos.y,
-                    )
-                ) {
+                if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
                     isAvailable = false
                     break
                 }
@@ -144,10 +134,7 @@ export default class SourceManager {
 
     @profile
     public getNextAvailableAuxHarvestPosition(): RoomPosition | null {
-        if (
-            this.source.energy === 0 ||
-            hasEnoughWorkParts(this.allHarvesters)
-        ) {
+        if (this.source.energy === 0 || hasEnoughWorkParts(this.allHarvesters)) {
             return null
         }
 
@@ -156,12 +143,7 @@ export default class SourceManager {
         for (const pos of this.getPositions()) {
             let isAvailable = true
             for (const harvester of harvesters) {
-                if (
-                    pos.isEqualTo(
-                        harvester.memory.pos.x,
-                        harvester.memory.pos.y,
-                    )
-                ) {
+                if (pos.isEqualTo(harvester.memory.pos.x, harvester.memory.pos.y)) {
                     isAvailable = false
                     break
                 }

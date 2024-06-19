@@ -26,9 +26,7 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const home = Game.rooms[creep.memory.home]!
     let resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
     if (creep.memory.home !== creep.room.name) {
-        resources = resources.concat(
-            getDroppedResources(creep.room, capacity, RESOURCE_ENERGY),
-        )
+        resources = resources.concat(getDroppedResources(creep.room, capacity, RESOURCE_ENERGY))
     }
     if (resources.length > 0) {
         const resource = findClosestByRange(creep.pos, resources) as Resource
@@ -36,11 +34,7 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
             addPickupTask(creep, resource)
             return true
         } else {
-            Logger.error(
-                'task:pickup::makeRequest:failure:no-resource',
-                creep.name,
-                resources,
-            )
+            Logger.error('task:pickup::makeRequest:failure:no-resource', creep.name, resources)
             return false
         }
     }
@@ -75,11 +69,7 @@ function addPickupTask(creep: ResourceCreep, resource: Resource) {
 
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
-        Logger.warning(
-            'task:pickup::complete:failure',
-            creep.name,
-            creep.memory.tasks,
-        )
+        Logger.warning('task:pickup::complete:failure', creep.name, creep.memory.tasks)
     }
     const task = creep.memory.tasks[0]
     task.complete = true
@@ -87,12 +77,7 @@ export function completeRequest(creep: ResourceCreep) {
 
 export function cleanup(task: PickupTask, creep: ResourceCreep): boolean {
     if (Game.getObjectById(task.resourceId) === null) {
-        Logger.info(
-            'task:pickup:cleanup:non-existant',
-            task.resourceId,
-            creep.name,
-            task,
-        )
+        Logger.info('task:pickup:cleanup:non-existant', task.resourceId, creep.name, task)
         return true
     }
 
@@ -129,15 +114,9 @@ function getResource(task: PickupTask): Resource {
     return Game.getObjectById(task.resourceId) as Resource
 }
 
-function getDroppedResources(
-    room: Room,
-    capacity: number,
-    resource: ResourceConstant,
-): Resource[] {
+function getDroppedResources(room: Room, capacity: number, resource: ResourceConstant): Resource[] {
     const targets = PickupTarget.findInRoom(room, resource)
-    const eligibles = targets.filter(
-        (target) => target.resourcesAvailable() >= capacity,
-    )
+    const eligibles = targets.filter((target) => target.resourcesAvailable() >= capacity)
     return eligibles.map((eligible) => eligible.resource)
 }
 

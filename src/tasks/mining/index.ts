@@ -30,22 +30,15 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
 export function run(task: MiningTask, creep: ResourceCreep): boolean {
     const source = Game.getObjectById<Source>(task.source)!
     if (creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-        Logger.info(
-            'task:mining:complete',
-            creep.name,
-            JSON.stringify(task.pos),
-        )
+        Logger.info('task:mining:complete', creep.name, JSON.stringify(task.pos))
         completeRequest(creep)
         return true
     }
     const err = creep.harvest(source)
     if (err === ERR_NOT_IN_RANGE) {
-        const err = creep.moveTo(
-            new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName),
-            {
-                visualizePathStyle: { stroke: '#ffaa00' },
-            },
-        )
+        const err = creep.moveTo(new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName), {
+            visualizePathStyle: { stroke: '#ffaa00' },
+        })
     } else if (err !== OK) {
         Logger.warning(`task:mining:run:harvest:failed ${creep.name}: ${err}`)
     }
@@ -75,11 +68,7 @@ function addMiningTask(
 
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
-        Logger.warning(
-            'task:mining::complete:failure',
-            creep.name,
-            creep.memory.tasks,
-        )
+        Logger.warning('task:mining::complete:failure', creep.name, creep.memory.tasks)
     }
     const task = creep.memory.tasks[0]
     task.complete = true
@@ -92,11 +81,7 @@ export function cleanup(task: MiningTask, creep: ResourceCreep): boolean {
         return true
     }
     if (source.energy === 0) {
-        Logger.info(
-            'task:mining:cleanup:empty',
-            creep.name,
-            JSON.stringify(task.pos),
-        )
+        Logger.info('task:mining:cleanup:empty', creep.name, JSON.stringify(task.pos))
         return true
     }
 

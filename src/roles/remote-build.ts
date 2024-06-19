@@ -115,12 +115,7 @@ class RemoteBuildCreep {
             if (err === ERR_NOT_IN_RANGE) {
                 moveTo(targets[0].pos, this.creep, { range: 3 })
             } else if (err !== OK) {
-                Logger.warning(
-                    'remote-build:build:failure',
-                    err,
-                    this.creep.name,
-                    targets[0].pos,
-                )
+                Logger.warning('remote-build:build:failure', err, this.creep.name, targets[0].pos)
             }
         } else {
             Logger.warning(

@@ -19,9 +19,7 @@ export default class DroppedEnergyManager {
                 )} in room ${source.room.name}`,
             )
         const { x, y } = point
-        return new DroppedEnergyManager(
-            new RoomPosition(x, y, source.room.name),
-        )
+        return new DroppedEnergyManager(new RoomPosition(x, y, source.room.name))
     }
 
     public get room(): Room {

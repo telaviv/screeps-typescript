@@ -30,16 +30,14 @@ export const findClosestByRange = wrap(
 
         const rooms = new Set<string>()
         for (const position of positions) {
-            const pos =
-                position instanceof RoomPosition ? position : position.pos
+            const pos = position instanceof RoomPosition ? position : position.pos
             rooms.add(pos.roomName)
         }
         let closestPosition = null
         let closestDistance = Infinity
 
         for (const position of positions) {
-            const pos =
-                position instanceof RoomPosition ? position : position.pos
+            const pos = position instanceof RoomPosition ? position : position.pos
             const distance = PathFinder.search(
                 origin,
                 { pos, range: opts.range || 0 },
@@ -59,16 +57,8 @@ export const findClosestByRange = wrap(
 
 export function getNeighbors(pos: RoomPosition, range = 1): RoomPosition[] {
     const positions = []
-    for (
-        let x = Math.max(0, pos.x - range);
-        x <= Math.min(49, pos.x + range);
-        x++
-    ) {
-        for (
-            let y = Math.max(0, pos.y - range);
-            y <= Math.min(49, pos.y + range);
-            y++
-        ) {
+    for (let x = Math.max(0, pos.x - range); x <= Math.min(49, pos.x + range); x++) {
+        for (let y = Math.max(0, pos.y - range); y <= Math.min(49, pos.y + range); y++) {
             if (x === pos.x && y === pos.y) {
                 continue
             }
@@ -79,10 +69,7 @@ export function getNeighbors(pos: RoomPosition, range = 1): RoomPosition[] {
 }
 
 export function hasObstacle(pos: RoomPosition): boolean {
-    if (
-        Game.rooms[pos.roomName].getTerrain().get(pos.x, pos.y) ===
-        TERRAIN_MASK_WALL
-    ) {
+    if (Game.rooms[pos.roomName].getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
         return true
     }
     const look = pos.lookFor(LOOK_STRUCTURES)
@@ -90,21 +77,14 @@ export function hasObstacle(pos: RoomPosition): boolean {
     return pos.lookFor(LOOK_STRUCTURES).some((s) => isObstacle(s.structureType))
 }
 
-export function getNonObstacleNeighbors(
-    pos: RoomPosition,
-    range = 1,
-): RoomPosition[] {
+export function getNonObstacleNeighbors(pos: RoomPosition, range = 1): RoomPosition[] {
     const neighbors = getNeighbors(pos, range)
-    const nonObstacleNeighbors = neighbors.filter((pos) => !hasObstacle(pos))
-    return getNeighbors(pos, range).filter((pos) => !hasObstacle(pos))
+    const nonObstacleNeighbors = neighbors.filter((p) => !hasObstacle(p))
+    return getNeighbors(pos, range).filter((p) => !hasObstacle(p))
 }
 
-export function getRandomWalkablePosition(
-    pos: RoomPosition,
-): RoomPosition | null {
-    const positions = getNonObstacleNeighbors(pos).filter(
-        (pos) => !isAtEdge(pos),
-    )
+export function getRandomWalkablePosition(pos: RoomPosition): RoomPosition | null {
+    const positions = getNonObstacleNeighbors(pos).filter((pos) => !isAtEdge(pos))
     if (positions.length === 0) {
         return null
     }

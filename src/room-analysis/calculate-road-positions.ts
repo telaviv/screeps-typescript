@@ -25,16 +25,8 @@ export default function calculateRoadPositions(
     iroom: ImmutableRoom,
     features: ConstructionFeatures,
 ): Position[] {
-    const surroundingRoadPositions = calculateSurroundingRoadPositions(
-        room,
-        iroom,
-        features,
-    )
-    const roadSpinePositions = calculateRoadSpinePositions(
-        room,
-        iroom,
-        features,
-    )
+    const surroundingRoadPositions = calculateSurroundingRoadPositions(room, iroom, features)
+    const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
     const uniquePositions = uniqBy(
         [...surroundingRoadPositions, ...roadSpinePositions],
         (pos) => `${pos.x}:${pos.y}`,
@@ -102,9 +94,7 @@ function calculateRoadSpinePositions(
         roomName: room.name,
     }
     const sourcesPos = RoomUtils.getSources(room).map((source) => source.pos)
-    const mineralsPos = RoomUtils.getMinerals(room).map(
-        (mineral) => mineral.pos,
-    )
+    const mineralsPos = RoomUtils.getMinerals(room).map((mineral) => mineral.pos)
     const positions = [controllerPos, storagePos, ...sourcesPos, ...mineralsPos]
     const flatPositions = positions.map((pos) => ({
         x: pos.x,
@@ -143,11 +133,7 @@ export const calculateMinPathPositions = (
     }
     const vertices = positions.map(positionToString)
     const minPosEdges = profiledMinimumSpanningTree(edges, vertices)
-    return flatten(
-        minPosEdges.map(
-            (edge) => pathMap[posStringPairToString(edge.a, edge.b)],
-        ),
-    )
+    return flatten(minPosEdges.map((edge) => pathMap[posStringPairToString(edge.a, edge.b)]))
 }
 
 const posStringPairToString = (a: string, b: string): string => {
@@ -167,10 +153,7 @@ const positionToString = (pos: FlatRoomPosition): string => {
     return `${pos.x}:${pos.y}:${pos.roomName}`
 }
 
-export const minimumSpanningTree = (
-    edges: PositionEdge[],
-    vertices: string[],
-): PositionEdge[] => {
+export const minimumSpanningTree = (edges: PositionEdge[], vertices: string[]): PositionEdge[] => {
     const graph = createGraph(edges, vertices)
     const mst = prim(graph)
     const minPosEdge: PositionEdge[] = []
@@ -182,10 +165,7 @@ export const minimumSpanningTree = (
     return minPosEdge
 }
 
-const profiledMinimumSpanningTree = Profiling.wrap(
-    minimumSpanningTree,
-    'minimumSpanningTree',
-)
+const profiledMinimumSpanningTree = Profiling.wrap(minimumSpanningTree, 'minimumSpanningTree')
 
 const createGraph = (edges: PositionEdge[], vertices: string[]): Graph => {
     const graph = new Graph(false)

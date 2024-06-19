@@ -11,10 +11,7 @@ type RoomSearchResults = {
     depth: number
 }[]
 
-export function roomSearch(
-    roomNames: string[],
-    maxDepth = 3,
-): RoomSearchResults {
+export function roomSearch(roomNames: string[], maxDepth = 3): RoomSearchResults {
     const results: RoomSearchResults = []
     const visited: { [name: string]: boolean } = {}
     const queue: { name: string; depth: number }[] = roomNames.map((name) => ({

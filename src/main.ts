@@ -37,7 +37,7 @@ declare global {
       Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
     */
     // Memory extension samples
-    interface Memory { }
+    interface Memory {}
 
     interface RoomMemory {
         strategy: StrategyPhase
@@ -53,7 +53,7 @@ declare global {
 
     // Syntax for adding proprties to `global` (ex "global.log")
     namespace NodeJS {
-        interface Global { }
+        interface Global {}
     }
 }
 
@@ -88,10 +88,7 @@ const runMyRoom = wrap((room: Room) => {
 
     const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
         filter: (s) => {
-            return (
-                s.structureType === STRUCTURE_TOWER ||
-                s.structureType === STRUCTURE_SPAWN
-            )
+            return s.structureType === STRUCTURE_TOWER || s.structureType === STRUCTURE_SPAWN
         },
     })
 
@@ -109,10 +106,7 @@ const ensureSafeMode = wrap((room: Room) => {
         return
     }
     for (const event of room.getEventLog()) {
-        if (
-            event.event === EVENT_OBJECT_DESTROYED &&
-            event.data.type === STRUCTURE_RAMPART
-        ) {
+        if (event.event === EVENT_OBJECT_DESTROYED && event.data.type === STRUCTURE_RAMPART) {
             room.controller.activateSafeMode()
             return
         }
@@ -185,7 +179,9 @@ function unwrappedLoop() {
 
 const loop = wrap(
     // @ts-ignore : global trickery in tests
-    !global.Game || global.Game.cpu.tickLimit < 30 ? unwrappedLoop : ErrorMapper.wrap(unwrappedLoop),
+    !global.Game || global.Game.cpu.tickLimit < 30
+        ? unwrappedLoop
+        : ErrorMapper.wrap(unwrappedLoop),
     'main:loop',
 )
 

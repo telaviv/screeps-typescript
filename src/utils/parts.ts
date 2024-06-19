@@ -54,9 +54,7 @@ export function byPartCount(parts: Partial<Record<BodyPartConstant, number>>) {
     let plan: BodyPartConstant[] = []
     for (const [part, amount] of Object.entries(parts)) {
         if (amount) {
-            plan = plan.concat(
-                times(amount, constant(part as BodyPartConstant)),
-            )
+            plan = plan.concat(times(amount, constant(part as BodyPartConstant)))
         }
     }
     return plan

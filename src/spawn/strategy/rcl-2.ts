@@ -100,10 +100,7 @@ export default function (spawn: StructureSpawn) {
     }
 }
 
-function createWarCreeps(
-    spawn: StructureSpawn,
-    warDepartment: WarDepartment,
-): number | null {
+function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): number | null {
     const room = spawn.room
     const status = warDepartment.status
     const attackers = getCreeps('attack', room)
@@ -135,9 +132,7 @@ function createWarCreeps(
         } else if (claimers.length < CLAIMERS_COUNT) {
             if (claimers.length === 0) {
                 return roleClaimer.create(spawn, warDepartment.target)
-            } else if (
-                warDepartment.targetRoom.controller!.upgradeBlocked < 20
-            ) {
+            } else if (warDepartment.targetRoom.controller!.upgradeBlocked < 20) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }
         }

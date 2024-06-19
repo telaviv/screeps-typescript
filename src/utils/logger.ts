@@ -36,10 +36,7 @@ function logForLevel(level: string, color: string, ...args: any[]) {
         }
         return arg
     })
-    console.log(
-        `<span color="${color}">[${level}][${Game.time}]</span>`,
-        ...normalized,
-    )
+    console.log(`<span color="${color}">[${level}][${Game.time}]</span>`, ...normalized)
 }
 
 export function setLogLevel(level: string) {

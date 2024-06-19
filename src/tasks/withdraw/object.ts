@@ -36,16 +36,9 @@ export class WithdrawObject {
     }
 
     public static getTargetsInRoom(room: Room): WithdrawObject[] {
-        const structures = room.find<StructureContainer | StructureStorage>(
-            FIND_STRUCTURES,
-            {
-                filter: (r) =>
-                    includes(
-                        [STRUCTURE_CONTAINER, STRUCTURE_STORAGE],
-                        r.structureType,
-                    ),
-            },
-        )
+        const structures = room.find<StructureContainer | StructureStorage>(FIND_STRUCTURES, {
+            filter: (r) => includes([STRUCTURE_CONTAINER, STRUCTURE_STORAGE], r.structureType),
+        })
         const tombstones = room.find(FIND_TOMBSTONES)
         const ruins = room.find(FIND_RUINS)
 
@@ -55,26 +48,18 @@ export class WithdrawObject {
         return structureTargets.concat(tombstoneTargets, ruinTargets)
     }
 
-    public resourcesAvailable(
-        resource: ResourceConstant = RESOURCE_ENERGY,
-    ): number {
+    public resourcesAvailable(resource: ResourceConstant = RESOURCE_ENERGY): number {
         return Math.max(
-            getUsedCapacity(this.withdrawable, resource) -
-                this.sumOfWithdraws(resource),
+            getUsedCapacity(this.withdrawable, resource) - this.sumOfWithdraws(resource),
             0,
         )
     }
 
-    public makeRequest(
-        creep: Creep,
-        resource: ResourceConstant = RESOURCE_ENERGY,
-    ): WithdrawTask {
+    public makeRequest(creep: Creep, resource: ResourceConstant = RESOURCE_ENERGY): WithdrawTask {
         const creepCapacity = creep.store.getFreeCapacity(resource)
         if (creepCapacity <= 0) {
             throw new Error(
-                `creep ${
-                    creep.name
-                } was trying to make request: ${JSON.stringify(creep)}`,
+                `creep ${creep.name} was trying to make request: ${JSON.stringify(creep)}`,
             )
         }
         const resourcesAvailable = this.resourcesAvailable(resource)

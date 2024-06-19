@@ -73,8 +73,7 @@ export class HarvesterCreep {
     private isHarvestTick(): boolean {
         const workParts = this.creep.getActiveBodyparts(WORK)
         return (
-            this.creep.ticksToLive! % (workParts / MAX_WORK_PARTS) === 0 ||
-            this.source.energy === 0
+            this.creep.ticksToLive! % (workParts / MAX_WORK_PARTS) === 0 || this.source.energy === 0
         )
     }
 
@@ -103,12 +102,7 @@ export class HarvesterCreep {
         if (err === ERR_NOT_IN_RANGE) {
             this.moveToHarvestPos()
         } else if (err !== OK && err !== ERR_NOT_ENOUGH_RESOURCES) {
-            Logger.warning(
-                'harvester:harvest:failure',
-                this.creep.name,
-                "couldn't harvest",
-                err,
-            )
+            Logger.warning('harvester:harvest:failure', this.creep.name, "couldn't harvest", err)
         }
     }
 
@@ -179,9 +173,7 @@ const roleHarvester = {
             return ERR_NOT_FOUND
         }
         const stationaryPosition =
-            pos === null
-                ? source.room.memory.stationaryPoints!.sources[sourceId]
-                : pos
+            pos === null ? source.room.memory.stationaryPoints!.sources[sourceId] : pos
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable

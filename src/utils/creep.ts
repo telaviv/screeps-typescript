@@ -1,11 +1,7 @@
 import { getSpawns } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { filter } from 'lodash'
-import {
-    LogisticsCreep,
-    LogisticsPreference,
-    isLogisticsCreep,
-} from 'roles/logistics-constants'
+import { LogisticsCreep, LogisticsPreference, isLogisticsCreep } from 'roles/logistics-constants'
 import { Harvester, HarvesterCreep } from 'roles/harvester'
 import { ResourceCreep, isResourceCreep } from '../tasks/types'
 
@@ -36,11 +32,7 @@ type MoveToReturnCode =
     | ERR_INVALID_TARGET
 
 export const moveTo = wrap(
-    (
-        pos: RoomPosition,
-        creep: Creep,
-        opts: MoveToOpts = {},
-    ): MoveToReturnCode => {
+    (pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): MoveToReturnCode => {
         const original = pos
         const err: MoveToReturnCode = creep.moveTo(pos, {
             ...opts,
@@ -74,12 +66,7 @@ export function moveTowardsCenter(creep: Creep) {
 }
 
 export function isAtEdge(creep: Creep) {
-    return (
-        creep.pos.x === 0 ||
-        creep.pos.x === 49 ||
-        creep.pos.y === 0 ||
-        creep.pos.y === 49
-    )
+    return creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49
 }
 
 export function recycle(creep: ResourceCreep) {
@@ -141,18 +128,11 @@ export function getLogisticsCreeps(options: {
     taskType?: string
 }): LogisticsCreep[] {
     const check = (creep: LogisticsCreep): boolean => {
-        if (
-            options.preference &&
-            creep.memory.preference !== options.preference
-        ) {
+        if (options.preference && creep.memory.preference !== options.preference) {
             return false
         }
         if (options.taskType) {
-            if (
-                !creep.memory.tasks.some(
-                    (task) => task.type === options.taskType,
-                )
-            ) {
+            if (!creep.memory.tasks.some((task) => task.type === options.taskType)) {
                 return false
             }
         }

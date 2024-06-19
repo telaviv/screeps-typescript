@@ -32,10 +32,7 @@ export class PickupTarget {
         return PickupTarget.create(id)
     }
 
-    public static findInRoom(
-        room: Room,
-        resource: ResourceConstant,
-    ): PickupTarget[] {
+    public static findInRoom(room: Room, resource: ResourceConstant): PickupTarget[] {
         const resources = room.find(FIND_DROPPED_RESOURCES, {
             filter: (r) => r.resourceType === resource,
         })
@@ -47,22 +44,16 @@ export class PickupTarget {
     }
 
     public makeRequest(creep: Creep): PickupTask {
-        const creepCapacity = creep.store.getFreeCapacity(
-            this.resource.resourceType,
-        )
+        const creepCapacity = creep.store.getFreeCapacity(this.resource.resourceType)
         const resourcesAvailable = this.resourcesAvailable()
         if (creepCapacity <= 0) {
             throw new Error(
-                `creep ${
-                    creep.name
-                } was trying to make request: ${JSON.stringify(creep)}`,
+                `creep ${creep.name} was trying to make request: ${JSON.stringify(creep)}`,
             )
         }
         if (resourcesAvailable <= 0) {
             throw new Error(
-                `creep ${
-                    creep.name
-                } was trying to make request: ${JSON.stringify(this.resource)}`,
+                `creep ${creep.name} was trying to make request: ${JSON.stringify(this.resource)}`,
             )
         }
         const amountToPickup = Math.min(creepCapacity, resourcesAvailable)

@@ -79,10 +79,7 @@ class RoleLogistics {
         if (this.creep.spawning) {
             return
         }
-        if (
-            this.creep.memory.tasks.length > 0 ||
-            this.creep.memory.currentTask !== NO_TASK
-        ) {
+        if (this.creep.memory.tasks.length > 0 || this.creep.memory.currentTask !== NO_TASK) {
             this.unidle()
         } else {
             this.idle()
@@ -144,11 +141,7 @@ class RoleLogistics {
     @profile
     private setToNoTask(reason: string): void {
         if (this.creep.memory.tasks.length > 0) {
-            Logger.warning(
-                'logistics:setToNoTask:failure:hasTasks',
-                this.creep.name,
-                reason,
-            )
+            Logger.warning('logistics:setToNoTask:failure:hasTasks', this.creep.name, reason)
             return
         }
         this.creep.memory.currentTask = NO_TASK
@@ -199,9 +192,7 @@ class RoleLogistics {
         const tasks = this.creep.memory.tasks
         if (tasks.length > 0 && tasks[0] === undefined) {
             throw new Error(
-                `undefined task: ${this.creep.name}: ${JSON.stringify(
-                    tasks,
-                )} $${tasks.length}`,
+                `undefined task: ${this.creep.name}: ${JSON.stringify(tasks)} $${tasks.length}`,
             )
         }
         if (tasks.length > 0 && isMiningTask(tasks[0])) {
@@ -249,8 +240,7 @@ class RoleLogistics {
     getNonWallSites(room: Room) {
         return getConstructionSites(room, {
             filter: (site: ConstructionSite) =>
-                site.structureType !== STRUCTURE_WALL &&
-                site.structureType !== STRUCTURE_RAMPART,
+                site.structureType !== STRUCTURE_WALL && site.structureType !== STRUCTURE_RAMPART,
         })
     }
 
@@ -258,9 +248,7 @@ class RoleLogistics {
     repairWalls() {
         let structure = null
         if (this.creep.memory.currentTarget) {
-            structure = Game.getObjectById<Structure>(
-                this.creep.memory.currentTarget,
-            )
+            structure = Game.getObjectById<Structure>(this.creep.memory.currentTarget)
             if (structure === null) {
                 Logger.warning(
                     'repair:target:failure',
@@ -288,11 +276,7 @@ class RoleLogistics {
                 range: 3,
             })
         } else if (err !== OK) {
-            Logger.warning(
-                'logistics:repair-wall:failure',
-                this.creep.name,
-                err,
-            )
+            Logger.warning('logistics:repair-wall:failure', this.creep.name, err)
         }
     }
 
@@ -322,9 +306,7 @@ class RoleLogistics {
             this.creep.say('???')
             return
         }
-        if (
-            this.creep.upgradeController(home.controller) === ERR_NOT_IN_RANGE
-        ) {
+        if (this.creep.upgradeController(home.controller) === ERR_NOT_IN_RANGE) {
             this.creep.moveTo(home.controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
                 range: 3,
@@ -360,10 +342,7 @@ class RoleLogistics {
     @profile
     switchTask() {
         let task: LogisticsTask = this.creep.memory.currentTask
-        if (
-            !isAtExtensionCap(this.creep.room) ||
-            hasTunnelSite(this.creep.room)
-        ) {
+        if (!isAtExtensionCap(this.creep.room) || hasTunnelSite(this.creep.room)) {
             task = TASK_BUILDING
         } else if (hasOwnFragileWall(this.creep.room)) {
             task = TASK_WALL_REPAIRS
@@ -372,10 +351,7 @@ class RoleLogistics {
         } else {
             task = TASK_UPGRADING
         }
-        if (
-            this.creep.memory.currentTask === task ||
-            this.creep.memory.currentTask !== NO_TASK
-        ) {
+        if (this.creep.memory.currentTask === task || this.creep.memory.currentTask !== NO_TASK) {
             Logger.info(
                 'logistics:switch-task:failure',
                 this.creep.name,
@@ -432,30 +408,15 @@ class RoleLogistics {
 
     @profile
     public static shouldCreateCreep(spawn: StructureSpawn): boolean {
-        const logistics = filter(
-            Object.keys(Memory.creeps),
-            (creepName: string) => {
-                const creep = Game.creeps[creepName] as LogisticsCreep
-                return (
-                    creep &&
-                    creep.memory.role === 'logistics' &&
-                    creep.room.name === spawn.room.name
-                )
-            },
-        ).map(
-            (creepName: string) =>
-                new RoleLogistics(Game.creeps[creepName] as LogisticsCreep),
-        )
+        const logistics = filter(Object.keys(Memory.creeps), (creepName: string) => {
+            const creep = Game.creeps[creepName] as LogisticsCreep
+            return creep && creep.memory.role === 'logistics' && creep.room.name === spawn.room.name
+        }).map((creepName: string) => new RoleLogistics(Game.creeps[creepName] as LogisticsCreep))
 
-        const maxIdleTime = logistics.reduce(
-            (max: number, role: RoleLogistics) => {
-                return Math.max(max, role.idleTime())
-            },
-            0,
-        )
-        const canCreateCreep = RoleLogistics.canCreateCreep(
-            spawn.room.energyAvailable,
-        )
+        const maxIdleTime = logistics.reduce((max: number, role: RoleLogistics) => {
+            return Math.max(max, role.idleTime())
+        }, 0)
+        const canCreateCreep = RoleLogistics.canCreateCreep(spawn.room.energyAvailable)
         const retVal =
             RoleLogistics.canCreateCreep(spawn.room.energyAvailable) &&
             maxIdleTime <= RESPAWN_IDLE_LIMIT

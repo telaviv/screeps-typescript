@@ -66,52 +66,30 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     return false
 }
 
-const addWithdrawTask = wrap(
-    (creep: ResourceCreep, withdrawable: Withdrawable) => {
-        const withdrawObject = WithdrawObject.get(withdrawable.id)
-        const task = withdrawObject.makeRequest(creep)
-        Logger.info(
-            'withdraw:create',
-            creep.name,
-            task.id,
-            task.withdrawId,
-            task.amount,
-        )
-        creep.memory.tasks.push(task)
-        return task
-    },
-    'withdraw:addWithdrawTask',
-)
+const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
+    const withdrawObject = WithdrawObject.get(withdrawable.id)
+    const task = withdrawObject.makeRequest(creep)
+    Logger.info('withdraw:create', creep.name, task.id, task.withdrawId, task.amount)
+    creep.memory.tasks.push(task)
+    return task
+}, 'withdraw:addWithdrawTask')
 
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
-        Logger.warning(
-            'withdraw::complete:failure',
-            creep.name,
-            creep.memory.tasks,
-        )
+        Logger.warning('withdraw::complete:failure', creep.name, creep.memory.tasks)
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const task = creep.memory.tasks[0]
     if (isWithdrawTask(task)) {
         task.complete = true
     } else {
-        Logger.warning(
-            'withdraw:complete:no-transfer',
-            creep.name,
-            creep.memory.tasks,
-        )
+        Logger.warning('withdraw:complete:no-transfer', creep.name, creep.memory.tasks)
     }
 }
 
 export function cleanup(task: WithdrawTask, creep: Creep): boolean {
     if (Game.getObjectById(task.withdrawId) === null) {
-        Logger.info(
-            'withdraw:cleanup:failure',
-            task.withdrawId,
-            creep.name,
-            task,
-        )
+        Logger.info('withdraw:cleanup:failure', task.withdrawId, creep.name, task)
         return true
     }
 
@@ -170,8 +148,7 @@ function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     const nonEmpties = withdrawObjects.filter(
         (target) =>
             target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
-            (target.resourcesAvailable(RESOURCE_ENERGY) > 0 &&
-                isTemporary(target)),
+            (target.resourcesAvailable(RESOURCE_ENERGY) > 0 && isTemporary(target)),
     )
 
     const temporaries = nonEmpties.filter(isTemporary)
@@ -191,9 +168,7 @@ function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
     if (nonEmpties.length === 0) {
         return []
     }
-    const bestTarget = maxBy(nonEmpties, (t) =>
-        t.resourcesAvailable(RESOURCE_ENERGY),
-    )
+    const bestTarget = maxBy(nonEmpties, (t) => t.resourcesAvailable(RESOURCE_ENERGY))
     if (!bestTarget) {
         return []
     }

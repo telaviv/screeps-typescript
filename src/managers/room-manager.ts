@@ -76,10 +76,7 @@ export class RoomManager {
         if (roomsOwned.length >= Game.gcl.level) {
             return false
         }
-        return (
-            this.hasClaimRoomTask() &&
-            roleClaimer.canCreate(this.room.find(FIND_MY_SPAWNS)[0])
-        )
+        return this.hasClaimRoomTask() && roleClaimer.canCreate(this.room.find(FIND_MY_SPAWNS)[0])
     }
 
     public hasClaimRoomTask(): boolean {
@@ -102,17 +99,13 @@ export class RoomManager {
         if (err === OK) {
             warDepartment.claimRoom(destination)
             Logger.info('RoomManager:claimRoom:success', destination)
-            this.roomTasks = this.roomTasks.filter(
-                (task) => task.id !== claimTask.id,
-            )
+            this.roomTasks = this.roomTasks.filter((task) => task.id !== claimTask.id)
             return true
         }
         return false
     }
 
     public getClaimRoomTask(): ClaimRoomTask | undefined {
-        return this.roomTasks.find(
-            (task) => task.type === 'claim',
-        ) as ClaimRoomTask
+        return this.roomTasks.find((task) => task.type === 'claim') as ClaimRoomTask
     }
 }

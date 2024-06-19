@@ -4,13 +4,7 @@ import * as TaskRunner from 'tasks/runner'
 import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
 import { profile, wrap } from 'utils/profiling'
 import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import {
-    getWallSites,
-    getWeakestWall,
-    hasFragileWall,
-    hasWallSite,
-    hasWeakWall,
-} from 'utils/room'
+import { getWallSites, getWeakestWall, hasFragileWall, hasWallSite, hasWeakWall } from 'utils/room'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 import autoIncrement from 'utils/autoincrement'
@@ -115,11 +109,7 @@ export class MasonCreep {
         if (this.repairTarget) {
             structure = Game.getObjectById<Wall>(this.repairTarget)
             if (structure === null) {
-                Logger.warning(
-                    'mason:repair:target:failure',
-                    this.creep.name,
-                    this.repairTarget,
-                )
+                Logger.warning('mason:repair:target:failure', this.creep.name, this.repairTarget)
             }
         }
 
@@ -128,11 +118,7 @@ export class MasonCreep {
         }
 
         if (structure === null || structure.hits === structure.hitsMax) {
-            Logger.warning(
-                'mason:repair:cant-repair',
-                this.creep.name,
-                this.repairTarget,
-            )
+            Logger.warning('mason:repair:cant-repair', this.creep.name, this.repairTarget)
             return
         }
 
@@ -145,11 +131,7 @@ export class MasonCreep {
                 range: 3,
             })
         } else if (err !== OK) {
-            Logger.warning(
-                'logistics:repair-wall:failure',
-                this.creep.name,
-                err,
-            )
+            Logger.warning('logistics:repair-wall:failure', this.creep.name, err)
         }
     }
 
@@ -166,11 +148,7 @@ export class MasonCreep {
                 Logger.warning('mason:build:failure', err, this.creep.name)
             }
         } else {
-            Logger.warning(
-                'mason:build',
-                'nothing to build',
-                this.creep.room.name,
-            )
+            Logger.warning('mason:build', 'nothing to build', this.creep.room.name)
         }
     }
 
@@ -192,18 +170,14 @@ export default {
     create(spawn: StructureSpawn): number {
         const capacity = spawn.room.energyCapacityAvailable
         const parts = fromBodyPlan(capacity, [CARRY, WORK, MOVE, MOVE])
-        return spawn.spawnCreep(
-            parts,
-            `${ROLE}:${spawn.room.name}:${autoIncrement()}`,
-            {
-                memory: {
-                    role: ROLE,
-                    home: spawn.room.name,
-                    tasks: [],
-                    idleTimestamp: null,
-                    repairTarget: null,
-                } as MasonMemory,
-            },
-        )
+        return spawn.spawnCreep(parts, `${ROLE}:${spawn.room.name}:${autoIncrement()}`, {
+            memory: {
+                role: ROLE,
+                home: spawn.room.name,
+                tasks: [],
+                idleTimestamp: null,
+                repairTarget: null,
+            } as MasonMemory,
+        })
     },
 }

@@ -16,10 +16,7 @@ export type DeliveryTask =
     | typeof TASK_UPGRADING
     | typeof TASK_REPAIRING
     | typeof TASK_WALL_REPAIRS
-export type LogisticsTask =
-    | typeof NO_TASK
-    | DeliveryTask
-    | typeof TASK_COLLECTING
+export type LogisticsTask = typeof NO_TASK | DeliveryTask | typeof TASK_COLLECTING
 export type LogisticsPreference = DeliveryTask | typeof PREFERENCE_WORKER
 
 export interface LogisticsCreep extends Creep {

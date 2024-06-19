@@ -63,17 +63,13 @@ const roleAttacker = {
 
     create(spawn: StructureSpawn, roomName: string): number {
         const capacity = spawn.room.energyCapacityAvailable
-        return spawn.spawnCreep(
-            calculateParts(capacity),
-            `${ROLE}:${Game.time}`,
-            {
-                memory: {
-                    role: ROLE,
-                    home: spawn.room.name,
-                    roomName,
-                } as AttackerMemory,
-            },
-        )
+        return spawn.spawnCreep(calculateParts(capacity), `${ROLE}:${Game.time}`, {
+            memory: {
+                role: ROLE,
+                home: spawn.room.name,
+                roomName,
+            } as AttackerMemory,
+        })
     },
 }
 

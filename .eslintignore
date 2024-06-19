@@ -1,5 +1,6 @@
 node_modules
 dist
 coverage
+src/data-structures/**
 **/*spec.ts
 **/testing/**

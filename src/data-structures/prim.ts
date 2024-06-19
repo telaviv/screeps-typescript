@@ -33,10 +33,7 @@ export default function prim(graph: Graph): Graph {
 
     // Add all edges of start vertex to the queue.
     startVertex.getEdges().forEach((graphEdge) => {
-        if (
-            graphEdge.startVertex === startVertex ||
-            graphEdge.endVertex === startVertex
-        ) {
+        if (graphEdge.startVertex === startVertex || graphEdge.endVertex === startVertex) {
             edgesQueue.queue(graphEdge)
         }
     })

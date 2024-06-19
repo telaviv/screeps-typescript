@@ -44,9 +44,7 @@ export default class SourcesManager {
     }
 
     public hasAllContainerHarvesters() {
-        return this.sourceManagers.every((sourceManager) =>
-            sourceManager.hasStaticHarvester(),
-        )
+        return this.sourceManagers.every((sourceManager) => sourceManager.hasStaticHarvester())
     }
 
     public getNextHarvesterMiningTarget(): {
@@ -76,9 +74,7 @@ export default class SourcesManager {
             if (this.verifyPositionAvailable(pos, source)) {
                 return { source, pos }
             } else {
-                Logger.error(
-                    `position ${pos}/${source} is not available for a new harvester}`,
-                )
+                Logger.error(`position ${pos}/${source} is not available for a new harvester}`)
             }
         }
         return null
@@ -115,10 +111,7 @@ export default class SourcesManager {
         return roleHarvester.create(spawn, sourceManager.id, pos, rescue)
     }
 
-    private verifyPositionAvailable(
-        pos: RoomPosition,
-        source: Id<Source>,
-    ): boolean {
+    private verifyPositionAvailable(pos: RoomPosition, source: Id<Source>): boolean {
         const harvesters = getHarvesters(this.room)
         for (const harvester of harvesters) {
             if (

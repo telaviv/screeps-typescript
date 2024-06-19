@@ -17,19 +17,11 @@ const MESSAGE = "i'm learning be gentle 😿"
 export function makeRequest(creep: ResourceCreep): boolean {
     const room = creep.memory.home && Game.rooms[creep.memory.home]
     if (!room) {
-        Logger.warning(
-            'task:sign::makeRequest:failure:no-room',
-            creep.name,
-            creep.memory.home,
-        )
+        Logger.warning('task:sign::makeRequest:failure:no-room', creep.name, creep.memory.home)
         return false
     }
     if (!room.controller) {
-        Logger.warning(
-            'task:sign::makeRequest:failure:no-controller',
-            creep.name,
-            room.name,
-        )
+        Logger.warning('task:sign::makeRequest:failure:no-controller', creep.name, room.name)
         return false
     }
 
@@ -55,11 +47,7 @@ export function run(task: SignTask, creep: ResourceCreep): boolean {
 
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
-        Logger.warning(
-            'task:mining::complete:failure',
-            creep.name,
-            creep.memory.tasks,
-        )
+        Logger.warning('task:mining::complete:failure', creep.name, creep.memory.tasks)
     }
     const task = creep.memory.tasks[0]
     task.complete = true
@@ -72,11 +60,7 @@ export function cleanup(task: SignTask, creep: ResourceCreep): boolean {
         return true
     }
     if (room.memory.signed === true) {
-        Logger.warning(
-            'task:sign::cleanup:failure:room-signed',
-            creep.name,
-            room.name,
-        )
+        Logger.warning('task:sign::cleanup:failure:room-signed', creep.name, room.name)
         return true
     }
     return false

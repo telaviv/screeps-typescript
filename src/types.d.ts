@@ -16,12 +16,10 @@ interface Memory {
 }
 
 interface RoomMemory {
-    roadPositions: RoomPositionSet
+    roadPositions: RoomPosition[]
     collapsed: boolean
     visuals: { snapshot: boolean }
 }
-
-type RoomPositionSet = RoomPosition[]
 
 // `global` extension samples
 declare namespace NodeJS {

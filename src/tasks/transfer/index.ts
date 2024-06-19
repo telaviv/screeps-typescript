@@ -20,9 +20,7 @@ export function makeRequest(creep: ResourceCreep): AnyStoreStructure | null {
 
     const extensions = fillableExtensions(creep.room)
     if (extensions.length > 0) {
-        const extension = creep.pos.findClosestByRange(
-            extensions,
-        ) as StructureExtension
+        const extension = creep.pos.findClosestByRange(extensions) as StructureExtension
         const request = addTransferTask(creep, extension)
         return getStructure(request)
     }
@@ -78,33 +76,20 @@ function addTransferTask(creep: ResourceCreep, structure: AnyStoreStructure) {
 
 export function completeRequest(creep: ResourceCreep) {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
-        Logger.warning(
-            'task:transfer:complete:failure',
-            creep.name,
-            creep.memory.tasks,
-        )
+        Logger.warning('task:transfer:complete:failure', creep.name, creep.memory.tasks)
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const task = creep.memory.tasks[0]
     if (isTransferTask(task)) {
         task.complete = true
     } else {
-        Logger.warning(
-            'task:transfer:complete:no-transfer',
-            creep.name,
-            creep.memory.tasks,
-        )
+        Logger.warning('task:transfer:complete:no-transfer', creep.name, creep.memory.tasks)
     }
 }
 
 export function cleanup(task: TransferTask, creep: ResourceCreep): boolean {
     if (Game.getObjectById(task.structureId) === null) {
-        Logger.warning(
-            'transfer:cleanup:failure',
-            task.structureId,
-            creep.name,
-            task,
-        )
+        Logger.warning('transfer:cleanup:failure', task.structureId, creep.name, task)
         return true
     }
 

@@ -66,27 +66,23 @@ export default class WarDepartment {
     }
 
     public hasInvaderCore(): boolean {
-        const invaderCores = this.targetRoom!.find(FIND_STRUCTURES, {
+        const invaderCores = this.targetRoom?.find(FIND_STRUCTURES, {
             filter: { structureType: STRUCTURE_INVADER_CORE },
         })
-        return invaderCores.length > 0
+        return invaderCores ? invaderCores.length > 0 : false
     }
 
     public hasHostiles(): boolean {
-        const hostiles = this.targetRoom!.find(FIND_HOSTILE_CREEPS)
-        return hostiles.length > 0
+        const hostiles = this.targetRoom?.find(FIND_HOSTILE_CREEPS)
+        return hostiles ? hostiles.length > 0 : false
     }
 
-    public update() {
+    public update(): void {
         if (this.status === WarStatus.NONE) {
             return
         }
         if (this.status === WarStatus.CLAIM) {
-            if (
-                this.targetRoom &&
-                this.targetRoom.controller &&
-                this.targetRoom.controller.my
-            ) {
+            if (this.targetRoom && this.targetRoom.controller && this.targetRoom.controller.my) {
                 this.status = WarStatus.SPAWN
             }
         } else if (this.status === WarStatus.SPAWN) {
@@ -96,15 +92,15 @@ export default class WarDepartment {
         }
     }
 
-    public declareWar(target: string) {
+    public declareWar(target: string): void {
         this.warMemory = { status: WarStatus.ATTACK, target }
     }
 
-    public cancelWar() {
+    public cancelWar(): void {
         this.warMemory = { status: WarStatus.NONE, target: '' }
     }
 
-    public claimRoom(target: string) {
+    public claimRoom(target: string): void {
         this.warMemory = { status: WarStatus.CLAIM, target }
     }
 }

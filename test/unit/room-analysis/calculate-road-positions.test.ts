@@ -1,5 +1,5 @@
-import { expect } from 'chai';
-import { minimumSpanningTree } from '../../../src/room-analysis/calculate-road-positions';
+import { expect } from 'chai'
+import { minimumSpanningTree } from '../../../src/room-analysis/calculate-road-positions'
 
 describe('minimumSpanningTree', () => {
     it('should return the minimum spanning tree of a graph', () => {
@@ -10,8 +10,8 @@ describe('minimumSpanningTree', () => {
             { a: 'C', b: 'D', weight: 2 },
             { a: 'D', b: 'A', weight: 4 },
             { a: 'A', b: 'C', weight: 1 },
-        ];
-        const vertices = ['A', 'B', 'C', 'D'];
+        ]
+        const vertices = ['A', 'B', 'C', 'D']
 
         // Call the function
         const result = minimumSpanningTree(edges, vertices)
@@ -21,8 +21,8 @@ describe('minimumSpanningTree', () => {
             { a: 'A', b: 'C', weight: 1 },
             { a: 'C', b: 'D', weight: 2 },
             { a: 'B', b: 'C', weight: 3 },
-        ]);
-    });
+        ])
+    })
 
     // Add more test cases if needed
-});
+})
