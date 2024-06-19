@@ -2,14 +2,13 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable @typescript-eslint/no-this-alias */
 
-import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
-import maxBy from 'lodash/maxBy'
-
-import { flatten, includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
 import * as Logger from 'utils/logger'
-import { wrap } from 'utils/profiling'
-import { FlatRoomPosition, NonObstacle, Obstacle, Position, isObstacle } from 'types'
 import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
+import { FlatRoomPosition, NonObstacle, Obstacle, Position, isObstacle } from 'types'
+import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
+import { flatten, includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
+import maxBy from 'lodash/maxBy'
+import { wrap } from 'utils/profiling'
 
 interface NonObstacles {
     road: boolean
@@ -163,7 +162,7 @@ export class ImmutableRoom implements ValueObject {
         }, [])
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public equals(other: any): boolean {
         return this.grid.equals(other)
     }
@@ -198,7 +197,7 @@ export class ImmutableRoom implements ValueObject {
         return this.setNonObstacle(x, y, 'constructionSite', val)
     }
 
-    public setNonObstacle(x: number, y: number, key: NonObstacle, value: boolean) {
+    public setNonObstacle(x: number, y: number, key: NonObstacle, value: boolean): ImmutableRoom {
         const roomItem = this.get(x, y)
         const nonObstacles = roomItem.get('nonObstacles')
         return this.set(x, y, roomItem.set('nonObstacles', nonObstacles.set(key, value)))
@@ -260,7 +259,7 @@ export class ImmutableRoom implements ValueObject {
         const queue = [start]
         const visited = new Set<ImmutableRoomItem>()
         while (queue.length > 0) {
-            const roomItem = queue.shift()!
+            const roomItem = queue.shift() as ImmutableRoomItem
             if (visited.has(roomItem)) {
                 continue
             }
@@ -278,7 +277,7 @@ export class ImmutableRoom implements ValueObject {
         const queue = [this.get(ri.x, ri.y)]
         const visited = new Set<ImmutableRoomItem>()
         while (queue.length > 0) {
-            const roomItem = queue.shift()!
+            const roomItem = queue.shift() as ImmutableRoomItem
             if (visited.has(roomItem)) {
                 continue
             }
@@ -390,7 +389,11 @@ export class ImmutableRoom implements ValueObject {
 
     public controllerLinkPos(): FlatRoomPosition {
         const room = Game.rooms[this.name]
-        const pos = room.controller!.pos
+        if (!room.controller) {
+            Logger.error('immutable-room:controllerLinkPos:no-controller', this.name)
+            throw new Error('No controller found.')
+        }
+        const pos = room.controller.pos
         this.getClosestNeighbors(pos.x, pos.y)
         const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter(
             (ri) => !ri.isObstacle() || ri.obstacle === 'link',
@@ -403,13 +406,17 @@ export class ImmutableRoom implements ValueObject {
             Logger.error('immutable-room:controllerLinkPos:no-neighbors', pos.x, pos.y)
             throw new Error('No neighbors found.')
         }
-        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
+        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3)) as ImmutableRoomItem
         return new RoomPosition(x, y, this.name)
     }
 
     public hasControllerLink(): boolean {
         const room = Game.rooms[this.name]
-        const controller = room.controller!
+        if (!room.controller) {
+            Logger.error('immutable-room:hasControllerLink:no-controller', this.name)
+            return false
+        }
+        const controller = room.controller
         return this.hasNearbyLink(controller.pos.x, controller.pos.y)
     }
 
@@ -447,7 +454,7 @@ export class ImmutableRoom implements ValueObject {
         }
         const pos = storages[0]
         const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter((ri) => !ri.isObstacle())
-        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3))!
+        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3)) as ImmutableRoomItem
         return new RoomPosition(x, y, this.name)
     }
 
@@ -479,7 +486,7 @@ export class ImmutableRoom implements ValueObject {
                 source,
                 this.getClosestNeighbors(source.x, source.y).filter((ri) => !ri.isObstacle()),
             ]),
-            ([_, neighbors]) => neighbors.length,
+            ([, neighbors]) => neighbors.length,
         )
         const usedPositions = new Set<ImmutableRoomItem>()
         const sourceContainerInfo: {
@@ -551,7 +558,9 @@ export class ImmutableRoom implements ValueObject {
                 Logger.error('immutable-room:getMappedSourceContainers:no-container', source)
                 continue
             }
-            const sourceId = sources.find((s) => s.pos.x === source.x && s.pos.y === source.y)!.id
+            const sourceId = (
+                sources.find((s) => s.pos.x === source.x && s.pos.y === source.y) as Source
+            ).id
             map[sourceId] = container
         }
         if (Object.keys(map).length !== sources.length) {
@@ -845,6 +854,6 @@ export const fromRoom = wrap((room: Room): ImmutableRoom => {
     return fromRoomUncached(room)
 }, 'immutable-room:fromRoom')
 
-export function updateCache(room: Room, immutableRoom: ImmutableRoom) {
+export function updateCache(room: Room, immutableRoom: ImmutableRoom): void {
     cache[Game.time][room.name] = immutableRoom
 }

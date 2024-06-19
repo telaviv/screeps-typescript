@@ -1,18 +1,16 @@
-import { hash } from 'immutable'
-
-import * as WithdrawTask from 'tasks/withdraw'
 import * as PickupTask from 'tasks/pickup'
+import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep } from 'tasks/types'
 
-export function isFullOfEnergy(creep: Creep) {
+export function isFullOfEnergy(creep: Creep): boolean {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0
 }
 
-export function hasNoEnergy(creep: Creep) {
+export function hasNoEnergy(creep: Creep): boolean {
     return creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0
 }
 
-export function freeEnergyCapacity(creep: Creep) {
+export function freeEnergyCapacity(creep: Creep): number {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
 

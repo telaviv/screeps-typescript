@@ -8,19 +8,19 @@ declare global {
     }
 }
 
-export function error(...args: any[]) {
+export function error(...args: any[]): void {
     logForLevel('error', 'red', ...args)
 }
 
-export function warning(...args: any[]) {
+export function warning(...args: any[]): void {
     logForLevel('warning', 'yellow', ...args)
 }
 
-export function info(...args: any[]) {
+export function info(...args: any[]): void {
     logForLevel('info', 'white', ...args)
 }
 
-export function debug(...args: any) {
+export function debug(...args: any[]): void {
     logForLevel('debug', 'green', ...args)
 }
 
@@ -39,7 +39,7 @@ function logForLevel(level: string, color: string, ...args: any[]) {
     console.log(`<span color="${color}">[${level}][${Game.time}]</span>`, ...normalized)
 }
 
-export function setLogLevel(level: string) {
+export function setLogLevel(level: string): void {
     if (LOG_LEVELS.findIndex((l) => l === level) === -1) {
         throw new Error(`level ${level} isn't a valid log level`)
     }

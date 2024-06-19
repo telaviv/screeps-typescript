@@ -1,18 +1,15 @@
-import { getSpawns } from 'utils/room'
 import * as Logger from 'utils/logger'
-import { filter } from 'lodash'
 import { LogisticsCreep, LogisticsPreference, isLogisticsCreep } from 'roles/logistics-constants'
-import { Harvester, HarvesterCreep } from 'roles/harvester'
-import { ResourceCreep, isResourceCreep } from '../tasks/types'
-
+import { Harvester } from 'roles/harvester'
+import { ResourceCreep } from '../tasks/types'
+import { getSpawns } from 'utils/room'
 import { wrap } from './profiling'
-import { time } from 'console'
 
-export function freeEnergyCapacity(creep: Creep) {
+export function freeEnergyCapacity(creep: Creep): number {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
 
-export function currentEnergyHeld(creep: Creep) {
+export function currentEnergyHeld(creep: Creep): number {
     return creep.store.getUsedCapacity(RESOURCE_ENERGY)
 }
 
@@ -51,25 +48,25 @@ export const moveTo = wrap(
     'creep:moveTo',
 )
 
-export function moveToRoom(roomName: string, creep: Creep) {
+export function moveToRoom(roomName: string, creep: Creep): void {
     creep.moveTo(new RoomPosition(25, 25, roomName), {
         range: 18,
         visualizePathStyle: { stroke: '#ffaa00' },
     })
 }
 
-export function moveTowardsCenter(creep: Creep) {
+export function moveTowardsCenter(creep: Creep): void {
     creep.moveTo(new RoomPosition(25, 25, creep.room.name), {
         range: 21,
         visualizePathStyle: { stroke: '#ffaa00' },
     })
 }
 
-export function isAtEdge(creep: Creep) {
+export function isAtEdge(creep: Creep): boolean {
     return creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49
 }
 
-export function recycle(creep: ResourceCreep) {
+export function recycle(creep: ResourceCreep): void {
     const spawns = getSpawns(creep.room)
     const spawn = creep.pos.findClosestByPath(spawns)
     if (!spawn) {

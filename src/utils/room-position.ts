@@ -72,14 +72,10 @@ export function hasObstacle(pos: RoomPosition): boolean {
     if (Game.rooms[pos.roomName].getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
         return true
     }
-    const look = pos.lookFor(LOOK_STRUCTURES)
-    const noObstacleLook = look.some((s) => isObstacle(s.structureType))
     return pos.lookFor(LOOK_STRUCTURES).some((s) => isObstacle(s.structureType))
 }
 
 export function getNonObstacleNeighbors(pos: RoomPosition, range = 1): RoomPosition[] {
-    const neighbors = getNeighbors(pos, range)
-    const nonObstacleNeighbors = neighbors.filter((p) => !hasObstacle(p))
     return getNeighbors(pos, range).filter((p) => !hasObstacle(p))
 }
 

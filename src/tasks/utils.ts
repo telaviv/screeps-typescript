@@ -1,7 +1,7 @@
-import autoIncrement from 'utils/autoincrement'
 import { Task, isResourceCreep } from './types'
+import autoIncrement from 'utils/autoincrement'
 
-export function* getAllTasks() {
+export function* getAllTasks(): Generator<Task<unknown>> {
     for (const creep of Object.values(Game.creeps)) {
         if (isResourceCreep(creep)) {
             for (const task of creep.memory.tasks) {
@@ -27,7 +27,7 @@ export function makeTask<T>(type: T, data: Record<string, unknown>): Task<T> {
 export function findTaskByType<T>(type: T): Task<T> | undefined {
     for (const task of getAllTasks()) {
         if (task.type === type) {
-            return task
+            return task as Task<T>
         }
     }
     return undefined

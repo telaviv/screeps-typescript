@@ -1,7 +1,3 @@
-/* eslint @typescript-eslint/no-explicit-any: "off" */
-
-import { LogisticsCreep } from 'roles/logistics-constants'
-
 export interface Task<T> {
     readonly id: string
     readonly type: T
@@ -14,7 +10,7 @@ export interface TaskMemory {
 }
 
 export interface ResourceCreepMemory extends CreepMemory {
-    tasks: Task<any>[]
+    tasks: Task<unknown>[]
     idleTimestamp: number | null
 }
 

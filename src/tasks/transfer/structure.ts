@@ -1,9 +1,9 @@
+import { ResourceCreep } from 'tasks/types'
 import { TransferTask } from 'tasks/transfer/types'
-import { isTransferTask } from 'tasks/transfer/utils'
-import { getAllTasks } from 'tasks/utils'
 import autoIncrement from 'utils/autoincrement'
 import { currentEnergyHeld } from 'utils/creep'
-import { ResourceCreep } from 'tasks/types'
+import { getAllTasks } from 'tasks/utils'
+import { isTransferTask } from 'tasks/transfer/utils'
 
 export class TransferStructure {
     public readonly structure: AnyStoreStructure
@@ -14,7 +14,7 @@ export class TransferStructure {
         this.tasks = tasks
     }
 
-    public static create(id: Id<AnyStoreStructure>) {
+    public static create(id: Id<AnyStoreStructure>): TransferStructure {
         const tasks: TransferTask[] = []
         const structure = Game.getObjectById<AnyStoreStructure>(id)
         if (structure === null) {
@@ -29,7 +29,7 @@ export class TransferStructure {
         return new TransferStructure(structure, tasks)
     }
 
-    public static get(id: Id<AnyStoreStructure>) {
+    public static get(id: Id<AnyStoreStructure>): TransferStructure {
         return TransferStructure.create(id)
     }
 

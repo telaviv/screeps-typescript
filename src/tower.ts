@@ -1,4 +1,4 @@
-function runTower(tower: StructureTower) {
+function runTower(tower: StructureTower): void {
     const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS)
 
     if (closestHostile) {

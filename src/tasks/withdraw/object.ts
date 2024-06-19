@@ -1,10 +1,9 @@
 import includes from 'lodash/includes'
 
-import { getAllTasks } from 'tasks/utils'
-import autoIncrement from 'utils/autoincrement'
-import { getUsedCapacity } from 'utils/store'
-
 import { WithdrawTask, Withdrawable } from './types'
+import autoIncrement from 'utils/autoincrement'
+import { getAllTasks } from 'tasks/utils'
+import { getUsedCapacity } from 'utils/store'
 import { isWithdrawTask } from './utils'
 
 export class WithdrawObject {
@@ -16,7 +15,7 @@ export class WithdrawObject {
         this.tasks = tasks
     }
 
-    public static create(id: Id<Withdrawable>) {
+    public static create(id: Id<Withdrawable>): WithdrawObject {
         const tasks: WithdrawTask[] = []
         const withdrawable = Game.getObjectById<Withdrawable>(id)
         if (withdrawable === null) {
@@ -31,7 +30,7 @@ export class WithdrawObject {
         return new WithdrawObject(withdrawable, tasks)
     }
 
-    public static get(id: Id<Withdrawable>) {
+    public static get(id: Id<Withdrawable>): WithdrawObject {
         return WithdrawObject.create(id)
     }
 

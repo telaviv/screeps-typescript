@@ -8,7 +8,7 @@ if (!Memory.autoincrement) {
     Memory.autoincrement = 0
 }
 
-export default function autoIncrement() {
+export default function autoIncrement(): number {
     Memory.autoincrement++
     if (Memory.autoincrement >= Number.MAX_SAFE_INTEGER) {
         Memory.autoincrement = 0

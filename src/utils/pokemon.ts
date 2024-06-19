@@ -810,7 +810,7 @@ const POKEMON = [
     'Melmetal',
 ]
 
-export default function getPokemonName() {
+export default function getPokemonName(): string {
     const pokemon = POKEMON[Math.floor(Math.random() * POKEMON.length)]
     return pokemon.toLowerCase()
 }

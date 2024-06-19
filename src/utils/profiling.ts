@@ -26,22 +26,22 @@ declare global {
     }
 }
 
-export function start() {
+export function start(): void {
     Memory.profiler.recording = true
     Memory.profiler.start = Game.time
 }
 
-export function stop() {
+export function stop(): void {
     Memory.profiler.recording = false
 }
 
-export function init() {
+export function init(): void {
     if (!Memory.profiler) {
         Memory.profiler = { recording: false, data: {} }
     }
 }
 
-export function clear() {
+export function clear(): void {
     Memory.profiler.data = {}
     start()
 }
@@ -81,7 +81,8 @@ export function wrap<T extends (...args: any[]) => any>(
 }
 
 export function mprofile(key: string) {
-    return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    return (target: any, propertyKey: string, descriptor: PropertyDescriptor): any => {
         const originalMethod = descriptor.value
         descriptor.value = function (...args: any) {
             const startCpu = Game.cpu.getUsed()
@@ -110,6 +111,7 @@ function markProfileMemory(key: string, time: number) {
     data[key].calls += 1
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function profile(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value
     // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -121,9 +123,10 @@ export function profile(target: any, propertyKey: string, descriptor: PropertyDe
         markProfileMemory(key, stopCpu - startCpu)
         return ret
     }
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 }
 
-export function output() {
+export function output(): void {
     if (!Memory.profiler.start) {
         console.log('process never started')
         return

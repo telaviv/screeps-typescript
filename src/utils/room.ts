@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/brace-style */
 
-import minBy from 'lodash/minBy'
-import includes from 'lodash/includes'
-import filter from 'lodash/filter'
 import * as Logger from 'utils/logger'
+import filter from 'lodash/filter'
+import includes from 'lodash/includes'
+import minBy from 'lodash/minBy'
 import { randomElement } from 'utils/utilities'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
@@ -220,7 +220,7 @@ export function getOwnWeakestWall(room: Room): StructureWall | StructureRampart 
     if (walls.length === 0) {
         return null
     }
-    return minBy(walls, 'hits')!
+    return minBy(walls, 'hits') as StructureWall | StructureRampart
 }
 
 export function getWeakestWall(room: Room): StructureWall | StructureRampart | null {
@@ -230,13 +230,17 @@ export function getWeakestWall(room: Room): StructureWall | StructureRampart | n
     if (walls.length === 0) {
         return null
     }
-    return minBy(walls, 'hits')!
+    return minBy(walls, 'hits') as StructureWall | StructureRampart
 }
 
 function isFragileWall(structure: Structure): boolean {
+    if (!structure.room.controller) {
+        Logger.error('isFragileWall: no controller')
+        return false
+    }
     return (
         includes([STRUCTURE_RAMPART, STRUCTURE_WALL], structure.structureType) &&
-        structure.hits < FRAGILE_WALL_HITS[structure.room.controller!.level]
+        structure.hits < FRAGILE_WALL_HITS[structure.room.controller.level]
     )
 }
 
@@ -336,7 +340,7 @@ function logConstructionFailure(
     )
 }
 
-export function makeSpawnConstructionSite(pos: RoomPosition, name?: string) {
+export function makeSpawnConstructionSite(pos: RoomPosition, name?: string): ScreepsReturnCode {
     const room = Game.rooms[pos.roomName]
     if (!room.controller || !room.controller.my) {
         return ERR_NOT_OWNER

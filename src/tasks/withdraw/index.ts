@@ -1,14 +1,13 @@
 import maxBy from 'lodash/maxBy'
 
-import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import * as Logger from 'utils/logger'
-
-import { WithdrawObject } from './object'
 import { WithdrawTask, Withdrawable } from './types'
-import { isWithdrawTask } from './utils'
+import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import { ResourceCreep } from '../types'
-import { getHome } from 'roles/utils'
+import { WithdrawObject } from './object'
 import { findClosestByRange } from 'utils/room-position'
+import { getHome } from 'roles/utils'
+import { isWithdrawTask } from './utils'
 import { wrap } from 'utils/profiling'
 
 const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
@@ -74,7 +73,7 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     return false
 }
 
-export function completeRequest(creep: ResourceCreep) {
+export function completeRequest(creep: ResourceCreep): void {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning('withdraw::complete:failure', creep.name, creep.memory.tasks)
     }

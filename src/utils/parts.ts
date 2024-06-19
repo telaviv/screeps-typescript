@@ -1,5 +1,5 @@
-import { constant, times } from 'lodash'
 import * as Logger from 'utils/logger'
+import { constant, times } from 'lodash'
 
 /**
  * Creates a body plan for a creep based on the given capacity and body part plan.
@@ -13,7 +13,7 @@ export function fromBodyPlan(
     capacity: number,
     plan: BodyPartConstant[],
     fixed: BodyPartConstant[] = [],
-) {
+): BodyPartConstant[] {
     const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
     const unitCost = plan.reduce((total, p) => total + BODYPART_COST[p], 0)
     let capacityLeft = capacity - fixedCost
@@ -42,7 +42,7 @@ export function fromBodyPlanSafe(
     capacity: number,
     plan: BodyPartConstant[],
     fixed: BodyPartConstant[] = [],
-) {
+): BodyPartConstant[] | null {
     const parts = fromBodyPlan(capacity, plan, fixed)
     if (planCost(parts) > capacity || parts.length === 0) {
         return null
@@ -50,7 +50,7 @@ export function fromBodyPlanSafe(
     return parts
 }
 
-export function byPartCount(parts: Partial<Record<BodyPartConstant, number>>) {
+export function byPartCount(parts: Partial<Record<BodyPartConstant, number>>): BodyPartConstant[] {
     let plan: BodyPartConstant[] = []
     for (const [part, amount] of Object.entries(parts)) {
         if (amount) {

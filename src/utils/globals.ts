@@ -1,13 +1,13 @@
-import WarDepartment from 'war-department'
 import * as Logger from 'utils/logger'
 import { resetSnapshot, saveSnapshot } from 'snapshot'
+import ErrorMapper from './ErrorMapper'
+import { RoomManager } from 'managers/room-manager'
+import { Task } from 'tasks/types'
+import WarDepartment from 'war-department'
+import { getAllTasks } from 'tasks/utils'
 import roleScout from 'roles/scout'
 import roleWrecker from 'roles/wrecker'
 import { visualizeRoom } from 'room-visualizer'
-import { getAllTasks } from 'tasks/utils'
-import { RoomManager } from 'managers/room-manager'
-import ErrorMapper, { trace } from './ErrorMapper'
-import { Task } from 'tasks/types'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach((creep) => {
@@ -72,7 +72,7 @@ function printTasks(type?: Task<any>) {
     }
 }
 
-export default function assignGlobals() {
+export default function assignGlobals(): void {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
     }

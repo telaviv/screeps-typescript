@@ -14,7 +14,6 @@ import ErrorMapper from 'utils/ErrorMapper'
 import assignGlobals from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import * as TaskRunner from 'tasks/runner'
-import * as Logger from 'utils/logger'
 import BuildManager from 'managers/build-manager'
 
 import { runSpawn } from './spawn'

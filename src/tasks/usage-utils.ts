@@ -1,7 +1,7 @@
-import * as MiningTask from 'tasks/mining'
-import * as WithdrawTask from 'tasks/withdraw'
-import * as PickupTask from 'tasks/pickup'
 import * as Logger from 'utils/logger'
+import * as MiningTask from 'tasks/mining'
+import * as PickupTask from 'tasks/pickup'
+import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep } from './types'
 import { wrap } from 'utils/profiling'
 
