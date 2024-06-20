@@ -1,5 +1,5 @@
-import { hasNoSpawns } from 'utils/room'
 import { WarMemory, WarStatus } from 'war-department'
+import { hasNoSpawns } from 'utils/room'
 
 export default class WarDepartment {
     readonly room: Room
@@ -39,7 +39,7 @@ export default class WarDepartment {
         return this.warMemory.target
     }
 
-    update() {
+    update(): void {
         if (this.status === WarStatus.NONE) {
             return
         }
@@ -55,11 +55,11 @@ export default class WarDepartment {
         }
     }
 
-    declareWar(target: string) {
+    declareWar(target: string): void {
         this.warMemory = { status: WarStatus.ATTACK, target }
     }
 
-    claimRoom(target: string) {
+    claimRoom(target: string): void {
         this.warMemory = { status: WarStatus.CLAIM, target }
     }
 }

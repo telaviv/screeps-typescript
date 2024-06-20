@@ -1,5 +1,5 @@
-import { StrategyPhase } from 'strategy'
 import RCL_2 from './strategy/rcl-2'
+import { StrategyPhase } from 'strategy'
 
 type SpawnRunner = (spawn: StructureSpawn) => void
 
@@ -15,7 +15,7 @@ const SPAWN_STRATEGIES: { [k: string]: SpawnRunner } = {
     [StrategyPhase.RCL_8]: RCL_2,
 }
 
-function runSpawn(spawn: StructureSpawn) {
+function runSpawn(spawn: StructureSpawn): void {
     SPAWN_STRATEGIES[spawn.room.memory.strategy](spawn)
 }
 

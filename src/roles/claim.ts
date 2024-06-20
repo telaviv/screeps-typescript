@@ -1,9 +1,9 @@
 import includes from 'lodash/includes'
 
-import autoIncrement from 'utils/autoincrement'
-import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
-import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
+import autoIncrement from 'utils/autoincrement'
+import { fromBodyPlanSafe } from 'utils/parts'
+import { wrap } from 'utils/profiling'
 
 const ROLE = 'claimer'
 
@@ -62,14 +62,14 @@ const roleClaimer = {
     create(spawn: StructureSpawn, roomName: string, minimal = false): number {
         const energyAvailable = spawn.room.energyAvailable
         let parts = calculateParts(energyAvailable)
-        if (!parts) {
+        if (parts === null || parts.length === 0) {
             Logger.warning('claimer:create:failed', spawn.room.name, parts, energyAvailable)
         }
         if (minimal) {
             parts = [CLAIM, MOVE]
         }
 
-        const err = spawn.spawnCreep(parts!, `${ROLE}:${autoIncrement()}`, {
+        const err = spawn.spawnCreep(parts as BodyPartConstant[], `${ROLE}:${autoIncrement()}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,

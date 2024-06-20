@@ -37,6 +37,7 @@ export const recordGameStats = wrap((): void => {
     }
 
     for (const [k, v] of Object.entries(Game.cpu.getHeapStatistics())) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         recordStatistic(`Game.heap.${k}`, v)
     }
 }, 'recordGameStats')

@@ -1,5 +1,5 @@
-import { moveToRoom } from 'utils/creep'
 import { profile, wrap } from 'utils/profiling'
+import { moveToRoom } from 'utils/creep'
 
 const ROLE = 'scout'
 

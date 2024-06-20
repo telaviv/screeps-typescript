@@ -1,5 +1,5 @@
-import filter from 'lodash/filter'
 import * as Logger from 'utils/logger'
+import filter from 'lodash/filter'
 
 type DrawFunction = (visual: RoomVisual, pos: RoomPosition) => void
 
@@ -71,11 +71,11 @@ export default class RoomVisualizer {
         }
     }
 
-    get visuals() {
+    get visuals(): { snapshot: boolean } {
         return this.room.memory.visuals
     }
 
-    render(roads = false) {
+    render(roads = false): void {
         if (!this.visuals.snapshot) {
             return
         }
@@ -109,6 +109,6 @@ export default class RoomVisualizer {
     }
 }
 
-export function visualizeRoom(roomName: string, on = true) {
+export function visualizeRoom(roomName: string, on = true): void {
     Game.rooms[roomName].memory.visuals.snapshot = on
 }

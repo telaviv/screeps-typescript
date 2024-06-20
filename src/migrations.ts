@@ -4,7 +4,7 @@ declare global {
     }
 }
 
-export default function migrate() {
+export default function migrate(): void {
     if (!Memory.version) {
         Memory.version = '1.0.0'
     }

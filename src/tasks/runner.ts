@@ -1,12 +1,10 @@
-/* eslint @typescript-eslint/no-explicit-any: "off" */
-
+import * as Logger from 'utils/logger'
 import { ResourceCreep, Runner, Task } from 'tasks/types'
+import MiningRunner from 'tasks/mining'
+import PickupRunner from 'tasks/pickup'
+import SignRunner from 'tasks/sign'
 import TransferRunner from 'tasks/transfer'
 import WithdrawRunner from 'tasks/withdraw'
-import PickupRunner from 'tasks/pickup'
-import MiningRunner from 'tasks/mining'
-import SignRunner from 'tasks/sign'
-import * as Logger from 'utils/logger'
 import { wrap } from 'utils/profiling'
 
 const runners: Runner<any>[] = [

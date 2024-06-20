@@ -105,7 +105,6 @@ export default class SourceManager {
         if (hasEnoughWorkParts(this.harvesters)) {
             return true
         }
-        const nextAvailable = this.getNextAvailableHarvesterPosition()
         return this.getNextAvailableHarvesterPosition() === null
     }
 

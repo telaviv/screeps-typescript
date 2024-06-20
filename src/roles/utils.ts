@@ -1,5 +1,5 @@
-import { ResourceCreep } from 'tasks/types'
 import * as Logger from 'utils/logger'
+import { ResourceCreep } from 'tasks/types'
 
 export function getHome(creep: ResourceCreep): Room | null {
     if (!creep.memory.home) {

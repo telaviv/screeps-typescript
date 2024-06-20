@@ -1,13 +1,10 @@
-/* eslint no-lonely-if: ["off"] */
-
-import * as TaskRunner from 'tasks/runner'
-import { moveToRoom, recycle } from 'utils/creep'
-import { profile, wrap } from 'utils/profiling'
-import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import * as Logger from 'utils/logger'
-import { fromBodyPlan } from 'utils/parts'
+import * as TaskRunner from 'tasks/runner'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { profile, wrap } from 'utils/profiling'
 import { addEnergyTask } from 'tasks/usage-utils'
+import { fromBodyPlan } from 'utils/parts'
 
 const ROLE = 'remote-upgrade'
 
@@ -88,7 +85,7 @@ class RemoteUpgradeCreep {
 
     private shouldRecycle() {
         const roundTripTime: number = this.roundTripTime()
-        const ticksToLive: number = this.creep.ticksToLive!
+        const ticksToLive: number = this.creep.ticksToLive || 0
         return ticksToLive < roundTripTime + 50
     }
 
@@ -111,9 +108,14 @@ class RemoteUpgradeCreep {
     private upgradeController() {
         this.creep.say('🌃')
         const controller = this.destinationRoom.controller
-        const err = this.creep.upgradeController(controller!)
+        if (!controller) {
+            Logger.error('remote-upgrade:upgrade:no-controller', this.destination, this.creep.name)
+            return
+        }
+
+        const err = this.creep.upgradeController(controller)
         if (err === ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(controller!, {
+            this.creep.moveTo(controller, {
                 visualizePathStyle: { stroke: '#ffffff' },
                 range: 3,
             })

@@ -1,11 +1,10 @@
-import { getFreeCapacity } from 'utils/store'
 import * as Logger from 'utils/logger'
-
 import { PickupTarget } from './target'
 import { PickupTask } from './types'
-import { isPickupTask } from './utils'
 import { ResourceCreep } from '../types'
 import { findClosestByRange } from 'utils/room-position'
+import { getFreeCapacity } from 'utils/store'
+import { isPickupTask } from './utils'
 import { wrap } from 'utils/profiling'
 
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
@@ -23,7 +22,11 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
         return false
     }
 
-    const home = Game.rooms[creep.memory.home]!
+    const home = Game.rooms[creep.memory.home]
+    if (!home) {
+        Logger.error('task:pickup::makeRequest:failure:no-room', creep.name, creep.memory.home)
+        return false
+    }
     let resources = getDroppedResources(home, capacity, RESOURCE_ENERGY)
     if (creep.memory.home !== creep.room.name) {
         resources = resources.concat(getDroppedResources(creep.room, capacity, RESOURCE_ENERGY))
@@ -67,7 +70,7 @@ function addPickupTask(creep: ResourceCreep, resource: Resource) {
     return task
 }
 
-export function completeRequest(creep: ResourceCreep) {
+export function completeRequest(creep: ResourceCreep): void {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning('task:pickup::complete:failure', creep.name, creep.memory.tasks)
     }

@@ -1,7 +1,6 @@
-import { getAllTasks } from 'tasks/utils'
-import autoIncrement from 'utils/autoincrement'
-
 import { PickupTask } from './types'
+import autoIncrement from 'utils/autoincrement'
+import { getAllTasks } from 'tasks/utils'
 import { isPickupTask } from './utils'
 
 export class PickupTarget {
@@ -13,7 +12,7 @@ export class PickupTarget {
         this.tasks = tasks
     }
 
-    public static create(id: Id<Resource>) {
+    public static create(id: Id<Resource>): PickupTarget {
         const tasks: PickupTask[] = []
         const resource = Game.getObjectById<Resource>(id)
         if (resource === null) {
@@ -28,7 +27,7 @@ export class PickupTarget {
         return new PickupTarget(resource, tasks)
     }
 
-    public static get(id: Id<Resource>) {
+    public static get(id: Id<Resource>): PickupTarget {
         return PickupTarget.create(id)
     }
 

@@ -1,8 +1,8 @@
-import roleHarvester from 'roles/harvester'
+import * as Logger from 'utils/logger'
 import SourceManager from './source-manager'
 import { getHarvesters } from 'utils/creep'
-import * as Logger from 'utils/logger'
 import { profile } from 'utils/profiling'
+import roleHarvester from 'roles/harvester'
 
 export default class SourcesManager {
     private room: Room
@@ -43,7 +43,7 @@ export default class SourcesManager {
         return true
     }
 
-    public hasAllContainerHarvesters() {
+    public hasAllContainerHarvesters(): boolean {
         return this.sourceManagers.every((sourceManager) => sourceManager.hasStaticHarvester())
     }
 

@@ -1,10 +1,11 @@
+import * as Logger from '../utils/logger'
+import * as Profiling from '../utils/profiling'
 import * as RoomUtils from '../utils/room'
 import { ConstructionFeatures, FlatRoomPosition, Position } from '../types'
-import { flatten, uniqBy } from 'lodash'
-import prim from '../data-structures/prim'
 import { Graph, GraphEdge, GraphVertex } from '../data-structures/graph'
-import * as Profiling from '../utils/profiling'
-import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
+import { flatten, uniqBy } from 'lodash'
+import { ImmutableRoom } from 'utils/immutable-room'
+import prim from '../data-structures/prim'
 
 const SURROUNDED_BUILDING_TYPES = [
     STRUCTURE_EXTENSION,
@@ -122,6 +123,16 @@ function calculateRoadSpinePositions(
     iroom: ImmutableRoom,
     features: ConstructionFeatures,
 ): Position[] {
+    if (!features[STRUCTURE_STORAGE]) {
+        Logger.error('calculateRoadSpinePositions: no storage set in features')
+        throw new Error('no storage set in features')
+    }
+
+    if (!room.controller) {
+        Logger.error('calculateRoadSpinePositions: no controller in room')
+        throw new Error('no controller in room')
+    }
+
     const roomCallback = (roomName: string): CostMatrix | false => {
         if (roomName !== room.name) {
             return false
@@ -134,9 +145,9 @@ function calculateRoadSpinePositions(
         }
         return costs
     }
-    const controllerPos = room.controller!.pos
+    const controllerPos = room.controller.pos
     const storagePos = {
-        ...features[STRUCTURE_STORAGE]![0],
+        ...features[STRUCTURE_STORAGE][0],
         roomName: room.name,
     }
     const sourcesPos = RoomUtils.getSources(room).map((source) => source.pos)
@@ -170,7 +181,7 @@ const profiledMinimumSpanningTree = Profiling.wrap(minimumSpanningTree, 'minimum
 const createGraph = (edges: PositionEdge[], vertices: string[]): Graph => {
     const graph = new Graph(false)
     const graphVertices = vertices.map((vertex) => new GraphVertex(vertex))
-    const graphEdges = edges.map((edge) => {
+    edges.forEach((edge) => {
         const aVertex = graphVertices.find((vertex) => vertex.key === edge.a)
         const bVertex = graphVertices.find((vertex) => vertex.key === edge.b)
         if (!aVertex || !bVertex) {

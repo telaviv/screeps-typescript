@@ -1,12 +1,10 @@
-/* eslint @typescript-eslint/no-unused-vars: ['off'] */
-import { minCutWalls } from 'screeps-min-cut-wall'
-
-import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
-import { each } from 'lodash'
 import * as Profiling from 'utils/profiling'
 import { ConstructionFeatures, Position } from 'types'
+import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
+import { each } from 'lodash'
 import { hasBuildingAt } from 'utils/room'
+import { minCutWalls } from 'screeps-min-cut-wall'
 
 const CPU_MIN = 50
 
@@ -52,7 +50,7 @@ function saveConstructionFeatures(room: Room) {
 }
 
 export function getConstructionFeatures(room: Room): ConstructionFeatures {
-    return room.memory.constructionFeatures!
+    return room.memory.constructionFeatures as ConstructionFeatures
 }
 
 function calculateConstructionFeatures(room: Room): ConstructionFeatures {

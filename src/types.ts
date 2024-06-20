@@ -24,5 +24,6 @@ export type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
 export type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function isObstacle(x: any): x is Obstacle {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return OBSTACLE_OBJECT_TYPES.includes(x)
 }

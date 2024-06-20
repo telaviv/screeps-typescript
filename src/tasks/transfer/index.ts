@@ -73,7 +73,7 @@ function addTransferTask(creep: ResourceCreep, structure: AnyStoreStructure) {
     return task
 }
 
-export function completeRequest(creep: ResourceCreep) {
+export function completeRequest(creep: ResourceCreep): void {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning('task:transfer:complete:failure', creep.name, creep.memory.tasks)
     }

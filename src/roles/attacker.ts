@@ -1,10 +1,8 @@
-import { wrap } from 'utils/profiling'
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
-import WarDepartment, { WarStatus } from 'war-department'
-import { getIn } from 'immutable'
 import { getInvaderCores } from 'utils/room'
 import { moveTo } from 'utils/creep'
+import { wrap } from 'utils/profiling'
 
 const ROLE = 'attack'
 
@@ -20,8 +18,8 @@ interface AttackerMemory extends CreepMemory {
 
 const roleAttacker = {
     run: wrap((creep: Attacker) => {
-        const targetRoom = Game.rooms[creep.memory.roomName]!
-        if (!targetRoom.controller) {
+        const targetRoom = Game.rooms[creep.memory.roomName]
+        if (!targetRoom || !targetRoom.controller) {
             Logger.warning('attacker:no-controller', creep.name)
             return
         }

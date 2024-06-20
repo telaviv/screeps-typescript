@@ -1,10 +1,9 @@
 import * as Logger from 'utils/logger'
-
 import { ResourceCreep } from '../types'
-import { makeTask } from 'tasks/utils'
-import { moveTo } from 'utils/creep'
 import { SignTask } from './types'
 import { isSignTask } from './utils'
+import { makeTask } from 'tasks/utils'
+import { moveTo } from 'utils/creep'
 
 declare global {
     interface RoomMemory {
@@ -32,8 +31,12 @@ export function makeRequest(creep: ResourceCreep): boolean {
 }
 
 export function run(task: SignTask, creep: ResourceCreep): boolean {
-    const room = Game.rooms[task.roomName]!
-    const controller = room.controller!
+    const room = Game.rooms[task.roomName]
+    if (!room || !room.controller) {
+        Logger.warning('task:sign::run:failure:no-room', creep.name, task.roomName)
+        return false
+    }
+    const controller = room.controller
     const err = creep.signController(controller, task.message)
     if (err === ERR_NOT_IN_RANGE) {
         moveTo(controller.pos, creep, { range: 1 })
@@ -45,7 +48,7 @@ export function run(task: SignTask, creep: ResourceCreep): boolean {
     return false
 }
 
-export function completeRequest(creep: ResourceCreep) {
+export function completeRequest(creep: ResourceCreep): void {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
         Logger.warning('task:mining::complete:failure', creep.name, creep.memory.tasks)
     }

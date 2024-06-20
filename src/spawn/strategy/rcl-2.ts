@@ -1,21 +1,22 @@
-import WarDepartment, { WarStatus } from 'war-department'
-import roleClaimer from 'roles/claim'
-import roleAttacker from 'roles/attacker'
-import RoleLogistics from 'roles/logistics'
-import roleMason, { MasonCreep } from 'roles/mason'
-import roleRemoteUpgrade from 'roles/remote-upgrade'
-import roleRemoteBuild from 'roles/remote-build'
+import * as Logger from 'utils/logger'
 import {
     PREFERENCE_WORKER,
     TASK_BUILDING,
     TASK_HAULING,
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
+import WarDepartment, { WarStatus } from 'war-department'
+import { getCreeps, getLogisticsCreeps } from 'utils/creep'
+import roleMason, { MasonCreep } from 'roles/mason'
+import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
-import { getCreeps, getLogisticsCreeps } from 'utils/creep'
-import roleScout from 'roles/scout'
 import { hasWeakWall } from 'utils/room'
+import roleAttacker from 'roles/attacker'
+import roleClaimer from 'roles/claim'
+import roleRemoteBuild from 'roles/remote-build'
+import roleRemoteUpgrade from 'roles/remote-upgrade'
+import roleScout from 'roles/scout'
 
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
@@ -27,7 +28,7 @@ const ATTACKERS_COUNT = 2
 const REMOTE_UPGRADE_COUNT = 1
 const REMOTE_BUILD_MINIMUM = 1
 
-export default function (spawn: StructureSpawn) {
+export default function (spawn: StructureSpawn): void {
     updateRescueStatus(spawn.room)
 
     if (spawn.room.memory.collapsed) {
@@ -132,7 +133,10 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         } else if (claimers.length < CLAIMERS_COUNT) {
             if (claimers.length === 0) {
                 return roleClaimer.create(spawn, warDepartment.target)
-            } else if (warDepartment.targetRoom.controller!.upgradeBlocked < 20) {
+            } else if (
+                warDepartment.targetRoom.controller &&
+                warDepartment.targetRoom.controller.upgradeBlocked < 20
+            ) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }
         }
@@ -153,8 +157,12 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
     const roomMemory = room.memory
+    if (!roomMemory.stationaryPoints) {
+        Logger.error('createRescueCreeps:missing-stationary-points', room.name)
+        return
+    }
     const sourcesManager = new SourcesManager(room)
-    const sourceCount = Object.keys(roomMemory.stationaryPoints!.sources).length
+    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
@@ -167,7 +175,11 @@ function createRescueCreeps(spawn: StructureSpawn) {
 
 function updateRescueStatus(room: Room) {
     const roomMemory = room.memory
-    const sourceCount = Object.keys(roomMemory.stationaryPoints!.sources).length
+    if (!roomMemory.stationaryPoints) {
+        Logger.error('updateRescueStatus:missing-stationary-points', room.name)
+        return
+    }
+    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
     const haulerCount = haulers.length + workers.length

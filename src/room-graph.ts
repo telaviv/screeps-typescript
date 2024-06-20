@@ -20,7 +20,7 @@ export function roomSearch(roomNames: string[], maxDepth = 3): RoomSearchResults
     }))
 
     while (queue.length > 0) {
-        const { name, depth } = queue.shift()!
+        const { name, depth } = queue.shift() as { name: string; depth: number }
         if (visited[name]) {
             continue
         }

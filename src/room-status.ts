@@ -1,6 +1,7 @@
-import { wrap } from 'utils/profiling'
-import { FlatRoomPosition } from './types'
 import { compressToBase64 as compress, decompressFromBase64 as decompress } from 'lz-string'
+
+import { FlatRoomPosition } from './types'
+import { wrap } from 'utils/profiling'
 
 const SCOUT_TTL = 1000
 const VERSION = '1.0.2'
@@ -47,7 +48,7 @@ declare global {
 global.compress = compress
 global.decompress = decompress
 
-export const run = wrap(() => {
+export const run = wrap((): void => {
     for (const roomName in Game.rooms) {
         const room = Game.rooms[roomName]
         if (room.memory.scout && room.memory.scout.version !== VERSION) {
@@ -67,7 +68,7 @@ export const run = wrap(() => {
     }
 }, 'room-status:scout')
 
-export function recordStatus(room: Room) {
+export function recordStatus(room: Room): void {
     if (
         room.memory.scout &&
         room.memory.scout.timestamp + SCOUT_TTL < Game.time &&

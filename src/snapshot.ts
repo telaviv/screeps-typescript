@@ -68,11 +68,11 @@ export default class RoomSnapshot {
         return null
     }
 
-    public hasStructure(structureType: BuildableStructureConstant) {
+    public hasStructure(structureType: BuildableStructureConstant): boolean {
         return this.getStructurePos(structureType) !== null
     }
 
-    public addStructure(structureType: StructureConstant, pos: FlatRoomPosition) {
+    public addStructure(structureType: StructureConstant, pos: FlatRoomPosition): void {
         const immPos = new FlatRoomPositionRecord({
             x: pos.x,
             y: pos.y,
@@ -87,7 +87,7 @@ export default class RoomSnapshot {
         this.snapshot = this.snapshot.set(immPos, structureSet)
     }
 
-    public loadFromRoom() {
+    public loadFromRoom(): void {
         this.loadFromFlags()
         const structures = this.room.find(FIND_STRUCTURES)
         for (const structure of structures) {
@@ -95,7 +95,7 @@ export default class RoomSnapshot {
         }
     }
 
-    public loadFromFlags() {
+    public loadFromFlags(): void {
         for (const flag of getConstructionFlags(this.room)) {
             const structureType = STRUCTURE_COLORS.get(flag.color) as BuildableStructureConstant
             this.addStructure(structureType, flag.pos)
@@ -103,7 +103,7 @@ export default class RoomSnapshot {
         }
     }
 
-    public saveToMemory() {
+    public saveToMemory(): void {
         const snapshotMemory = []
         for (const [pos, structureTypes] of this.snapshot) {
             for (const structureType of structureTypes) {
@@ -114,7 +114,7 @@ export default class RoomSnapshot {
         updateCache(this.room, this)
     }
 
-    public reset() {
+    public reset(): void {
         this.snapshot = Map()
     }
 
@@ -140,14 +140,14 @@ export default class RoomSnapshot {
     }
 }
 
-export function saveSnapshot(roomName: string) {
+export function saveSnapshot(roomName: string): void {
     const room = Game.rooms[roomName]
     const roomSnapshot = RoomSnapshot.create(room)
     roomSnapshot.loadFromRoom()
     roomSnapshot.saveToMemory()
 }
 
-export function resetSnapshot(roomName: string) {
+export function resetSnapshot(roomName: string): void {
     const room = Game.rooms[roomName]
     const roomSnapshot = RoomSnapshot.create(room)
     roomSnapshot.reset()
@@ -155,6 +155,6 @@ export function resetSnapshot(roomName: string) {
     roomSnapshot.saveToMemory()
 }
 
-export function updateCache(room: Room, snapshot: RoomSnapshot) {
+export function updateCache(room: Room, snapshot: RoomSnapshot): void {
     cache[room.name] = snapshot
 }

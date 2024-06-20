@@ -1,15 +1,15 @@
 /* eslint no-lonely-if: ["off"] */
 
-import * as TaskRunner from 'tasks/runner'
-import { moveTo, moveToRoom, recycle } from 'utils/creep'
-import { profile, wrap } from 'utils/profiling'
-import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { getConstructionSites } from 'utils/room'
 import * as Logger from 'utils/logger'
-import { fromBodyPlan } from 'utils/parts'
-import autoIncrement from 'utils/autoincrement'
+import * as TaskRunner from 'tasks/runner'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { profile, wrap } from 'utils/profiling'
 import { addEnergyTask } from 'tasks/usage-utils'
+import autoIncrement from 'utils/autoincrement'
+import { fromBodyPlan } from 'utils/parts'
+import { getConstructionSites } from 'utils/room'
+import { moveTo } from 'utils/creep'
 
 const ROLE = 'remote-build'
 
@@ -86,7 +86,7 @@ class RemoteBuildCreep {
 
     private shouldRecycle() {
         const roundTripTime: number = this.roundTripTime()
-        const ticksToLive: number = this.creep.ticksToLive!
+        const ticksToLive: number = this.creep.ticksToLive || 0
         return ticksToLive < roundTripTime + 50
     }
 

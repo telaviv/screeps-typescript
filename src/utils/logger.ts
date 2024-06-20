@@ -8,19 +8,19 @@ declare global {
     }
 }
 
-export function error(...args: any[]): void {
+export function error(...args: unknown[]): void {
     logForLevel('error', 'red', ...args)
 }
 
-export function warning(...args: any[]): void {
+export function warning(...args: unknown[]): void {
     logForLevel('warning', 'yellow', ...args)
 }
 
-export function info(...args: any[]): void {
+export function info(...args: unknown[]): void {
     logForLevel('info', 'white', ...args)
 }
 
-export function debug(...args: any[]): void {
+export function debug(...args: unknown[]): void {
     logForLevel('debug', 'green', ...args)
 }
 

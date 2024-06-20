@@ -1,14 +1,12 @@
-/* eslint no-lonely-if: ["off"] */
-
+import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
-import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
-import { profile, wrap } from 'utils/profiling'
+import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { getWallSites, getWeakestWall, hasFragileWall, hasWallSite, hasWeakWall } from 'utils/room'
-import * as Logger from 'utils/logger'
-import { fromBodyPlan } from 'utils/parts'
+import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
+import { profile, wrap } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
-import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { fromBodyPlan } from 'utils/parts'
 
 const ROLE = 'mason'
 type Wall = StructureWall | StructureRampart
@@ -31,7 +29,7 @@ export class MasonCreep {
         this.creep = creep
     }
 
-    static shouldCreate(room: Room) {
+    static shouldCreate(room: Room): boolean {
         return hasWeakWall(room) || hasWallSite(room)
     }
 
@@ -47,16 +45,16 @@ export class MasonCreep {
         this.memory.repairTarget = target
     }
 
-    get room() {
+    get room(): Room {
         return this.creep.room
     }
 
-    get home() {
+    get home(): string {
         return this.memory.home
     }
 
     @profile
-    run() {
+    run(): void {
         if (this.creep.spawning) {
             return
         }
@@ -91,16 +89,16 @@ export class MasonCreep {
         }
     }
 
-    private shouldRecycle() {
-        const ticksToLive: number = this.creep.ticksToLive!
+    private shouldRecycle(): boolean {
+        const ticksToLive: number = this.creep.ticksToLive || 0
         return ticksToLive < 50
     }
 
-    private hasNoEnergy() {
+    private hasNoEnergy(): boolean {
         return hasNoEnergy(this.creep)
     }
 
-    private isFullOfEnergy() {
+    private isFullOfEnergy(): boolean {
         return isFullOfEnergy(this.creep)
     }
 

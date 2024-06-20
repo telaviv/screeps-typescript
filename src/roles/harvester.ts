@@ -1,12 +1,10 @@
-import includes from 'lodash/includes'
-
+import * as Logger from 'utils/logger'
+import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
 import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
 import { profile, wrap } from 'utils/profiling'
-import * as Logger from 'utils/logger'
-import { spawnCreep } from 'utils/spawn'
 import { isFullOfEnergy } from 'utils/energy-harvesting'
-import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
 import { moveTo } from 'utils/creep'
+import { spawnCreep } from 'utils/spawn'
 
 const MAX_WORK_PARTS = 5
 
@@ -67,13 +65,14 @@ export class HarvesterCreep {
     }
 
     get source(): Source {
-        return Game.getObjectById(this.creep.memory.source)!
+        return Game.getObjectById(this.creep.memory.source) as Source
     }
 
     private isHarvestTick(): boolean {
         const workParts = this.creep.getActiveBodyparts(WORK)
         return (
-            this.creep.ticksToLive! % (workParts / MAX_WORK_PARTS) === 0 || this.source.energy === 0
+            (this.creep.ticksToLive || 0) % (workParts / MAX_WORK_PARTS) === 0 ||
+            this.source.energy === 0
         )
     }
 
@@ -125,7 +124,12 @@ export class HarvesterCreep {
 
     @profile
     private transferEnergyToLink(): void {
-        const err = this.creep.transfer(this.getLink()!, RESOURCE_ENERGY)
+        const link = this.getLink()
+        if (link === null) {
+            Logger.error('harvester:transfer:link:not-found', this.creep.name)
+            return
+        }
+        const err = this.creep.transfer(link, RESOURCE_ENERGY)
         if (err !== OK) {
             Logger.error(
                 'harvester:transfer:failure',
@@ -142,6 +146,7 @@ export class HarvesterCreep {
 
     @profile
     private getLink(): StructureLink | null {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         const link = this.creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_LINK,
         }) as StructureLink | null
@@ -172,8 +177,12 @@ const roleHarvester = {
             Logger.error('harvester:create:source:not-found', sourceId)
             return ERR_NOT_FOUND
         }
-        const stationaryPosition =
-            pos === null ? source.room.memory.stationaryPoints!.sources[sourceId] : pos
+        const stationaryPoints = source.room.memory.stationaryPoints
+        if (!stationaryPoints || !stationaryPoints.sources[sourceId]) {
+            Logger.error('harvester:create:stationary-points:not-found', sourceId)
+            return ERR_NOT_FOUND
+        }
+        const stationaryPosition = pos === null ? stationaryPoints.sources[sourceId] : pos
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable

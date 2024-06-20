@@ -1,23 +1,9 @@
 import filter from 'lodash/filter'
-import EnergySinkManager from 'managers/energy-sink-manager'
-import { getBuildManager } from 'managers/build-manager'
-import { moveToRoom } from 'utils/creep'
-import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
-import { mprofile, profile } from 'utils/profiling'
-import {
-    getConstructionSites,
-    getOwnWeakestWall,
-    hasHostileCreeps,
-    hasOwnFragileWall,
-    hasTunnelSite,
-    isAtExtensionCap,
-} from 'utils/room'
-import { spawnCreep } from 'utils/spawn'
+
 import * as Logger from 'utils/logger'
+import * as SignTask from 'tasks/sign'
 import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
-import * as SignTask from 'tasks/sign'
 import {
     LogisticsCreep,
     LogisticsMemory,
@@ -33,10 +19,24 @@ import {
     TASK_UPGRADING,
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
-import { isMiningTask } from 'tasks/mining/utils'
-import { findTaskByType } from 'tasks/utils'
+import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
+import {
+    getConstructionSites,
+    getOwnWeakestWall,
+    hasHostileCreeps,
+    hasOwnFragileWall,
+    hasTunnelSite,
+    isAtExtensionCap,
+} from 'utils/room'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { mprofile, profile } from 'utils/profiling'
+import EnergySinkManager from 'managers/energy-sink-manager'
 import { addEnergyTask } from 'tasks/usage-utils'
+import { findTaskByType } from 'tasks/utils'
+import { getBuildManager } from 'managers/build-manager'
 import { getRandomWalkablePosition } from 'utils/room-position'
+import { isMiningTask } from 'tasks/mining/utils'
+import { spawnCreep } from 'utils/spawn'
 
 const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -75,7 +75,7 @@ class RoleLogistics {
     }
 
     @profile
-    public run() {
+    public run(): void {
         if (this.creep.spawning) {
             return
         }
@@ -118,7 +118,7 @@ class RoleLogistics {
     }
 
     @profile
-    private canSign() {
+    private canSign(): boolean {
         const home = Game.rooms[this.creep.memory.home]
         if (home.memory.signed) {
             return false
@@ -127,7 +127,7 @@ class RoleLogistics {
         return task === undefined
     }
 
-    public static staticRun(creep: LogisticsCreep) {
+    public static staticRun(creep: LogisticsCreep): void {
         return new RoleLogistics(creep).run()
     }
 
@@ -181,7 +181,7 @@ class RoleLogistics {
     }
 
     @profile
-    say() {
+    say(): void {
         if (this.idleTime() > SLEEP_SAY_TIME) {
             this.creep.say('😴')
             return
@@ -208,18 +208,18 @@ class RoleLogistics {
         return Game.time - (this.creep.memory.idleTimestamp || Game.time)
     }
 
-    private idle() {
+    private idle(): void {
         if (this.creep.memory.idleTimestamp === null) {
             this.creep.memory.idleTimestamp = Game.time
         }
     }
 
-    private unidle() {
+    private unidle(): void {
         this.creep.memory.idleTimestamp = null
     }
 
     @profile
-    build() {
+    build(): void {
         const targets = this.getNonWallSites(this.creep.room)
         const target = this.creep.pos.findClosestByRange(targets)
         if (target) {
@@ -237,7 +237,7 @@ class RoleLogistics {
     }
 
     @profile
-    getNonWallSites(room: Room) {
+    getNonWallSites(room: Room): ConstructionSite[] {
         return getConstructionSites(room, {
             filter: (site: ConstructionSite) =>
                 site.structureType !== STRUCTURE_WALL && site.structureType !== STRUCTURE_RAMPART,
@@ -245,7 +245,7 @@ class RoleLogistics {
     }
 
     @profile
-    repairWalls() {
+    repairWalls(): void {
         let structure = null
         if (this.creep.memory.currentTarget) {
             structure = Game.getObjectById<Structure>(this.creep.memory.currentTarget)
@@ -281,7 +281,7 @@ class RoleLogistics {
     }
 
     @mprofile('logistics:repair')
-    repair() {
+    repair(): void {
         const structure = EnergySinkManager.findRepairTarget(this.creep)
         if (structure === null) {
             this.switchTask()
@@ -300,7 +300,7 @@ class RoleLogistics {
     }
 
     @mprofile('logistics:upgrade')
-    upgrade() {
+    upgrade(): void {
         const home = Game.rooms[this.creep.memory.home]
         if (!home.controller) {
             this.creep.say('???')
@@ -315,7 +315,7 @@ class RoleLogistics {
     }
 
     @mprofile('logistics:haulEnergy')
-    haulEnergy() {
+    haulEnergy(): void {
         if (TransferTask.makeRequest(this.creep)) {
             this.runTask()
         } else if (hasHostileCreeps(this.creep.room)) {
@@ -326,7 +326,7 @@ class RoleLogistics {
     }
 
     @profile
-    private wander() {
+    private wander(): void {
         const pos = getRandomWalkablePosition(this.creep.pos)
         if (pos !== null) {
             this.creep.moveTo(pos)
@@ -334,13 +334,13 @@ class RoleLogistics {
     }
 
     @profile
-    private runTask() {
+    private runTask(): void {
         const task = this.creep.memory.tasks[0]
         TaskRunner.run(task, this.creep)
     }
 
     @profile
-    switchTask() {
+    switchTask(): void {
         let task: LogisticsTask = this.creep.memory.currentTask
         if (!isAtExtensionCap(this.creep.room) || hasTunnelSite(this.creep.room)) {
             task = TASK_BUILDING
