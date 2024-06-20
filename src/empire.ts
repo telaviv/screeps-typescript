@@ -1,8 +1,8 @@
-import { RoomTask, isClaimRoomTask } from 'managers/room-manager'
-import { profile } from 'utils/profiling'
-import { hasNoSpawns } from 'utils/room'
-import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
 import * as Logger from 'utils/logger'
+import { RoomTask, isClaimRoomTask } from 'managers/room-manager'
+import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
+import { hasNoSpawns } from 'utils/room'
+import { profile } from 'utils/profiling'
 
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
 
@@ -82,7 +82,8 @@ export default class Empire {
             (r) =>
                 !hasNoSpawns(r) &&
                 r.memory.war.status === WarStatus.NONE &&
-                r.controller!.level >= 3,
+                r.controller &&
+                r.controller.level >= 3,
         )
         const savior = saviors.sort(
             (a, b) =>

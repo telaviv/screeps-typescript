@@ -1,15 +1,14 @@
 import filter from 'lodash/filter'
 import some from 'lodash/some'
 
-import { getAllHarvesters, getLogisticsCreeps } from 'utils/creep'
-import { Harvester, isHarvester } from 'roles/harvester'
-import { LogisticsCreep } from 'roles/logistics-constants'
-import { isMiningTask } from 'tasks/mining/utils'
-import { MiningTask } from 'tasks/mining/types'
-
-import { profile } from 'utils/profiling'
-import { getNonObstacleNeighbors } from 'utils/room-position'
 import * as Logger from 'utils/logger'
+import { Harvester, isHarvester } from 'roles/harvester'
+import { getAllHarvesters, getLogisticsCreeps } from 'utils/creep'
+import { LogisticsCreep } from 'roles/logistics-constants'
+import { MiningTask } from 'tasks/mining/types'
+import { getNonObstacleNeighbors } from 'utils/room-position'
+import { isMiningTask } from 'tasks/mining/utils'
+import { profile } from 'utils/profiling'
 
 const MAX_WORK_PARTS = 5
 
@@ -19,9 +18,13 @@ export default class SourceManager {
     public readonly containerPosition: RoomPosition
 
     private constructor(source: Source) {
+        const stationaryPoints = source.room.memory.stationaryPoints
+        if (!stationaryPoints || !stationaryPoints.sources) {
+            throw new Error('stationaryPoints.sources is not defined')
+        }
         this.id = source.id
         this.source = source
-        const containerPosition = this.source.room.memory.stationaryPoints!.sources[this.id]
+        const containerPosition = stationaryPoints.sources[this.id]
         this.containerPosition = new RoomPosition(
             containerPosition.x,
             containerPosition.y,
@@ -29,12 +32,15 @@ export default class SourceManager {
         )
     }
 
-    public static createFromSource(source: Source) {
+    public static createFromSource(source: Source): SourceManager {
         return new SourceManager(source)
     }
 
-    public static createFromSourceId(id: Id<Source>) {
-        const source = Game.getObjectById(id)!
+    public static createFromSourceId(id: Id<Source>): SourceManager {
+        const source = Game.getObjectById(id)
+        if (!source) {
+            throw new Error(`source-manager:createFromSourceId:source ${id} is not found`)
+        }
         return new SourceManager(source)
     }
 

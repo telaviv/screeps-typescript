@@ -1,27 +1,26 @@
-import migrate from 'migrations'
-import RoomVisualizer from 'room-visualizer'
-import roleHarvester, { Harvester } from 'roles/harvester'
-import RoleLogistics from 'roles/logistics'
-import roleClaimer, { Claimer } from 'roles/claim'
-import roleWrecker, { Wrecker } from 'roles/wrecker'
+import * as TaskRunner from 'tasks/runner'
+import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
+import roleClaimer, { Claimer } from 'roles/claim'
+import roleHarvester, { Harvester } from 'roles/harvester'
+import roleMason, { Mason } from 'roles/mason'
 import roleRemoteBuild, { RemoteBuild } from 'roles/remote-build'
 import roleRemoteUpgrade, { RemoteUpgrade } from 'roles/remote-upgrade'
-import roleMason, { Mason } from 'roles/mason'
 import roleScout, { Scout } from 'roles/scout'
-import { LogisticsCreep } from 'roles/logistics-constants'
-import ErrorMapper from 'utils/ErrorMapper'
-import assignGlobals from 'utils/globals'
-import { recordGameStats, recordRoomStats } from 'utils/stats'
-import * as TaskRunner from 'tasks/runner'
-import BuildManager from 'managers/build-manager'
-
-import { runSpawn } from './spawn'
+import roleWrecker, { Wrecker } from 'roles/wrecker'
 import updateStrategy, { StrategyPhase } from './strategy'
-import survey from './surveyor'
-import { runTower } from './tower'
+import BuildManager from 'managers/build-manager'
 import Empire from 'empire'
+import ErrorMapper from 'utils/ErrorMapper'
+import { LogisticsCreep } from 'roles/logistics-constants'
+import RoleLogistics from 'roles/logistics'
+import RoomVisualizer from 'room-visualizer'
+import assignGlobals from 'utils/globals'
+import migrate from 'migrations'
+import { runSpawn } from './spawn'
+import { runTower } from './tower'
 import { run as scout } from 'room-status'
+import survey from './surveyor'
 import { wrap } from 'utils/profiling'
 
 const ROOM_TTL = 30000
@@ -167,7 +166,7 @@ const runAllCreeps = wrap(() => {
     }
 }, 'main:runAllCreeps')
 
-function unwrappedLoop() {
+function unwrappedLoop(): void {
     // Automatically delete memory of missing creeps
     initialize()
     runAllRooms()

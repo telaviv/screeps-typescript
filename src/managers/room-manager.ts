@@ -1,9 +1,8 @@
-import { extend } from 'lodash'
-import roleClaimer from 'roles/claim'
-import roleScout from 'roles/scout'
-import autoIncrement from 'utils/autoincrement'
 import * as Logger from 'utils/logger'
 import WarDepartment from 'war-department'
+import autoIncrement from 'utils/autoincrement'
+import roleClaimer from 'roles/claim'
+import roleScout from 'roles/scout'
 
 declare global {
     interface RoomMemory {

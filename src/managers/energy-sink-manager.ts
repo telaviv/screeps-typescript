@@ -1,6 +1,7 @@
 /* eslint @typescript-eslint/no-explicit-any: ["off"] */
 
 import includes from 'lodash/includes'
+
 import { LogisticsCreep } from 'roles/logistics-constants'
 
 export default class EnergySinkManager {

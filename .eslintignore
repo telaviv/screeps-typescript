@@ -2,6 +2,7 @@ node_modules
 dist
 coverage
 src/data-structures/**
+src/utils/ErrorMapper.ts
 src/types.d.ts
 **/*spec.ts
 **/testing/**

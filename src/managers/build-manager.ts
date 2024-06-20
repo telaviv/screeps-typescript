@@ -1,4 +1,7 @@
 import includes from 'lodash/includes'
+import pokemon from 'pokemon'
+
+import * as Logger from 'utils/logger'
 import {
     LINK_COUNTS,
     MIN_RAMPART_LEVEL,
@@ -17,11 +20,9 @@ import {
     makeConstructionSite,
     makeSpawnConstructionSite,
 } from 'utils/room'
-import * as Logger from 'utils/logger'
 import { profile, wrap } from 'utils/profiling'
-import { getConstructionFeatures } from 'surveyor'
 import { Position } from 'types'
-import pokemon from 'pokemon'
+import { getConstructionFeatures } from 'surveyor'
 
 declare global {
     interface RoomMemory {
@@ -45,7 +46,7 @@ export default class BuildManager {
         return new BuildManager(room)
     }
 
-    removeEnemyConstructionSites() {
+    removeEnemyConstructionSites(): void {
         const sites = this.room.find(FIND_HOSTILE_CONSTRUCTION_SITES)
         for (const site of sites) {
             site.remove()
@@ -174,7 +175,13 @@ export default class BuildManager {
                 filter: { structureType: type },
             })
         }
-        const toBuild = constructionFeatures[type]!.find(({ x, y }) => {
+        const constructionPosition = constructionFeatures[type]
+        if (constructionPosition === undefined) {
+            Logger.warning('nextBuildPosition:no-construction-features', type, this.room.name)
+            return null
+        }
+
+        const toBuild = constructionPosition.find(({ x, y }) => {
             return !structures.some((structure) => structure.pos.x === x && structure.pos.y === y)
         })
         if (toBuild === undefined) {
@@ -206,14 +213,21 @@ export default class BuildManager {
     private canBuildLinks = wrap(() => {
         const constructionFeatures = getConstructionFeatures(this.room)
         const links = getLinks(this.room)
-        const possibleLinkCount = LINK_COUNTS[this.room.controller!.level]!
-        return (
-            links.length < Math.min(possibleLinkCount, constructionFeatures[STRUCTURE_LINK]!.length)
-        )
+        if (this.room.controller === undefined) {
+            Logger.error('canBuildLinks:controller:error:no-controller', this.room.name)
+            return false
+        }
+        const linkPositions = constructionFeatures[STRUCTURE_LINK]
+        if (linkPositions === undefined) {
+            Logger.warning('canBuildLinks:no-link-positions', this.room.name)
+            return false
+        }
+        const possibleLinkCount = LINK_COUNTS[this.room.controller.level] || 0
+        return links.length < Math.min(possibleLinkCount, linkPositions.length)
     }, 'BuildManager:canBuildLinks')
 
     private canBuildStorage = wrap((): boolean => {
-        if (this.room.controller!.level < MIN_STORAGE_LEVEL) {
+        if (!this.room.controller || this.room.controller.level < MIN_STORAGE_LEVEL) {
             return false
         }
         return !hasStorage(this.room)
@@ -247,7 +261,11 @@ export default class BuildManager {
 
     private getNextRoad(): Position | undefined {
         const constructionFeatures = getConstructionFeatures(this.room)
-        return constructionFeatures[STRUCTURE_ROAD]!.find((pos) => {
+        if (constructionFeatures[STRUCTURE_ROAD] === undefined) {
+            Logger.warning('getNextRoad:no-road-features', this.room.name)
+            return undefined
+        }
+        return constructionFeatures[STRUCTURE_ROAD].find((pos) => {
             return !hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
         })
     }
@@ -257,7 +275,7 @@ export default class BuildManager {
     }, 'BuildManager:canBuildExtension')
 
     private canBuildWall = wrap((): boolean => {
-        if (this.room.controller!.level < MIN_RAMPART_LEVEL) {
+        if (!this.room.controller || this.room.controller.level < MIN_RAMPART_LEVEL) {
             return false
         }
         const constructionFeatures = getConstructionFeatures(this.room)
@@ -270,6 +288,6 @@ export default class BuildManager {
     }, 'BuildManager:canBuildWall')
 }
 
-export function getBuildManager(room: Room) {
+export function getBuildManager(room: Room): BuildManager {
     return BuildManager.get(room)
 }

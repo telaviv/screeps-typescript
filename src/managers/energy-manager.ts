@@ -1,5 +1,4 @@
 import minBy from 'lodash/minBy'
-import { LogisticsMemory, TASK_HAULING } from 'roles/logistics-constants'
 
 import SourceManager from './source-manager'
 import { getSources } from 'utils/room'
