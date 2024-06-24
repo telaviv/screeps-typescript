@@ -25,7 +25,7 @@ module.exports = {
         'import/resolver': {
             typescript: {},
         },
-        "import/extensions": [".ts"],
+        'import/extensions': ['.ts'],
     },
     rules: {
         '@typescript-eslint/array-type': 'error',

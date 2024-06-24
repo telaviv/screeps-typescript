@@ -1,6 +1,6 @@
 import { expect, config } from 'chai'
 
-import { getClosestRooms } from '../../../src/utils/world'
+import { World } from '../../../src/utils/world'
 
 config.showDiff = true
 config.truncateThreshold = 0
@@ -37,7 +37,8 @@ describe('getClosestRooms', () => {
     it('should return an empty array when given an empty roomNames array', () => {
         const roomNames: string[] = []
         const maxDistance = 5
-        const result = getClosestRooms(roomNames, maxDistance, describeExitsFn(exitDescriptions))
+        const world = new World(describeExitsFn(exitDescriptions))
+        const result = world.getClosestRooms(roomNames, maxDistance)
         expect(result).to.deep.equal([])
     })
 
@@ -51,7 +52,8 @@ describe('getClosestRooms', () => {
         delete exitDescriptions.get('W7N8')!['1']
         delete exitDescriptions.get('W7N8')!['5']
         const maxDistance = 2
-        const result = getClosestRooms(roomNames, maxDistance, describeExitsFn(exitDescriptions))
+        const world = new World(describeExitsFn(exitDescriptions))
+        const result = world.getClosestRooms(roomNames, maxDistance)
         expect(result).to.deep.include({ roomName: 'W6N8', distance: 1 })
         expect(result).to.deep.include({ roomName: 'W7N8', distance: 2 })
     })
