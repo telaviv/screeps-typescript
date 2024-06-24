@@ -59,11 +59,34 @@ describe('World', () => {
         })
     })
 
-    describe ('#findBestOwnedRoom', () => {
+    describe('#findBestOwnedRoom', () => {
         it('should return null when there are no owned rooms', () => {
             const world = new World(describeExitsFn(exitDescriptions))
             const result = world.findBestOwnedRoom('W5N5', 5, new Map())
             expect(result).to.be.null
+        })
+
+        it('should return the closest owned room within the maxDistance', () => {
+            const ownedRoomProgress = new Map<string, number>([
+                ['W5N8', 0],
+                ['W6N8', 0],
+                ['W7N8', 0],
+            ])
+            const world = new World(describeExitsFn(exitDescriptions))
+            const result = world.findBestOwnedRoom('W4N8', 2, ownedRoomProgress)
+            expect(result).to.equal('W5N8')
+        })
+
+        it('should return the room with the highest controller level when there are multiple candidates', () => {
+            const ownedRoomProgress = new Map<string, number>([
+                ['W5N8', 0],
+                ['W3N8', 1],
+                ['W4N7', 0],
+                ['W4N9', 0],
+            ])
+            const world = new World(describeExitsFn(exitDescriptions))
+            const result = world.findBestOwnedRoom('W4N8', 2, ownedRoomProgress)
+            expect(result).to.equal('W3N8')
         })
     })
 })

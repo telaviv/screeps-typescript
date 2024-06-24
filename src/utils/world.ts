@@ -14,7 +14,6 @@ export class World {
     getClosestRooms(
         roomNames: string[],
         maxDistance: number,
-        onlyInclude: string[] = [],
     ): RoomDistanceInfo[] {
         const distanceQueue: RoomDistanceInfo[] = roomNames.map((roomName) => ({
             roomName,
@@ -56,13 +55,17 @@ export class World {
         }
         const closestRooms = this.getClosestRooms([targetRoom], maxDistance)
         if (closestRooms.length === 0) return null
-        const ownedRooms = Object.keys(ownedRoomProgress)
+        const ownedRooms = Array.from(ownedRoomProgress.keys())
         const candidates = closestRooms.filter(
             ({ roomName, distance }) =>
                 distance === closestRooms[0].distance && ownedRooms.includes(roomName),
         )
         if (candidates.length === 0) return null
-        candidates.sort((a, b) => b.distance - a.distance)
+        candidates.sort(
+            (a, b) =>
+                (ownedRoomProgress?.get(b.roomName) ?? 0) -
+                (ownedRoomProgress?.get(a.roomName) ?? 0),
+        )
         return candidates[0].roomName
     }
 }
