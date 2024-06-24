@@ -2,7 +2,7 @@ import { OwnedRoomProgress, World } from 'utils/world'
 
 const MAX_SCOUT_DISTANCE = 3
 const TIME_PER_TICK = 4.6 // seconds on shard 0
-const DistanceTTL: Record<number, number> = {
+export const DistanceTTL: Record<number, number> = {
     1: (60 * 60 * 24) / TIME_PER_TICK,
     2: (60 * 60 * 24) / TIME_PER_TICK,
     3: (60 * 60 * 36) / TIME_PER_TICK,
@@ -27,15 +27,18 @@ class ScoutManager {
     private world: World
     private ownedRoomProgress: OwnedRoomProgress
     private scoutRoomData: Record<string, ScoutMemory>
+    private gameTime: number
 
     constructor(
         world: World,
         ownedRoomProgress: Map<string, number>,
         scoutRoomData: Record<string, ScoutMemory>,
+        gameTime: number = Game.time,
     ) {
         this.world = world
         this.ownedRoomProgress = ownedRoomProgress
         this.scoutRoomData = scoutRoomData
+        this.gameTime = gameTime
     }
 
     get ownedRooms(): string[] {
@@ -48,8 +51,8 @@ class ScoutManager {
             const ttl = DistanceTTL[distance] ?? 0
             if (
                 !this.scoutRoomData[roomName] ||
-                !this.scoutRoomData[roomName].updatedAt ||
-                this.scoutRoomData[roomName].updatedAt + ttl < Game.time
+                !Object.prototype.hasOwnProperty.call(this.scoutRoomData[roomName], 'updatedAt') ||
+                this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime
             ) {
                 return roomName
             }

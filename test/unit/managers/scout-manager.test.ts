@@ -1,8 +1,7 @@
 import { stub } from 'sinon'
 import { expect } from 'chai'
 
-import { ScoutManager } from '../../../src/managers/scout-manager'
-import { get } from 'lodash'
+import { DistanceTTL, ScoutManager } from '../../../src/managers/scout-manager'
 
 describe('ScoutManager', () => {
     describe('findNextRoomToScout', () => {
@@ -10,21 +9,69 @@ describe('ScoutManager', () => {
             const world = { getClosestRooms: stub() }
             world.getClosestRooms.returns([])
             // Mock the scout room data
-            const scoutManager = new ScoutManager(world as any, new Map(), {})
+            const scoutManager = new ScoutManager(world as any, new Map(), {}, 100)
             const nextRoomToScout = scoutManager.findNextRoomToScout()
             expect(nextRoomToScout).to.be.null
         })
 
-        it('should return the room closest room', () => {
+        it('should return the closest room', () => {
             const ownedRoomProgress = new Map()
             ownedRoomProgress.set('W5N8', 0)
             ownedRoomProgress.set('W3N8', 0)
-            const world = {getClosestRooms: stub()}
-            world.getClosestRooms.returns([{roomName: 'W5N8', distance: 1}, {roomName: 'W3N8', distance: 2}])
+            const world = { getClosestRooms: stub() }
+            world.getClosestRooms.returns([
+                { roomName: 'W5N8', distance: 1 },
+                { roomName: 'W3N8', distance: 2 },
+            ])
 
-            const scoutManager = new ScoutManager(world as any, ownedRoomProgress, {})
+            const scoutManager = new ScoutManager(world as any, ownedRoomProgress, {}, 100)
             const nextRoomToScout = scoutManager.findNextRoomToScout()
             expect(nextRoomToScout).to.equal('W5N8')
+        })
+
+        it('should return the room that has not been scouted', () => {
+            const ownedRoomProgress = new Map()
+            ownedRoomProgress.set('W5N8', 0)
+            ownedRoomProgress.set('W3N8', 0)
+            const world = { getClosestRooms: stub() }
+            let scoutRoomData = {
+                W5N8: { updatedAt: 0 },
+            }
+            world.getClosestRooms.returns([
+                { roomName: 'W5N8', distance: 1 },
+                { roomName: 'W3N8', distance: 2 },
+            ])
+            const scoutManager = new ScoutManager(
+                world as any,
+                ownedRoomProgress,
+                scoutRoomData as any,
+                100,
+            )
+            const nextRoomToScout = scoutManager.findNextRoomToScout()
+            expect(nextRoomToScout).to.equal('W3N8')
+        })
+
+        it('should return the room that has expired their ttl', () => {
+            const ownedRoomProgress = new Map()
+            ownedRoomProgress.set('W5N8', 0)
+            ownedRoomProgress.set('W3N8', 0)
+            const world = { getClosestRooms: stub() }
+            let scoutRoomData = {
+                W5N8: { updatedAt: DistanceTTL[1] },
+                W3N8: { updatedAt: 0 }, // should be passed ttl
+            }
+            world.getClosestRooms.returns([
+                { roomName: 'W5N8', distance: 1 },
+                { roomName: 'W3N8', distance: 2 },
+            ])
+            const scoutManager = new ScoutManager(
+                world as any,
+                ownedRoomProgress,
+                scoutRoomData as any,
+                DistanceTTL[2] + 1,
+            )
+            const nextRoomToScout = scoutManager.findNextRoomToScout()
+            expect(nextRoomToScout).to.equal('W3N8')
         })
     })
 })

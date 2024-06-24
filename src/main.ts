@@ -22,8 +22,6 @@ import { runTower } from './tower'
 import survey from './surveyor'
 import { wrap } from 'utils/profiling'
 
-const ROOM_TTL = 30000
-
 declare global {
     /*
       Example types, expand on these or remove them and add your own.
@@ -70,12 +68,15 @@ const clearMemory = wrap(() => {
         }
     }
 
+    /**
     for (const [name, memory] of Object.entries(Memory.rooms || [])) {
-        if (!memory.updated || memory.updated + ROOM_TTL < Game.time) {
+        if (memory.scout && memory.scout.updatedAt + ROOM_TTL < Game.time) {
             // Logger.info('room:expired', name, memory.updated, Game.time)
             delete Memory.rooms[name]
         }
     }
+    * temporary disabled
+    */
 }, 'main:clearMemory')
 
 const runMyRoom = wrap((room: Room) => {
