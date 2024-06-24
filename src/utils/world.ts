@@ -11,7 +11,11 @@ export class World {
         this.describeExits = describeExits
     }
 
-    getClosestRooms(roomNames: string[], maxDistance: number): RoomDistanceInfo[] {
+    getClosestRooms(
+        roomNames: string[],
+        maxDistance: number,
+        onlyInclude: string[] = [],
+    ): RoomDistanceInfo[] {
         const distanceQueue: RoomDistanceInfo[] = roomNames.map((roomName) => ({
             roomName,
             distance: 0,
@@ -42,20 +46,20 @@ export class World {
     findBestOwnedRoom(
         targetRoom: string,
         maxDistance: number,
-        ownedRooms: { name: string; controllerProgress: number }[] | null = null,
+        ownedRoomProgress: Map<string, number> | null = null,
     ): string | null {
-        if (ownedRooms === null) {
-            ownedRooms = Object.values(Game.rooms)
-                .filter((room) => room.controller && room.controller.my)
-                .map((room) => ({
-                    name: room.name,
-                    controllerProgress: room.controller?.progressTotal ?? 0,
-                }))
+        if (ownedRoomProgress === null) {
+            ownedRoomProgress = new Map<string, number>()
+            for (const roomName in Game.rooms) {
+                ownedRoomProgress.set(roomName, Game.rooms[roomName].controller?.level ?? 0)
+            }
         }
         const closestRooms = this.getClosestRooms([targetRoom], maxDistance)
         if (closestRooms.length === 0) return null
+        const ownedRooms = Object.keys(ownedRoomProgress)
         const candidates = closestRooms.filter(
-            ({ distance }) => distance === closestRooms[0].distance,
+            ({ roomName, distance }) =>
+                distance === closestRooms[0].distance && ownedRooms.includes(roomName),
         )
         if (candidates.length === 0) return null
         candidates.sort((a, b) => b.distance - a.distance)
