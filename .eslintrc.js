@@ -8,8 +8,6 @@ module.exports = {
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
         'plugin:@typescript-eslint/recommended-requiring-type-checking',
-        'plugin:prettier/recommended',
-        'prettier',
         'plugin:import/errors',
         'plugin:import/warnings',
         'plugin:import/typescript',
@@ -27,6 +25,7 @@ module.exports = {
         'import/resolver': {
             typescript: {},
         },
+        "import/extensions": [".ts"],
     },
     rules: {
         '@typescript-eslint/array-type': 'error',

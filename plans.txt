@@ -2,24 +2,29 @@ Features
 ----------------------------
 
 [ ] - Long Distance Energy Mining
+   [ ] - Scouting
+      [x] - Write function that gets closest rooms from a list of rooms
+      [ ] - Create a data structure called ScoutedFeatures that talks about some aspects of a room visited
+         [ ] - Optional features include:
+            [ ] - owner
+            [ ] - controllerLevel
+            [ ] - hasInvaderCore
+            [ ] - enemyThatsMining
+      [ ] - Every 24 hours a scout is sent out to rooms distance 2 and 36 hours for rooms 3 distance away
+         [ ] - Scout is sent from room sorted by distance->highest level
+   [ ] -
+   [ ] -
 [x] - Workers can wall repair really weak walls
 [x] - Logistics become workers when preference doesn't work.
 [x] - Builders don't make construction sites, the build manager does
 [x] - Auto build spawn when we don't have one.
-[ ] - Snapshot System
-   [x] - Save snapshot
-   [ ] - Build from snapshot before generating iroom
-   [ ] - Replace obstacles if one exists.
-   [ ] - Include construction sites
-   [x] - Allow Flags in snapshot system.
-   [x] - Visualize snapshots
 [x] - Private Server
-[ ] - Room Planner v1
+[x] - Room Planner v1
    [x] - Drop Spots
-   [ ] - Links
-   [ ] - Visualizer
-   [-] - Storage
-   [ ] - Roads
+   [x] - Links
+   [x] - Visualizer
+   [x] - Storage
+   [x] - Roads
    [x] - Extension
 [ ] - Safe Mode Usage
 [ ] - Mineral Extraction
