@@ -19,7 +19,6 @@ import assignGlobals from 'utils/globals'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
-import { run as scout } from 'room-status'
 import survey from './surveyor'
 import { wrap } from 'utils/profiling'
 
@@ -139,7 +138,6 @@ const runCreep = wrap((creepName: string) => {
 const initialize = wrap(() => {
     clearMemory()
     survey()
-    scout()
     TaskRunner.cleanup()
 }, 'main:initialize')
 

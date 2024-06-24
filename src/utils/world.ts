@@ -3,6 +3,8 @@ interface RoomDistanceInfo {
     distance: number
 }
 
+export type OwnedRoomProgress = Map<string, number>
+
 export class World {
     describeExits: (roomName: string) => ExitsInformation
 
@@ -11,10 +13,7 @@ export class World {
         this.describeExits = describeExits
     }
 
-    getClosestRooms(
-        roomNames: string[],
-        maxDistance: number,
-    ): RoomDistanceInfo[] {
+    getClosestRooms(roomNames: string[], maxDistance: number): RoomDistanceInfo[] {
         const distanceQueue: RoomDistanceInfo[] = roomNames.map((roomName) => ({
             roomName,
             distance: 0,
@@ -45,14 +44,8 @@ export class World {
     findBestOwnedRoom(
         targetRoom: string,
         maxDistance: number,
-        ownedRoomProgress: Map<string, number> | null = null,
+        ownedRoomProgress: OwnedRoomProgress,
     ): string | null {
-        if (ownedRoomProgress === null) {
-            ownedRoomProgress = new Map<string, number>()
-            for (const roomName in Game.rooms) {
-                ownedRoomProgress.set(roomName, Game.rooms[roomName].controller?.level ?? 0)
-            }
-        }
         const closestRooms = this.getClosestRooms([targetRoom], maxDistance)
         if (closestRooms.length === 0) return null
         const ownedRooms = Array.from(ownedRoomProgress.keys())
