@@ -24,37 +24,42 @@ declare global {
 }
 
 class ScoutManager {
-    private world: World;
-    private ownedRoomProgress: OwnedRoomProgress;
-    private scoutRoomData: Record<string, ScoutMemory>;
+    private world: World
+    private ownedRoomProgress: OwnedRoomProgress
+    private scoutRoomData: Record<string, ScoutMemory>
 
-    constructor(world: World, ownedRoomProgress: Map<string, number>, scoutRoomData: Record<string, ScoutMemory>) {
-        this.world = world;
-        this.ownedRoomProgress = ownedRoomProgress;
-        this.scoutRoomData = scoutRoomData;
+    constructor(
+        world: World,
+        ownedRoomProgress: Map<string, number>,
+        scoutRoomData: Record<string, ScoutMemory>,
+    ) {
+        this.world = world
+        this.ownedRoomProgress = ownedRoomProgress
+        this.scoutRoomData = scoutRoomData
     }
 
     get ownedRooms(): string[] {
-        return Array.from(this.ownedRoomProgress.keys());
+        return Array.from(this.ownedRoomProgress.keys())
     }
 
     findNextRoomToScout(): string | null {
-        const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE);
+        const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
         for (const { roomName, distance } of closestRooms) {
-            const ttl = DistanceTTL[distance] ?? 0;
-            if (!this.scoutRoomData[roomName] ||
+            const ttl = DistanceTTL[distance] ?? 0
+            if (
+                !this.scoutRoomData[roomName] ||
                 !this.scoutRoomData[roomName].updatedAt ||
-                this.scoutRoomData[roomName].updatedAt + ttl < Game.time) {
-                return roomName;
+                this.scoutRoomData[roomName].updatedAt + ttl < Game.time
+            ) {
+                return roomName
             }
-
         }
-        return null;
+        return null
     }
 
     findBestRoomToCreateScout(roomName: string): string | null {
-        return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress);
+        return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress)
     }
 }
 
-export { ScoutManager };
+export { ScoutManager }
