@@ -15,6 +15,7 @@ import ErrorMapper from 'utils/ErrorMapper'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import RoleLogistics from 'roles/logistics'
 import RoomVisualizer from 'room-visualizer'
+import { ScoutManager } from 'managers/scout-manager'
 import assignGlobals from 'utils/globals'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
@@ -50,7 +51,9 @@ declare global {
     // Syntax for adding proprties to `global` (ex "global.log")
     namespace NodeJS {
         // eslint-disable-next-line @typescript-eslint/no-empty-interface
-        interface Global {}
+        interface Global {
+            USERNAME: string
+        }
     }
 }
 
@@ -67,16 +70,6 @@ const clearMemory = wrap(() => {
             delete Memory.creeps[name]
         }
     }
-
-    /**
-    for (const [name, memory] of Object.entries(Memory.rooms || [])) {
-        if (memory.scout && memory.scout.updatedAt + ROOM_TTL < Game.time) {
-            // Logger.info('room:expired', name, memory.updated, Game.time)
-            delete Memory.rooms[name]
-        }
-    }
-    * temporary disabled
-    */
 }, 'main:clearMemory')
 
 const runMyRoom = wrap((room: Room) => {
@@ -138,6 +131,7 @@ const runCreep = wrap((creepName: string) => {
 
 const initialize = wrap(() => {
     clearMemory()
+    ScoutManager.create().run()
     survey()
     TaskRunner.cleanup()
 }, 'main:initialize')

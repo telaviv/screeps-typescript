@@ -72,11 +72,27 @@ function printTasks(type?: Task<any>) {
     }
 }
 
+function isOwnedStructure(obj: any): obj is OwnedStructure {
+    return Object.prototype.hasOwnProperty.call(obj, 'owner')
+}
+
+function findUsername(): string {
+    for (const structure of Object.values(Game.structures)) {
+        if (structure && isOwnedStructure(structure)) {
+            return structure.owner?.username ?? ''
+        }
+    }
+    return ''
+}
+
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
     }
 
+    if (!global.USERNAME) {
+        global.USERNAME = findUsername()
+    }
     global.killAllCreeps = killAllCreeps
     global.setLogLevel = Logger.setLogLevel
     global.saveSnapshot = saveSnapshot
