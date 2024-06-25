@@ -4,12 +4,12 @@ Features
 [ ] - Long Distance Energy Mining
    [ ] - Scouting
       [x] - Write function that gets closest rooms from a list of rooms
-      [ ] - Create a data structure called ScoutedFeatures that talks about some aspects of a room visited
-         [ ] - Optional features include:
-            [ ] - owner
-            [ ] - controllerLevel
-            [ ] - hasInvaderCore
-            [ ] - enemyThatsMining
+      [x] - Create a data structure called ScoutedFeatures that talks about some aspects of a room visited
+         [x] - Optional features include:
+            [x] - owner
+            [x] - controllerLevel
+            [x] - hasInvaderCore
+            [x] - enemyThatsMining
       [ ] - Every 24 hours a scout is sent out to rooms distance 2 and 36 hours for rooms 3 distance away
          [ ] - Scout is sent from room sorted by distance->highest level
    [ ] -
