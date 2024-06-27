@@ -1,13 +1,15 @@
+import * as TaskRunner from 'tasks/runner'
+import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { profile, wrap } from 'utils/profiling'
-import { moveToRoom } from 'utils/creep'
+import { createTravelTask } from 'tasks/travel'
 
 const ROLE = 'scout'
 
-export interface Scout extends Creep {
+export interface Scout extends ResourceCreep {
     memory: ScoutMemory
 }
 
-interface ScoutMemory extends CreepMemory {
+interface ScoutMemory extends ResourceCreepMemory {
     role: 'scout'
     destination: string
     home: string
@@ -34,7 +36,15 @@ class ScoutCreep {
 
     @profile
     run() {
-        moveToRoom(this.destination, this.creep)
+        if (this.creep.spawning) {
+            return
+        }
+
+        if (this.creep.memory.tasks.length > 0) {
+            const task = this.creep.memory.tasks[0]
+            TaskRunner.run(task, this.creep)
+            return
+        }
     }
 }
 
@@ -45,11 +55,14 @@ const roleScout = {
     }, 'roleScout:run'),
 
     create(spawn: StructureSpawn, destination: string, opts: SpawnOptions = {}): number {
-        return spawn.spawnCreep([MOVE], `${ROLE}:${Game.time}`, {
+        const name = `${ROLE}:${Game.time}`
+        return spawn.spawnCreep([MOVE], name, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
+                tasks: [createTravelTask(name, destination)],
                 destination,
+                idleTimestamp: null,
             } as ScoutMemory,
             ...opts,
         })

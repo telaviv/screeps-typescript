@@ -4,6 +4,7 @@ import MiningRunner from 'tasks/mining'
 import PickupRunner from 'tasks/pickup'
 import SignRunner from 'tasks/sign'
 import TransferRunner from 'tasks/transfer'
+import TravelRunner from 'tasks/travel'
 import WithdrawRunner from 'tasks/withdraw'
 import { wrap } from 'utils/profiling'
 
@@ -13,6 +14,7 @@ const runners: Runner<any>[] = [
     PickupRunner,
     MiningRunner,
     SignRunner,
+    TravelRunner,
 ]
 
 export const run = wrap((task: Task<any>, creep: ResourceCreep): boolean => {
