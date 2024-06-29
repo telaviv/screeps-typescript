@@ -1,4 +1,8 @@
 import { OwnedRoomProgress, World } from 'utils/world'
+import { RoomManager } from './room-manager'
+import { createTravelTask } from 'tasks/travel'
+import { getScouts } from 'utils/creep'
+import { isTravelTask } from 'tasks/travel/utils'
 
 const SCOUT_VERSION = '1.0.3'
 
@@ -52,8 +56,10 @@ class ScoutManager {
             if (room.controller?.my) {
                 ownedRoomProgress.set(room.name, room.controller.progressTotal)
             }
-            if (room.memory.scout) {
-                scoutRoomData[room.name] = room.memory.scout
+        }
+        for (const [name, memory] of Object.entries(Memory.rooms)) {
+            if (memory.scout) {
+                scoutRoomData[name] = memory.scout
             }
         }
         return new ScoutManager(world, ownedRoomProgress, scoutRoomData)
@@ -103,6 +109,33 @@ class ScoutManager {
         for (const room of Object.values(Game.rooms)) {
             this.recordScoutData(room)
         }
+        const roomToScout = this.findNextRoomToScout()
+        if (!roomToScout) {
+            return
+        }
+        const scouts = getScouts()
+        if (
+            scouts.some((scout) =>
+                scout.memory.tasks.some(
+                    (task) => isTravelTask(task) && task.destination === roomToScout,
+                ),
+            )
+        ) {
+            return
+        }
+        if (scouts.length > 0) {
+            const task = createTravelTask(scouts[0].name, roomToScout)
+            scouts[0].memory.tasks.push(task)
+            return
+        }
+        if (RoomManager.getAllScoutTasks().some((task) => task.data.room === roomToScout)) {
+            return
+        }
+        const scoutRoom = this.findBestRoomToCreateScout(roomToScout)
+        if (!scoutRoom) {
+            return
+        }
+        new RoomManager(Game.rooms[scoutRoom]).addScoutRoomTask(roomToScout)
     }
 
     private recordScoutData(room: Room): void {

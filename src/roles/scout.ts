@@ -1,7 +1,8 @@
-import * as TaskRunner from 'tasks/runner'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { createTravelTask, run as travelTaskRunner } from 'tasks/travel'
 import { profile, wrap } from 'utils/profiling'
-import { createTravelTask } from 'tasks/travel'
+import { LogisticsCreep } from './logistics-constants'
+import { isTravelTask } from 'tasks/travel/utils'
 
 const ROLE = 'scout'
 
@@ -11,23 +12,18 @@ export interface Scout extends ResourceCreep {
 
 interface ScoutMemory extends ResourceCreepMemory {
     role: 'scout'
-    destination: string
     home: string
 }
 
-class ScoutCreep {
+export function isScout(creep: Creep): creep is Scout {
+    return (creep as LogisticsCreep).memory.role === ROLE
+}
+
+export class ScoutCreep {
     readonly creep: Scout
 
     constructor(creep: Scout) {
         this.creep = creep
-    }
-
-    get destination(): string {
-        return this.memory.destination
-    }
-
-    get home(): string {
-        return this.memory.home
     }
 
     get memory(): ScoutMemory {
@@ -35,15 +31,13 @@ class ScoutCreep {
     }
 
     @profile
-    run() {
-        if (this.creep.spawning) {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    run(): void {
+        if (this.creep.spawning || this.creep.memory.tasks.length === 0) {
             return
         }
-
-        if (this.creep.memory.tasks.length > 0) {
-            const task = this.creep.memory.tasks[0]
-            TaskRunner.run(task, this.creep)
-            return
+        if (isTravelTask(this.creep.memory.tasks[0])) {
+            travelTaskRunner(this.creep.memory.tasks[0], this.creep)
         }
     }
 }
@@ -54,14 +48,18 @@ const roleScout = {
         scout.run()
     }, 'roleScout:run'),
 
-    create(spawn: StructureSpawn, destination: string, opts: SpawnOptions = {}): number {
+    create(
+        spawn: StructureSpawn,
+        destination: string,
+        permanent = false,
+        opts: SpawnOptions = {},
+    ): number {
         const name = `${ROLE}:${Game.time}`
         return spawn.spawnCreep([MOVE], name, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
-                tasks: [createTravelTask(name, destination)],
-                destination,
+                tasks: [createTravelTask(name, destination, permanent)],
                 idleTimestamp: null,
             } as ScoutMemory,
             ...opts,

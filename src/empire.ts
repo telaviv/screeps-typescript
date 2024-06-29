@@ -15,7 +15,7 @@ export default class Empire {
     @profile
     public run(): void {
         this.clearSaviors()
-        this.findSaviors()
+        // this.findSaviors()
         for (const room of this.rooms) {
             const warDepartment = new WarDepartment(room)
             warDepartment.update()

@@ -1,8 +1,10 @@
 import * as Logger from 'utils/logger'
 import { LogisticsCreep, LogisticsPreference, isLogisticsCreep } from 'roles/logistics-constants'
+import { Scout, isScout } from 'roles/scout'
 import { Harvester } from 'roles/harvester'
 import { ResourceCreep } from '../tasks/types'
 import { getSpawns } from 'utils/room'
+import { isTravelTask } from 'tasks/travel/utils'
 import { wrap } from './profiling'
 
 export function freeEnergyCapacity(creep: Creep): number {
@@ -27,6 +29,13 @@ type MoveToReturnCode =
     | ERR_INVALID_ARGS
     | ERR_NO_PATH
     | ERR_INVALID_TARGET
+
+declare global {
+    interface CreepMemory {
+        role: string
+        home: string | undefined
+    }
+}
 
 export const moveTo = wrap(
     (pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): MoveToReturnCode => {
@@ -86,13 +95,20 @@ export function recycle(creep: ResourceCreep): void {
     }
 }
 
-export function getCreeps(role: string, room: Room): Creep[] {
+export function getCreeps(role: string, room?: Room): Creep[] {
     return Object.values(Game.creeps).filter((creep: Creep) => {
-        return (
-            creep.memory.role === role &&
-            ((creep.memory.home && creep.memory.home === room.name) ||
-                creep.room.name === room.name)
-        )
+        if (!creep.memory.role) {
+            return false
+        }
+        if (room) {
+            if (
+                creep.room.name !== room.name ||
+                (creep.memory.home && creep.memory.home !== room.name)
+            ) {
+                return false
+            }
+        }
+        return creep.memory.role === role
     })
 }
 
@@ -104,6 +120,13 @@ export function getHarvesters(room: Room): Harvester[] {
                 creep.room.name === room.name)
         )
     }) as Harvester[]
+}
+
+export function getScouts(permanent = false): Scout[] {
+    const scouts = Object.values(Game.creeps).filter(isScout)
+    return scouts.filter((scout) =>
+        scout.memory.tasks.every((task) => isTravelTask(task) && task.permanent === permanent),
+    )
 }
 
 const harvesterCache: { [time: number]: Harvester[] } = {}

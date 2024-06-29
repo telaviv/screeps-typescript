@@ -12,6 +12,9 @@ export const makeRequest = wrap((creep: ResourceCreep, destination: string): boo
 
 export function run(task: TravelTask, creep: ResourceCreep): boolean {
     if (creep.room.name === task.destination && creep.pos.inRangeTo(25, 25, 18)) {
+        if (task.permanent) {
+            return false
+        }
         completeRequest(creep)
         return true
     }
@@ -19,22 +22,24 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
     return false
 }
 
-function addTravelTask(
-    creep: ResourceCreep,
-    destination: string,
-): TravelTask {
+function addTravelTask(creep: ResourceCreep, destination: string): TravelTask {
     const task = createTravelTask(creep.name, destination)
     creep.memory.tasks.push(task)
     return task
 }
 
-export function createTravelTask(creepName: string, destination: string): TravelTask {
+export function createTravelTask(
+    creepName: string,
+    destination: string,
+    permanent = false,
+): TravelTask {
     return {
         type: 'travel',
         id: autoIncrement().toString(),
         creep: creepName,
         destination,
         timestamp: Game.time,
+        permanent,
         complete: false,
     }
 }

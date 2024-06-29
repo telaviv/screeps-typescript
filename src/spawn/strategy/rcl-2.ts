@@ -50,6 +50,11 @@ export default function (spawn: StructureSpawn): void {
         return
     }
 
+    if (roomManager.getScoutRoomTasks().length > 0) {
+        roomManager.scoutRoom()
+        return
+    }
+
     if (room.energyAvailable < 0.95 * spawn.room.energyCapacityAvailable) {
         return
     }
@@ -87,6 +92,11 @@ export default function (spawn: StructureSpawn): void {
         return
     }
 
+    if (roomManager.getScoutRoomTasks().length > 0) {
+        roomManager.scoutRoom()
+        return
+    }
+
     if (!sourcesManager.hasEnoughHarvesters()) {
         sourcesManager.createHarvester(spawn)
         return
@@ -112,7 +122,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 
     if (warDepartment.targetRoom === undefined) {
         if (scouts.length === 0) {
-            return roleScout.create(spawn, warDepartment.target)
+            return roleScout.create(spawn, warDepartment.target, true)
         }
         return null
     }
