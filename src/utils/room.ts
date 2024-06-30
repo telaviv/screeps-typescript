@@ -390,6 +390,10 @@ function findSpawnlessRooms() {
     })
 }
 
+export function findMyRooms(): Room[] {
+    return Object.values(Game.rooms).filter((room) => room.controller && room.controller.my)
+}
+
 export function findLongDistanceBuild(home: string): ConstructionSite | null {
     for (const room of findSpawnlessRooms()) {
         if (room.name !== home) {

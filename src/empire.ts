@@ -1,7 +1,7 @@
-import * as Logger from 'utils/logger'
-import { RoomTask, isClaimRoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
-import { hasNoSpawns } from 'utils/room'
+import { RoomTask } from 'managers/room-manager'
+import { World } from 'utils/world'
+import { findMyRooms } from 'utils/room'
 import { profile } from 'utils/profiling'
 
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
@@ -22,6 +22,25 @@ export default class Empire {
         }
     }
 
+    findClaimCandidates(): string[] {
+        const world = new World()
+        const roomNames = findMyRooms().map((room) => room.name)
+        const closestRooms = world.getClosestRooms(roomNames, 3)
+        return closestRooms
+            .filter(({ roomName }) => {
+                const memory = Memory.rooms[roomName]?.scout
+                if (!memory) return false
+                if (memory.sourceCount !== 2 || memory.controllerOwner) return false
+                const neighbors = world.getClosestRooms([roomName], 1)
+                return !neighbors.some(
+                    ({ roomName: name }) =>
+                        Memory.rooms[name]?.scout?.controllerOwner &&
+                        !Game.rooms[name]?.controller?.my,
+                )
+            })
+            .map((room) => room.roomName)
+    }
+
     private clearSaviors(): void {
         for (const room of this.rooms) {
             const warDepartment = new WarDepartment(room)
@@ -36,62 +55,6 @@ export default class Empire {
                 warDepartment.cancelWar()
             }
         }
-    }
-
-    private findSaviors(): void {
-        for (const room of this.rooms) {
-            if (room.controller && room.controller.my && hasNoSpawns(room)) {
-                if (
-                    this.rooms.some(
-                        (r) =>
-                            r.memory.war?.status === WarStatus.SPAWN &&
-                            r.memory.war?.target === room.name,
-                    )
-                ) {
-                    continue
-                }
-                const savior = this.findSavior(room)
-                if (savior) {
-                    savior.memory.war = {
-                        status: WarStatus.SPAWN,
-                        target: room.name,
-                        type: 'savior',
-                    } as SpawnWarMemory
-                }
-            }
-        }
-    }
-
-    private findSavior(room: Room): Room | undefined {
-        if (
-            this.getRoomTasks().some(
-                (task) => isClaimRoomTask(task) && task.data.name === room.name,
-            )
-        ) {
-            return
-        }
-        if (
-            this.rooms.some(
-                (r) =>
-                    r.memory.war?.status === WarStatus.SPAWN && r.memory.war?.target === room.name,
-            )
-        ) {
-            return
-        }
-        const saviors = this.rooms.filter(
-            (r) =>
-                !hasNoSpawns(r) &&
-                r.memory.war.status === WarStatus.NONE &&
-                r.controller &&
-                r.controller.level >= 3,
-        )
-        const savior = saviors.sort(
-            (a, b) =>
-                Game.map.getRoomLinearDistance(a.name, room.name) -
-                Game.map.getRoomLinearDistance(b.name, room.name),
-        )[0]
-        Logger.warning('empire:findSavior', room.name, savior.name)
-        return savior
     }
 
     public getRoomTasks(): RoomTask[] {

@@ -2,9 +2,10 @@ import { OwnedRoomProgress, World } from 'utils/world'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getScouts } from 'utils/creep'
+import { getSources } from 'utils/room'
 import { isTravelTask } from 'tasks/travel/utils'
 
-const SCOUT_VERSION = '1.0.3'
+const SCOUT_VERSION = '1.0.4'
 
 const MAX_SCOUT_DISTANCE = 3
 const TIME_PER_TICK = 4.6 // seconds on shard 0
@@ -22,6 +23,7 @@ interface ScoutMemory {
     controllerProgress?: number
     hasInvaderCore?: boolean
     enemyThatsMining?: string
+    sourceCount?: number
 }
 
 declare global {
@@ -89,8 +91,8 @@ class ScoutManager {
     }
 
     clearExpiredScoutData(): void {
-        for (const room of Object.values(Game.rooms)) {
-            const memory = room.memory.scout
+        for (const roomMemory of Object.values(Memory.rooms)) {
+            const memory = roomMemory.scout
             if (!memory) {
                 continue
             }
@@ -99,7 +101,7 @@ class ScoutManager {
                 memory.updatedAt + EXPIRATION_TTL < this.gameTime ||
                 memory.version !== SCOUT_VERSION
             ) {
-                delete room.memory.scout
+                delete roomMemory.scout
             }
         }
     }
@@ -148,6 +150,7 @@ class ScoutManager {
             scoutMemory.hasInvaderCore = ScoutManager.hasInvaderCore(room)
             scoutMemory.enemyThatsMining = ScoutManager.enemyThatsMining(room)
         }
+        scoutMemory.sourceCount = getSources(room).length
         scoutMemory.version = SCOUT_VERSION
         scoutMemory.updatedAt = this.gameTime
         room.memory.scout = scoutMemory
