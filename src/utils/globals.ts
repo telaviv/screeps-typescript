@@ -88,8 +88,10 @@ function findUsername(): string {
 
 function findClaimCandidates(): void {
     const empire = new Empire()
-    for (const room of empire.findClaimCandidates()) {
-        console.log(room)
+    const candidates = empire.findClaimCandidates()
+    for (const room of candidates) {
+        const claimer = empire.findBestClaimer(room)
+        console.log(`room: ${room} claimer: ${claimer}`)
     }
 }
 

@@ -25,7 +25,7 @@ export default class Empire {
     findClaimCandidates(): string[] {
         const world = new World()
         const roomNames = findMyRooms().map((room) => room.name)
-        const closestRooms = world.getClosestRooms(roomNames, 3)
+        const closestRooms = world.getClosestRooms(roomNames, 2)
         return closestRooms
             .filter(({ roomName }) => {
                 const memory = Memory.rooms[roomName]?.scout
@@ -39,6 +39,26 @@ export default class Empire {
                 )
             })
             .map((room) => room.roomName)
+    }
+
+    findBestClaimer(roomName: string): string | null {
+        const world = new World()
+        const maxDistance = 2
+        const closestRooms = world.getClosestRooms([roomName], maxDistance)
+        const candidates = closestRooms.filter(
+            ({ roomName: name }) => Game.rooms[name]?.controller?.my,
+        )
+        if (candidates.length === 0) return null
+        candidates.sort(({ roomName: ar, distance: ad }, { roomName: br, distance: bd }) => {
+            const roomA = Game.rooms[ar]
+            const roomB = Game.rooms[br]
+            if (ad !== bd) return ad - bd
+            return (
+                (roomB.controller?.progressTotal ?? Infinity) -
+                (roomA.controller?.progressTotal ?? Infinity)
+            )
+        })
+        return candidates[0].roomName
     }
 
     private clearSaviors(): void {
