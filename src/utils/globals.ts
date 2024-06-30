@@ -1,6 +1,5 @@
 import * as Logger from 'utils/logger'
 import { resetSnapshot, saveSnapshot } from 'snapshot'
-import Empire from 'empire'
 import ErrorMapper from './ErrorMapper'
 import { RoomManager } from 'managers/room-manager'
 import { Task } from 'tasks/types'
@@ -86,14 +85,6 @@ function findUsername(): string {
     return ''
 }
 
-function findClaimCandidates(): void {
-    const empire = new Empire()
-    const candidates = empire.findClaimCandidates()
-    for (const room of candidates) {
-        const claimer = empire.findBestClaimer(room)
-        console.log(`room: ${room} claimer: ${claimer}`)
-    }
-}
 
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
@@ -117,7 +108,6 @@ export default function assignGlobals(): void {
     global.resetSnapshot = resetSnapshot
     global.printTasks = printTasks
     global.sendScout = sendScout
-    global.findClaimCandidates = findClaimCandidates
 }
 
 declare global {
@@ -137,7 +127,6 @@ declare global {
             resetSnapshot: (roomName: string) => void
             printTasks: (type?: Task<any>) => void
             sendScout: (destination: string, startRoom: string) => void
-            findClaimCandidates: () => void
         }
     }
 }

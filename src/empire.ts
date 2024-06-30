@@ -6,6 +6,42 @@ import { profile } from 'utils/profiling'
 
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
 
+declare global {
+    interface Memory {
+        autoclaim: boolean
+    }
+    namespace NodeJS {
+        interface Global {
+            findClaimCandidates: () => void
+            enableAutoClaim: () => void
+            disableAutoClaim: () => void
+        }
+    }
+}
+
+if (!Memory.autoclaim) Memory.autoclaim = false
+
+function findClaimCandidates(): void {
+    const empire = new Empire()
+    const candidates = empire.findClaimCandidates()
+    for (const room of candidates) {
+        const claimer = empire.findBestClaimer(room)
+        console.log(`room: ${room} claimer: ${claimer}`)
+    }
+}
+
+function enableAutoClaim(): void {
+    Memory.autoclaim = true
+}
+
+function disableAutoClaim(): void {
+    Memory.autoclaim = false
+}
+
+global.findClaimCandidates = findClaimCandidates
+global.enableAutoClaim = enableAutoClaim
+global.disableAutoClaim = disableAutoClaim
+
 export default class Empire {
     private rooms: Room[]
     constructor() {
