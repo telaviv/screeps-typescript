@@ -1,3 +1,4 @@
+import * as Logger from 'utils/logger'
 import { OwnedRoomProgress, World } from 'utils/world'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
@@ -71,41 +72,6 @@ class ScoutManager {
         return Array.from(this.ownedRoomProgress.keys())
     }
 
-    findNextRoomToScout(): string | null {
-        const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
-        for (const { roomName, distance } of closestRooms) {
-            const ttl = DistanceTTL[distance] ?? 0
-            if (
-                !this.scoutRoomData[roomName] ||
-                !Object.prototype.hasOwnProperty.call(this.scoutRoomData[roomName], 'updatedAt') ||
-                this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime
-            ) {
-                return roomName
-            }
-        }
-        return null
-    }
-
-    findBestRoomToCreateScout(roomName: string): string | null {
-        return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress)
-    }
-
-    clearExpiredScoutData(): void {
-        for (const roomMemory of Object.values(Memory.rooms)) {
-            const memory = roomMemory.scout
-            if (!memory) {
-                continue
-            }
-            if (
-                !memory.updatedAt ||
-                memory.updatedAt + EXPIRATION_TTL < this.gameTime ||
-                memory.version !== SCOUT_VERSION
-            ) {
-                delete roomMemory.scout
-            }
-        }
-    }
-
     run(): void {
         this.clearExpiredScoutData()
         for (const room of Object.values(Game.rooms)) {
@@ -135,9 +101,45 @@ class ScoutManager {
         }
         const scoutRoom = this.findBestRoomToCreateScout(roomToScout)
         if (!scoutRoom) {
+            Logger.error('scout-manager:run:no-scout-room:', roomToScout)
             return
         }
         new RoomManager(Game.rooms[scoutRoom]).addScoutRoomTask(roomToScout)
+    }
+
+    findNextRoomToScout(): string | null {
+        const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
+        for (const { roomName, distance } of closestRooms) {
+            const ttl = DistanceTTL[distance] ?? 0
+            if (
+                !this.scoutRoomData[roomName] ||
+                !this.scoutRoomData[roomName].updatedAt ||
+                this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime
+            ) {
+                return roomName
+            }
+        }
+        return null
+    }
+
+    findBestRoomToCreateScout(roomName: string): string | null {
+        return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress)
+    }
+
+    clearExpiredScoutData(): void {
+        for (const roomMemory of Object.values(Memory.rooms)) {
+            const memory = roomMemory.scout
+            if (!memory) {
+                continue
+            }
+            if (
+                !memory.updatedAt ||
+                memory.updatedAt + EXPIRATION_TTL < this.gameTime ||
+                memory.version !== SCOUT_VERSION
+            ) {
+                delete roomMemory.scout
+            }
+        }
     }
 
     private recordScoutData(room: Room): void {

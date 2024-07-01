@@ -1,5 +1,7 @@
+import * as Logger from 'utils/logger'
+import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
-import { RoomTask } from 'managers/room-manager'
+import { ScoutManager } from 'managers/scout-manager'
 import { World } from 'utils/world'
 import { findMyRooms } from 'utils/room'
 import { profile } from 'utils/profiling'
@@ -26,7 +28,9 @@ function findClaimCandidates(): void {
     const candidates = empire.findClaimCandidates()
     for (const room of candidates) {
         const claimer = empire.findBestClaimer(room)
-        console.log(`room: ${room} claimer: ${claimer}`)
+        if (claimer) {
+            console.log(`room: ${room} claimer: ${claimer}`)
+        }
     }
 }
 
@@ -45,16 +49,50 @@ global.disableAutoClaim = disableAutoClaim
 export default class Empire {
     private rooms: Room[]
     constructor() {
-        this.rooms = Object.values(Game.rooms)
+        this.rooms = findMyRooms()
     }
 
     @profile
     public run(): void {
         this.clearSaviors()
         // this.findSaviors()
+
+        if (Memory.autoclaim) {
+            this.autoClaim()
+        }
+
         for (const room of this.rooms) {
             const warDepartment = new WarDepartment(room)
             warDepartment.update()
+        }
+    }
+
+    autoClaim(): void {
+        const scout = ScoutManager.create().findNextRoomToScout()
+        if (scout) return
+        const candidates = this.findClaimCandidates()
+        if (candidates.length === 0) return
+        const roomName = candidates[0]
+
+        const tasks = RoomManager.getAllClaimTasks()
+        if (tasks.some((task) => task.data.name === roomName)) return
+        for (const r of this.rooms) {
+            if (r.memory.war?.target === roomName) return
+        }
+
+        const claimerName = this.findBestClaimer(roomName)
+        if (!claimerName) {
+            Logger.error(`empire:autoclaim: no claimer found for ${roomName}`)
+            return
+        }
+        const claimer = Game.rooms[claimerName]
+        if ((claimer.memory.war?.status ?? WarStatus.NONE) !== WarStatus.NONE) return
+
+        const warDepartment = new WarDepartment(claimer)
+        if (Memory.rooms[roomName]?.scout?.hasInvaderCore) {
+            warDepartment.declareWar(roomName)
+        } else {
+            new RoomManager(claimer).addClaimRoomTask(roomName)
         }
     }
 
@@ -68,10 +106,11 @@ export default class Empire {
                 if (!memory) return false
                 if (memory.sourceCount !== 2 || memory.controllerOwner) return false
                 const neighbors = world.getClosestRooms([roomName], 1)
+                // if any neighbor is owned by an enemy, don't claim
                 return !neighbors.some(
                     ({ roomName: name }) =>
                         Memory.rooms[name]?.scout?.controllerOwner &&
-                        !Game.rooms[name]?.controller?.my,
+                        Memory.rooms[name]?.scout?.controllerOwner !== global.USERNAME,
                 )
             })
             .map((room) => room.roomName)

@@ -57,6 +57,13 @@ export class RoomManager {
         }, [] as ScoutRoomTask[])
     }
 
+    static getAllClaimTasks(): ClaimRoomTask[] {
+        return Object.values(Game.rooms).reduce((acc, room) => {
+            const roomManager = new RoomManager(room)
+            return acc.concat(roomManager.getClaimRoomTasks())
+        }, [] as ClaimRoomTask[])
+    }
+
     get roomTasks(): RoomTask[] {
         if (!this.room.memory.tasks) {
             this.room.memory.tasks = []
@@ -121,6 +128,10 @@ export class RoomManager {
 
     public getScoutRoomTasks(): ScoutRoomTask[] {
         return this.roomTasks.filter((task) => task.type === 'scout') as ScoutRoomTask[]
+    }
+
+    public getClaimRoomTasks(): ClaimRoomTask[] {
+        return this.roomTasks.filter((task) => task.type === 'claim') as ClaimRoomTask[]
     }
 
     public claimRoom(): boolean {

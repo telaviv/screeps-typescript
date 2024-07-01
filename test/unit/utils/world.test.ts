@@ -1,6 +1,7 @@
 import { expect, config } from 'chai'
 
 import { World } from '../../../src/utils/world'
+import { Game } from '../mock';
 
 config.showDiff = true
 config.truncateThreshold = 0
@@ -60,6 +61,10 @@ describe('World', () => {
     })
 
     describe('#findBestOwnedRoom', () => {
+        beforeEach(() => {
+            global.Game = Game
+        })
+
         it('should return null when there are no owned rooms', () => {
             const world = new World(describeExitsFn(exitDescriptions))
             const result = world.findBestOwnedRoom('W5N5', 5, new Map())
@@ -68,9 +73,9 @@ describe('World', () => {
 
         it('should return the closest owned room within the maxDistance', () => {
             const ownedRoomProgress = new Map<string, number>([
-                ['W5N8', 0],
-                ['W6N8', 0],
-                ['W7N8', 0],
+                ['W5N8', 1],
+                ['W6N8', 1],
+                ['W7N8', 1],
             ])
             const world = new World(describeExitsFn(exitDescriptions))
             const result = world.findBestOwnedRoom('W4N8', 2, ownedRoomProgress)
@@ -79,10 +84,10 @@ describe('World', () => {
 
         it('should return the room with the highest controller level when there are multiple candidates', () => {
             const ownedRoomProgress = new Map<string, number>([
-                ['W5N8', 0],
-                ['W3N8', 1],
-                ['W4N7', 0],
-                ['W4N9', 0],
+                ['W5N8', 1],
+                ['W3N8', 2],
+                ['W4N7', 1],
+                ['W4N9', 1],
             ])
             const world = new World(describeExitsFn(exitDescriptions))
             const result = world.findBestOwnedRoom('W4N8', 2, ownedRoomProgress)

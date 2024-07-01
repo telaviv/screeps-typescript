@@ -1,3 +1,5 @@
+import { RoomType, getRoomType } from './room'
+
 interface RoomDistanceInfo {
     roomName: string
     distance: number
@@ -5,11 +7,41 @@ interface RoomDistanceInfo {
 
 export type OwnedRoomProgress = Map<string, number>
 
+declare global {
+    namespace NodeJS {
+        interface Global {
+            USERNAME: string
+        }
+    }
+}
+
+function safeDescribeExits(roomName: string): ExitsInformation {
+    const exits = Game.map.describeExits(roomName)
+    const exitCopy = {} as ExitsInformation
+    for (const [direction, exit] of Object.entries(exits)) {
+        const exitType = getRoomType(exit)
+        if ([RoomType.CENTER, RoomType.SOURCE_KEEPER].includes(exitType)) {
+            continue
+        }
+        // not every room has a controller owner.
+        // if it does, make sure it's not the enemys'
+        if (Memory.rooms[exit]?.scout?.controllerOwner) {
+            if (Memory.rooms[exit]?.scout?.controllerOwner !== global.USERNAME) {
+                continue
+            }
+        }
+        exitCopy[direction as keyof ExitsInformation] = exit
+    }
+    return exitCopy
+}
+
 export class World {
     describeExits: (roomName: string) => ExitsInformation
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    constructor(describeExits: (roomName: string) => ExitsInformation = Game.map.describeExits) {
+    constructor(
+        describeExits: (roomName: string) => ExitsInformation = safeDescribeExits,
+    ) {
         this.describeExits = describeExits
     }
 
@@ -24,7 +56,6 @@ export class World {
         while (distanceQueue.length > 0) {
             const { roomName, distance } = distanceQueue.shift() as RoomDistanceInfo
             const exits = this.describeExits(roomName)
-
             if (exits === null) continue
 
             for (const exit of Object.values(exits)) {
@@ -49,16 +80,14 @@ export class World {
         const closestRooms = this.getClosestRooms([targetRoom], maxDistance)
         if (closestRooms.length === 0) return null
         const ownedRooms = Array.from(ownedRoomProgress.keys())
-        const candidates = closestRooms.filter(
-            ({ roomName, distance }) =>
-                distance === closestRooms[0].distance && ownedRooms.includes(roomName),
-        )
+        const candidates = closestRooms.filter(({ roomName }) => ownedRooms.includes(roomName))
         if (candidates.length === 0) return null
-        candidates.sort(
-            (a, b) =>
-                (ownedRoomProgress?.get(b.roomName) ?? 0) -
-                (ownedRoomProgress?.get(a.roomName) ?? 0),
-        )
+        candidates.sort(({ roomName: ar, distance: ad }, { roomName: br, distance: bd }) => {
+            const roomAProgress = ownedRoomProgress.get(ar) ?? Infinity
+            const roomBProgress = ownedRoomProgress.get(br) ?? Infinity
+            if (ad !== bd) return ad - bd
+            return roomBProgress - roomAProgress
+        })
         return candidates[0].roomName
     }
 }

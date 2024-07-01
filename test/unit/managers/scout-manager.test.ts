@@ -35,7 +35,7 @@ describe('ScoutManager', () => {
             ownedRoomProgress.set('W3N8', 0)
             const world = { getClosestRooms: stub() }
             let scoutRoomData = {
-                W5N8: { updatedAt: 0 },
+                W5N8: { updatedAt: 1 },
             }
             world.getClosestRooms.returns([
                 { roomName: 'W5N8', distance: 1 },
@@ -45,7 +45,7 @@ describe('ScoutManager', () => {
                 world as any,
                 ownedRoomProgress,
                 scoutRoomData as any,
-                100,
+                2,
             )
             const nextRoomToScout = scoutManager.findNextRoomToScout()
             expect(nextRoomToScout).to.equal('W3N8')

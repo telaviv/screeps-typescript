@@ -73,7 +73,7 @@ function printTasks(type?: Task<any>) {
 }
 
 function isOwnedStructure(obj: any): obj is OwnedStructure {
-    return Object.prototype.hasOwnProperty.call(obj, 'owner')
+    return 'owner' in obj
 }
 
 function findUsername(): string {
@@ -84,7 +84,6 @@ function findUsername(): string {
     }
     return ''
 }
-
 
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
