@@ -44,6 +44,11 @@ export class HarvesterCreep {
             return
         }
 
+        if (!this.isAtHarvestPos()) {
+            this.moveToHarvestPos()
+            return
+        }
+
         if (this.canTransferEnergy()) {
             this.transferEnergyToLink()
             return

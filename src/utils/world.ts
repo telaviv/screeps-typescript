@@ -39,9 +39,7 @@ export class World {
     describeExits: (roomName: string) => ExitsInformation
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    constructor(
-        describeExits: (roomName: string) => ExitsInformation = safeDescribeExits,
-    ) {
+    constructor(describeExits: (roomName: string) => ExitsInformation = safeDescribeExits) {
         this.describeExits = describeExits
     }
 

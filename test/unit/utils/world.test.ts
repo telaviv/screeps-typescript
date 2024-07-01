@@ -1,7 +1,7 @@
 import { expect, config } from 'chai'
 
 import { World } from '../../../src/utils/world'
-import { Game } from '../mock';
+import { Game } from '../mock'
 
 config.showDiff = true
 config.truncateThreshold = 0
