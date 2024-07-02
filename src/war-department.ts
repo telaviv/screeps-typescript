@@ -89,6 +89,10 @@ export default class WarDepartment {
             if (this.targetRoom && !hasNoSpawns(this.targetRoom)) {
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
+        } else if (this.status === WarStatus.ATTACK) {
+            if (!this.hasHostiles() && !this.hasInvaderCore()) {
+                this.warMemory = { status: WarStatus.NONE, target: '' }
+            }
         }
     }
 

@@ -23,6 +23,15 @@ function safeDescribeExits(roomName: string): ExitsInformation {
         if ([RoomType.CENTER, RoomType.SOURCE_KEEPER].includes(exitType)) {
             continue
         }
+
+        if (Game.map.getRoomStatus(exit).status !== 'normal') {
+            continue
+        }
+
+        if (Memory.rooms[exit]?.scout?.enemyThatsMining) {
+            continue
+        }
+
         // not every room has a controller owner.
         // if it does, make sure it's not the enemys'
         if (Memory.rooms[exit]?.scout?.controllerOwner) {

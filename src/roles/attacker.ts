@@ -1,8 +1,9 @@
 import * as Logger from 'utils/logger'
 import { fromBodyPlan } from 'utils/parts'
 import { getInvaderCores } from 'utils/room'
-import { moveTo } from 'utils/creep'
+import { goHome, moveTo, recycle } from 'utils/creep'
 import { wrap } from 'utils/profiling'
+import { cleanup } from 'tasks/travel'
 
 const ROLE = 'attack'
 
@@ -36,29 +37,41 @@ const roleAttacker = {
         const structures = getInvaderCores(targetRoom)
         const hostiles = targetRoom.find(FIND_HOSTILE_CREEPS)
         const targets = [...structures, ...hostiles]
-
         if (targets.length > 0) {
-            const target = targets[0]
-            const err = creep.attack(target)
-            if (err === ERR_NOT_IN_RANGE) {
-                // eslint-disable-next-line @typescript-eslint/no-shadow
-                const err = moveTo(target.pos, creep, { range: 1 })
-                if (err !== OK) {
-                    Logger.error(
-                        'attacker:moveTo:target:failed',
-                        creep.name,
-                        JSON.stringify(target.pos),
-                        err,
-                    )
-                }
-            } else if (err !== OK) {
-                Logger.error('attacker:attack:failed', creep.name, err)
-            }
+            roleAttacker.attack(creep, targets[0])
             return
         } else {
-            Logger.info('attacker:no-targets', creep.name)
+            roleAttacker.cleanup(creep)
         }
     }, 'runAttacker'),
+
+    attack(creep: Attacker, target: Creep | Structure): ScreepsReturnCode {
+        const err = creep.attack(target)
+        if (err === ERR_NOT_IN_RANGE) {
+            // eslint-disable-next-line @typescript-eslint/no-shadow
+            const err = moveTo(target.pos, creep, { range: 1 })
+            if (err !== OK) {
+                Logger.error(
+                    'attacker:moveTo:target:failed',
+                    creep.name,
+                    JSON.stringify(target.pos),
+                    err,
+                )
+            }
+        } else if (err !== OK) {
+            Logger.error('attacker:attack:failed', creep.name, err)
+        }
+        return err
+    },
+
+    cleanup(creep: Creep): void{
+        if (creep.room.name === creep.memory.home) {
+            recycle(creep)
+            return
+        }
+        goHome(creep)
+        Logger.info('attacker:no-targets', creep.name)
+    },
 
     create(spawn: StructureSpawn, roomName: string): number {
         const capacity = spawn.room.energyCapacityAvailable

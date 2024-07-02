@@ -64,6 +64,14 @@ export function moveToRoom(roomName: string, creep: Creep): void {
     })
 }
 
+export function goHome(creep: Creep): void {
+    if (creep.memory.home) {
+        moveToRoom(creep.memory.home, creep)
+    } else {
+        Logger.warning('goHome:noHome', creep.name)
+    }
+}
+
 export function moveTowardsCenter(creep: Creep): void {
     creep.moveTo(new RoomPosition(25, 25, creep.room.name), {
         range: 21,
@@ -75,7 +83,7 @@ export function isAtEdge(creep: Creep): boolean {
     return creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49
 }
 
-export function recycle(creep: ResourceCreep): void {
+export function recycle(creep: Creep): void {
     const spawns = getSpawns(creep.room)
     const spawn = creep.pos.findClosestByPath(spawns)
     if (!spawn) {
@@ -102,7 +110,7 @@ export function getCreeps(role: string, room?: Room): Creep[] {
         }
         if (room) {
             if (
-                creep.room.name !== room.name ||
+                creep.room.name !== room.name &&
                 (creep.memory.home && creep.memory.home !== room.name)
             ) {
                 return false

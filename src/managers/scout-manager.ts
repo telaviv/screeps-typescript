@@ -9,7 +9,7 @@ import { isTravelTask } from 'tasks/travel/utils'
 const SCOUT_VERSION = '1.0.4'
 
 const MAX_SCOUT_DISTANCE = 3
-const TIME_PER_TICK = 4.6 // seconds on shard 0
+const TIME_PER_TICK = 4.7 // seconds on shard 0
 export const DistanceTTL: Record<number, number> = {
     1: (60 * 60 * 24) / TIME_PER_TICK,
     2: (60 * 60 * 24) / TIME_PER_TICK,
