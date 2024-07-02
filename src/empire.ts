@@ -143,7 +143,9 @@ export default class Empire {
         const maxDistance = 2
         const closestRooms = world.getClosestRooms([roomName], maxDistance)
         const candidates = closestRooms.filter(
-            ({ roomName: name }) => Game.rooms[name]?.controller?.my,
+            ({ roomName: name }) =>
+                Game.rooms[name]?.controller?.my &&
+                Game.rooms[name]?.energyCapacityAvailable >= 650, // min claimer cost
         )
         if (candidates.length === 0) return null
         return getBestNearbyRoom(roomName, maxDistance)?.name ?? null

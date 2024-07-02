@@ -45,9 +45,11 @@ function clearAllConstructionFeatures() {
 }
 
 function saveConstructionFeatures(room: Room) {
-    if (!room.memory.constructionFeatures && Game.cpu.tickLimit > CPU_MIN) {
+    if (Game.cpu.tickLimit > CPU_MIN && Game.cpu.bucket > 500) {
         const features = calculateConstructionFeatures(room)
+        const stationaryPoints = calculateStationaryPoints(room)
         room.memory.constructionFeatures = features
+        room.memory.stationaryPoints = stationaryPoints
     }
 }
 
@@ -56,6 +58,10 @@ export function getConstructionFeatures(room: Room): ConstructionFeatures {
 }
 
 function calculateConstructionFeatures(room: Room): ConstructionFeatures {
+    if (room.memory.constructionFeatures) {
+        return room.memory.constructionFeatures
+    }
+    console.log('calculating construction features:', room.name)
     const iroom = calculateSurveyImmutableRoom(room)
 
     const features = {
@@ -76,15 +82,27 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     )
     features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
     features[STRUCTURE_ROAD] = calculateRoadPositions(room, iroom, features)
+    return features
+}
 
-    if (!room.memory.stationaryPoints) {
-        room.memory.stationaryPoints = {
+function calculateStationaryPoints(room: Room): StationaryPoints {
+    if (
+        !room.memory.stationaryPoints ||
+        room.memory.stationaryPoints.controllerLink === undefined
+    ) {
+        console.log(
+            'checking stationary points:',
+            room.name,
+            room.memory.stationaryPoints?.controllerLink,
+        )
+        const iroom = calculateSurveyImmutableRoom(room)
+        return {
             sources: iroom.getMappedSourceContainers(),
             controllerLink: iroom.getControllerLinkStationaryPoint(),
             storageLink: iroom.getStorageLinkStationaryPoint(),
         }
     }
-    return features
+    return room.memory.stationaryPoints
 }
 
 function calculateSurveyImmutableRoom(room: Room): ImmutableRoom {
@@ -117,7 +135,7 @@ function getRampartPositions(room: Room, features: Position[]): Position[] {
 
 const assignRoomFeatures = Profiling.wrap(() => {
     each(Game.rooms, (room: Room) => {
-        if (room.controller) {
+        if (room.controller && room.controller.my) {
             saveConstructionFeatures(room)
         }
     })

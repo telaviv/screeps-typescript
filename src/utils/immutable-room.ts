@@ -596,7 +596,7 @@ export class ImmutableRoom implements ValueObject {
             if (ri.isObstacle()) {
                 return false
             }
-            console.log('checking', ri.x, ri.y)
+            console.log('checking', ri.x, ri.y, this.name)
             const nb = this.getClosestNeighbors(ri.x, ri.y)
             return nb.some((r) => r.obstacle === 'storage')
         })
