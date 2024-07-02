@@ -147,7 +147,7 @@ export class RoomManager {
             return false
         }
         const err = roleScout.create(spawns[0], destination, false, { dryRun: true })
-        Logger.error('RoomManager:claimRoom:create', err)
+        Logger.error('RoomManager:claimRoom:scout:create', err)
         if (err === OK) {
             warDepartment.claimRoom(destination)
             Logger.info('RoomManager:claimRoom:success', destination)

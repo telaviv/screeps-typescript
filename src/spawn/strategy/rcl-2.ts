@@ -28,8 +28,13 @@ const ATTACKERS_COUNT = 2
 const REMOTE_UPGRADE_COUNT = 1
 const REMOTE_BUILD_MINIMUM = 1
 
+const MAX_USEFUL_ENERGY = 1200 // roughly the biggest logistics bot
+
 export default function (spawn: StructureSpawn): void {
     updateRescueStatus(spawn.room)
+    if (spawn.spawning) {
+        return
+    }
 
     if (spawn.room.memory.collapsed) {
         createRescueCreeps(spawn)
@@ -45,17 +50,20 @@ export default function (spawn: StructureSpawn): void {
     const builders = getLogisticsCreeps({ preference: TASK_BUILDING, room })
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
-    if (!sourcesManager.hasAllContainerHarvesters()) {
-        sourcesManager.createHarvester(spawn)
-        return
-    }
-
     if (roomManager.getScoutRoomTasks().length > 0) {
         roomManager.scoutRoom()
         return
     }
 
-    if (room.energyAvailable < 0.95 * spawn.room.energyCapacityAvailable) {
+    if (
+        room.energyAvailable <
+        Math.min(0.95 * spawn.room.energyCapacityAvailable, MAX_USEFUL_ENERGY)
+    ) {
+        return
+    }
+
+    if (!sourcesManager.hasAllContainerHarvesters()) {
+        sourcesManager.createHarvester(spawn)
         return
     }
 
@@ -130,7 +138,11 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     const sourcesManager = new SourcesManager(warDepartment.targetRoom)
 
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
-        return roleAttacker.create(spawn, warDepartment.target)
+        return roleAttacker.create(
+            spawn,
+            warDepartment.target,
+            Math.min(MAX_USEFUL_ENERGY, room.energyAvailable),
+        )
     }
 
     if (warDepartment.hasHostiles()) {
@@ -138,14 +150,19 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     }
 
     if (status === WarStatus.CLAIM) {
-        if (warDepartment.hasInvaderCore() && attackers.length === 0) {
-            return roleAttacker.create(spawn, warDepartment.target)
+        if (warDepartment.hasInvaderCore() && attackers.length < ATTACKERS_COUNT) {
+            return roleAttacker.create(
+                spawn,
+                warDepartment.target,
+                Math.min(MAX_USEFUL_ENERGY, room.energyAvailable),
+            )
         } else if (claimers.length < CLAIMERS_COUNT) {
             if (claimers.length === 0) {
                 return roleClaimer.create(spawn, warDepartment.target)
             } else if (
                 warDepartment.targetRoom.controller &&
-                warDepartment.targetRoom.controller.upgradeBlocked < 100
+                (warDepartment.targetRoom.controller.upgradeBlocked < 100 ||
+                    warDepartment.targetRoom.controller.reservation)
             ) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }

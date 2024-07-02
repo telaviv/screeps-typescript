@@ -18,6 +18,10 @@ interface AttackerMemory extends CreepMemory {
 
 const roleAttacker = {
     run: wrap((creep: Attacker) => {
+        if (creep.spawning) {
+            return
+        }
+
         const targetRoom = Game.rooms[creep.memory.roomName]
         if (!targetRoom || !targetRoom.controller) {
             Logger.warning('attacker:no-controller', creep.name)
@@ -40,7 +44,7 @@ const roleAttacker = {
             roleAttacker.attack(creep, targets[0])
             return
         } else {
-            roleAttacker.cleanup(creep)
+            // roleAttacker.cleanup(creep)
         }
     }, 'runAttacker'),
 
@@ -72,8 +76,8 @@ const roleAttacker = {
         Logger.info('attacker:no-targets', creep.name)
     },
 
-    create(spawn: StructureSpawn, roomName: string): number {
-        const capacity = spawn.room.energyCapacityAvailable
+    create(spawn: StructureSpawn, roomName: string, capacity: number | null = null): number {
+        capacity = capacity ? capacity : spawn.room.energyCapacityAvailable
         return spawn.spawnCreep(calculateParts(capacity), `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
