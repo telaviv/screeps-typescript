@@ -122,6 +122,7 @@ export default function (spawn: StructureSpawn): void {
 function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): number | null {
     const room = spawn.room
     const status = warDepartment.status
+    const capacity = Math.min(MAX_USEFUL_ENERGY, room.energyAvailable)
     const attackers = getCreeps('attack', room)
     const claimers = getCreeps('claimer', room)
     const scouts = getCreeps('scout', room)
@@ -138,11 +139,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     const sourcesManager = new SourcesManager(warDepartment.targetRoom)
 
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
-        return roleAttacker.create(
-            spawn,
-            warDepartment.target,
-            Math.min(MAX_USEFUL_ENERGY, room.energyAvailable),
-        )
+        return roleAttacker.create(spawn, warDepartment.target, capacity)
     }
 
     if (warDepartment.hasHostiles()) {
@@ -151,11 +148,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 
     if (status === WarStatus.CLAIM) {
         if (warDepartment.hasInvaderCore() && attackers.length < ATTACKERS_COUNT) {
-            return roleAttacker.create(
-                spawn,
-                warDepartment.target,
-                Math.min(MAX_USEFUL_ENERGY, room.energyAvailable),
-            )
+            return roleAttacker.create(spawn, warDepartment.target, capacity)
         } else if (claimers.length < CLAIMERS_COUNT) {
             if (claimers.length === 0) {
                 return roleClaimer.create(spawn, warDepartment.target)
@@ -169,13 +162,13 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         }
     } else if (status === WarStatus.SPAWN) {
         if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
-            return roleRemoteUpgrade.create(spawn, warDepartment.target)
+            return roleRemoteUpgrade.create(spawn, warDepartment.target, capacity)
         } else if (remoteBuilders.length < REMOTE_BUILD_MINIMUM) {
-            return roleRemoteBuild.create(spawn, warDepartment.target)
+            return roleRemoteBuild.create(spawn, warDepartment.target, capacity)
         } else if (!sourcesManager.hasAllContainerHarvesters()) {
             return sourcesManager.createHarvester(spawn)
         } else {
-            return roleRemoteBuild.create(spawn, warDepartment.target)
+            return roleRemoteBuild.create(spawn, warDepartment.target, capacity)
         }
     }
     return null

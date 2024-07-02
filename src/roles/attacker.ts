@@ -44,6 +44,7 @@ const roleAttacker = {
             roleAttacker.attack(creep, targets[0])
             return
         } else {
+            // invader rooms require non stop vigilance
             // roleAttacker.cleanup(creep)
         }
     }, 'runAttacker'),

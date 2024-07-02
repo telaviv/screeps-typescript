@@ -46,6 +46,23 @@ global.findClaimCandidates = findClaimCandidates
 global.enableAutoClaim = enableAutoClaim
 global.disableAutoClaim = disableAutoClaim
 
+function getBestNearbyRoom(roomName: string, distance: number): Room | null {
+    const world = new World()
+    const closestRooms = world.getClosestRooms([roomName], distance)
+    const candidates = closestRooms.filter(({ roomName: rn }) => Game.rooms[rn]?.controller?.my)
+    if (candidates.length === 0) return null
+    candidates.sort(({ roomName: ar, distance: ad }, { roomName: br, distance: bd }) => {
+        const roomA = Game.rooms[ar]
+        const roomB = Game.rooms[br]
+        if (ad !== bd) return ad - bd
+        return (
+            (roomB.controller?.progressTotal ?? Infinity) -
+            (roomA.controller?.progressTotal ?? Infinity)
+        )
+    })
+    return Game.rooms[candidates[0].roomName]
+}
+
 export default class Empire {
     private rooms: Room[]
     constructor() {
@@ -55,7 +72,7 @@ export default class Empire {
     @profile
     public run(): void {
         this.clearSaviors()
-        // this.findSaviors()
+        this.findSaviors()
 
         if (Memory.autoclaim) {
             this.autoClaim()
@@ -86,6 +103,10 @@ export default class Empire {
             return
         }
         const claimer = Game.rooms[claimerName]
+        if (!claimer) {
+            Logger.warning(`empire:autoclaim: no vision for ${claimerName}`)
+            return
+        }
         if ((claimer.memory.war?.status ?? WarStatus.NONE) !== WarStatus.NONE) return
 
         const warDepartment = new WarDepartment(claimer)
@@ -125,16 +146,26 @@ export default class Empire {
             ({ roomName: name }) => Game.rooms[name]?.controller?.my,
         )
         if (candidates.length === 0) return null
-        candidates.sort(({ roomName: ar, distance: ad }, { roomName: br, distance: bd }) => {
-            const roomA = Game.rooms[ar]
-            const roomB = Game.rooms[br]
-            if (ad !== bd) return ad - bd
-            return (
-                (roomB.controller?.progressTotal ?? Infinity) -
-                (roomA.controller?.progressTotal ?? Infinity)
-            )
-        })
-        return candidates[0].roomName
+        return getBestNearbyRoom(roomName, maxDistance)?.name ?? null
+    }
+
+    private findSaviors(): void {
+        for (const room of this.rooms) {
+            const spawns = room.find(FIND_MY_SPAWNS)
+            if (spawns.length > 0) {
+                continue
+            }
+            if (Object.values(Memory.rooms).some((r) => r.war?.target === room.name)) {
+                continue
+            }
+            const savior = getBestNearbyRoom(room.name, 3)
+            if (!savior) {
+                Logger.warning(`empire:find-saviors:not-found: no savior found for ${room.name}`)
+                continue
+            }
+            const warDepartment = new WarDepartment(savior)
+            warDepartment.saveRoom(room.name)
+        }
     }
 
     private clearSaviors(): void {

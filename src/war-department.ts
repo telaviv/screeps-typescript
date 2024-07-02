@@ -1,8 +1,9 @@
+import * as Logger from 'utils/logger'
 import { hasNoSpawns } from 'utils/room'
 
 declare global {
     interface RoomMemory {
-        war: WarMemory
+        war: WarMemory | SpawnWarMemory
     }
 }
 
@@ -46,7 +47,7 @@ export default class WarDepartment {
         return this.room.memory.war
     }
 
-    public set warMemory(mem: WarMemory) {
+    private set warMemory(mem: WarMemory) {
         this.room.memory.war = mem
     }
 
@@ -83,10 +84,16 @@ export default class WarDepartment {
         }
         if (this.status === WarStatus.CLAIM) {
             if (this.targetRoom && this.targetRoom.controller && this.targetRoom.controller.my) {
+                Logger.info(
+                    `war-department:update: switching status from CLAIM to SPAWN for ${this.target}`,
+                )
                 this.status = WarStatus.SPAWN
             }
         } else if (this.status === WarStatus.SPAWN) {
             if (this.targetRoom && !hasNoSpawns(this.targetRoom)) {
+                Logger.info(
+                    `war-department:update: switching status from CLAIM to SPAWN for ${this.target}`,
+                )
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
         } else if (this.status === WarStatus.ATTACK) {
@@ -106,5 +113,9 @@ export default class WarDepartment {
 
     public claimRoom(target: string): void {
         this.warMemory = { status: WarStatus.CLAIM, target }
+    }
+
+    public saveRoom(target: string): void {
+        this.warMemory = { status: WarStatus.SPAWN, target, type: 'savior' } as SpawnWarMemory
     }
 }

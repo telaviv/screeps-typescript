@@ -131,8 +131,8 @@ export default {
         remoteUpgrade.run()
     }, 'roleRemoteUpgrade:run'),
 
-    create(spawn: StructureSpawn, destination: string): number {
-        const capacity = spawn.room.energyCapacityAvailable
+    create(spawn: StructureSpawn, destination: string, capacity: number | null = null): number {
+        capacity = capacity || spawn.room.energyCapacityAvailable
         const parts = fromBodyPlan(capacity, [CARRY, MOVE], [WORK, MOVE])
         return spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
             memory: {
