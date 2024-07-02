@@ -23,7 +23,7 @@ const BUILDERS_COUNT = 1
 const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 
-const CLAIMERS_COUNT = 3
+const CLAIMERS_COUNT = 1
 const ATTACKERS_COUNT = 2
 const REMOTE_UPGRADE_COUNT = 1
 const REMOTE_BUILD_MINIMUM = 1
@@ -138,14 +138,14 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     }
 
     if (status === WarStatus.CLAIM) {
-        if (warDepartment.hasInvaderCore()) {
+        if (warDepartment.hasInvaderCore() && attackers.length === 0) {
             return roleAttacker.create(spawn, warDepartment.target)
         } else if (claimers.length < CLAIMERS_COUNT) {
             if (claimers.length === 0) {
                 return roleClaimer.create(spawn, warDepartment.target)
             } else if (
                 warDepartment.targetRoom.controller &&
-                warDepartment.targetRoom.controller.upgradeBlocked < 20
+                warDepartment.targetRoom.controller.upgradeBlocked < 100
             ) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }

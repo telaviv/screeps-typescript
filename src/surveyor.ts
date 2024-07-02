@@ -10,6 +10,8 @@ const CPU_MIN = 50
 
 interface StationaryPoints {
     sources: { [id: string]: Position }
+    controllerLink: Position
+    storageLink: Position
 }
 
 declare global {
@@ -78,6 +80,8 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     if (!room.memory.stationaryPoints) {
         room.memory.stationaryPoints = {
             sources: iroom.getMappedSourceContainers(),
+            controllerLink: iroom.getControllerLinkStationaryPoint(),
+            storageLink: iroom.getStorageLinkStationaryPoint(),
         }
     }
     return features

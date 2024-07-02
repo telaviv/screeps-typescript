@@ -7,20 +7,24 @@ import { constant, times } from 'lodash'
  * @param capacity - The maximum energy capacity for the plan
  * @param plan - An array of body part constants representing the desired body part plan.
  * @param fixed - An optional array of body part constants representing the fixed body parts that should be included in the body plan.
+ * @param maxCopies - The maximum number of times the plan can be repeated in the body plan.
  * @returns An array of body part constants representing the final body plan for the creep.
  */
 export function fromBodyPlan(
     capacity: number,
     plan: BodyPartConstant[],
     fixed: BodyPartConstant[] = [],
+    maxCopies = 50,
 ): BodyPartConstant[] {
     const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
     const unitCost = plan.reduce((total, p) => total + BODYPART_COST[p], 0)
     let capacityLeft = capacity - fixedCost
     let partsLeft = 50 - fixed.length
     let parts: BodyPartConstant[] = [...fixed]
-    while (capacityLeft >= unitCost && partsLeft >= plan.length) {
+    let copies = 0
+    while (capacityLeft >= unitCost && partsLeft >= plan.length && copies <= maxCopies) {
         parts = parts.concat(plan)
+        copies++
         capacityLeft -= unitCost
         partsLeft -= plan.length
     }

@@ -8,7 +8,6 @@ import {
     LogisticsCreep,
     LogisticsMemory,
     LogisticsPreference,
-    LogisticsTask,
     NO_TASK,
     PREFERENCE_WORKER,
     TASK_BUILDING,
@@ -25,8 +24,6 @@ import {
     getOwnWeakestWall,
     hasHostileCreeps,
     hasOwnFragileWall,
-    hasTunnelSite,
-    isAtExtensionCap,
 } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { mprofile, profile } from 'utils/profiling'
@@ -113,7 +110,7 @@ class RoleLogistics {
             this.repairWalls()
         } else if (currentTask === NO_TASK) {
             this.wander()
-            this.switchTask()
+            this.assignWorkerPreference()
         }
     }
 
@@ -230,7 +227,7 @@ class RoleLogistics {
                 })
             }
         } else if (isFullOfEnergy(this.creep)) {
-            this.switchTask()
+            this.assignWorkerPreference()
         } else {
             this.creep.memory.currentTask = TASK_COLLECTING
         }
@@ -263,7 +260,7 @@ class RoleLogistics {
         }
 
         if (structure === null || structure.hits === structure.hitsMax) {
-            this.switchTask()
+            this.assignWorkerPreference()
             return
         }
 
@@ -284,7 +281,7 @@ class RoleLogistics {
     repair(): void {
         const structure = EnergySinkManager.findRepairTarget(this.creep)
         if (structure === null) {
-            this.switchTask()
+            this.assignWorkerPreference()
             return
         }
 
@@ -321,7 +318,7 @@ class RoleLogistics {
         } else if (hasHostileCreeps(this.creep.room)) {
             this.creep.memory.currentTask = TASK_REPAIRING
         } else {
-            this.switchTask()
+            this.assignWorkerPreference()
         }
     }
 
@@ -337,34 +334,6 @@ class RoleLogistics {
     private runTask(): void {
         const task = this.creep.memory.tasks[0]
         TaskRunner.run(task, this.creep)
-    }
-
-    @profile
-    switchTask(): void {
-        let task: LogisticsTask = this.creep.memory.currentTask
-        if (!isAtExtensionCap(this.creep.room) || hasTunnelSite(this.creep.room)) {
-            task = TASK_BUILDING
-        } else if (hasOwnFragileWall(this.creep.room)) {
-            task = TASK_WALL_REPAIRS
-        } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
-            task = TASK_REPAIRING
-        } else {
-            task = TASK_UPGRADING
-        }
-        if (this.creep.memory.currentTask === task || this.creep.memory.currentTask !== NO_TASK) {
-            Logger.info(
-                'logistics:switch-task:failure',
-                this.creep.name,
-                "couldn't switch from",
-                task,
-                '(',
-                isAtExtensionCap(this.creep.room),
-                ',',
-                hasTunnelSite(this.creep.room),
-                ')',
-            )
-        }
-        this.creep.memory.currentTask = task
     }
 
     static requestedCarryCapacity(spawn: StructureSpawn): number {
@@ -443,7 +412,14 @@ class RoleLogistics {
  * @returns true if the creep can be spawned.
  */
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    const plan = fromBodyPlan(capacity, BODY_PLAN_UNIT)
+    const fixed = [...BODY_PLAN_UNIT, ...BODY_PLAN_UNIT, ...BODY_PLAN_UNIT]
+    const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
+    let plan: BodyPartConstant[]
+    if (fixedCost > capacity) {
+        plan = fromBodyPlan(capacity, BODY_PLAN_UNIT)
+    } else {
+        plan = fromBodyPlan(capacity, [MOVE, CARRY], fixed, 4)
+    }
     Logger.debug('logistics:calculateParts', JSON.stringify(plan), capacity)
     return plan
 }

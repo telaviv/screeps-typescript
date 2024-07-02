@@ -453,6 +453,9 @@ export class ImmutableRoom implements ValueObject {
         if (storages.length === 0) {
             throw new Error('No storage found.')
         }
+        if (this.hasNearbyLink(storages[0].x, storages[0].y)) {
+            return this.getNearbyLinks(storages[0].x, storages[0].y)[0]
+        }
         const pos = storages[0]
         const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter((ri) => !ri.isObstacle())
         const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3)) as ImmutableRoomItem
@@ -568,6 +571,41 @@ export class ImmutableRoom implements ValueObject {
             Logger.error('immutable-room:getMappedSourceContainers:source-mismatch', map, sources)
         }
         return map
+    }
+
+    public getControllerLinkStationaryPoint(): FlatRoomPosition {
+        const pos = this.controllerLinkPos()
+        const neighbors = this.getClosestNeighbors(pos.x, pos.y)
+        const available = neighbors.filter((ri) => !ri.isObstacle())
+        if (available.length === 0) {
+            Logger.error(
+                'immutable-room:getControllerLinkStationaryPoint:no-available-positions',
+                pos,
+            )
+            throw new Error('No available positions for controller link stationary point.')
+        }
+        const stationaryPoint = this.sortByCentroidDistance(available)[0]
+        return stationaryPoint.flatPos
+    }
+
+    public getStorageLinkStationaryPoint(): FlatRoomPosition {
+        const pos = this.storageLinkPos()
+        console.log('storage link pos', JSON.stringify(pos))
+        const neighbors = this.getClosestNeighbors(pos.x, pos.y)
+        const available = neighbors.filter((ri) => {
+            if (ri.isObstacle()) {
+                return false
+            }
+            console.log('checking', ri.x, ri.y)
+            const nb = this.getClosestNeighbors(ri.x, ri.y)
+            return nb.some((r) => r.obstacle === 'storage')
+        })
+        if (available.length === 0) {
+            Logger.error('immutable-room:getStorageLinkStationaryPoint:no-available-positions', pos)
+            throw new Error('No available positions for storage link stationary point.')
+        }
+        const stationaryPoint = this.sortByCentroidDistance(available)[0]
+        return stationaryPoint.flatPos
     }
 
     private sortByCentroidDistance(roomItems: ImmutableRoomItem[]): ImmutableRoomItem[] {
