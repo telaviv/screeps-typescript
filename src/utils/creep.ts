@@ -2,7 +2,6 @@ import * as Logger from 'utils/logger'
 import { LogisticsCreep, LogisticsPreference, isLogisticsCreep } from 'roles/logistics-constants'
 import { Scout, isScout } from 'roles/scout'
 import { Harvester } from 'roles/harvester'
-import { ResourceCreep } from '../tasks/types'
 import { getSpawns } from 'utils/room'
 import { isTravelTask } from 'tasks/travel/utils'
 import { wrap } from './profiling'
@@ -111,7 +110,8 @@ export function getCreeps(role: string, room?: Room): Creep[] {
         if (room) {
             if (
                 creep.room.name !== room.name &&
-                (creep.memory.home && creep.memory.home !== room.name)
+                creep.memory.home &&
+                creep.memory.home !== room.name
             ) {
                 return false
             }

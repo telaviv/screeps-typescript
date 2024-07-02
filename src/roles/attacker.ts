@@ -1,9 +1,8 @@
 import * as Logger from 'utils/logger'
+import { goHome, moveTo, recycle } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
 import { getInvaderCores } from 'utils/room'
-import { goHome, moveTo, recycle } from 'utils/creep'
 import { wrap } from 'utils/profiling'
-import { cleanup } from 'tasks/travel'
 
 const ROLE = 'attack'
 
@@ -64,7 +63,7 @@ const roleAttacker = {
         return err
     },
 
-    cleanup(creep: Creep): void{
+    cleanup(creep: Creep): void {
         if (creep.room.name === creep.memory.home) {
             recycle(creep)
             return

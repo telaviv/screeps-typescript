@@ -104,7 +104,8 @@ export default class Empire {
             .filter(({ roomName }) => {
                 const memory = Memory.rooms[roomName]?.scout
                 if (!memory) return false
-                if (memory.sourceCount !== 2 || memory.controllerOwner || memory.enemyThatsMining) return false
+                if (memory.sourceCount !== 2 || memory.controllerOwner || memory.enemyThatsMining)
+                    return false
                 const neighbors = world.getClosestRooms([roomName], 1)
                 // if any neighbor is owned by an enemy, don't claim
                 return !neighbors.some(
