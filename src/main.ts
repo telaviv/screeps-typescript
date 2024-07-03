@@ -132,6 +132,8 @@ const runCreep = wrap((creepName: string) => {
 const initialize = wrap(() => {
     clearMemory()
     ScoutManager.create().run()
+    const empire = new Empire()
+    empire.run()
     survey()
     TaskRunner.cleanup()
 }, 'main:initialize')
@@ -144,8 +146,6 @@ const runAllRooms = wrap(() => {
         visualizer.render()
 
         updateStrategy(room)
-        const empire = new Empire()
-        empire.run()
 
         if (room.controller && room.controller.my) {
             runMyRoom(room)

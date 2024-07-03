@@ -1,6 +1,6 @@
 import { RoomType, getRoomType } from './room'
 
-interface RoomDistanceInfo {
+export interface RoomDistanceInfo {
     roomName: string
     distance: number
 }

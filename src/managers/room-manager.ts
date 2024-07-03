@@ -83,6 +83,7 @@ export class RoomManager {
      * @param room The name of the room to claim.
      */
     public addClaimRoomTask(room: string): void {
+        console.log('addClaimRoomTask', room)
         const task: ClaimRoomTask = {
             id: autoIncrement(),
             type: 'claim',

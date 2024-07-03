@@ -590,13 +590,11 @@ export class ImmutableRoom implements ValueObject {
 
     public getStorageLinkStationaryPoint(): FlatRoomPosition {
         const pos = this.storageLinkPos()
-        console.log('storage link pos', JSON.stringify(pos))
         const neighbors = this.getClosestNeighbors(pos.x, pos.y)
         const available = neighbors.filter((ri) => {
             if (ri.isObstacle()) {
                 return false
             }
-            console.log('checking', ri.x, ri.y, this.name)
             const nb = this.getClosestNeighbors(ri.x, ri.y)
             return nb.some((r) => r.obstacle === 'storage')
         })

@@ -41,7 +41,7 @@ function sendScout(destination: string, startRoom: string) {
     if (spawns.length === 0) {
         throw new Error('no spawn in starting room')
     }
-    const err = roleScout.create(spawns[0], destination)
+    const err = roleScout.create(spawns[0], destination, true)
     Logger.info('sendScout:create', err)
 }
 

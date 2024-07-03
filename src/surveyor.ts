@@ -90,11 +90,6 @@ function calculateStationaryPoints(room: Room): StationaryPoints {
         !room.memory.stationaryPoints ||
         room.memory.stationaryPoints.controllerLink === undefined
     ) {
-        console.log(
-            'checking stationary points:',
-            room.name,
-            room.memory.stationaryPoints?.controllerLink,
-        )
         const iroom = calculateSurveyImmutableRoom(room)
         return {
             sources: iroom.getMappedSourceContainers(),
