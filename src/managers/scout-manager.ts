@@ -78,6 +78,7 @@ class ScoutManager {
             this.recordScoutData(room)
         }
         const roomToScout = this.findNextRoomToScout()
+        Logger.info('scout-manager:run:room-to-scout:', roomToScout)
         if (!roomToScout) {
             return
         }

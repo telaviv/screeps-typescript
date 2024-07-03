@@ -90,6 +90,7 @@ export default class Empire {
         const candidates = this.findClaimCandidates()
         if (candidates.length === 0) return
         const roomName = candidates[0]
+        Logger.info(`empire:autoclaim:candidates ${JSON.stringify(candidates)}`)
 
         const tasks = RoomManager.getAllClaimTasks()
         if (tasks.some((task) => task.data.name === roomName)) return

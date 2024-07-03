@@ -94,6 +94,10 @@ export default class BuildManager {
     }
 
     private ensureNonWallSite(): boolean {
+        if (!this.room.memory.constructionFeatures) {
+            return false
+        }
+
         if (this.hasNonWallSite()) {
             return false
         }
