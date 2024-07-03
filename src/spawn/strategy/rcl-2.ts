@@ -163,10 +163,12 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     } else if (status === WarStatus.SPAWN) {
         if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
             return roleRemoteUpgrade.create(spawn, warDepartment.target, capacity)
+        } else if (!sourcesManager.hasAHarvester()) {
+            return sourcesManager.createHarvester(spawn, true)
         } else if (remoteBuilders.length < REMOTE_BUILD_MINIMUM) {
             return roleRemoteBuild.create(spawn, warDepartment.target, capacity)
         } else if (!sourcesManager.hasAllContainerHarvesters()) {
-            return sourcesManager.createHarvester(spawn)
+            return sourcesManager.createHarvester(spawn, true)
         } else {
             return roleRemoteBuild.create(spawn, warDepartment.target, capacity)
         }

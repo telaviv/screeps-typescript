@@ -6,7 +6,7 @@ import * as Logger from 'utils/logger'
 import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
 import { FlatRoomPosition, NonObstacle, Obstacle, Position, isObstacle } from 'types'
 import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
-import { flatten, includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
+import { includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
 import maxBy from 'lodash/maxBy'
 import { wrap } from 'utils/profiling'
 
@@ -41,6 +41,16 @@ const ImmutableRoomItemRecord = Record({
     obstacle: '',
     roomName: '',
 })
+
+export interface LinkTypes {
+    controller: FlatRoomPosition
+    storage: FlatRoomPosition
+    sourceContainers: {
+        source: FlatRoomPosition
+        container: FlatRoomPosition
+        link: FlatRoomPosition
+    }[]
+}
 
 export class ImmutableRoomItem extends ImmutableRoomItemRecord implements IImmutableRoomItem {
     public readonly x!: number
@@ -750,46 +760,79 @@ export class ImmutableRoom implements ValueObject {
         }))
     }
 
-    public sortedLinkPositions(): Position[] {
+    public linkTypes(): LinkTypes {
         const containerInfo = this.getSourceContainerInfo()
-        const sourceContainers = reverse(
-            this.sortByCentroidDistance(
-                containerInfo
-                    .map(({ container }) => container)
-                    .filter((ri) => ri !== null) as ImmutableRoomItem[],
+        const sourceContainerLinks: {
+            source: FlatRoomPosition
+            container: FlatRoomPosition
+            link: FlatRoomPosition
+        }[] = []
+        for (const { source, container } of containerInfo) {
+            if (container === null) {
+                throw new Error(
+                    `No container found for source ${source.x}, ${source.y}, ${this.name}`,
+                )
+            }
+            const links = this.getClosestNeighbors(container.x, container.y).filter(
+                (ri) => ri.obstacle === 'link',
+            )
+            if (links.length === 0) {
+                Logger.error(`immutable-room:linkTypes:no-link`, source.x, source.y, this.name)
+                continue
+            }
+            sourceContainerLinks.push({
+                source: source.flatPos,
+                container: container.flatPos,
+                link: links[0].flatPos,
+            })
+        }
+        const centroid = this.findCentroid()
+        const sortedSourceContainerLinks = reverse(
+            sortBy(
+                sourceContainerLinks,
+                ({ container }) =>
+                    Math.abs(container.x - centroid.x) + Math.abs(container.y - centroid.y),
             ),
-        )
-        const sourceContainerLinks = ImmutableRoomItem.unique(
-            flatten(
-                sourceContainers.map((ri) => {
-                    const neighbors = this.getClosestNeighbors(ri.x, ri.y)
-                    return neighbors.filter((r) => r.obstacle === 'link')
-                }),
-            ),
-        )
-        const controllerLink = this.controllerLinkPos()
-        const storageLink = this.getStorageLink()
-        const links = uniqBy(
-            [
-                sourceContainerLinks[0],
-                controllerLink,
-                storageLink,
-                ...sourceContainerLinks.slice(1),
-            ],
-            (ri) => `${ri.x},${ri.y}`,
         )
 
+        const controllerLink = this.controllerLinkPos()
+        const storageLink = this.getStorageLink()
+        const linkArray = [
+            ...sortedSourceContainerLinks.map(({ link }) => link),
+            controllerLink,
+            storageLink,
+        ]
+
         const possibleLinks = this.getObstacles('link')
-        if (possibleLinks.length !== links.length) {
+        if (possibleLinks.length !== linkArray.length) {
             Logger.error(
                 'immutable-room:sortedLinkPositions:link-mismatch',
                 possibleLinks.map((ri) => `(${ri.x}, ${ri.y})`),
-                links.map((ri) => `(${ri.x}, ${ri.y})`),
+                linkArray.map((ri) => `(${ri.x}, ${ri.y})`),
                 this.get(39, 10),
             )
-            return []
+            throw new Error('Link mismatch for room: ${this.name}')
         }
-        return links.map((ri) => ({ x: ri.x, y: ri.y }))
+        return {
+            controller: controllerLink,
+            storage: storageLink,
+            sourceContainers: sortedSourceContainerLinks,
+        }
+    }
+
+    public sortedLinkPositions(): Position[] {
+        const linkTypes = this.linkTypes()
+        return [
+            linkTypes.sourceContainers[0].link,
+            linkTypes.controller,
+            linkTypes.storage,
+            ...linkTypes.sourceContainers.slice(1).map(({ link }) => link),
+        ].reduce((acc: FlatRoomPosition[], val: FlatRoomPosition) => {
+            if (acc.some((ri) => ri.x === val.x && ri.y === val.y)) {
+                return acc
+            }
+            return [...acc, val]
+        }, [])
     }
 
     public isGoodRoadPosition(x: number, y: number): boolean {

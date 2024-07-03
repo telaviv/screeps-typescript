@@ -108,7 +108,7 @@ export default class Empire {
         const claimerName = this.findBestClaimer(roomName)
         Logger.info(`empire:autoclaim:claimer ${claimerName} for ${roomName}`)
         if (!claimerName) {
-            Logger.error(`empire:autoclaim: no claimer found for ${roomName}`)
+            Logger.info(`empire:autoclaim: no claimer found for ${roomName}`)
             return
         }
         const claimer = Game.rooms[claimerName]

@@ -1,21 +1,19 @@
 import * as Profiling from 'utils/profiling'
-import { ConstructionFeatures, Position } from 'types'
+import { ConstructionFeatures, ConstructionFeaturesV2, Position, StationaryPoints } from 'types'
 import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 import { each } from 'lodash'
 import { hasBuildingAt } from 'utils/room'
 import { minCutWalls } from 'screeps-min-cut-wall'
 
-const CPU_MIN = 50
+const CONSTRUCTION_FEATURES_VERSION = '1.0.0'
+const STATIONARY_POINTS_VERSION = '1.0.0'
 
-interface StationaryPoints {
-    sources: { [id: string]: Position }
-    controllerLink: Position
-    storageLink: Position
-}
+const CPU_MIN = 50
 
 declare global {
     interface RoomMemory {
+        constructionFeaturesV2?: ConstructionFeaturesV2
         constructionFeatures?: ConstructionFeatures
         stationaryPoints?: StationaryPoints
     }
@@ -47,9 +45,19 @@ function clearAllConstructionFeatures() {
 function saveConstructionFeatures(room: Room) {
     if (Game.cpu.tickLimit > CPU_MIN && Game.cpu.bucket > 500) {
         const features = calculateConstructionFeatures(room)
-        const stationaryPoints = calculateStationaryPoints(room)
         room.memory.constructionFeatures = features
-        room.memory.stationaryPoints = stationaryPoints
+    }
+    if (!room.memory.constructionFeaturesV2 && room.memory.constructionFeatures) {
+        room.memory.constructionFeaturesV2 = {
+            version: CONSTRUCTION_FEATURES_VERSION,
+            features: room.memory.constructionFeatures,
+        }
+    }
+
+    const stationaryPoints = calculateStationaryPoints(room)
+    room.memory.stationaryPoints = stationaryPoints
+    if (room.memory.stationaryPoints && !room.memory.stationaryPoints.version) {
+        room.memory.stationaryPoints.version = STATIONARY_POINTS_VERSION
     }
 }
 
@@ -61,7 +69,6 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     if (room.memory.constructionFeatures) {
         return room.memory.constructionFeatures
     }
-    console.log('calculating construction features:', room.name)
     const iroom = calculateSurveyImmutableRoom(room)
 
     const features = {
@@ -92,6 +99,7 @@ function calculateStationaryPoints(room: Room): StationaryPoints {
     ) {
         const iroom = calculateSurveyImmutableRoom(room)
         return {
+            version: STATIONARY_POINTS_VERSION,
             sources: iroom.getMappedSourceContainers(),
             controllerLink: iroom.getControllerLinkStationaryPoint(),
             storageLink: iroom.getStorageLinkStationaryPoint(),

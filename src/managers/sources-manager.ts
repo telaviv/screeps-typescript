@@ -20,6 +20,15 @@ export default class SourcesManager {
         }
     }
 
+    public hasAHarvester(): boolean {
+        for (const sourceManager of this.sourceManagers) {
+            if (sourceManager.harvesters.length > 0) {
+                return true
+            }
+        }
+        return false
+    }
+
     public hasEnoughHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughHarvesters()) {

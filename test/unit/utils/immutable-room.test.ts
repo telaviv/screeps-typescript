@@ -270,7 +270,7 @@ describe('immutable-room module', () => {
                 expect(positions[0].y).to.equal(2)
             })
 
-            it('adds a container even two sources share a container', () => {
+            it('adds a container even if two sources share a container', () => {
                 let iroom = new ImmutableRoom('test')
                 iroom = iroom.setObstacle(1, 1, 'source')
                 iroom = iroom.setObstacle(2, 1, 'source')
