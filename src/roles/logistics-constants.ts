@@ -35,3 +35,5 @@ export interface LogisticsMemory extends ResourceCreepMemory {
 export function isLogisticsCreep(creep: Creep): creep is LogisticsCreep {
     return (creep as LogisticsCreep).memory.role === 'logistics'
 }
+
+export const MINIMUM_EXTENSION_ENERGY = 1750

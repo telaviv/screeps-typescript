@@ -166,7 +166,7 @@ class RoleLogistics {
         const buildManager = getBuildManager(this.creep.room)
         if (TransferTask.makeRequest(this.creep)) {
             memory.currentTask = TASK_HAULING
-        } else if (buildManager.canBuildImportant()) {
+        } else if (buildManager && buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING
         } else if (hasOwnFragileWall(this.creep.room)) {
             memory.currentTask = TASK_WALL_REPAIRS

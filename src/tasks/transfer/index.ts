@@ -1,6 +1,7 @@
 import * as Logger from 'utils/logger'
 import { getExtensions, getSpawns, getTowers } from 'utils/room'
 import { ResourceCreep } from 'tasks/types'
+import { MINIMUM_EXTENSION_ENERGY } from 'roles/logistics-constants'
 import { TransferStructure } from 'tasks/transfer/structure'
 import { TransferTask } from './types'
 import { currentEnergyHeld } from 'utils/creep'
@@ -17,6 +18,15 @@ export function makeRequest(creep: ResourceCreep): AnyStoreStructure | null {
         return getStructure(currentRequest)
     }
 
+    if (creep.room.energyAvailable > MINIMUM_EXTENSION_ENERGY) {
+        const towers = fillableTowers(creep.room)
+        if (towers.length > 0) {
+            const tower = creep.pos.findClosestByRange(towers) as StructureTower
+            const request = addTransferTask(creep, tower)
+            return getStructure(request)
+        }
+    }
+
     const extensions = fillableExtensions(creep.room)
     if (extensions.length > 0) {
         const extension = creep.pos.findClosestByRange(extensions) as StructureExtension
@@ -28,13 +38,6 @@ export function makeRequest(creep: ResourceCreep): AnyStoreStructure | null {
     if (spawns.length > 0) {
         const spawn = creep.pos.findClosestByRange(spawns) as StructureSpawn
         const request = addTransferTask(creep, spawn)
-        return getStructure(request)
-    }
-
-    const towers = fillableTowers(creep.room)
-    if (towers.length > 0) {
-        const tower = creep.pos.findClosestByRange(towers) as StructureTower
-        const request = addTransferTask(creep, tower)
         return getStructure(request)
     }
 

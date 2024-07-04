@@ -1,5 +1,11 @@
 import * as Profiling from 'utils/profiling'
-import { ConstructionFeatures, ConstructionFeaturesV2, Position, StationaryPoints } from 'types'
+import {
+    ConstructionFeatures,
+    ConstructionFeaturesV2,
+    Links,
+    Position,
+    StationaryPoints,
+} from 'types'
 import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 import { each } from 'lodash'
@@ -8,6 +14,7 @@ import { minCutWalls } from 'screeps-min-cut-wall'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.0'
 export const STATIONARY_POINTS_VERSION = '1.0.0'
+export const LINKS_VERSION = '1.0.0'
 
 const CPU_MIN = 50
 
@@ -15,6 +22,7 @@ declare global {
     interface RoomMemory {
         constructionFeaturesV2?: ConstructionFeaturesV2
         stationaryPoints?: StationaryPoints
+        links?: Links
     }
 
     namespace NodeJS {
@@ -50,14 +58,51 @@ function clearAllConstructionFeatures() {
 
 function saveConstructionFeatures(room: Room) {
     if (Game.cpu.tickLimit > CPU_MIN && Game.cpu.bucket > 500) {
-        const features = calculateConstructionFeatures(room)
-        room.memory.constructionFeaturesV2 = { features, version: CONSTRUCTION_FEATURES_VERSION }
-    }
+        // if we update construction features let's update everything
+        if (room.memory.constructionFeaturesV2?.version !== CONSTRUCTION_FEATURES_VERSION) {
+            const features = calculateConstructionFeatures(room)
+            const links = calculateLinks(room)
+            const stationaryPoints = calculateStationaryPoints(room)
+            room.memory.constructionFeaturesV2 = {
+                features,
+                version: CONSTRUCTION_FEATURES_VERSION,
+            }
+            room.memory.links = links
+            room.memory.stationaryPoints = stationaryPoints
+        } else {
+            if (room.memory.links?.version !== LINKS_VERSION) {
+                const links = calculateLinks(room)
+                room.memory.links = links
+            }
 
-    const stationaryPoints = calculateStationaryPoints(room)
-    room.memory.stationaryPoints = stationaryPoints
-    if (room.memory.stationaryPoints && !room.memory.stationaryPoints.version) {
-        room.memory.stationaryPoints.version = STATIONARY_POINTS_VERSION
+            if (room.memory.stationaryPoints?.version !== STATIONARY_POINTS_VERSION) {
+                const stationaryPoints = calculateStationaryPoints(room)
+                room.memory.stationaryPoints = stationaryPoints
+            }
+        }
+    }
+}
+
+function calculateLinks(room: Room): Links {
+    const iroom = calculateSurveyImmutableRoom(room)
+    const linkTypes = iroom.linkTypes()
+    const sourceTypes = [] as { source: Id<Source>; container: Position; link: Position }[]
+    for (const { source, container, link } of linkTypes.sourceContainers) {
+        const sources = room.find(FIND_SOURCES, { filter: { x: source.x, y: source.y } })
+        if (sources.length === 0) {
+            throw new Error(`No source found at ${source.x}, ${source.y}`)
+        }
+        sourceTypes.push({
+            source: sources[0].id,
+            container: { x: container.x, y: container.y },
+            link: { x: link.x, y: link.y },
+        })
+    }
+    return {
+        version: LINKS_VERSION,
+        controller: linkTypes.controller,
+        storage: linkTypes.storage,
+        sourceContainers: sourceTypes,
     }
 }
 
