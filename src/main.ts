@@ -11,6 +11,7 @@ import roleWrecker, { Wrecker } from 'roles/wrecker'
 import updateStrategy, { StrategyPhase } from './strategy'
 import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
+import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import RoleLogistics from 'roles/logistics'
 import RoomVisualizer from 'room-visualizer'
@@ -82,6 +83,10 @@ const runMyRoom = wrap((room: Room) => {
     buildManager.ensureConstructionSites()
     ensureSafeMode(room)
 
+    const linkManager = LinkManager.createFromRoom(room)
+    if (linkManager) {
+        linkManager.run()
+    }
     const structures: Structure[] = room.find(FIND_MY_STRUCTURES, {
         filter: (s) => {
             return s.structureType === STRUCTURE_TOWER || s.structureType === STRUCTURE_SPAWN

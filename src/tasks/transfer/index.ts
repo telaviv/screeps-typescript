@@ -1,7 +1,7 @@
 import * as Logger from 'utils/logger'
 import { getExtensions, getSpawns, getTowers } from 'utils/room'
-import { ResourceCreep } from 'tasks/types'
 import { MINIMUM_EXTENSION_ENERGY } from 'roles/logistics-constants'
+import { ResourceCreep } from 'tasks/types'
 import { TransferStructure } from 'tasks/transfer/structure'
 import { TransferTask } from './types'
 import { currentEnergyHeld } from 'utils/creep'

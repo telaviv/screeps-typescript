@@ -13,7 +13,7 @@ import { hasBuildingAt } from 'utils/room'
 import { minCutWalls } from 'screeps-min-cut-wall'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.0'
-export const STATIONARY_POINTS_VERSION = '1.0.0'
+export const STATIONARY_POINTS_VERSION = '1.0.1'
 export const LINKS_VERSION = '1.0.0'
 
 declare global {
@@ -39,6 +39,13 @@ global.clearAllConstructionFeatures = clearAllConstructionFeatures
 export function getConstructionFeatures(room: Room): ConstructionFeatures | null {
     if (room.memory.constructionFeaturesV2?.version === CONSTRUCTION_FEATURES_VERSION) {
         return room.memory.constructionFeaturesV2.features
+    }
+    return null
+}
+
+export function getCalculatedLinks(room: Room): Links | null {
+    if (room.memory.links?.version === LINKS_VERSION) {
+        return room.memory.links
     }
     return null
 }
@@ -142,19 +149,23 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
 }
 
 function calculateStationaryPoints(room: Room): StationaryPoints {
-    if (
-        !room.memory.stationaryPoints ||
-        room.memory.stationaryPoints.controllerLink === undefined
-    ) {
-        const iroom = calculateSurveyImmutableRoom(room)
-        return {
-            version: STATIONARY_POINTS_VERSION,
-            sources: iroom.getMappedSourceContainers(),
-            controllerLink: iroom.getControllerLinkStationaryPoint(),
-            storageLink: iroom.getStorageLinkStationaryPoint(),
+    const iroom = calculateSurveyImmutableRoom(room)
+    const stationaryPoints = iroom.getStationaryPoints()
+    const sources: { [id: string]: Position } = {}
+    for (const { source, point } of stationaryPoints.sourceContainerLinks) {
+        const psources = room.find(FIND_SOURCES, { filter: { pos: { x: source.x, y: source.y } } })
+        if (psources.length === 0) {
+            throw new Error(`No source found at ${source.x}, ${source.y} @ room ${room.name}`)
         }
+        sources[psources[0].id] = { x: point.x, y: point.y }
     }
-    return room.memory.stationaryPoints
+
+    return {
+        version: STATIONARY_POINTS_VERSION,
+        sources,
+        controllerLink: stationaryPoints.controllerLink,
+        storageLink: stationaryPoints.storageLink,
+    }
 }
 
 function calculateSurveyImmutableRoom(room: Room): ImmutableRoom {

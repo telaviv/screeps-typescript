@@ -1,15 +1,40 @@
-import { getLinks } from 'utils/room'
+import * as Logger from 'utils/logger'
+import { Position } from 'types'
+import { getCalculatedLinks } from 'surveyor'
+
+declare global {
+    namespace NodeJS {
+        interface Global {
+            createLinkManager(room: Room): LinkManager | null
+        }
+    }
+}
+
+global.createLinkManager = (room: Room): LinkManager | null => {
+    return LinkManager.createFromRoom(room)
+}
+
+const getLinkFromPosition = (room: Room, pos: Position): StructureLink | null => {
+    const rp = new RoomPosition(pos.x, pos.y, room.name)
+    return (
+        room
+            .find<StructureLink>(FIND_MY_STRUCTURES, {
+                filter: { structureType: STRUCTURE_LINK },
+            })
+            .filter((link) => link.pos.isEqualTo(rp))[0] || null
+    )
+}
 
 export default class LinkManager {
     public static cache = new Map<string, LinkManager>()
 
-    public readonly storageLink: StructureLink
-    public readonly containerLink: StructureLink
+    public readonly storageLink: StructureLink | null
+    public readonly containerLink: StructureLink | null
     public readonly sourceLinks: StructureLink[]
 
     public constructor(
-        storageLink: StructureLink,
-        containerLink: StructureLink,
+        storageLink: StructureLink | null,
+        containerLink: StructureLink | null,
         sourceLinks: StructureLink[],
     ) {
         this.storageLink = storageLink
@@ -17,71 +42,94 @@ export default class LinkManager {
         this.sourceLinks = sourceLinks
     }
 
-    public static canCreateLinkManager(room: Room): boolean {
-        return getLinks(room).length === 4 // 1 storage link, 1 container link, 2 source links for now
+    public static createFromRoom(room: Room): LinkManager | null {
+        const storedLinks = getCalculatedLinks(room)
+        if (storedLinks === null) {
+            Logger.warning('link-manager:create-from-room:no-links', room.name)
+            return null
+        }
+        const storageLink = getLinkFromPosition(room, storedLinks.storage)
+        const controllerLink = getLinkFromPosition(room, storedLinks.controller)
+        const sourceLinks = storedLinks.sourceContainers
+            .map(({ link }) => getLinkFromPosition(room, link))
+            .reduce((acc, link) => {
+                if (link === null || acc.some((l) => l.id === link.id)) {
+                    return acc
+                }
+                return acc.concat(link)
+            }, [] as StructureLink[])
+        return new LinkManager(storageLink, controllerLink, sourceLinks)
     }
 
-    public static createFromRoom(room: Room): LinkManager {
-        const stationaryPoints = room.memory.stationaryPoints
-        if (!stationaryPoints) throw new Error(`No stationary points found in room ${room.name}`)
-        const storageStationaryPos = new RoomPosition(
-            stationaryPoints.storageLink.x,
-            stationaryPoints.storageLink.y,
-            room.name,
-        )
-        const containerStationaryPos = new RoomPosition(
-            stationaryPoints.controllerLink.x,
-            stationaryPoints.controllerLink.y,
-            room.name,
-        )
-        const sourceStationaryPos = Object.values(stationaryPoints.sources).map(
-            (pos) => new RoomPosition(pos.x, pos.y, room.name),
-        )
-        const sortArray = [
-            { type: 'storage', pos: storageStationaryPos, links: [] as StructureLink[] },
-            { type: 'controller', pos: containerStationaryPos, links: [] as StructureLink[] },
-            ...sourceStationaryPos.map((pos) => ({
-                type: 'source',
-                pos,
-                links: [] as StructureLink[],
-            })),
-        ]
-        for (const struct of sortArray) {
-            const { pos } = struct
-            const links = pos.findInRange<StructureLink>(FIND_MY_STRUCTURES, 1, {
-                filter: { structureType: STRUCTURE_LINK },
-            })
-            struct.links = links
-        }
-        sortArray.sort((a, b) => a.links.length - b.links.length)
-        const usedLinks = [] as Id<StructureLink>[]
-        const sourceLinks = [] as StructureLink[]
-        let storageLink: StructureLink | null = null
-        let controllerLink: StructureLink | null = null
-        for (const { type, links, pos } of sortArray) {
-            if (links.length === 0) {
-                throw new Error(
-                    `No link found for ${type} in room ${room.name} at ${JSON.stringify(pos)}`,
-                )
+    get sources(): StructureLink[] {
+        return this.sourceLinks
+    }
+
+    get sinks(): StructureLink[] {
+        return [this.storageLink, this.containerLink].filter(
+            (link) => link !== null,
+        ) as StructureLink[]
+    }
+
+    public run(): void {
+        const sinkTracker = this.sinks.map((link) => ({
+            amount: link.store.getFreeCapacity(RESOURCE_ENERGY),
+            link,
+        }))
+        for (const source of this.sources) {
+            const amount = source.store.getUsedCapacity(RESOURCE_ENERGY)
+            const emptySinks = sinkTracker.filter((sink) => sink.amount >= amount)
+            if (emptySinks.length > 0) {
+                const emptySink = emptySinks[0]
+                const err = source.transferEnergy(emptySink.link, amount)
+                if (err === OK) {
+                    emptySink.amount -= amount
+                    Logger.info(
+                        'link-manager:run:transfer',
+                        source.id,
+                        emptySink.link.id,
+                        emptySink.link.room.name,
+                        amount,
+                    )
+                    continue
+                } else if (err === ERR_TIRED) {
+                    continue
+                } else {
+                    Logger.error(
+                        'link-manager:run:transfer:failed',
+                        source.id,
+                        emptySink.link.id,
+                        emptySink.link.room.name,
+                        err,
+                    )
+                }
             }
-            const link = links.find((l) => !usedLinks.includes(l.id))
-            if (!link) {
-                throw new Error(
-                    `No unused link found for ${type} in room ${room.name} at ${JSON.stringify(
-                        pos,
-                    )}: ${JSON.stringify(usedLinks)}`,
-                )
+            const fillableSinks = sinkTracker.filter((sink) => sink.amount > 0)
+            if (fillableSinks.length > 0) {
+                const fillableSink = fillableSinks[0]
+                const err = source.transferEnergy(fillableSink.link, fillableSink.amount)
+                if (err === OK) {
+                    fillableSink.amount = 0
+                    Logger.info(
+                        'link-manager:run:transfer:fill',
+                        source.id,
+                        fillableSink.link.id,
+                        fillableSink.amount,
+                        fillableSink.link.room.name,
+                    )
+                    continue
+                } else if (err === ERR_TIRED) {
+                    continue
+                } else {
+                    Logger.error(
+                        'link-manager:run:transfer:fill:failed',
+                        source.id,
+                        fillableSink.link.id,
+                        fillableSink.link.room.name,
+                        err,
+                    )
+                }
             }
-            usedLinks.push(link.id)
-            if (type === 'source') sourceLinks.push(link)
-            if (type === 'storage') storageLink = link
-            if (type === 'controller') controllerLink = link
         }
-        if (!storageLink) throw new Error(`No storage link found in room ${room.name}`)
-        if (!controllerLink) throw new Error(`No controller link found in room ${room.name}`)
-        if (sourceLinks.length !== 2) {
-            throw new Error(`Expected 2 source links, found ${sourceLinks.length}`)
-        }
-        return new LinkManager(storageLink, controllerLink, sourceLinks)
     }
 }

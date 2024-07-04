@@ -52,6 +52,15 @@ export interface LinkTypes {
     }[]
 }
 
+export interface StationaryPoints {
+    controllerLink: FlatRoomPosition
+    storageLink: FlatRoomPosition
+    sourceContainerLinks: {
+        source: FlatRoomPosition
+        point: FlatRoomPosition
+    }[]
+}
+
 export class ImmutableRoomItem extends ImmutableRoomItemRecord implements IImmutableRoomItem {
     public readonly x!: number
     public readonly y!: number
@@ -583,39 +592,36 @@ export class ImmutableRoom implements ValueObject {
         return map
     }
 
-    public getControllerLinkStationaryPoint(): FlatRoomPosition {
-        const pos = this.controllerLinkPos()
-        const neighbors = this.getClosestNeighbors(pos.x, pos.y)
-        const available = neighbors.filter((ri) => !ri.isObstacle())
-        if (available.length === 0) {
-            Logger.error(
-                'immutable-room:getControllerLinkStationaryPoint:no-available-positions',
-                pos,
-            )
-            throw new Error('No available positions for controller link stationary point.')
+    public getStationaryPoints(): StationaryPoints {
+        const linkTypes = this.linkTypes()
+        const sourcePoints = linkTypes.sourceContainers.map(({ container, source }) => ({
+            source,
+            point: container,
+        }))
+        const controllerPoints = this.getClosestNeighbors(
+            linkTypes.controller.x,
+            linkTypes.controller.y,
+        ).filter((ri) => !ri.isObstacle())
+        if (controllerPoints.length === 0) {
+            Logger.error('immutable-room:getStationaryPoints:no-controller-points')
+            throw new Error(`No controller points found in room ${this.name}`)
         }
-        const stationaryPoint = this.sortByCentroidDistance(available)[0]
-        return stationaryPoint.flatPos
-    }
-
-    public getStorageLinkStationaryPoint(): FlatRoomPosition {
-        const pos = this.storageLinkPos()
-        const neighbors = this.getClosestNeighbors(pos.x, pos.y)
-        const available = neighbors.filter((ri) => {
+        const storagePoints = this.getClosestNeighbors(
+            linkTypes.storage.x,
+            linkTypes.storage.y,
+        ).filter((ri) => {
             if (ri.isObstacle()) {
                 return false
             }
-            const nb = this.getClosestNeighbors(ri.x, ri.y)
-            return nb.some((r) => r.obstacle === 'storage')
+            return this.getClosestNeighbors(ri.x, ri.y).some((r) => r.obstacle === 'storage')
         })
-        if (available.length === 0) {
-            Logger.error('immutable-room:getStorageLinkStationaryPoint:no-available-positions', pos)
-            throw new Error('No available positions for storage link stationary point.')
+        // TODO: we should probably check that none of the stationary points overlap
+        return {
+            controllerLink: controllerPoints[0],
+            storageLink: storagePoints[0],
+            sourceContainerLinks: sourcePoints,
         }
-        const stationaryPoint = this.sortByCentroidDistance(available)[0]
-        return stationaryPoint.flatPos
     }
-
     private sortByCentroidDistance(roomItems: ImmutableRoomItem[]): ImmutableRoomItem[] {
         const centroid = this.findCentroid()
         return sortBy(roomItems, (ri) => ri.distanceTo(centroid))
