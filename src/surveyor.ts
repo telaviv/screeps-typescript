@@ -12,7 +12,7 @@ import { each } from 'lodash'
 import { hasBuildingAt } from 'utils/room'
 import { minCutWalls } from 'screeps-min-cut-wall'
 
-export const CONSTRUCTION_FEATURES_VERSION = '1.0.0'
+export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
 export const STATIONARY_POINTS_VERSION = '1.0.1'
 export const LINKS_VERSION = '1.0.0'
 
