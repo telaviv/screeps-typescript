@@ -88,9 +88,9 @@ function calculateLinks(room: Room): Links {
     const linkTypes = iroom.linkTypes()
     const sourceTypes = [] as { source: Id<Source>; container: Position; link: Position }[]
     for (const { source, container, link } of linkTypes.sourceContainers) {
-        const sources = room.find(FIND_SOURCES, { filter: { x: source.x, y: source.y } })
+        const sources = room.find(FIND_SOURCES, { filter: { pos: { x: source.x, y: source.y } } })
         if (sources.length === 0) {
-            throw new Error(`No source found at ${source.x}, ${source.y}`)
+            throw new Error(`No source found at ${source.x}, ${source.y} @ room ${room.name}`)
         }
         sourceTypes.push({
             source: sources[0].id,

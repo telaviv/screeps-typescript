@@ -365,7 +365,7 @@ export class ImmutableRoom implements ValueObject {
             if (this.canPlaceStorage(roomItem)) {
                 return { x: roomItem.x, y: roomItem.y, roomName: this.name }
             } else {
-                Logger.error(
+                Logger.debug(
                     'immutable-room:nextStoragePos:cannot-place-storage',
                     this.name,
                     roomItem.x,
