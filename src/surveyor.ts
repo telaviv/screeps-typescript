@@ -16,8 +16,6 @@ export const CONSTRUCTION_FEATURES_VERSION = '1.0.0'
 export const STATIONARY_POINTS_VERSION = '1.0.0'
 export const LINKS_VERSION = '1.0.0'
 
-const CPU_MIN = 50
-
 declare global {
     interface RoomMemory {
         constructionFeaturesV2?: ConstructionFeaturesV2
@@ -57,7 +55,7 @@ function clearAllConstructionFeatures() {
 }
 
 function saveConstructionFeatures(room: Room) {
-    if (Game.cpu.tickLimit > CPU_MIN && Game.cpu.bucket > 500) {
+    if (Game.cpu.bucket > 1000) {
         // if we update construction features let's update everything
         if (room.memory.constructionFeaturesV2?.version !== CONSTRUCTION_FEATURES_VERSION) {
             const features = calculateConstructionFeatures(room)
