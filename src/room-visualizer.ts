@@ -1,5 +1,7 @@
 import * as Logger from 'utils/logger'
+import { ConstructionFeatures } from 'types'
 import filter from 'lodash/filter'
+import { getConstructionFeatures } from 'surveyor'
 
 type DrawFunction = (visual: RoomVisual, pos: RoomPosition) => void
 
@@ -63,12 +65,22 @@ function hasConstructionSiteAt(structureType: BuildableStructureConstant, pos: R
 
 export default class RoomVisualizer {
     readonly room: Room
+    private readonly constructionFeatures: ConstructionFeatures
 
-    constructor(room: Room) {
+    private constructor(room: Room, constructionFeatures: ConstructionFeatures) {
         this.room = room
+        this.constructionFeatures = constructionFeatures
         if (!this.room.memory.visuals) {
             this.room.memory.visuals = { snapshot: false }
         }
+    }
+
+    static create(room: Room): RoomVisualizer | null {
+        const constuctionFeatures = getConstructionFeatures(room)
+        if (!constuctionFeatures) {
+            return null
+        }
+        return new RoomVisualizer(room, constuctionFeatures)
     }
 
     get visuals(): { snapshot: boolean } {
@@ -79,12 +91,7 @@ export default class RoomVisualizer {
         if (!this.visuals.snapshot) {
             return
         }
-        if (!this.room.memory.constructionFeatures) {
-            return
-        }
-        for (const [structureType, positions] of Object.entries(
-            this.room.memory.constructionFeatures,
-        )) {
+        for (const [structureType, positions] of Object.entries(this.constructionFeatures)) {
             if (structureType === STRUCTURE_ROAD && !roads) {
                 continue
             }

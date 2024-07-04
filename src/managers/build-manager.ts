@@ -2,6 +2,7 @@ import includes from 'lodash/includes'
 import pokemon from 'pokemon'
 
 import * as Logger from 'utils/logger'
+import { ConstructionFeatures, Position } from 'types'
 import {
     LINK_COUNTS,
     MIN_RAMPART_LEVEL,
@@ -21,7 +22,6 @@ import {
     makeSpawnConstructionSite,
 } from 'utils/room'
 import { profile, wrap } from 'utils/profiling'
-import { Position } from 'types'
 import { getConstructionFeatures } from 'surveyor'
 
 declare global {
@@ -32,18 +32,24 @@ declare global {
 
 export default class BuildManager {
     static cache = new Map<string, BuildManager>()
-    public room: Room
+    private room: Room
+    private constructionFeatures: ConstructionFeatures
 
-    constructor(room: Room) {
+    constructor(room: Room, constructionFeatures: ConstructionFeatures) {
         this.room = room
+        this.constructionFeatures = constructionFeatures
 
         if (!this.room.memory.construction) {
             this.room.memory.construction = { paused: false }
         }
     }
 
-    static get(room: Room): BuildManager {
-        return new BuildManager(room)
+    static get(room: Room): BuildManager | null {
+        const constructionFeatures = getConstructionFeatures(room)
+        if (!constructionFeatures) {
+            return null
+        }
+        return new BuildManager(room, constructionFeatures)
     }
 
     removeEnemyConstructionSites(): void {
@@ -94,10 +100,6 @@ export default class BuildManager {
     }
 
     private ensureNonWallSite(): boolean {
-        if (!this.room.memory.constructionFeatures) {
-            return false
-        }
-
         if (this.hasNonWallSite()) {
             return false
         }
@@ -129,7 +131,8 @@ export default class BuildManager {
         return false
     }
 
-    canBuildImportant = wrap((): boolean => {
+    @profile
+    canBuildImportant(): boolean {
         return (
             this.hasImportantConstructionSite() ||
             this.canBuildExtension() ||
@@ -139,7 +142,7 @@ export default class BuildManager {
             this.canBuildStorage() ||
             this.canBuildLinks()
         )
-    }, 'BuildManager:canBuildImportant')
+    }
 
     private hasImportantConstructionSite = wrap((): boolean => {
         const sites = getConstructionSites(this.room)
@@ -156,11 +159,10 @@ export default class BuildManager {
 
     private canBuildContainer = wrap(() => {
         const containers = getContainers(this.room)
-        const constructionFeatures = getConstructionFeatures(this.room)
-        if (constructionFeatures[STRUCTURE_CONTAINER] === undefined) {
+        if (this.constructionFeatures[STRUCTURE_CONTAINER] === undefined) {
             return false
         }
-        return containers.length < constructionFeatures[STRUCTURE_CONTAINER].length
+        return containers.length < this.constructionFeatures[STRUCTURE_CONTAINER].length
     }, 'BuildManager:canBuildContainer')
 
     private nextBuildPosition(type: BuildableStructureConstant): RoomPosition | null {
@@ -168,7 +170,6 @@ export default class BuildManager {
             Logger.error('nextBuildPosition:controller:error:no-controller', this.room.name)
             return null
         }
-        const constructionFeatures = getConstructionFeatures(this.room)
         let structures: Structure[] = []
         if (type === STRUCTURE_CONTAINER) {
             structures = getContainers(this.room)
@@ -179,7 +180,7 @@ export default class BuildManager {
                 filter: { structureType: type },
             })
         }
-        const constructionPosition = constructionFeatures[type]
+        const constructionPosition = this.constructionFeatures[type]
         if (constructionPosition === undefined) {
             Logger.warning('nextBuildPosition:no-construction-features', type, this.room.name)
             return null
@@ -215,13 +216,12 @@ export default class BuildManager {
     }
 
     private canBuildLinks = wrap(() => {
-        const constructionFeatures = getConstructionFeatures(this.room)
         const links = getLinks(this.room)
         if (this.room.controller === undefined) {
             Logger.error('canBuildLinks:controller:error:no-controller', this.room.name)
             return false
         }
-        const linkPositions = constructionFeatures[STRUCTURE_LINK]
+        const linkPositions = this.constructionFeatures[STRUCTURE_LINK]
         if (linkPositions === undefined) {
             Logger.warning('canBuildLinks:no-link-positions', this.room.name)
             return false
@@ -264,12 +264,11 @@ export default class BuildManager {
     }, 'BuildManager:canBuildSwampRoad')
 
     private getNextRoad(): Position | undefined {
-        const constructionFeatures = getConstructionFeatures(this.room)
-        if (constructionFeatures[STRUCTURE_ROAD] === undefined) {
+        if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
             Logger.warning('getNextRoad:no-road-features', this.room.name)
             return undefined
         }
-        return constructionFeatures[STRUCTURE_ROAD].find((pos) => {
+        return this.constructionFeatures[STRUCTURE_ROAD].find((pos) => {
             return !hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
         })
     }
@@ -282,9 +281,8 @@ export default class BuildManager {
         if (!this.room.controller || this.room.controller.level < MIN_RAMPART_LEVEL) {
             return false
         }
-        const constructionFeatures = getConstructionFeatures(this.room)
         const ramparts = getRamparts(this.room)
-        const rampartPositions = constructionFeatures[STRUCTURE_RAMPART] || []
+        const rampartPositions = this.constructionFeatures[STRUCTURE_RAMPART] || []
         const missingRamparts = rampartPositions.filter((pos) => {
             return !ramparts.some((rampart) => rampart.pos.x === pos.x && rampart.pos.y === pos.y)
         })
@@ -292,6 +290,6 @@ export default class BuildManager {
     }, 'BuildManager:canBuildWall')
 }
 
-export function getBuildManager(room: Room): BuildManager {
+export function getBuildManager(room: Room): BuildManager | null {
     return BuildManager.get(room)
 }

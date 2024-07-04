@@ -6,15 +6,14 @@ import { each } from 'lodash'
 import { hasBuildingAt } from 'utils/room'
 import { minCutWalls } from 'screeps-min-cut-wall'
 
-const CONSTRUCTION_FEATURES_VERSION = '1.0.0'
-const STATIONARY_POINTS_VERSION = '1.0.0'
+export const CONSTRUCTION_FEATURES_VERSION = '1.0.0'
+export const STATIONARY_POINTS_VERSION = '1.0.0'
 
 const CPU_MIN = 50
 
 declare global {
     interface RoomMemory {
         constructionFeaturesV2?: ConstructionFeaturesV2
-        constructionFeatures?: ConstructionFeatures
         stationaryPoints?: StationaryPoints
     }
 
@@ -31,8 +30,15 @@ global.clearConstructionFeatures = clearConstructionFeatures
 global.calculateSurveyImmutableRoom = calculateSurveyImmutableRoom
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
 
+export function getConstructionFeatures(room: Room): ConstructionFeatures | null {
+    if (room.memory.constructionFeaturesV2?.version === CONSTRUCTION_FEATURES_VERSION) {
+        return room.memory.constructionFeaturesV2.features
+    }
+    return null
+}
+
 function clearConstructionFeatures(roomName: string) {
-    Memory.rooms[roomName].constructionFeatures = undefined
+    Memory.rooms[roomName].constructionFeaturesV2 = undefined
     Memory.rooms[roomName].stationaryPoints = undefined
 }
 
@@ -45,13 +51,7 @@ function clearAllConstructionFeatures() {
 function saveConstructionFeatures(room: Room) {
     if (Game.cpu.tickLimit > CPU_MIN && Game.cpu.bucket > 500) {
         const features = calculateConstructionFeatures(room)
-        room.memory.constructionFeatures = features
-    }
-    if (!room.memory.constructionFeaturesV2 && room.memory.constructionFeatures) {
-        room.memory.constructionFeaturesV2 = {
-            version: CONSTRUCTION_FEATURES_VERSION,
-            features: room.memory.constructionFeatures,
-        }
+        room.memory.constructionFeaturesV2 = { features, version: CONSTRUCTION_FEATURES_VERSION }
     }
 
     const stationaryPoints = calculateStationaryPoints(room)
@@ -61,13 +61,19 @@ function saveConstructionFeatures(room: Room) {
     }
 }
 
-export function getConstructionFeatures(room: Room): ConstructionFeatures {
-    return room.memory.constructionFeatures as ConstructionFeatures
+export function isConstructionFeaturesUpToDate(room: Room): boolean {
+    return Boolean(
+        room.memory.constructionFeaturesV2 &&
+            room.memory.constructionFeaturesV2.version === CONSTRUCTION_FEATURES_VERSION,
+    )
 }
 
 function calculateConstructionFeatures(room: Room): ConstructionFeatures {
-    if (room.memory.constructionFeatures) {
-        return room.memory.constructionFeatures
+    if (
+        room.memory.constructionFeaturesV2 &&
+        room.memory.constructionFeaturesV2.version === CONSTRUCTION_FEATURES_VERSION
+    ) {
+        return room.memory.constructionFeaturesV2.features
     }
     const iroom = calculateSurveyImmutableRoom(room)
 

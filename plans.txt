@@ -1,17 +1,24 @@
 Features
 ----------------------------
 
+[x] - Scouting
+   [x] - Write function that gets closest rooms from a list of rooms
+   [x] - Create a data structure called ScoutedFeatures that talks about some aspects of a room visited
+      [x] - Optional features include:
+         [x] - owner
+         [x] - controllerLevel
+         [x] - hasInvaderCore
+         [x] - enemyThatsMining
+   [x] - Every 24 hours a scout is sent out to rooms distance 2 and 36 hours for rooms 3 distance away
+      [x] - Scout is sent from room sorted by distance->highest level
+[x] - Autoclaim
+[ ] - Link Usage
+   [ ] - Record data about which link is for what
+   [ ] - First 3 links should be about sending energy to the storage
+   [ ] - Create a static link hauler to move stuff from link to the storage
+   [ ] - 4th link goes to the controller
+   [ ] - create a static controller upgrader
 [ ] - Long Distance Energy Mining
-   [ ] - Scouting
-      [x] - Write function that gets closest rooms from a list of rooms
-      [x] - Create a data structure called ScoutedFeatures that talks about some aspects of a room visited
-         [x] - Optional features include:
-            [x] - owner
-            [x] - controllerLevel
-            [x] - hasInvaderCore
-            [x] - enemyThatsMining
-      [ ] - Every 24 hours a scout is sent out to rooms distance 2 and 36 hours for rooms 3 distance away
-         [ ] - Scout is sent from room sorted by distance->highest level
    [ ] -
    [ ] -
 [x] - Workers can wall repair really weak walls

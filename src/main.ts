@@ -9,7 +9,6 @@ import roleRemoteUpgrade, { RemoteUpgrade } from 'roles/remote-upgrade'
 import roleScout, { Scout } from 'roles/scout'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
 import updateStrategy, { StrategyPhase } from './strategy'
-import BuildManager from 'managers/build-manager'
 import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
 import { LogisticsCreep } from 'roles/logistics-constants'
@@ -17,6 +16,7 @@ import RoleLogistics from 'roles/logistics'
 import RoomVisualizer from 'room-visualizer'
 import { ScoutManager } from 'managers/scout-manager'
 import assignGlobals from 'utils/globals'
+import { getBuildManager } from 'managers/build-manager'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
@@ -74,7 +74,10 @@ const clearMemory = wrap(() => {
 
 const runMyRoom = wrap((room: Room) => {
     recordRoomStats(room)
-    const buildManager = BuildManager.get(room)
+    const buildManager = getBuildManager(room)
+    if (!buildManager) {
+        return
+    }
     buildManager.removeEnemyConstructionSites()
     buildManager.ensureConstructionSites()
     ensureSafeMode(room)
@@ -142,8 +145,10 @@ const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
         room.memory.updated = Game.time
 
-        const visualizer = new RoomVisualizer(room)
-        visualizer.render()
+        const visualizer = RoomVisualizer.create(room)
+        if (visualizer) {
+            visualizer.render()
+        }
 
         updateStrategy(room)
 
