@@ -13,8 +13,8 @@ Features
       [x] - Scout is sent from room sorted by distance->highest level
 [x] - Autoclaim
 [ ] - Link Usage
-   [ ] - Record data about which link is for what
-   [ ] - First 3 links should be about sending energy to the storage
+   [x] - Record data about which link is for what
+   [x] - First 3 links should be about sending energy to the storage
    [ ] - Create a static link hauler to move stuff from link to the storage
    [ ] - 4th link goes to the controller
    [ ] - create a static controller upgrader
@@ -33,13 +33,14 @@ Features
    [x] - Storage
    [x] - Roads
    [x] - Extension
-[ ] - Safe Mode Usage
+[x] - Safe Mode Usage
 [ ] - Mineral Extraction
 
 [x] - Wall Repairer
 
 Optimizations
 ----------------------------
+[ ] - clear the immutable room cache for old game times
 [x] - Pickups from closest
 [ ] - Harvester Self Repair
 [ ] - No Builders if unneeded

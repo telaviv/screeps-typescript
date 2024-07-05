@@ -17,6 +17,7 @@ import roleClaimer from 'roles/claim'
 import roleRemoteBuild from 'roles/remote-build'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
 import roleScout from 'roles/scout'
+import roleStaticLinkHauler from 'roles/static-link-hauler'
 
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
@@ -42,6 +43,7 @@ export default function (spawn: StructureSpawn): void {
     }
     const room = spawn.room
     const masons = getCreeps('mason', room)
+    const staticLinkHaulers = getCreeps('static-link-hauler', room)
     const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
     const warDepartment = new WarDepartment(spawn.room)
@@ -102,6 +104,14 @@ export default function (spawn: StructureSpawn): void {
 
     if (roomManager.getScoutRoomTasks().length > 0) {
         roomManager.scoutRoom()
+        return
+    }
+
+    if (
+        staticLinkHaulers.length === 0 &&
+        roleStaticLinkHauler.canCreate(spawn, room.energyAvailable)
+    ) {
+        roleStaticLinkHauler.create(spawn, room.name, room.energyAvailable)
         return
     }
 

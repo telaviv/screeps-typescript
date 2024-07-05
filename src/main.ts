@@ -7,6 +7,7 @@ import roleMason, { Mason } from 'roles/mason'
 import roleRemoteBuild, { RemoteBuild } from 'roles/remote-build'
 import roleRemoteUpgrade, { RemoteUpgrade } from 'roles/remote-upgrade'
 import roleScout, { Scout } from 'roles/scout'
+import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
 import updateStrategy, { StrategyPhase } from './strategy'
 import Empire from 'empire'
@@ -134,6 +135,8 @@ const runCreep = wrap((creepName: string) => {
         roleRemoteBuild.run(creep as RemoteBuild)
     } else if (creep.memory.role === 'mason') {
         roleMason.run(creep as Mason)
+    } else if (creep.memory.role === 'static-link-hauler') {
+        roleStaticLinkHauler.run(creep as StaticLinkHauler)
     }
 }, 'main:runCreep')
 

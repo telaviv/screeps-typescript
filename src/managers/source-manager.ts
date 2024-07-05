@@ -1,5 +1,4 @@
 import filter from 'lodash/filter'
-import some from 'lodash/some'
 
 import * as Logger from 'utils/logger'
 import { Harvester, isHarvester } from 'roles/harvester'
@@ -92,8 +91,7 @@ export default class SourceManager {
     }
 
     public hasStaticHarvester(): boolean {
-        return some(
-            this.harvesters,
+        return this.harvesters.some(
             (harvester: Creep) => isHarvester(harvester) && harvester.memory.source === this.id,
         )
     }

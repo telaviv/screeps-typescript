@@ -50,6 +50,13 @@ export function getCalculatedLinks(room: Room): Links | null {
     return null
 }
 
+export function getStationaryPoints(room: Room): StationaryPoints | null {
+    if (room.memory.stationaryPoints?.version === STATIONARY_POINTS_VERSION) {
+        return room.memory.stationaryPoints
+    }
+    return null
+}
+
 function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeaturesV2 = undefined
     Memory.rooms[roomName].stationaryPoints = undefined
