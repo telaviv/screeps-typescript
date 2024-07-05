@@ -29,7 +29,7 @@ export default class LinkManager {
     public static cache = new Map<string, LinkManager>()
 
     public readonly storageLink: StructureLink | null
-    public readonly containerLink: StructureLink | null
+    public readonly controllerLink: StructureLink | null
     public readonly sourceLinks: StructureLink[]
 
     public constructor(
@@ -38,7 +38,7 @@ export default class LinkManager {
         sourceLinks: StructureLink[],
     ) {
         this.storageLink = storageLink
-        this.containerLink = containerLink
+        this.controllerLink = containerLink
         this.sourceLinks = sourceLinks
     }
 
@@ -66,7 +66,7 @@ export default class LinkManager {
     }
 
     get sinks(): StructureLink[] {
-        return [this.storageLink, this.containerLink].filter(
+        return [this.controllerLink, this.storageLink].filter(
             (link) => link !== null,
         ) as StructureLink[]
     }
@@ -78,10 +78,13 @@ export default class LinkManager {
         }))
         for (const source of this.sources) {
             const amount = source.store.getUsedCapacity(RESOURCE_ENERGY)
+            if (amount === 0 || source.cooldown > 0) {
+                continue
+            }
             const emptySinks = sinkTracker.filter((sink) => sink.amount >= amount)
             if (emptySinks.length > 0) {
                 const emptySink = emptySinks[0]
-                const err = source.transferEnergy(emptySink.link, amount)
+                const err = source.transferEnergy(emptySink.link)
                 if (err === OK) {
                     emptySink.amount -= amount
                     Logger.info(
@@ -92,14 +95,15 @@ export default class LinkManager {
                         amount,
                     )
                     continue
-                } else if (err === ERR_TIRED) {
-                    continue
                 } else {
                     Logger.error(
                         'link-manager:run:transfer:failed',
                         source.id,
                         emptySink.link.id,
                         emptySink.link.room.name,
+                        amount,
+                        emptySink.link.store.getFreeCapacity(RESOURCE_ENERGY),
+                        JSON.stringify(emptySink),
                         err,
                     )
                 }
@@ -107,7 +111,7 @@ export default class LinkManager {
             const fillableSinks = sinkTracker.filter((sink) => sink.amount > 0)
             if (fillableSinks.length > 0) {
                 const fillableSink = fillableSinks[0]
-                const err = source.transferEnergy(fillableSink.link, fillableSink.amount)
+                const err = source.transferEnergy(fillableSink.link)
                 if (err === OK) {
                     fillableSink.amount = 0
                     Logger.info(
@@ -118,14 +122,15 @@ export default class LinkManager {
                         fillableSink.link.room.name,
                     )
                     continue
-                } else if (err === ERR_TIRED) {
-                    continue
                 } else {
                     Logger.error(
                         'link-manager:run:transfer:fill:failed',
                         source.id,
                         fillableSink.link.id,
                         fillableSink.link.room.name,
+                        amount,
+                        fillableSink.link.store.getFreeCapacity(RESOURCE_ENERGY),
+                        JSON.stringify(fillableSink),
                         err,
                     )
                 }
