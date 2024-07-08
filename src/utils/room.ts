@@ -13,7 +13,7 @@ export const LINK_COUNTS = [0, 0, 0, 0, 0, 2, 3, 4, 6]
 export const MIN_STORAGE_LEVEL = 4
 export const MIN_RAMPART_LEVEL = 2
 
-const STRONG_WALL_HITS = 10000000
+const STRONG_WALL_HITS = 100000000
 const FRAGILE_WALL_HITS = [1, 1, 1000, 10000, 30000, 100000, 100000, 100000, 1000000]
 
 export function isAtExtensionCap(room: Room): boolean {

@@ -146,7 +146,10 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         return null
     }
 
-    const sourcesManager = new SourcesManager(warDepartment.targetRoom)
+    const sourcesManager = SourcesManager.create(warDepartment.targetRoom)
+    if (!sourcesManager) {
+        return null
+    }
 
     if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
         return roleAttacker.create(spawn, warDepartment.target, capacity)

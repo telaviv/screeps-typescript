@@ -164,7 +164,10 @@ class RoleLogistics {
     private assignWorkerPreference() {
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
-        if (TransferTask.makeRequest(this.creep)) {
+        if (this.creep.room.controller && this.creep.room.controller.ticksToDowngrade < 5000) {
+            memory.currentTask = TASK_UPGRADING
+            return
+        } else if (TransferTask.makeRequest(this.creep)) {
             memory.currentTask = TASK_HAULING
         } else if (buildManager && buildManager.canBuildImportant()) {
             memory.currentTask = TASK_BUILDING

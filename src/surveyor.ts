@@ -7,6 +7,7 @@ import {
     StationaryPoints,
 } from 'types'
 import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
+import Empire from 'empire'
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 import { each } from 'lodash'
 import { hasBuildingAt } from 'utils/room'
@@ -35,6 +36,12 @@ declare global {
 global.clearConstructionFeatures = clearConstructionFeatures
 global.calculateSurveyImmutableRoom = calculateSurveyImmutableRoom
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
+
+export function isSurveyComplete(room: Room): boolean {
+    return Boolean(
+        getConstructionFeatures(room) && getCalculatedLinks(room) && getStationaryPoints(room),
+    )
+}
 
 export function getConstructionFeatures(room: Room): ConstructionFeatures | null {
     if (room.memory.constructionFeaturesV2?.version === CONSTRUCTION_FEATURES_VERSION) {
@@ -204,8 +211,9 @@ function getRampartPositions(room: Room, features: Position[]): Position[] {
 }
 
 const assignRoomFeatures = Profiling.wrap(() => {
+    const roomsBeingClaimed = new Empire().getRoomsBeingClaimed()
     each(Game.rooms, (room: Room) => {
-        if (room.controller && room.controller.my) {
+        if ((room.controller && room.controller.my) || roomsBeingClaimed.includes(room.name)) {
             saveConstructionFeatures(room)
         }
     })

@@ -8,7 +8,9 @@ import roleRemoteBuild, { RemoteBuild } from 'roles/remote-build'
 import roleRemoteUpgrade, { RemoteUpgrade } from 'roles/remote-upgrade'
 import roleScout, { Scout } from 'roles/scout'
 import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler'
+import roleStaticUpgrader, { StaticUpgrader } from 'roles/static-upgrader'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
+import survey, { isSurveyComplete } from './surveyor'
 import updateStrategy, { StrategyPhase } from './strategy'
 import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
@@ -22,7 +24,6 @@ import { getBuildManager } from 'managers/build-manager'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
-import survey from './surveyor'
 import { wrap } from 'utils/profiling'
 
 declare global {
@@ -137,6 +138,8 @@ const runCreep = wrap((creepName: string) => {
         roleMason.run(creep as Mason)
     } else if (creep.memory.role === 'static-link-hauler') {
         roleStaticLinkHauler.run(creep as StaticLinkHauler)
+    } else if (creep.memory.role === 'static-upgrader') {
+        roleStaticUpgrader.run(creep as StaticUpgrader)
     }
 }, 'main:runCreep')
 
@@ -160,7 +163,7 @@ const runAllRooms = wrap(() => {
 
         updateStrategy(room)
 
-        if (room.controller && room.controller.my) {
+        if (room.controller && room.controller.my && isSurveyComplete(room)) {
             runMyRoom(room)
         }
     })
@@ -173,7 +176,6 @@ const runAllCreeps = wrap(() => {
 }, 'main:runAllCreeps')
 
 function unwrappedLoop(): void {
-    // Automatically delete memory of missing creeps
     initialize()
     runAllRooms()
     runAllCreeps()

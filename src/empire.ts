@@ -121,6 +121,12 @@ export default class Empire {
         new RoomManager(claimer).addClaimRoomTask(roomName)
     }
 
+    getRoomsBeingClaimed(): string[] {
+        return this.rooms
+            .map((room) => room.memory.war?.target)
+            .filter((roomName) => roomName !== undefined)
+    }
+
     findClaimCandidates(): string[] {
         const world = new World()
         const roomNames = findMyRooms().map((room) => room.name)

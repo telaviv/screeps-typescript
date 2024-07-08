@@ -1,6 +1,7 @@
 import * as Logger from 'utils/logger'
 import SourceManager from './source-manager'
 import { getHarvesters } from 'utils/creep'
+import { isSurveyComplete } from 'surveyor'
 import { profile } from 'utils/profiling'
 import roleHarvester from 'roles/harvester'
 
@@ -18,6 +19,13 @@ export default class SourcesManager {
             const sourceManager = SourceManager.createFromSource(source)
             this.sourceManagers.push(sourceManager)
         }
+    }
+
+    public static create(room: Room): SourcesManager | null {
+        if (isSurveyComplete(room)) {
+            return new SourcesManager(room)
+        }
+        return null
     }
 
     public hasAHarvester(): boolean {

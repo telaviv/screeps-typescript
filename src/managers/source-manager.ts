@@ -19,7 +19,7 @@ export default class SourceManager {
     private constructor(source: Source) {
         const stationaryPoints = source.room.memory.stationaryPoints
         if (!stationaryPoints || !stationaryPoints.sources) {
-            throw new Error('stationaryPoints.sources is not defined')
+            throw new Error(`stationaryPoints.sources is not defined for room ${source.room.name}`)
         }
         this.id = source.id
         this.source = source
