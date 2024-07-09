@@ -35,9 +35,34 @@ Features
 [ ] - Mineral Extraction
 [ ] - Hauler
    [ ] - When running creeps make sure to prioritize ones without WORK parts
-[ ] Dismantler
-   [ ] - Create a dismantler when there's a mismatch of ramparts
-   [ ] - Make sure masons aren't repairing mismatched ramparts
+[ ] - Bunker
+   [ ] - Add the bunker to a new "stamps" folder
+   [ ] - Implement distance transforms. Only cache them when visualizing
+      [ ] - 1) Distance from walls
+      [ ] - 2) Distance from sources and controller
+      [ ] - 3) Sum of source + controller transforms
+      [ ] - 4) We pick a spot far enough from the walls to place the bunker with a minimum sum distance
+   [ ] Dismantler
+      [ ] - ConstructionFeaturesV3
+         [ ] - add stationaryPoints as points
+         [ ] - add optional values:
+            [ ] - previousFeatures
+            [ ] - diffFeatures
+               [ ] - this is a map with building type as key.
+                   - the value is is an object with keys "clear" and "vestigial"
+                     - clear needs to be dismantled first or else vestigial can't go anywhere
+               [ ] - dismantle spots in order of importance starting with spawn
+               [ ] - don't repair anything in the dismantle list
+               [ ] - delete diffFeatures and previousFeatures after dismantling is done
+            [ ] - previousPoints
+               [ ] - only exists long enough to switch stationary creeps positions
+               [ ] - don't switch stationary positions until diffFeatures is gone
+            [ ] - wipe. True if the entire room is invalid
+   [ ] Long distance Dismantler + Hauler to clear rooms and bring energy to storage
+      [ ] - Let's start with 1 dismantler and 2 energy haulers
+      [ ] - Use the closest room that's not level 8 but still has highest controller progress
+      [ ] - All the creeps in the invalid room should go to the dismantling room and recycle themselves
+      [ ] - After all buildings are dismantled, unclaim the controller
 [ ] - Room Defense
    [ ] - Change the routing in a room while under attack
    [ ] - Have no path caching
@@ -46,7 +71,7 @@ Features
 
 Optimizations
 ----------------------------
-[x] - clear the immutable room cache for old game times
+[x] - Clear the immutable room cache for old game times
 [ ] - TransferTask.create gets all tasks every time one is created. Cache this!!
 [x] - Pickups from closest
 [ ] - No Builders if unneeded
