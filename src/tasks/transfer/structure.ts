@@ -1,3 +1,4 @@
+import { mprofile, profile } from 'utils/profiling'
 import { ResourceCreep } from 'tasks/types'
 import { TransferTask } from 'tasks/transfer/types'
 import autoIncrement from 'utils/autoincrement'
@@ -14,6 +15,7 @@ export class TransferStructure {
         this.tasks = tasks
     }
 
+    @mprofile('TransferStructure:create')
     public static create(id: Id<AnyStoreStructure>): TransferStructure {
         const tasks: TransferTask[] = []
         const structure = Game.getObjectById<AnyStoreStructure>(id)
@@ -33,6 +35,7 @@ export class TransferStructure {
         return TransferStructure.create(id)
     }
 
+    @profile
     public remainingCapacity(resource: ResourceConstant = RESOURCE_ENERGY): number {
         if (this.structure.store === null) {
             return 0
@@ -65,6 +68,7 @@ export class TransferStructure {
         return task
     }
 
+    @profile
     private sumOfTransfers(resource: ResourceConstant): number {
         return this.tasks
             .filter((task) => task.resourceType === resource)

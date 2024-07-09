@@ -4,6 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 
 import sizeof from 'object-sizeof'
+import { table } from 'table'
 
 interface ProfilerData {
     [key: string]: { total: number; calls: number }
@@ -13,6 +14,7 @@ interface ProfilerMemory {
     recording: boolean
     data: ProfilerData
     start?: number
+    stop?: number
 }
 
 declare global {
@@ -33,6 +35,7 @@ export function start(): void {
 
 export function stop(): void {
     Memory.profiler.recording = false
+    Memory.profiler.stop = Game.time
 }
 
 export function init(): void {
@@ -43,7 +46,7 @@ export function init(): void {
 
 export function clear(): void {
     Memory.profiler.data = {}
-    start()
+    Memory.profiler.recording = false
 }
 
 declare global {
@@ -131,20 +134,30 @@ export function output(): void {
         console.log('process never started')
         return
     }
-    const totalTicks = Game.time - Memory.profiler.start
+
+    if (!Memory.profiler.stop) {
+        console.log('process never stopped')
+        return
+    }
+    const totalTicks = Memory.profiler.stop - Memory.profiler.start
     const dataArray = Object.entries(Memory.profiler.data)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     dataArray.sort(([_, dataa], [__, datab]) => datab.total - dataa.total)
+    const outputData = []
     for (const [key, data] of dataArray.slice(0, 30)) {
-        console.log(
-            `${key}: ${data.total / totalTicks} ${data.total / data.calls} ${
-                data.calls / totalTicks
-            } ${data.total}`,
-        )
+        outputData.push([
+            key,
+            data.total / totalTicks,
+            data.total / data.calls,
+            data.calls / totalTicks,
+            data.total,
+        ])
     }
+    console.log(table(outputData))
 }
 
 const calculateMemory = () => {
     console.log(`Memory used: ${sizeof(Memory) / 1024} KB`)
 }
+
 global.calculateMemory = calculateMemory

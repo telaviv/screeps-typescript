@@ -1,4 +1,5 @@
 import * as TaskRunner from 'tasks/runner'
+import * as TimeCache from 'utils/time-cache'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleClaimer, { Claimer } from 'roles/claim'
@@ -73,6 +74,7 @@ const clearMemory = wrap(() => {
             delete Memory.creeps[name]
         }
     }
+    TimeCache.clearAll()
 }, 'main:clearMemory')
 
 const runMyRoom = wrap((room: Room) => {

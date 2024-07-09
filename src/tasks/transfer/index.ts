@@ -6,8 +6,9 @@ import { TransferStructure } from 'tasks/transfer/structure'
 import { TransferTask } from './types'
 import { currentEnergyHeld } from 'utils/creep'
 import { isTransferTask } from './utils'
+import { wrap } from 'utils/profiling'
 
-export function makeRequest(creep: ResourceCreep): AnyStoreStructure | null {
+export const makeRequest = wrap((creep: ResourceCreep): AnyStoreStructure | null => {
     const energy = currentEnergyHeld(creep)
     if (energy === 0) {
         return null
@@ -42,7 +43,7 @@ export function makeRequest(creep: ResourceCreep): AnyStoreStructure | null {
     }
 
     return null
-}
+}, 'transfer:makeRequest')
 
 export function run(task: TransferTask, creep: ResourceCreep): boolean {
     const structure = getStructure(task)
@@ -60,7 +61,7 @@ export function run(task: TransferTask, creep: ResourceCreep): boolean {
     return false
 }
 
-function addTransferTask(creep: ResourceCreep, structure: AnyStoreStructure) {
+const addTransferTask = wrap((creep: ResourceCreep, structure: AnyStoreStructure) => {
     const transferStructure = TransferStructure.get(structure.id)
     const task = transferStructure.makeRequest(creep)
     Logger.info(
@@ -74,7 +75,7 @@ function addTransferTask(creep: ResourceCreep, structure: AnyStoreStructure) {
     )
     creep.memory.tasks.push(task)
     return task
-}
+}, 'transfer:addTransferTask')
 
 export function completeRequest(creep: ResourceCreep): void {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
@@ -118,10 +119,10 @@ function getStructure(task: TransferTask): AnyStoreStructure {
     return Game.getObjectById(task.structureId) as AnyStoreStructure
 }
 
-function fillableExtensions(room: Room): AnyStoreStructure[] {
+const fillableExtensions = wrap((room: Room): AnyStoreStructure[] => {
     const extensions = getExtensions(room)
     return filterFillableStructures(extensions)
-}
+}, 'transfer:fillableExtensions')
 
 function fillableTowers(room: Room): AnyStoreStructure[] {
     const towers = getTowers(room)

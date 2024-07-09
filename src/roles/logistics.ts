@@ -15,6 +15,7 @@ import {
     TASK_HAULING,
     TASK_MINING,
     TASK_REPAIRING,
+    TASK_STORE,
     TASK_UPGRADING,
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
@@ -39,6 +40,7 @@ const ROLE = 'logistics'
 const SUICIDE_TIME = 40
 const RESPAWN_IDLE_LIMIT = 0
 const SLEEP_SAY_TIME = 10
+const MAX_TICKS_TO_DOWNGRADE = 5000
 
 const TASK_EMOJIS = {
     [TASK_HAULING]: '🚚',
@@ -47,6 +49,7 @@ const TASK_EMOJIS = {
     [TASK_COLLECTING]: '⚡',
     [TASK_UPGRADING]: '🌃',
     [TASK_MINING]: '⛏️',
+    [TASK_STORE]: '🏪',
     [TASK_WALL_REPAIRS]: '🧱',
     [NO_TASK]: '🤔',
 }
@@ -59,7 +62,6 @@ const PREFERENCE_EMOJIS = {
     [TASK_UPGRADING]: '🌃',
     [TASK_WALL_REPAIRS]: '🧱',
     [PREFERENCE_WORKER]: '👷',
-    [NO_TASK]: '🤔',
 }
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
@@ -164,7 +166,10 @@ class RoleLogistics {
     private assignWorkerPreference() {
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
-        if (this.creep.room.controller && this.creep.room.controller.ticksToDowngrade < 5000) {
+        if (
+            this.creep.room.controller &&
+            this.creep.room.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
+        ) {
             memory.currentTask = TASK_UPGRADING
             return
         } else if (TransferTask.makeRequest(this.creep)) {

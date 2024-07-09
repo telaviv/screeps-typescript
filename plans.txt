@@ -15,12 +15,9 @@ Features
 [ ] - Link Usage
    [x] - Record data about which link is for what
    [x] - First 3 links should be about sending energy to the storage
-   [ ] - Create a static link hauler to move stuff from link to the storage
-   [ ] - 4th link goes to the controller
+   [x] - Create a static link hauler to move stuff from link to the storage
    [ ] - create a static controller upgrader
 [ ] - Long Distance Energy Mining
-   [ ] -
-   [ ] -
 [x] - Workers can wall repair really weak walls
 [x] - Logistics become workers when preference doesn't work.
 [x] - Builders don't make construction sites, the build manager does
@@ -35,14 +32,13 @@ Features
    [x] - Extension
 [x] - Safe Mode Usage
 [ ] - Mineral Extraction
-
 [x] - Wall Repairer
 
 Optimizations
 ----------------------------
 [ ] - clear the immutable room cache for old game times
+[ ] - TransferTask.create gets all tasks every time one is created. Cache this!!
 [x] - Pickups from closest
-[ ] - Harvester Self Repair
 [ ] - No Builders if unneeded
 
 Nice To Have

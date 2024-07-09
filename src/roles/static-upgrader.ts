@@ -57,7 +57,7 @@ class StaticUpgraderCreep {
     moveToPosition(): void {
         const err = moveTo(this.pos, this.creep)
         if (err !== OK && err !== ERR_TIRED) {
-            Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.pos, err)
+            Logger.error('static-upgrader:moveToHarvestPos:failure', this.creep.name, this.pos, err)
         }
     }
 
@@ -149,7 +149,7 @@ const roleStaticUpgrader = {
     getMemory(room: Room): StaticUpgraderMemory | null {
         const points = getStationaryPoints(room)
         const links = getCalculatedLinks(room)
-        console.log('getMemory:staticUpgrader', points, links)
+        console.log('staticUpgrader:getMemory', points, links)
         if (!points || !links) {
             return null
         }

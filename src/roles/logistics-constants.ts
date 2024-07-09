@@ -6,6 +6,7 @@ export const TASK_UPGRADING = 'upgrading'
 export const TASK_REPAIRING = 'repairing'
 export const TASK_WALL_REPAIRS = 'wall-repairs'
 export const TASK_COLLECTING = 'collecting'
+export const TASK_STORE = 'store'
 export const TASK_MINING = 'mining'
 export const NO_TASK = 'no-task'
 export const PREFERENCE_WORKER = 'worker'
@@ -16,8 +17,15 @@ export type DeliveryTask =
     | typeof TASK_UPGRADING
     | typeof TASK_REPAIRING
     | typeof TASK_WALL_REPAIRS
+    | typeof TASK_STORE
 export type LogisticsTask = typeof NO_TASK | DeliveryTask | typeof TASK_COLLECTING
-export type LogisticsPreference = DeliveryTask | typeof PREFERENCE_WORKER
+export type LogisticsPreference =
+    | typeof TASK_HAULING
+    | typeof TASK_BUILDING
+    | typeof TASK_UPGRADING
+    | typeof TASK_REPAIRING
+    | typeof TASK_WALL_REPAIRS
+    | typeof PREFERENCE_WORKER
 
 export interface LogisticsCreep extends Creep {
     memory: LogisticsMemory

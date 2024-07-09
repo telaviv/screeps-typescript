@@ -142,7 +142,7 @@ function isTemporary(withdrawable: WithdrawObject): boolean {
     return isRuin(object) || isTombstone(object)
 }
 
-function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
+const getEligibleTargets = wrap((room: Room, capacity: number): Withdrawable[] => {
     const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
     const nonEmpties = withdrawObjects.filter(
         (target) =>
@@ -172,7 +172,7 @@ function getEligibleTargets(room: Room, capacity: number): Withdrawable[] {
         return []
     }
     return [bestTarget.withdrawable]
-}
+}, 'withdraw:getEligibleTargets')
 
 export default {
     verifyType: isWithdrawTask,
