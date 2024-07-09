@@ -7,7 +7,6 @@ import WarDepartment from 'war-department'
 import { getAllTasks } from 'tasks/utils'
 import roleScout from 'roles/scout'
 import roleWrecker from 'roles/wrecker'
-import { visualizeRoom } from 'room-visualizer'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach((creep) => {
@@ -97,7 +96,6 @@ export default function assignGlobals(): void {
     global.setLogLevel = Logger.setLogLevel
     global.saveSnapshot = saveSnapshot
     global.claimRoom = ErrorMapper.wrap(claimRoom)
-    global.visualizeRoom = visualizeRoom
     global.assignGlobals = assignGlobals
     global.sendWrecker = sendWrecker
     global.declareWar = declareWar
@@ -116,7 +114,6 @@ declare global {
             setLogLevel: (level: string) => void
             saveSnapshot: (roomName: string) => void
             claimRoom: (destination: string, startRoom: string) => void
-            visualizeRoom: (roomName: string) => void
             assignGlobals: () => void
             sendWrecker: (endRoom: string, startRoom: string) => void
             declareWar: (endRoom: string, warRoom: string) => void

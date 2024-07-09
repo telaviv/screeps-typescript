@@ -17,7 +17,6 @@ import ErrorMapper from 'utils/ErrorMapper'
 import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import RoleLogistics from 'roles/logistics'
-import RoomVisualizer from 'room-visualizer'
 import { ScoutManager } from 'managers/scout-manager'
 import assignGlobals from 'utils/globals'
 import { clearImmutableRoomCache } from 'utils/immutable-room'
@@ -25,6 +24,7 @@ import { getBuildManager } from 'managers/build-manager'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
+import { visualizeRoom } from 'room-visualizer'
 import { wrap } from 'utils/profiling'
 
 declare global {
@@ -43,7 +43,6 @@ declare global {
     interface RoomMemory {
         strategy: StrategyPhase
         collapsed: boolean
-        visuals: { snapshot: boolean }
         updated: number
     }
 
@@ -157,17 +156,11 @@ const initialize = wrap(() => {
 const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
         room.memory.updated = Game.time
-
-        const visualizer = RoomVisualizer.create(room)
-        if (visualizer) {
-            visualizer.render()
-        }
-
         updateStrategy(room)
-
         if (room.controller && room.controller.my && isSurveyComplete(room)) {
             runMyRoom(room)
         }
+        visualizeRoom(room)
     })
 }, 'main:runAllRooms')
 

@@ -51,7 +51,7 @@ describe.only('distanceTransform', () => {
         expect(result[2][0]).to.equal(4)
     })
 
-    it ('should calculate the distance transform with multiple positions', () => {
+    it('should calculate the distance transform with multiple positions', () => {
         const roomTerrain = new RoomTerrain()
         const positions: Position[] = [
             { x: 1, y: 1 },

@@ -2,6 +2,37 @@ import * as Logger from 'utils/logger'
 import { ConstructionFeatures } from 'types'
 import filter from 'lodash/filter'
 import { getConstructionFeatures } from 'surveyor'
+import { getWallTransform } from 'room-analysis/distance-transform'
+
+type VisualType = 'construction' | 'wall-transform'
+
+declare global {
+    interface RoomMemory {
+        visuals:
+            | {
+                  visualType: VisualType
+                  showRoads?: boolean
+                  transform?: number[][]
+              }
+            | undefined
+    }
+
+    namespace NodeJS {
+        interface Global {
+            visuals: {
+                construction: (roomName: string, roads?: boolean) => void
+                wallTransform: (roomName: string) => void
+                cancel: (roomName: string) => void
+            }
+        }
+    }
+}
+
+global.visuals = {
+    construction: setConstructionVisuals,
+    wallTransform: setWallTransformVisuals,
+    cancel: cancelVisuals,
+}
 
 type DrawFunction = (visual: RoomVisual, pos: RoomPosition) => void
 
@@ -16,6 +47,10 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_TOWER, drawTower],
     [STRUCTURE_SPAWN, drawSpawn],
 ])
+
+function drawNumber(visual: RoomVisual, pos: RoomPosition, num: number): void {
+    visual.text(num.toString(), pos.x, pos.y + 0.25, { color: 'red', font: 0.95 })
+}
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
     visual.circle(pos, { fill: 'red', radius: 0.35 })
@@ -65,33 +100,13 @@ function hasConstructionSiteAt(structureType: BuildableStructureConstant, pos: R
 
 export default class RoomVisualizer {
     readonly room: Room
-    private readonly constructionFeatures: ConstructionFeatures
 
-    private constructor(room: Room, constructionFeatures: ConstructionFeatures) {
+    constructor(room: Room) {
         this.room = room
-        this.constructionFeatures = constructionFeatures
-        if (!this.room.memory.visuals) {
-            this.room.memory.visuals = { snapshot: false }
-        }
     }
 
-    static create(room: Room): RoomVisualizer | null {
-        const constuctionFeatures = getConstructionFeatures(room)
-        if (!constuctionFeatures) {
-            return null
-        }
-        return new RoomVisualizer(room, constuctionFeatures)
-    }
-
-    get visuals(): { snapshot: boolean } {
-        return this.room.memory.visuals
-    }
-
-    render(roads = false): void {
-        if (!this.visuals.snapshot) {
-            return
-        }
-        for (const [structureType, positions] of Object.entries(this.constructionFeatures)) {
+    renderConstructionFeatures(constructionFeatures: ConstructionFeatures, roads = false): void {
+        for (const [structureType, positions] of Object.entries(constructionFeatures)) {
             if (structureType === STRUCTURE_ROAD && !roads) {
                 continue
             }
@@ -114,8 +129,49 @@ export default class RoomVisualizer {
             }
         }
     }
+
+    renderTransform(transform: number[][]): void {
+        for (let x = 0; x < 50; x++) {
+            for (let y = 0; y < 50; y++) {
+                const value = transform[x][y]
+                if (value === Infinity || value === 0) {
+                    continue
+                }
+                drawNumber(this.room.visual, new RoomPosition(x, y, this.room.name), value)
+            }
+        }
+    }
 }
 
-export function visualizeRoom(roomName: string, on = true): void {
-    Game.rooms[roomName].memory.visuals.snapshot = on
+export function visualizeRoom(room: Room): void {
+    const visuals = room.memory.visuals
+    if (!visuals) {
+        return
+    }
+    const roomVisual = new RoomVisualizer(room)
+    if (visuals.visualType === 'construction') {
+        const constructionFeatures = getConstructionFeatures(room)
+        if (!constructionFeatures) {
+            console.log('no construction features for room', room.name)
+            return
+        }
+        roomVisual.renderConstructionFeatures(constructionFeatures, visuals.showRoads)
+    } else if (visuals.visualType === 'wall-transform') {
+        roomVisual.renderTransform(visuals.transform as number[][])
+    }
+}
+
+function setConstructionVisuals(roomName: string, roads = false): void {
+    const room = Game.rooms[roomName]
+    room.memory.visuals = { visualType: 'construction', showRoads: roads }
+}
+
+function setWallTransformVisuals(roomName: string): void {
+    const room = Game.rooms[roomName]
+    const wallTransform = getWallTransform(room)
+    room.memory.visuals = { visualType: 'wall-transform', transform: wallTransform }
+}
+
+function cancelVisuals(roomName: string): void {
+    Game.rooms[roomName].memory.visuals = undefined
 }
