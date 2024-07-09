@@ -36,7 +36,7 @@ Features
 
 Optimizations
 ----------------------------
-[ ] - clear the immutable room cache for old game times
+[x] - clear the immutable room cache for old game times
 [ ] - TransferTask.create gets all tasks every time one is created. Cache this!!
 [x] - Pickups from closest
 [ ] - No Builders if unneeded

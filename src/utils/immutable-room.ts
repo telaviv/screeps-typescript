@@ -928,12 +928,12 @@ export const fromRoomUncached = wrap((room: Room): ImmutableRoom => {
 }, 'immutable-room:fromRoomUncached')
 
 export const fromRoom = wrap((room: Room): ImmutableRoom => {
-    if (cache.hasOwnProperty(Game.time)) {
+    if (cache[Game.time]) {
         const timeCache = cache[Game.time]
-        if (timeCache.hasOwnProperty(room.name)) {
+        if (timeCache[room.name]) {
             return timeCache[room.name]
         }
-    } else if (!cache.hasOwnProperty(Game.time)) {
+    } else {
         cache = {}
         cache[Game.time] = {} as RoomCache
     }
@@ -942,4 +942,8 @@ export const fromRoom = wrap((room: Room): ImmutableRoom => {
 
 export function updateCache(room: Room, immutableRoom: ImmutableRoom): void {
     cache[Game.time][room.name] = immutableRoom
+}
+
+export function clearImmutableRoomCache(): void {
+    cache = {}
 }

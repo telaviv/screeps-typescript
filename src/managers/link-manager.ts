@@ -61,6 +61,11 @@ export default class LinkManager {
         return new LinkManager(storageLink, controllerLink, sourceLinks)
     }
 
+    public static hasControllerLink(room: Room): boolean {
+        const linkManager = LinkManager.createFromRoom(room)
+        return Boolean(linkManager && linkManager.controllerLink !== null)
+    }
+
     get sources(): StructureLink[] {
         return this.sourceLinks
     }

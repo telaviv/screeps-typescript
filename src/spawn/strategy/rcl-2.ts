@@ -6,18 +6,20 @@ import {
     TASK_UPGRADING,
 } from 'roles/logistics-constants'
 import WarDepartment, { WarStatus } from 'war-department'
+import { getConstructionSites, getLinks, hasWeakWall } from 'utils/room'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleMason, { MasonCreep } from 'roles/mason'
+import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
-import { hasWeakWall } from 'utils/room'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
 import roleRemoteBuild from 'roles/remote-build'
 import roleRemoteUpgrade from 'roles/remote-upgrade'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
+import roleStaticUpgrader from 'roles/static-upgrader'
 
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
@@ -31,7 +33,7 @@ const REMOTE_BUILD_MINIMUM = 1
 
 const MAX_USEFUL_ENERGY = 1200 // roughly the biggest logistics bot
 
-export default function (spawn: StructureSpawn): void {
+export default function runStrategy(spawn: StructureSpawn): void {
     updateRescueStatus(spawn.room)
     if (spawn.spawning) {
         return
@@ -42,15 +44,11 @@ export default function (spawn: StructureSpawn): void {
         return
     }
     const room = spawn.room
+    const links = getLinks(room)
     const masons = getCreeps('mason', room)
-    const staticLinkHaulers = getCreeps('static-link-hauler', room)
     const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
     const warDepartment = new WarDepartment(spawn.room)
-    const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
-    const upgraders = getLogisticsCreeps({ preference: TASK_UPGRADING, room })
-    const builders = getLogisticsCreeps({ preference: TASK_BUILDING, room })
-    const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
     if (roomManager.getScoutRoomTasks().length > 0) {
         roomManager.scoutRoom()
@@ -81,6 +79,24 @@ export default function (spawn: StructureSpawn): void {
         }
     }
 
+    if (links.length >= 2) {
+        linkStrategy(spawn)
+    } else {
+        swarmStrategy(spawn)
+    }
+}
+
+function swarmStrategy(spawn: StructureSpawn): void {
+    const room = spawn.room
+    const constructionSites = getConstructionSites(room)
+    const masons = getCreeps('mason', room)
+    const roomManager = new RoomManager(room)
+    const sourcesManager = new SourcesManager(room)
+    const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
+    const upgraders = getLogisticsCreeps({ preference: TASK_UPGRADING, room })
+    const builders = getLogisticsCreeps({ preference: TASK_BUILDING, room })
+    const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
+
     if (RoleLogistics.shouldCreateCreep(spawn)) {
         if (haulers.length < 1) {
             RoleLogistics.createCreep(spawn, TASK_HAULING)
@@ -91,7 +107,61 @@ export default function (spawn: StructureSpawn): void {
         } else if (upgraders.length < UPGRADERS_COUNT) {
             RoleLogistics.createCreep(spawn, TASK_UPGRADING)
             return
-        } else if (builders.length < BUILDERS_COUNT) {
+        } else if (builders.length < BUILDERS_COUNT && constructionSites.length > 0) {
+            RoleLogistics.createCreep(spawn, TASK_BUILDING)
+            return
+        }
+    }
+
+    if (roomManager.canClaimRoom()) {
+        roomManager.claimRoom()
+        return
+    }
+
+    if (roomManager.getScoutRoomTasks().length > 0) {
+        roomManager.scoutRoom()
+        return
+    }
+
+    if (!sourcesManager.hasEnoughHarvesters()) {
+        sourcesManager.createHarvester(spawn)
+        return
+    }
+
+    if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
+        roleMason.create(spawn)
+        return
+    } else if (RoleLogistics.shouldCreateCreep(spawn)) {
+        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+        return
+    }
+}
+
+function linkStrategy(spawn: StructureSpawn): void {
+    const room = spawn.room
+    const constructionSites = getConstructionSites(room)
+    const roomManager = new RoomManager(room)
+    const sourcesManager = new SourcesManager(room)
+    const masons = getCreeps('mason', room)
+    const staticLinkHaulers = getCreeps('static-link-hauler', room)
+    const staticUpgraders = getCreeps('static-upgrader', room)
+    const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
+    const upgraders = getLogisticsCreeps({ preference: TASK_UPGRADING, room })
+    const builders = getLogisticsCreeps({ preference: TASK_BUILDING, room })
+    const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
+    const upgraderCount = upgraders.length + staticUpgraders.length
+
+    if (RoleLogistics.shouldCreateCreep(spawn)) {
+        if (haulers.length < 1) {
+            RoleLogistics.createCreep(spawn, TASK_HAULING)
+            return
+        } else if (workers.length < 1) {
+            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+            return
+        } else if (upgraderCount === 0 && !LinkManager.hasControllerLink(room)) {
+            RoleLogistics.createCreep(spawn, TASK_UPGRADING)
+            return
+        } else if (builders.length < BUILDERS_COUNT && constructionSites.length > 0) {
             RoleLogistics.createCreep(spawn, TASK_BUILDING)
             return
         }
@@ -115,6 +185,11 @@ export default function (spawn: StructureSpawn): void {
         return
     }
 
+    if (staticUpgraders.length === 0 && roleStaticUpgrader.canCreate(spawn, room.energyAvailable)) {
+        roleStaticUpgrader.create(spawn, room.name, room.energyAvailable)
+        return
+    }
+
     if (!sourcesManager.hasEnoughHarvesters()) {
         sourcesManager.createHarvester(spawn)
         return
@@ -122,9 +197,6 @@ export default function (spawn: StructureSpawn): void {
 
     if (masons.length < MASON_COUNT && MasonCreep.shouldCreate(room)) {
         roleMason.create(spawn)
-        return
-    } else if (RoleLogistics.shouldCreateCreep(spawn)) {
-        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
         return
     }
 }

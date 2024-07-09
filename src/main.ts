@@ -1,5 +1,4 @@
 import * as TaskRunner from 'tasks/runner'
-import * as TimeCache from 'utils/time-cache'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleClaimer, { Claimer } from 'roles/claim'
@@ -21,6 +20,7 @@ import RoleLogistics from 'roles/logistics'
 import RoomVisualizer from 'room-visualizer'
 import { ScoutManager } from 'managers/scout-manager'
 import assignGlobals from 'utils/globals'
+import { clearImmutableRoomCache } from 'utils/immutable-room'
 import { getBuildManager } from 'managers/build-manager'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
@@ -74,7 +74,7 @@ const clearMemory = wrap(() => {
             delete Memory.creeps[name]
         }
     }
-    TimeCache.clearAll()
+    clearImmutableRoomCache()
 }, 'main:clearMemory')
 
 const runMyRoom = wrap((room: Room) => {

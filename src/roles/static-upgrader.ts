@@ -125,7 +125,6 @@ const roleStaticUpgrader = {
         const parts = calculateParts(capacity)
         const memory = this.getMemory(spawn.room)
         const pos = this.getPosition(spawn.room)
-        console.log('canCreate:staticUpgrader', parts, memory, pos)
         return parts !== null && memory !== null && pos !== null
     },
 
@@ -149,7 +148,6 @@ const roleStaticUpgrader = {
     getMemory(room: Room): StaticUpgraderMemory | null {
         const points = getStationaryPoints(room)
         const links = getCalculatedLinks(room)
-        console.log('staticUpgrader:getMemory', points, links)
         if (!points || !links) {
             return null
         }
@@ -159,7 +157,6 @@ const roleStaticUpgrader = {
             .filter((structure) => structure.structureType === STRUCTURE_LINK)[0] as
             | StructureLink
             | undefined
-        console.log('getMemory:staticUpgrader:link', storage, link)
         if (!storage || !link) {
             return null
         }
