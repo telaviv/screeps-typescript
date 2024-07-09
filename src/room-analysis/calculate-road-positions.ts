@@ -79,7 +79,7 @@ function calculateSurroundingRoadPositions(
 
     for (const structureType of SURROUNDED_BUILDING_TYPES) {
         for (const pos of features[structureType] || []) {
-            for (const neighbor of iroom.getClosestNeighbors(pos.x, pos.y)) {
+            for (const neighbor of iroom.getCardinalNeighbors(pos.x, pos.y)) {
                 if (iroom.isGoodRoadPosition(neighbor.x, neighbor.y)) {
                     roadPositions.push(neighbor)
                 }

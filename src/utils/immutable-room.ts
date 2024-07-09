@@ -423,7 +423,7 @@ export class ImmutableRoom implements ValueObject {
             return link
         }
         if (neighbors.length === 0) {
-            Logger.error('immutable-room:controllerLinkPos:no-neighbors', pos.x, pos.y)
+            Logger.error('immutable-room:controllerLinkPos:no-neighbors', this.name, pos.x, pos.y)
             throw new Error('No neighbors found.')
         }
         const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3)) as ImmutableRoomItem
@@ -803,13 +803,13 @@ export class ImmutableRoom implements ValueObject {
 
         const controllerLink = this.controllerLinkPos()
         const storageLink = this.getStorageLink()
-        const linkArray = [
-            ...sortedSourceContainerLinks.map(({ link }) => link),
-            controllerLink,
-            storageLink,
-        ]
+        const linkArray = uniqBy(
+            [...sortedSourceContainerLinks.map(({ link }) => link), controllerLink, storageLink],
+            (ri) => `${ri.x},${ri.y}`,
+        )
 
         const possibleLinks = this.getObstacles('link')
+
         if (possibleLinks.length !== linkArray.length) {
             Logger.error(
                 'immutable-room:sortedLinkPositions:link-mismatch',

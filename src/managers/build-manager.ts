@@ -256,12 +256,27 @@ export default class BuildManager {
     }, 'BuildManager:canBuildTower')
 
     private canBuildSwampRoad = wrap((): boolean => {
-        const pos = this.getNextRoad()
+        const pos = this.getNextSwampRoad()
         if (pos === undefined) {
             return false
         }
         return this.room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_SWAMP
     }, 'BuildManager:canBuildSwampRoad')
+
+    private getNextSwampRoad(): Position | undefined {
+        if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
+            Logger.warning('getNextRoad:no-road-features', this.room.name)
+            return undefined
+        }
+        return this.constructionFeatures[STRUCTURE_ROAD]?.find((pos) => {
+            const hasBuilding = hasBuildingAt(
+                new RoomPosition(pos.x, pos.y, this.room.name),
+                STRUCTURE_ROAD,
+            )
+            const hasSwamp = this.room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_SWAMP
+            return !hasBuilding && hasSwamp
+        })
+    }
 
     private getNextRoad(): Position | undefined {
         if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
