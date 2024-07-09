@@ -30,9 +30,18 @@ Features
    [x] - Storage
    [x] - Roads
    [x] - Extension
+   [x] - Ramparts
 [x] - Safe Mode Usage
 [ ] - Mineral Extraction
-[x] - Wall Repairer
+[ ] - Hauler
+   [ ] - When running creeps make sure to prioritize ones without WORK parts
+[ ] Dismantler
+   [ ] - Create a dismantler when there's a mismatch of ramparts
+   [ ] - Make sure masons aren't repairing mismatched ramparts
+[ ] - Room Defense
+   [ ] - Change the routing in a room while under attack
+   [ ] - Have no path caching
+   [ ] - Have pathing ignore edges and attackers
 
 Optimizations
 ----------------------------
