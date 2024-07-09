@@ -57,7 +57,7 @@ class StaticUpgraderCreep {
     moveToPosition(): void {
         const err = moveTo(this.pos, this.creep)
         if (err !== OK && err !== ERR_TIRED) {
-            Logger.error('static-upgrader:moveToHarvestPos:failure', this.creep.name, this.pos, err)
+            Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.pos, err)
         }
     }
 
@@ -136,7 +136,7 @@ const roleStaticUpgrader = {
             Logger.error('static-upgrader:create:failed', spawn.room.name, parts, capacity, pos)
             throw new Error(`failed to create static-upgrader room ${roomName}`)
         }
-        const err = spawn.spawnCreep(parts, `${ROLE}:${autoIncrement()}`, {
+        const err = spawn.spawnCreep(parts, `${ROLE}:${spawn.room.name}:${autoIncrement()}`, {
             memory,
         })
         if (err === ERR_NOT_ENOUGH_ENERGY) {

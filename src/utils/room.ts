@@ -288,6 +288,19 @@ export function hasTunnelSite(room: Room): boolean {
     })
 }
 
+export function getWallTerrainCount(room: Room): number {
+    const terrain = room.getTerrain()
+    let count = 0
+    for (let x = 0; x < 50; x++) {
+        for (let y = 0; y < 50; y++) {
+            if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+                count++
+            }
+        }
+    }
+    return count
+}
+
 export function hasContainerAtPosition(room: Room, pos: RoomPosition): boolean {
     return getContainerAtPosition(room, pos) !== null
 }

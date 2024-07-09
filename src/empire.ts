@@ -131,11 +131,16 @@ export default class Empire {
         const world = new World()
         const roomNames = findMyRooms().map((room) => room.name)
         const closestRooms = world.getClosestRooms(roomNames, 2)
-        return closestRooms
+        const candidates = closestRooms
             .filter(({ roomName }) => {
                 const memory = Memory.rooms[roomName]?.scout
-                if (!memory) return false
-                if (memory.sourceCount !== 2 || memory.controllerOwner || memory.enemyThatsMining)
+                if (
+                    !memory ||
+                    memory.sourceCount !== 2 ||
+                    memory.controllerOwner ||
+                    memory.enemyThatsMining ||
+                    memory.controllerBlocked
+                )
                     return false
                 const neighbors = world.getClosestRooms([roomName], 1)
                 // if any neighbor is owned by an enemy, don't claim
@@ -146,6 +151,12 @@ export default class Empire {
                 )
             })
             .map((room) => room.roomName)
+        candidates.sort(
+            (a, b) =>
+                (Memory.rooms[a].scout?.wallTerrain ?? Infinity) -
+                (Memory.rooms[b].scout?.wallTerrain ?? Infinity),
+        )
+        return candidates
     }
 
     findBestClaimer(roomName: string): string | null {

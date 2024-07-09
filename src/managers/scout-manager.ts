@@ -1,12 +1,13 @@
 import * as Logger from 'utils/logger'
 import { OwnedRoomProgress, World } from 'utils/world'
+import { getSources, getWallTerrainCount } from 'utils/room'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
+import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
-import { getSources } from 'utils/room'
 import { isTravelTask } from 'tasks/travel/utils'
 
-const SCOUT_VERSION = '1.0.4'
+const SCOUT_VERSION = '1.0.5'
 
 const MAX_SCOUT_DISTANCE = 3
 const TIME_PER_TICK = 4.7 // seconds on shard 0
@@ -25,6 +26,8 @@ interface ScoutMemory {
     hasInvaderCore?: boolean
     enemyThatsMining?: string
     sourceCount?: number
+    controllerBlocked?: boolean
+    wallTerrain?: number
 }
 
 declare global {
@@ -78,7 +81,6 @@ class ScoutManager {
             this.recordScoutData(room)
         }
         const roomToScout = this.findNextRoomToScout()
-        Logger.info('scout-manager:run:room-to-scout:', roomToScout)
         if (!roomToScout) {
             return
         }
@@ -154,6 +156,10 @@ class ScoutManager {
             scoutMemory.enemyThatsMining = ScoutManager.enemyThatsMining(room)
         }
         scoutMemory.sourceCount = getSources(room).length
+        scoutMemory.wallTerrain = getWallTerrainCount(room)
+        if (controller) {
+            scoutMemory.controllerBlocked = getNonObstacleNeighbors(controller.pos).length === 0
+        }
         scoutMemory.version = SCOUT_VERSION
         scoutMemory.updatedAt = this.gameTime
         room.memory.scout = scoutMemory
