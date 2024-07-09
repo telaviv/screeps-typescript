@@ -42,6 +42,7 @@ Features
    [ ] - Change the routing in a room while under attack
    [ ] - Have no path caching
    [ ] - Have pathing ignore edges and attackers
+[ ] - Build non-swamp roads with the builder and no one else when there's nothing better to build
 
 Optimizations
 ----------------------------
