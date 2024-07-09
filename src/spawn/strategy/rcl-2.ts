@@ -155,7 +155,7 @@ function linkStrategy(spawn: StructureSpawn): void {
         if (haulers.length < 1) {
             RoleLogistics.createCreep(spawn, TASK_HAULING)
             return
-        } else if (workers.length < 1) {
+        } else if (workers.length === 0) {
             RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
             return
         } else if (upgraderCount === 0 && !LinkManager.hasControllerLink(room)) {

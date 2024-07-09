@@ -288,7 +288,11 @@ export function hasTunnelSite(room: Room): boolean {
     })
 }
 
+const WALL_TERRAIN_COUNT_CACHE = new Map<string, number>()
 export function getWallTerrainCount(room: Room): number {
+    if (WALL_TERRAIN_COUNT_CACHE.has(room.name)) {
+        return WALL_TERRAIN_COUNT_CACHE.get(room.name) as number
+    }
     const terrain = room.getTerrain()
     let count = 0
     for (let x = 0; x < 50; x++) {
@@ -298,6 +302,7 @@ export function getWallTerrainCount(room: Room): number {
             }
         }
     }
+    WALL_TERRAIN_COUNT_CACHE.set(room.name, count)
     return count
 }
 

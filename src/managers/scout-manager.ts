@@ -6,6 +6,7 @@ import { createTravelTask } from 'tasks/travel'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
+import { mprofile } from 'utils/profiling'
 
 const SCOUT_VERSION = '1.0.5'
 
@@ -145,6 +146,7 @@ class ScoutManager {
         }
     }
 
+    @mprofile('scout-manager:record-scout-data')
     private recordScoutData(room: Room): void {
         const scoutMemory: ScoutMemory = room.memory.scout ?? ({} as ScoutMemory)
         const controller = room.controller
