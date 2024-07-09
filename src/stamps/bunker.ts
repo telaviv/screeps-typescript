@@ -1,4 +1,4 @@
-import {Stamp} from './types'
+import { Stamp } from './types'
 
 export default {
     rcl: 8,
