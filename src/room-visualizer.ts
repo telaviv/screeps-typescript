@@ -1,10 +1,13 @@
+import colormap from 'colormap'
+import filter from 'lodash/filter'
+
 import * as Logger from 'utils/logger'
 import { ConstructionFeatures } from 'types'
-import filter from 'lodash/filter'
 import { getConstructionFeatures } from 'surveyor'
 import { getWallTransform } from 'room-analysis/distance-transform'
 
-type VisualType = 'construction' | 'wall-transform'
+const MAX_BUNKER_DIMENSION = 13 // for now we have a 13 x 12 bunker
+type VisualType = 'construction' | 'transform'
 
 declare global {
     interface RoomMemory {
@@ -49,7 +52,14 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
 ])
 
 function drawNumber(visual: RoomVisual, pos: RoomPosition, num: number): void {
-    visual.text(num.toString(), pos.x, pos.y + 0.25, { color: 'red', font: 0.95 })
+    const color = transformColor(num)
+    visual.text(num.toString(), pos.x, pos.y + 0.25, { color, font: 0.6 })
+}
+
+function transformColor(value: number): string {
+    const colors = colormap({ colormap: 'cool', nshades: MAX_BUNKER_DIMENSION * 2, format: 'hex' })
+    const normalizedValue = Math.max(Math.min((value * 2) - 1, (MAX_BUNKER_DIMENSION * 2) - 1), 0)
+    return colors[normalizedValue]
 }
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
@@ -156,7 +166,7 @@ export function visualizeRoom(room: Room): void {
             return
         }
         roomVisual.renderConstructionFeatures(constructionFeatures, visuals.showRoads)
-    } else if (visuals.visualType === 'wall-transform') {
+    } else if (visuals.visualType === 'transform') {
         roomVisual.renderTransform(visuals.transform as number[][])
     }
 }
@@ -169,7 +179,7 @@ function setConstructionVisuals(roomName: string, roads = false): void {
 function setWallTransformVisuals(roomName: string): void {
     const room = Game.rooms[roomName]
     const wallTransform = getWallTransform(room)
-    room.memory.visuals = { visualType: 'wall-transform', transform: wallTransform }
+    room.memory.visuals = { visualType: 'transform', transform: wallTransform }
 }
 
 function cancelVisuals(roomName: string): void {

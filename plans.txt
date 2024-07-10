@@ -38,7 +38,7 @@ Features
 [ ] - Bunker
    [ ] - Add the bunker to a new "stamps" folder
    [ ] - Implement distance transforms. Only cache them when visualizing
-      [ ] - 1) Distance from walls
+      [x] - 1) Distance from walls
       [ ] - 2) Distance from sources and controller
       [ ] - 3) Sum of source + controller transforms
       [ ] - 4) We pick a spot far enough from the walls to place the bunker with a minimum sum distance
