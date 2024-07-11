@@ -22,6 +22,23 @@ export interface ConstructionFeaturesV2 {
     features: ConstructionFeatures
 }
 
+export interface ConstructionFeaturesV3 {
+    version: string
+    features: ConstructionFeatures
+    points: StationaryPoints
+    previousPoints: StationaryPoints
+    previousFeatures?: ConstructionFeatures
+    diffFeatures?: diffFeatures
+    wipe?: boolean
+}
+
+export type diffFeatures = {
+    [K in BuildableStructureConstant]?: {
+        clear: { pos: Position; structure: BuildableStructureConstant }[]
+        vestigial: { pos: Position }[]
+    }
+}
+
 export type ConstructionFeatures = {
     [K in BuildableStructureConstant]?: Position[]
 }

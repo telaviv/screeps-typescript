@@ -1,10 +1,45 @@
+import { getSources, getWallPositions } from 'utils/room'
 import { Position } from '../types'
-import { getWallPositions } from 'utils/room'
 
 export function getWallTransform(room: Room): number[][] {
     const roomTerrain = room.getTerrain()
     const wallPositions = getWallPositions(room)
     return distanceTransform(roomTerrain, wallPositions)
+}
+
+export function getTransformFromId(room: Room, id: Id<Source | StructureController>): number[][] {
+    const obj = Game.getObjectById(id)
+    if (!obj || !obj.pos.roomName) {
+        throw new Error(`Object with ${id} not found for room ${room.name}`)
+    }
+    const roomTerrain = room.getTerrain()
+    return distanceTransform(roomTerrain, [obj.pos])
+}
+
+// This function is used to get the sum of the distance transforms of all sources and the controller
+export function getSumTransform(room: Room): number[][] {
+    const sources = getSources(room)
+    const controller = room.controller
+    const objs = [controller, ...sources].filter(Boolean) as (Source | StructureController)[]
+    const transforms = objs.map((obj) => getTransformFromId(room, obj.id))
+    return sumTransforms(transforms)
+}
+
+function sumTransforms(transforms: number[][][]): number[][] {
+    const width = 50
+    const height = 50
+    const sumTransform: number[][] = Array.from({ length: width }, () =>
+        Array.from({ length: height }, () => 0),
+    )
+
+    for (const transform of transforms) {
+        for (let x = 0; x < width; x++) {
+            for (let y = 0; y < height; y++) {
+                sumTransform[x][y] = sumTransform[x][y] + transform[x][y]
+            }
+        }
+    }
+    return sumTransform
 }
 
 export function distanceTransform(roomTerrain: RoomTerrain, positions: Position[]): number[][] {

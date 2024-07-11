@@ -2,9 +2,13 @@ import colormap from 'colormap'
 import filter from 'lodash/filter'
 
 import * as Logger from 'utils/logger'
+import {
+    getSumTransform,
+    getTransformFromId,
+    getWallTransform,
+} from 'room-analysis/distance-transform'
 import { ConstructionFeatures } from 'types'
 import { getConstructionFeatures } from 'surveyor'
-import { getWallTransform } from 'room-analysis/distance-transform'
 
 const MAX_BUNKER_DIMENSION = 13 // for now we have a 13 x 12 bunker
 type VisualType = 'construction' | 'transform'
@@ -25,6 +29,8 @@ declare global {
             visuals: {
                 construction: (roomName: string, roads?: boolean) => void
                 wallTransform: (roomName: string) => void
+                tranformFromId: (roomName: string, id: Id<Source | StructureController>) => void
+                sumTransform: (roomName: string) => void
                 cancel: (roomName: string) => void
             }
         }
@@ -34,6 +40,8 @@ declare global {
 global.visuals = {
     construction: setConstructionVisuals,
     wallTransform: setWallTransformVisuals,
+    tranformFromId: setTransformFromId,
+    sumTransform: setSumTransformVisuals,
     cancel: cancelVisuals,
 }
 
@@ -58,7 +66,7 @@ function drawNumber(visual: RoomVisual, pos: RoomPosition, num: number): void {
 
 function transformColor(value: number): string {
     const colors = colormap({ colormap: 'cool', nshades: MAX_BUNKER_DIMENSION * 2, format: 'hex' })
-    const normalizedValue = Math.max(Math.min((value * 2) - 1, (MAX_BUNKER_DIMENSION * 2) - 1), 0)
+    const normalizedValue = Math.max(Math.min(value * 2 - 1, MAX_BUNKER_DIMENSION * 2 - 1), 0)
     return colors[normalizedValue]
 }
 
@@ -144,7 +152,7 @@ export default class RoomVisualizer {
         for (let x = 0; x < 50; x++) {
             for (let y = 0; y < 50; y++) {
                 const value = transform[x][y]
-                if (value === Infinity || value === 0) {
+                if (value === null || value === 0) {
                     continue
                 }
                 drawNumber(this.room.visual, new RoomPosition(x, y, this.room.name), value)
@@ -180,6 +188,18 @@ function setWallTransformVisuals(roomName: string): void {
     const room = Game.rooms[roomName]
     const wallTransform = getWallTransform(room)
     room.memory.visuals = { visualType: 'transform', transform: wallTransform }
+}
+
+function setTransformFromId(roomName: string, id: Id<Source | StructureController>): void {
+    const room = Game.rooms[roomName]
+    const transform = getTransformFromId(room, id)
+    room.memory.visuals = { visualType: 'transform', transform }
+}
+
+function setSumTransformVisuals(roomName: string): void {
+    const room = Game.rooms[roomName]
+    const transform = getSumTransform(room)
+    room.memory.visuals = { visualType: 'transform', transform }
 }
 
 function cancelVisuals(roomName: string): void {

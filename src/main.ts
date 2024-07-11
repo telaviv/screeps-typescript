@@ -1,3 +1,4 @@
+import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
@@ -175,6 +176,11 @@ function unwrappedLoop(): void {
     runAllRooms()
     runAllCreeps()
     recordGameStats()
+
+    if (Game.cpu.bucket === 10000) {
+        Game.cpu.generatePixel()
+        Logger.warning('PIXEL generated')
+    }
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change

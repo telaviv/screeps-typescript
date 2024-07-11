@@ -19,6 +19,10 @@ export const LINKS_VERSION = '1.0.0'
 
 declare global {
     interface RoomMemory {
+        /**
+         * @deprecated
+         */
+        constructionFeatures: undefined
         constructionFeaturesV2?: ConstructionFeaturesV2
         stationaryPoints?: StationaryPoints
         links?: Links
