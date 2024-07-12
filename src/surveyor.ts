@@ -80,6 +80,13 @@ function clearAllConstructionFeatures() {
 }
 
 function saveConstructionFeatures(room: Room) {
+    if (
+        room.memory.constructionFeaturesV2 &&
+        room.memory.stationaryPoints &&
+        !room.memory.constructionFeaturesV2.points
+    ) {
+        room.memory.constructionFeaturesV2.points = room.memory.stationaryPoints
+    }
     if (Game.cpu.bucket > 1000) {
         // if we update construction features let's update everything
         if (room.memory.constructionFeaturesV2?.version !== CONSTRUCTION_FEATURES_VERSION) {
@@ -89,6 +96,7 @@ function saveConstructionFeatures(room: Room) {
             room.memory.constructionFeaturesV2 = {
                 features,
                 version: CONSTRUCTION_FEATURES_VERSION,
+                points: stationaryPoints,
             }
             room.memory.links = links
             room.memory.stationaryPoints = stationaryPoints

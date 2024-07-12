@@ -20,13 +20,8 @@ export interface SourceCreep extends Creep {
 export interface ConstructionFeaturesV2 {
     version: string
     features: ConstructionFeatures
-}
-
-export interface ConstructionFeaturesV3 {
-    version: string
-    features: ConstructionFeatures
     points: StationaryPoints
-    previousPoints: StationaryPoints
+    previousPoints?: StationaryPoints
     previousFeatures?: ConstructionFeatures
     diffFeatures?: diffFeatures
     wipe?: boolean
