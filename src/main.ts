@@ -177,7 +177,7 @@ function unwrappedLoop(): void {
     runAllCreeps()
     recordGameStats()
 
-    if (Game.cpu.bucket === 10000) {
+    if (Game.cpu.bucket === 10000 && Game.cpu.generatePixel) {
         Game.cpu.generatePixel()
         Logger.warning('PIXEL generated')
     }

@@ -2,6 +2,7 @@ import * as Logger from 'utils/logger'
 import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
 import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
 import { profile, wrap } from 'utils/profiling'
+import { getStationaryPoints } from 'surveyor'
 import { isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveTo } from 'utils/creep'
 import { spawnCreep } from 'utils/spawn'
@@ -182,7 +183,7 @@ const roleHarvester = {
             Logger.error('harvester:create:source:not-found', sourceId)
             return ERR_NOT_FOUND
         }
-        const stationaryPoints = source.room.memory.stationaryPoints
+        const stationaryPoints = getStationaryPoints(spawn.room)
         if (!stationaryPoints || !stationaryPoints.sources[sourceId]) {
             Logger.error('harvester:create:stationary-points:not-found', sourceId)
             return ERR_NOT_FOUND

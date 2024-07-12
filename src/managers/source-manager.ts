@@ -6,6 +6,7 @@ import { getAllHarvesters, getLogisticsCreeps } from 'utils/creep'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { MiningTask } from 'tasks/mining/types'
 import { getNonObstacleNeighbors } from 'utils/room-position'
+import { getStationaryPoints } from 'surveyor'
 import { isMiningTask } from 'tasks/mining/utils'
 import { profile } from 'utils/profiling'
 
@@ -17,7 +18,7 @@ export default class SourceManager {
     public readonly containerPosition: RoomPosition
 
     private constructor(source: Source) {
-        const stationaryPoints = source.room.memory.stationaryPoints
+        const stationaryPoints = getStationaryPoints(source.room)
         if (!stationaryPoints || !stationaryPoints.sources) {
             throw new Error(`stationaryPoints.sources is not defined for room ${source.room.name}`)
         }

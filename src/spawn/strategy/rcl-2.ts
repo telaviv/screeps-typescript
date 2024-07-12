@@ -13,6 +13,7 @@ import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
+import { getStationaryPoints } from 'surveyor'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
 import roleRemoteBuild from 'roles/remote-build'
@@ -263,13 +264,13 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 
 function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
-    const roomMemory = room.memory
-    if (!roomMemory.stationaryPoints) {
+    const stationaryPoints = getStationaryPoints(room)
+    if (!stationaryPoints) {
         Logger.error('createRescueCreeps:missing-stationary-points', room.name)
         return
     }
     const sourcesManager = new SourcesManager(room)
-    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
+    const sourceCount = Object.keys(stationaryPoints.sources).length
     const harvesters = getCreeps('harvester', room)
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
 
@@ -281,12 +282,12 @@ function createRescueCreeps(spawn: StructureSpawn) {
 }
 
 function updateRescueStatus(room: Room) {
-    const roomMemory = room.memory
-    if (!roomMemory.stationaryPoints) {
+    const stationaryPoints = getStationaryPoints(room)
+    if (!stationaryPoints) {
         Logger.error('updateRescueStatus:missing-stationary-points', room.name)
         return
     }
-    const sourceCount = Object.keys(roomMemory.stationaryPoints.sources).length
+    const sourceCount = Object.keys(stationaryPoints.sources).length
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
     const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
     const haulerCount = haulers.length + workers.length

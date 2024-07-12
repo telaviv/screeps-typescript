@@ -22,9 +22,8 @@ declare global {
         /**
          * @deprecated
          */
-        constructionFeatures: undefined
+        stationaryPoints?: undefined
         constructionFeaturesV2?: ConstructionFeaturesV2
-        stationaryPoints?: StationaryPoints
         links?: Links
     }
 
@@ -62,15 +61,17 @@ export function getCalculatedLinks(room: Room): Links | null {
 }
 
 export function getStationaryPoints(room: Room): StationaryPoints | null {
-    if (room.memory.stationaryPoints?.version === STATIONARY_POINTS_VERSION) {
-        return room.memory.stationaryPoints
+    if (
+        room.memory.constructionFeaturesV2?.version === CONSTRUCTION_FEATURES_VERSION &&
+        room.memory.constructionFeaturesV2?.points
+    ) {
+        return room.memory.constructionFeaturesV2.points
     }
     return null
 }
 
 function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeaturesV2 = undefined
-    Memory.rooms[roomName].stationaryPoints = undefined
 }
 
 function clearAllConstructionFeatures() {
@@ -99,17 +100,11 @@ function saveConstructionFeatures(room: Room) {
                 points: stationaryPoints,
             }
             room.memory.links = links
-            room.memory.stationaryPoints = stationaryPoints
         } else {
-            if (room.memory.links?.version !== LINKS_VERSION) {
-                const links = calculateLinks(room)
-                room.memory.links = links
-            }
-
-            if (room.memory.stationaryPoints?.version !== STATIONARY_POINTS_VERSION) {
-                const stationaryPoints = calculateStationaryPoints(room)
-                room.memory.stationaryPoints = stationaryPoints
-            }
+            const links = getCalculatedLinks(room) ?? calculateLinks(room)
+            const points = getStationaryPoints(room) ?? calculateStationaryPoints(room)
+            room.memory.links = links
+            room.memory.constructionFeaturesV2.points = points
         }
     }
 }

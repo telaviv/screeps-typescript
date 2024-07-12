@@ -18,7 +18,7 @@
         "watch-season": "rollup -cw --environment DEST:season",
         "watch-sim": "rollup -cw --environment DEST:sim",
         "prettier": "prettier . --write",
-        "precommit": "yarn run prettier && yarn run lint && yarn run test",
+        "precommit": "yarn run prettier && yarn run lint && yarn run test && yarn run build",
         "hook-install": "precommit install",
         "hook-remove": "precommit remove"
     },
