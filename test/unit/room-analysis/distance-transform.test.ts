@@ -19,7 +19,7 @@ class RoomTerrain {
     }
 }
 
-describe.only('distanceTransform', () => {
+describe('distanceTransform', () => {
     it('should return all infinity if the position array is empty', () => {
         const roomTerrain = new RoomTerrain()
         const positions: Position[] = []

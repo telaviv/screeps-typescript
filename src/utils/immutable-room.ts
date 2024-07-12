@@ -9,6 +9,7 @@ import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
 import { includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
 import maxBy from 'lodash/maxBy'
 import { wrap } from 'utils/profiling'
+// import { Stamp } from 'stamps/types'
 
 interface NonObstacles {
     road: boolean
@@ -31,6 +32,7 @@ interface IImmutableRoomItem {
     nonObstacles: RecordOf<NonObstacles>
     obstacle: Obstacle | ''
     roomName: string
+    id: string | null
 }
 
 const ImmutableRoomItemRecord = Record({
@@ -40,6 +42,7 @@ const ImmutableRoomItemRecord = Record({
     nonObstacles: NonObstaclesRecord(),
     obstacle: '',
     roomName: '',
+    id: '',
 })
 
 export interface LinkTypes {
@@ -68,6 +71,7 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord implements IImmut
     public readonly nonObstacles!: RecordOf<NonObstacles>
     public readonly obstacle!: Obstacle | ''
     public readonly roomName!: string
+    public readonly id!: string
 
     public isObstacle(): boolean {
         return !!this.obstacle || this.terrain === TERRAIN_MASK_WALL
@@ -128,8 +132,13 @@ type RoomGrid = List<List<ImmutableRoomItem>>
 export class ImmutableRoom implements ValueObject {
     private readonly grid: RoomGrid
     public readonly name: string
+    public readonly stationaryPoints: Partial<StationaryPoints> = {}
 
-    public constructor(name: string, grid?: RoomGrid) {
+    public constructor(
+        name: string,
+        grid?: RoomGrid,
+        stationaryPoints: Partial<StationaryPoints> = {},
+    ) {
         if (grid) {
             this.grid = grid
         } else {
@@ -151,6 +160,7 @@ export class ImmutableRoom implements ValueObject {
             ).toList()
         }
         this.name = name
+        this.stationaryPoints = stationaryPoints
     }
 
     public reduce<T>(reducer: (acc: T, val: ImmutableRoomItem) => T, initial: T): T {
@@ -195,7 +205,7 @@ export class ImmutableRoom implements ValueObject {
     }
 
     public set(x: number, y: number, item: ImmutableRoomItem): ImmutableRoom {
-        return new ImmutableRoom(this.name, this.grid.setIn([x, y], item))
+        return new ImmutableRoom(this.name, this.grid.setIn([x, y], item), this.stationaryPoints)
     }
 
     public setTerrain(x: number, y: number, terrain: number): ImmutableRoom {
@@ -203,8 +213,16 @@ export class ImmutableRoom implements ValueObject {
         return this.set(x, y, roomItem.set('terrain', terrain))
     }
 
-    public setObstacle(x: number, y: number, obstacle: Obstacle): ImmutableRoom {
-        const roomItem = this.get(x, y)
+    public setObstacle(
+        x: number,
+        y: number,
+        obstacle: Obstacle,
+        id: Id<Source> | null = null,
+    ): ImmutableRoom {
+        let roomItem = this.get(x, y)
+        if (id !== null) {
+            roomItem = roomItem.set('id', id)
+        }
         return this.set(x, y, roomItem.set('obstacle', obstacle))
     }
 
@@ -548,6 +566,83 @@ export class ImmutableRoom implements ValueObject {
         return sourceContainerInfo
     }
 
+    public setSourceValues(): ImmutableRoom {
+        let iroom: ImmutableRoom = this
+        const containerPositions = iroom.calculateSourceContainerPositions()
+        for (const {
+            container: { x, y },
+        } of Object.values(containerPositions)) {
+            iroom = iroom.setNonObstacle(x, y, 'container', true)
+        }
+        const linkPositions = iroom.calculateSourceLinkPositions(containerPositions)
+        for (const { x, y } of Object.values(linkPositions)) {
+            iroom = iroom.setObstacle(x, y, 'link')
+        }
+        return iroom
+    }
+
+    public calculateSourceLinkPositions(
+        containerPositions: {
+            [key in Id<Source>]: { container: FlatRoomPosition; source: FlatRoomPosition }
+        },
+    ): {
+        [key in Id<Source>]: FlatRoomPosition
+    } {
+        const iroom: ImmutableRoom = this
+        const positions = {} as {
+            [key in Id<Source>]: FlatRoomPosition
+        }
+        for (const [sourceId, { container }] of Object.entries(containerPositions)) {
+            const neighbors = this.getClosestNeighbors(container.x, container.y)
+            const available = neighbors.filter(
+                (ri) => !ri.isObstacle() && !ri.nonObstacles.container,
+            )
+            const containerCountMap = available.map((ri) => {
+                const nb = this.getClosestNeighbors(ri.x, ri.y)
+                const containers = nb.filter((r) => r.nonObstacles.container)
+                return { container: ri, count: containers.length }
+            })
+            const sorted = sortBy(containerCountMap, ({ count }) => count)
+            const maxCount = sorted[sorted.length - 1].count
+            const maxCountContainers = sorted.filter(({ count }) => count === maxCount)
+            const pos = this.sortByCentroidDistance(
+                maxCountContainers.map(({ container: c }) => c),
+            )[0]
+            iroom.setObstacle(pos.x, pos.y, 'link')
+            positions[sourceId as Id<Source>] = { x: pos.x, y: pos.y, roomName: iroom.name }
+        }
+        return positions
+    }
+
+    public calculateSourceContainerPositions(): {
+        [key in Id<Source>]: { container: FlatRoomPosition; source: FlatRoomPosition }
+    } {
+        const iroom: ImmutableRoom = this
+        const positions = {} as {
+            [key in Id<Source>]: { container: FlatRoomPosition; source: FlatRoomPosition }
+        }
+        const usedPositions = new Set<ImmutableRoomItem>()
+        for (const source of this.getObstacles('source')) {
+            const neighbors = this.getClosestNeighbors(source.x, source.y)
+            const available = neighbors.filter((ri) => !usedPositions.has(ri))
+            if (available.length === 0) {
+                Logger.error('immutable-room:setSourceContainers:no-available-positions', source)
+                throw new Error(`No available positions for source ${source.id}`)
+            }
+            const ncontainer = this.sortByCentroidDistance(available)[0]
+            usedPositions.add(ncontainer)
+            positions[source.id as Id<Source>] = {
+                source: { x: source.x, y: source.y, roomName: iroom.name },
+                container: {
+                    x: ncontainer.x,
+                    y: ncontainer.y,
+                    roomName: iroom.name,
+                },
+            }
+        }
+        return positions
+    }
+
     public setSourceContainers(): ImmutableRoom {
         const info = this.getSourceContainerInfo()
         let iroom: ImmutableRoom = this
@@ -655,6 +750,13 @@ export class ImmutableRoom implements ValueObject {
             return this.setObstacle(pos.x, pos.y, 'link').setSourceContainerLinks()
         }
         return this
+    }
+
+    public setControllerValues(): ImmutableRoom {
+        const pos = this.controllerLinkPos()
+        const iroom = this.setObstacle(pos.x, pos.y, 'link')
+        iroom.stationaryPoints.controllerLink = { x: pos.x, y: pos.y, roomName: this.name }
+        return iroom
     }
 
     public setControllerLink(): ImmutableRoom {
@@ -845,6 +947,12 @@ export class ImmutableRoom implements ValueObject {
         const ipos = this.get(x, y)
         return !ipos.isObstacle() && !ipos.nonObstacles.road
     }
+    /**
+
+    public setBunker(bunker: Stamp) {
+        //const extants = this.getBunkerExtants(bunker)
+    }
+    */
 }
 
 interface RoomCache {
@@ -867,6 +975,27 @@ export const fromRoomUncached = wrap((room: Room): ImmutableRoom => {
         }
     }
 
+    const controller = room.controller
+    const sources = room.find(FIND_SOURCES)
+
+    if (controller) {
+        immutableRoom = immutableRoom.setObstacle(controller.pos.x, controller.pos.y, 'controller')
+    }
+
+    for (const source of sources) {
+        const pos = source.pos
+        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source', source.id)
+    }
+
+    updateCache(room, immutableRoom)
+
+    return immutableRoom
+}, 'immutable-room:fromRoomUncached')
+
+export function addRoomStructures(room: Room, immutableRoom: ImmutableRoom): ImmutableRoom {
+    const structures = room.find(FIND_STRUCTURES)
+    const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
+
     interface StructureMap {
         [index: string]: Obstacle
     }
@@ -878,15 +1007,6 @@ export const fromRoomUncached = wrap((room: Room): ImmutableRoom => {
         [STRUCTURE_SPAWN]: 'spawn',
         [STRUCTURE_TOWER]: 'tower',
         [STRUCTURE_WALL]: 'constructedWall',
-    }
-
-    const controller = room.controller
-    const structures = room.find(FIND_STRUCTURES)
-    const sources = room.find(FIND_SOURCES)
-    const constructionSites = room.find(FIND_CONSTRUCTION_SITES)
-
-    if (controller) {
-        immutableRoom = immutableRoom.setObstacle(controller.pos.x, controller.pos.y, 'controller')
     }
 
     for (const structure of structures) {
@@ -903,11 +1023,6 @@ export const fromRoomUncached = wrap((room: Room): ImmutableRoom => {
         }
     }
 
-    for (const source of sources) {
-        const pos = source.pos
-        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source')
-    }
-
     for (const constructionSite of constructionSites) {
         const pos = constructionSite.pos
         if (isObstacle(constructionSite.structureType)) {
@@ -922,10 +1037,8 @@ export const fromRoomUncached = wrap((room: Room): ImmutableRoom => {
         }
     }
 
-    updateCache(room, immutableRoom)
-
     return immutableRoom
-}, 'immutable-room:fromRoomUncached')
+}
 
 export const fromRoom = wrap((room: Room): ImmutableRoom => {
     if (cache[Game.time]) {

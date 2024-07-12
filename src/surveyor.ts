@@ -6,7 +6,8 @@ import {
     Position,
     StationaryPoints,
 } from 'types'
-import { ImmutableRoom, fromRoom } from 'utils/immutable-room'
+import { ImmutableRoom, addRoomStructures, fromRoom } from 'utils/immutable-room'
+// import BUNKER from 'stamps/bunker'
 import Empire from 'empire'
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 import { each } from 'lodash'
@@ -191,6 +192,7 @@ function calculateStationaryPoints(room: Room): StationaryPoints {
 
 function calculateSurveyImmutableRoom(room: Room): ImmutableRoom {
     let iroom: ImmutableRoom = fromRoom(room)
+    iroom = addRoomStructures(room, iroom)
     iroom = iroom.setStorage()
     iroom = iroom.setSourceContainers()
     iroom = iroom.setSourceContainerLinks()
@@ -201,6 +203,16 @@ function calculateSurveyImmutableRoom(room: Room): ImmutableRoom {
     iroom = iroom.setTowers()
     return iroom
 }
+
+/**
+function calculateBunkerImmutableRoom(room: Room): ImmutableRoom {
+    let iroom: ImmutableRoom = fromRoom(room)
+    iroom = iroom.setSourceValues()
+    iroom = iroom.setControllerValues()
+    iroom = iroom.setBunker(BUNKER)
+    return iroom
+}
+*/
 
 function getRampartPositions(room: Room, features: Position[]): Position[] {
     type Position = [number, number]
