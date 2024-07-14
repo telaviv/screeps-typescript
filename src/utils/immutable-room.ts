@@ -7,7 +7,6 @@ import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room
 import { FlatRoomPosition, NonObstacle, Obstacle, Position, isObstacle } from 'types'
 import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
 import { includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
-import maxBy from 'lodash/maxBy'
 import { wrap } from 'utils/profiling'
 // import { Stamp } from 'stamps/types'
 
@@ -58,10 +57,13 @@ export interface LinkTypes {
 export interface StationaryPoints {
     controllerLink: FlatRoomPosition
     storageLink: FlatRoomPosition
-    sourceContainerLinks: {
-        source: FlatRoomPosition
-        point: FlatRoomPosition
-    }[]
+    sourceContainerLinks: { [key in Id<Source>]: FlatRoomPosition }
+}
+
+export interface StationaryPointsLegacy {
+    controllerLink: FlatRoomPosition
+    storageLink: FlatRoomPosition
+    sourceContainerLinks: { source: FlatRoomPosition; point: FlatRoomPosition }[]
 }
 
 export class ImmutableRoomItem extends ImmutableRoomItemRecord implements IImmutableRoomItem {
@@ -137,7 +139,7 @@ export class ImmutableRoom implements ValueObject {
     public constructor(
         name: string,
         grid?: RoomGrid,
-        stationaryPoints: Partial<StationaryPoints> = {},
+        stationaryPoints: Partial<StationaryPoints> = { sourceContainerLinks: {} },
     ) {
         if (grid) {
             this.grid = grid
@@ -426,14 +428,14 @@ export class ImmutableRoom implements ValueObject {
     }
 
     public controllerLinkPos(): FlatRoomPosition {
-        const room = Game.rooms[this.name]
-        if (!room.controller) {
+        const controllerRi = this.getObstacles('controller')[0]
+        if (!controllerRi) {
             Logger.error('immutable-room:controllerLinkPos:no-controller', this.name)
             throw new Error('No controller found.')
         }
-        const pos = room.controller.pos
-        this.getClosestNeighbors(pos.x, pos.y)
-        const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter(
+        const { x: posx, y: posy } = { x: controllerRi.x, y: controllerRi.y }
+        this.getClosestNeighbors(posx, posy)
+        const neighbors = this.getClosestNeighbors(posx, posy).filter(
             (ri) => !ri.isObstacle() || ri.obstacle === 'link',
         )
         const link = neighbors.find((ri) => ri.obstacle === 'link')
@@ -441,11 +443,11 @@ export class ImmutableRoom implements ValueObject {
             return link
         }
         if (neighbors.length === 0) {
-            Logger.error('immutable-room:controllerLinkPos:no-neighbors', this.name, pos.x, pos.y)
+            Logger.error('immutable-room:controllerLinkPos:no-neighbors', this.name, posx, posy)
             throw new Error('No neighbors found.')
         }
-        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3)) as ImmutableRoomItem
-        return new RoomPosition(x, y, this.name)
+        const { x, y } = neighbors[0]
+        return { x, y, roomName: this.name }
     }
 
     public hasControllerLink(): boolean {
@@ -495,7 +497,7 @@ export class ImmutableRoom implements ValueObject {
         }
         const pos = storages[0]
         const neighbors = this.getClosestNeighbors(pos.x, pos.y).filter((ri) => !ri.isObstacle())
-        const { x, y } = maxBy(neighbors, (n) => this.calculateEmptiness(n, 3)) as ImmutableRoomItem
+        const { x, y } = neighbors[0]
         return new RoomPosition(x, y, this.name)
     }
 
@@ -569,10 +571,20 @@ export class ImmutableRoom implements ValueObject {
     public setSourceValues(): ImmutableRoom {
         let iroom: ImmutableRoom = this
         const containerPositions = iroom.calculateSourceContainerPositions()
-        for (const {
-            container: { x, y },
-        } of Object.values(containerPositions)) {
+
+        const containerLinks: { [key in Id<Source>]: FlatRoomPosition } = {}
+        for (const [
+            sourceId,
+            {
+                container: { x, y },
+            },
+        ] of Object.entries(containerPositions)) {
             iroom = iroom.setNonObstacle(x, y, 'container', true)
+            containerLinks[sourceId as Id<Source>] = { x, y, roomName: iroom.name }
+        }
+        iroom.stationaryPoints.sourceContainerLinks = {
+            ...containerLinks,
+            ...iroom.stationaryPoints.sourceContainerLinks,
         }
         const linkPositions = iroom.calculateSourceLinkPositions(containerPositions)
         for (const { x, y } of Object.values(linkPositions)) {
@@ -687,7 +699,7 @@ export class ImmutableRoom implements ValueObject {
         return map
     }
 
-    public getStationaryPoints(): StationaryPoints {
+    public getStationaryPoints(): StationaryPointsLegacy {
         const linkTypes = this.linkTypes()
         const sourcePoints = linkTypes.sourceContainers.map(({ container, source }) => ({
             source,
@@ -755,7 +767,14 @@ export class ImmutableRoom implements ValueObject {
     public setControllerValues(): ImmutableRoom {
         const pos = this.controllerLinkPos()
         const iroom = this.setObstacle(pos.x, pos.y, 'link')
-        iroom.stationaryPoints.controllerLink = { x: pos.x, y: pos.y, roomName: this.name }
+        const neighbors = iroom.getClosestNeighbors(pos.x, pos.y)
+        const controllerPoints = neighbors.filter((ri) => !ri.isObstacle())
+        if (controllerPoints.length === 0) {
+            Logger.error('immutable-room:setControllerValues:no-controller-points')
+            throw new Error(`No controller points found in room ${this.name}`)
+        }
+        const sp = controllerPoints[0]
+        iroom.stationaryPoints.controllerLink = { x: sp.x, y: sp.y, roomName: this.name }
         return iroom
     }
 

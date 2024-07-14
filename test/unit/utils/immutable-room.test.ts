@@ -133,6 +133,72 @@ describe('immutable-room module', () => {
             })
         })
 
+        describe('#setSourceValues', () => {
+            it('sets the source values', () => {
+                const controllerLink = { x: 3, y: 3, roomName: 'test' }
+                let room = new ImmutableRoom('test', undefined, { controllerLink })
+                room = room.setObstacle(1, 1, 'source', '1' as Id<Source>)
+                room = room.setObstacle(25, 25, 'source', '2' as Id<Source>)
+
+                room = room.setSourceValues()
+                expect(room.stationaryPoints.controllerLink).to.deep.equal(controllerLink)
+
+                const sourceContainerLinks = room.stationaryPoints.sourceContainerLinks
+                expect(sourceContainerLinks).to.not.be.undefined
+                expect(sourceContainerLinks!).to.have.keys('1', '2')
+                const source1StationaryPoint = sourceContainerLinks!['1' as Id<Source>]
+                const source2StationaryPoint = sourceContainerLinks!['2' as Id<Source>]
+                const sp1 = room.get(source1StationaryPoint.x, source1StationaryPoint.y)
+                const sp2 = room.get(source2StationaryPoint.x, source2StationaryPoint.y)
+                expect(sp1.obstacle).to.be.equal('')
+                expect(sp2.obstacle).to.be.equal('')
+                expect(sp1.nonObstacles.container).to.be.true
+                expect(sp2.nonObstacles.container).to.be.true
+
+                const sp1Neighbors = room.getClosestNeighbors(
+                    source1StationaryPoint.x,
+                    source1StationaryPoint.y,
+                )
+                const sp2Neighbors = room.getClosestNeighbors(
+                    source2StationaryPoint.x,
+                    source2StationaryPoint.y,
+                )
+                const hasSourceNeighbor1 = sp1Neighbors.some(
+                    (neighbor) => neighbor.obstacle === 'source',
+                )
+                const hasSourceNeighbor2 = sp2Neighbors.some(
+                    (neighbor) => neighbor.obstacle === 'source',
+                )
+                const hasLinkNeighbor1 = sp1Neighbors.some(
+                    (neighbor) => neighbor.obstacle === 'link',
+                )
+                const hasLinkNeighbor2 = sp2Neighbors.some(
+                    (neighbor) => neighbor.obstacle === 'link',
+                )
+
+                expect(hasSourceNeighbor1).to.be.true
+                expect(hasSourceNeighbor2).to.be.true
+                expect(hasLinkNeighbor1).to.be.true
+                expect(hasLinkNeighbor2).to.be.true
+            })
+        })
+
+        describe('#setControllerValues', () => {
+            it('sets the controller values', () => {
+                let room = new ImmutableRoom('test')
+                room = room.setObstacle(3, 3, 'controller')
+
+                room = room.setControllerValues()
+                const cl = room.stationaryPoints.controllerLink
+                expect(cl).to.not.be.undefined
+                const sp = room.get(cl!.x, cl!.y)
+                expect(sp.obstacle).to.be.equal('')
+                const neighbors = room.getClosestNeighbors(cl!.x, cl!.y)
+                const hasLinkNeighbor = neighbors.some((neighbor) => neighbor.obstacle === 'link')
+                expect(hasLinkNeighbor).to.be.true
+            })
+        })
+
         describe('#hasControllerLink', () => {
             beforeEach(() => {
                 // @ts-ignore
