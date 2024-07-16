@@ -62,6 +62,21 @@ export default function calculateRoadPositions(
     return uniquePositions
 }
 
+export function calculateBunkerRoadPositions(
+    room: Room,
+    iroom: ImmutableRoom,
+    features: ConstructionFeatures,
+): Position[] {
+    const existingRoads = iroom.getNonObstacles('road')
+    const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
+    const uniquePositions = uniqBy(
+        [...existingRoads, ...roadSpinePositions],
+        (pos) => `${pos.x}:${pos.y}`,
+    )
+    uniquePositions.sort(roadSortOrder(room))
+    return uniquePositions
+}
+
 function calculateSurroundingRoadPositions(
     room: Room,
     iroom: ImmutableRoom,

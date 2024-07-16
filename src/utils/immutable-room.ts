@@ -829,17 +829,22 @@ export class ImmutableRoom implements ValueObject {
         for (const [type, positions] of Object.entries(stamp.buildings)) {
             if (isObstacle(type)) {
                 for (const { x, y } of positions) {
-                    iroom = iroom.setObstacle(tl.x + (x - left), tl.y + (y - top), type)
+                    iroom = iroom.setObstacle(tl.x + (x - left) + 1, tl.y + (y - top) + 1, type)
                 }
             } else if (isNonObstacle(type)) {
                 for (const { x, y } of positions) {
-                    iroom = iroom.setNonObstacle(tl.x + (x - left), tl.y + (y - top), type, true)
+                    iroom = iroom.setNonObstacle(
+                        tl.x + (x - left) + 1,
+                        tl.y + (y - top) + 1,
+                        type,
+                        true,
+                    )
                 }
             }
         }
         iroom.stationaryPoints.storageLink = {
-            x: tl.x + (stamp.stationaryPoints.storageLink.x - left),
-            y: tl.y + (stamp.stationaryPoints.storageLink.y - top),
+            x: tl.x + (stamp.stationaryPoints.storageLink.x - left) + 1,
+            y: tl.y + (stamp.stationaryPoints.storageLink.y - top) + 1,
         }
         return iroom
     }

@@ -303,7 +303,11 @@ export function getWallPositions(terrain: RoomTerrain, roomName: string): RoomPo
     const positions: RoomPosition[] = []
     for (let x = 0; x < 50; x++) {
         for (let y = 0; y < 50; y++) {
-            if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+            if (
+                terrain.get(x, y) === TERRAIN_MASK_WALL ||
+                [0, 49].includes(x) ||
+                [0, 49].includes(y)
+            ) {
                 positions.push(new RoomPosition(x, y, roomName))
             }
         }

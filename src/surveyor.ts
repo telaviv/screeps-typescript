@@ -9,9 +9,11 @@ import {
     StationaryPoints,
 } from 'types'
 import { ImmutableRoom, addRoomStructures, fromRoom } from 'utils/immutable-room'
+import calculateRoadPositions, {
+    calculateBunkerRoadPositions,
+} from 'room-analysis/calculate-road-positions'
 import BUNKER from 'stamps/bunker'
 import Empire from 'empire'
-import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 import { each } from 'lodash'
 import { hasBuildingAt } from 'utils/room'
 import { minCutWalls } from 'screeps-min-cut-wall'
@@ -127,8 +129,6 @@ function setConstructionFeaturesV3(roomName: string) {
         )
         return
     }
-    const links = calculateLinks(room)
-    room.memory.links = links
     room.memory.constructionFeaturesV3 = constructionFeatures
 }
 
@@ -203,6 +203,11 @@ function calculateConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | u
         [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
         [STRUCTURE_TOWER]: iroom.sortedTowerPositions(),
         [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_TERMINAL]: iroom.getObstacles('terminal').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_NUKER]: iroom.getObstacles('nuker').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_LAB]: iroom.getObstacles('lab').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_OBSERVER]: iroom.getObstacles('observer').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_FACTORY]: iroom.getObstacles('factory').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_LINK]: iroom.sortedLinkPositions(),
         [STRUCTURE_CONTAINER]: iroom
             .getNonObstacles('container')
@@ -216,7 +221,7 @@ function calculateConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | u
         [] as Position[],
     )
     features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
-    features[STRUCTURE_ROAD] = calculateRoadPositions(room, iroom, features)
+    features[STRUCTURE_ROAD] = calculateBunkerRoadPositions(room, iroom, features)
     const points = iroom.stationaryPoints
     if (!points || !points.controllerLink || !points.sources || !points.storageLink) {
         Logger.error(
@@ -232,10 +237,12 @@ function calculateConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | u
         controllerLink: points.controllerLink,
         storageLink: points.storageLink,
     }
+    const links = calculateLinks(room)
     return {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
         features,
         points: stationaryPoints,
+        links,
     }
 }
 

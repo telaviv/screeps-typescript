@@ -21,6 +21,7 @@ export interface ConstructionFeaturesV3 {
     version: string
     features: ConstructionFeatures
     points: StationaryPoints
+    links: Links
     previousPoints?: StationaryPoints
     previousFeatures?: ConstructionFeatures
     diffFeatures?: diffFeatures

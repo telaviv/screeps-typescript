@@ -57,6 +57,11 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_ROAD, drawRoad],
     [STRUCTURE_TOWER, drawTower],
     [STRUCTURE_SPAWN, drawSpawn],
+    [STRUCTURE_LAB, drawLaboratory],
+    [STRUCTURE_TERMINAL, drawTerminal],
+    [STRUCTURE_OBSERVER, drawObserver],
+    [STRUCTURE_NUKER, drawNuker],
+    [STRUCTURE_FACTORY, drawFactory],
 ])
 
 function drawNumber(visual: RoomVisual, pos: RoomPosition, num: number): void {
@@ -104,6 +109,26 @@ function drawExtension(visual: RoomVisual, pos: RoomPosition): void {
 
 function drawRoad(visual: RoomVisual, pos: RoomPosition): void {
     visual.text('🧱', pos.x, pos.y + 0.25, { color: 'red', font: 0.95 })
+}
+
+function drawLaboratory(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('⚗️', pos.x, pos.y + 0.25, { color: 'white', font: 0.95 })
+}
+
+function drawTerminal(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('🏪', pos.x, pos.y + 0.25, { color: 'white', font: 0.95 })
+}
+
+function drawObserver(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('👁', pos.x, pos.y + 0.25, { color: 'white', font: 0.95 })
+}
+
+function drawNuker(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('🚀', pos.x, pos.y + 0.25, { color: 'white', font: 0.95 })
+}
+
+function drawFactory(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('🧪', pos.x, pos.y + 0.25, { color: 'white', font: 0.95 })
 }
 
 function hasStructureAt(structureType: StructureConstant, pos: RoomPosition) {
@@ -168,9 +193,14 @@ export function visualizeRoom(room: Room): void {
     }
     const roomVisual = new RoomVisualizer(room)
     if (visuals.visualType === 'construction') {
-        const constructionFeatures = getConstructionFeatures(room)
-        if (!constructionFeatures) {
-            return
+        let constructionFeatures: ConstructionFeatures | null
+        if (room.memory.constructionFeaturesV3) {
+            constructionFeatures = room.memory.constructionFeaturesV3.features
+        } else {
+            constructionFeatures = getConstructionFeatures(room)
+            if (!constructionFeatures) {
+                return
+            }
         }
         roomVisual.renderConstructionFeatures(constructionFeatures, visuals.showRoads)
     } else if (visuals.visualType === 'transform') {
