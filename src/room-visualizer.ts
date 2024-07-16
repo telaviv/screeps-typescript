@@ -170,7 +170,6 @@ export function visualizeRoom(room: Room): void {
     if (visuals.visualType === 'construction') {
         const constructionFeatures = getConstructionFeatures(room)
         if (!constructionFeatures) {
-            console.log('no construction features for room', room.name)
             return
         }
         roomVisual.renderConstructionFeatures(constructionFeatures, visuals.showRoads)
@@ -186,7 +185,7 @@ function setConstructionVisuals(roomName: string, roads = false): void {
 
 function setWallTransformVisuals(roomName: string): void {
     const room = Game.rooms[roomName]
-    const wallTransform = getWallTransform(room)
+    const wallTransform = getWallTransform(room.getTerrain(), room.name)
     room.memory.visuals = { visualType: 'transform', transform: wallTransform }
 }
 
@@ -202,6 +201,8 @@ function setSumTransformVisuals(roomName: string): void {
     room.memory.visuals = { visualType: 'transform', transform }
 }
 
-function cancelVisuals(roomName: string): void {
-    Game.rooms[roomName].memory.visuals = undefined
+function cancelVisuals(): void {
+    for (const room of Object.values(Memory.rooms)) {
+        delete room.visuals
+    }
 }

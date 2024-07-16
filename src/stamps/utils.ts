@@ -1,4 +1,4 @@
-import { Stamp, StampExtants } from './types'
+import { Stamp, StampExtants, StampMetadata } from './types'
 
 export function getStampExtants(stamp: Stamp): StampExtants {
     const extants: StampExtants = { left: 49, right: 0, top: 49, bottom: 0 }
@@ -19,4 +19,13 @@ export function getStampExtants(stamp: Stamp): StampExtants {
         }
     }
     return extants
+}
+
+export function getStampMetadata(stamp: Stamp): StampMetadata {
+    const extants = getStampExtants(stamp)
+    return {
+        extants,
+        width: extants.right - extants.left + 1,
+        height: extants.bottom - extants.top + 1,
+    }
 }

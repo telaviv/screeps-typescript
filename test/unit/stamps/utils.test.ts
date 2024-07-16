@@ -7,7 +7,7 @@ describe('getStampExtants', () => {
     it('should return the extants of a stamp', () => {
         const stamp: Stamp = {
             rcl: 8,
-            stationaryPoints: { controllerLink: { x: 2, y: 3 } },
+            stationaryPoints: { storageLink: { x: 2, y: 3 } },
             buildings: {
                 extension: [
                     { x: 2, y: 2 },

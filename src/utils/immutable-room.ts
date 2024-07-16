@@ -2,13 +2,28 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable @typescript-eslint/no-this-alias */
 
+import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
+
 import * as Logger from 'utils/logger'
 import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
-import { FlatRoomPosition, NonObstacle, Obstacle, Position, isObstacle } from 'types'
-import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
+import {
+    FlatRoomPosition,
+    NonObstacle,
+    Obstacle,
+    Position,
+    StationaryPoints,
+    isNonObstacle,
+    isObstacle,
+} from 'types'
+import { Stamp, StampMetadata } from 'stamps/types'
+import {
+    getPositionsFromTransform,
+    getWallTransform,
+    sumTransformsFromPositions,
+} from 'room-analysis/distance-transform'
 import { includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
+import { getStampMetadata } from 'stamps/utils'
 import { wrap } from 'utils/profiling'
-// import { Stamp } from 'stamps/types'
 
 interface NonObstacles {
     road: boolean
@@ -52,12 +67,6 @@ export interface LinkTypes {
         container: FlatRoomPosition
         link: FlatRoomPosition
     }[]
-}
-
-export interface StationaryPoints {
-    controllerLink: FlatRoomPosition
-    storageLink: FlatRoomPosition
-    sourceContainerLinks: { [key in Id<Source>]: FlatRoomPosition }
 }
 
 export interface StationaryPointsLegacy {
@@ -139,7 +148,7 @@ export class ImmutableRoom implements ValueObject {
     public constructor(
         name: string,
         grid?: RoomGrid,
-        stationaryPoints: Partial<StationaryPoints> = { sourceContainerLinks: {} },
+        stationaryPoints: Partial<StationaryPoints> = { sources: {} },
     ) {
         if (grid) {
             this.grid = grid
@@ -480,7 +489,7 @@ export class ImmutableRoom implements ValueObject {
 
     public getStorageLink(): FlatRoomPosition {
         const storages = this.getObstacles('storage')
-        const links = this.getNearbyLinks(storages[0].x, storages[0].y)
+        const links = this.getNearbyLinks(storages[0].x, storages[0].y, 2)
         if (links.length === 0) {
             throw new Error('No storage link found.')
         }
@@ -505,9 +514,9 @@ export class ImmutableRoom implements ValueObject {
         return this.getNearbyLinks(x, y).length > 0
     }
 
-    private getNearbyLinks(x: number, y: number): ImmutableRoomItem[] {
+    private getNearbyLinks(x: number, y: number, distance = 1): ImmutableRoomItem[] {
         const links = this.getObstacles('link')
-        const neighbors = this.getClosestNeighbors(x, y)
+        const neighbors = this.getClosestNeighbors(x, y, distance)
         return links.filter((link) => neighbors.includes(link))
     }
 
@@ -582,9 +591,9 @@ export class ImmutableRoom implements ValueObject {
             iroom = iroom.setNonObstacle(x, y, 'container', true)
             containerLinks[sourceId as Id<Source>] = { x, y, roomName: iroom.name }
         }
-        iroom.stationaryPoints.sourceContainerLinks = {
+        iroom.stationaryPoints.sources = {
             ...containerLinks,
-            ...iroom.stationaryPoints.sourceContainerLinks,
+            ...iroom.stationaryPoints.sources,
         }
         const linkPositions = iroom.calculateSourceLinkPositions(containerPositions)
         for (const { x, y } of Object.values(linkPositions)) {
@@ -636,7 +645,7 @@ export class ImmutableRoom implements ValueObject {
         const usedPositions = new Set<ImmutableRoomItem>()
         for (const source of this.getObstacles('source')) {
             const neighbors = this.getClosestNeighbors(source.x, source.y)
-            const available = neighbors.filter((ri) => !usedPositions.has(ri))
+            const available = neighbors.filter((ri) => !usedPositions.has(ri) && !ri.isObstacle())
             if (available.length === 0) {
                 Logger.error('immutable-room:setSourceContainers:no-available-positions', source)
                 throw new Error(`No available positions for source ${source.id}`)
@@ -774,8 +783,91 @@ export class ImmutableRoom implements ValueObject {
             throw new Error(`No controller points found in room ${this.name}`)
         }
         const sp = controllerPoints[0]
-        iroom.stationaryPoints.controllerLink = { x: sp.x, y: sp.y, roomName: this.name }
+        iroom.stationaryPoints.controllerLink = { x: sp.x, y: sp.y }
         return iroom
+    }
+
+    public setBunker(stamp: Stamp): ImmutableRoom | null {
+        const controller = this.getObstacles('controller')[0]
+        const links = this.getObstacles('link')
+        if (controller === undefined) {
+            throw new Error(`No controller found for room ${this.name}`)
+        }
+        if (links.length === 0) {
+            throw new Error(`No links found for room ${this.name}`)
+        }
+        const roomItems = [controller, ...links]
+        const positions = roomItems.map((ri) => ({ x: ri.x, y: ri.y }))
+        const terrain = this.getVirtualTerrain()
+        const wallTransform = getWallTransform(terrain, this.name)
+        const sumTransform = sumTransformsFromPositions(terrain, positions)
+        const metadata = getStampMetadata(stamp)
+        const maxDimension = Math.max(metadata.width, metadata.height)
+        const minDistance = Math.ceil(maxDimension / 2)
+        const possiblePositions = getPositionsFromTransform(wallTransform, minDistance)
+        if (possiblePositions.length === 0) {
+            Logger.warning(`Can't fit a bunker into room ${this.name}`)
+            return null
+        }
+        possiblePositions.sort(
+            ({ x: xa, y: ya }, { x: xb, y: yb }) => sumTransform[xa][ya] - sumTransform[xb][yb],
+        )
+        const tl = {
+            x: possiblePositions[0].x - minDistance,
+            y: possiblePositions[0].y - minDistance,
+        }
+        return this.addBunkerToRoom(tl, stamp, metadata)
+    }
+
+    private addBunkerToRoom(
+        tl: { x: number; y: number },
+        stamp: Stamp,
+        metadata: StampMetadata,
+    ): ImmutableRoom {
+        let iroom: ImmutableRoom = this
+        const { top, left } = metadata.extants
+        for (const [type, positions] of Object.entries(stamp.buildings)) {
+            if (isObstacle(type)) {
+                for (const { x, y } of positions) {
+                    iroom = iroom.setObstacle(tl.x + (x - left), tl.y + (y - top), type)
+                }
+            } else if (isNonObstacle(type)) {
+                for (const { x, y } of positions) {
+                    iroom = iroom.setNonObstacle(tl.x + (x - left), tl.y + (y - top), type, true)
+                }
+            }
+        }
+        iroom.stationaryPoints.storageLink = {
+            x: tl.x + (stamp.stationaryPoints.storageLink.x - left),
+            y: tl.y + (stamp.stationaryPoints.storageLink.y - top),
+        }
+        return iroom
+    }
+
+    public getVirtualTerrain(): RoomTerrain {
+        return {
+            get: (x: number, y: number) => {
+                const ri = this.get(x, y)
+                if (ri.isObstacle()) {
+                    return TERRAIN_MASK_WALL
+                }
+                if (
+                    this.stationaryPoints.controllerLink?.x === x &&
+                    this.stationaryPoints.controllerLink?.y === y
+                ) {
+                    return TERRAIN_MASK_WALL
+                }
+                if (
+                    this.stationaryPoints.sources &&
+                    Object.values(this.stationaryPoints.sources).some(
+                        (pos) => pos.x === x && pos.y === y,
+                    )
+                ) {
+                    return TERRAIN_MASK_WALL
+                }
+                return 0
+            },
+        }
     }
 
     public setControllerLink(): ImmutableRoom {
@@ -966,12 +1058,6 @@ export class ImmutableRoom implements ValueObject {
         const ipos = this.get(x, y)
         return !ipos.isObstacle() && !ipos.nonObstacles.road
     }
-    /**
-
-    public setBunker(bunker: Stamp) {
-        //const extants = this.getBunkerExtants(bunker)
-    }
-    */
 }
 
 interface RoomCache {

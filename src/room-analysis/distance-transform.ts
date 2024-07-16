@@ -1,9 +1,8 @@
 import { getSources, getWallPositions } from 'utils/room'
 import { Position } from '../types'
 
-export function getWallTransform(room: Room): number[][] {
-    const roomTerrain = room.getTerrain()
-    const wallPositions = getWallPositions(room)
+export function getWallTransform(roomTerrain: RoomTerrain, roomName: string): number[][] {
+    const wallPositions = getWallPositions(roomTerrain, roomName)
     return distanceTransform(roomTerrain, wallPositions)
 }
 
@@ -22,6 +21,14 @@ export function getSumTransform(room: Room): number[][] {
     const controller = room.controller
     const objs = [controller, ...sources].filter(Boolean) as (Source | StructureController)[]
     const transforms = objs.map((obj) => getTransformFromId(room, obj.id))
+    return sumTransforms(transforms)
+}
+
+export function sumTransformsFromPositions(
+    roomTerrain: RoomTerrain,
+    positions: Position[],
+): number[][] {
+    const transforms = positions.map((pos) => distanceTransform(roomTerrain, [pos]))
     return sumTransforms(transforms)
 }
 
@@ -86,4 +93,16 @@ export function distanceTransform(roomTerrain: RoomTerrain, positions: Position[
         }
     }
     return distanceMatrix
+}
+
+export function getPositionsFromTransform(transform: number[][], minNumber: number): Position[] {
+    const positions: Position[] = []
+    for (let x = 0; x < 50; x++) {
+        for (let y = 0; y < 50; y++) {
+            if (transform[x][y] >= minNumber) {
+                positions.push({ x, y })
+            }
+        }
+    }
+    return positions
 }

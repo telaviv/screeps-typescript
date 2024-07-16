@@ -293,19 +293,18 @@ export function getWallTerrainCount(room: Room): number {
     if (WALL_TERRAIN_COUNT_CACHE.has(room.name)) {
         return WALL_TERRAIN_COUNT_CACHE.get(room.name) as number
     }
-    const positions = getWallPositions(room)
+    const positions = getWallPositions(room.getTerrain(), room.name)
     const count = positions.length
     WALL_TERRAIN_COUNT_CACHE.set(room.name, positions.length)
     return count
 }
 
-export function getWallPositions(room: Room): RoomPosition[] {
-    const terrain = room.getTerrain()
+export function getWallPositions(terrain: RoomTerrain, roomName: string): RoomPosition[] {
     const positions: RoomPosition[] = []
     for (let x = 0; x < 50; x++) {
         for (let y = 0; y < 50; y++) {
             if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
-                positions.push(new RoomPosition(x, y, room.name))
+                positions.push(new RoomPosition(x, y, roomName))
             }
         }
     }

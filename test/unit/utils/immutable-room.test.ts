@@ -143,7 +143,7 @@ describe('immutable-room module', () => {
                 room = room.setSourceValues()
                 expect(room.stationaryPoints.controllerLink).to.deep.equal(controllerLink)
 
-                const sourceContainerLinks = room.stationaryPoints.sourceContainerLinks
+                const sourceContainerLinks = room.stationaryPoints.sources
                 expect(sourceContainerLinks).to.not.be.undefined
                 expect(sourceContainerLinks!).to.have.keys('1', '2')
                 const source1StationaryPoint = sourceContainerLinks!['1' as Id<Source>]

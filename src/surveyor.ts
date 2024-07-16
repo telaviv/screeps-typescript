@@ -1,13 +1,15 @@
+import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
 import {
     ConstructionFeatures,
     ConstructionFeaturesV2,
+    ConstructionFeaturesV3,
     Links,
     Position,
     StationaryPoints,
 } from 'types'
 import { ImmutableRoom, addRoomStructures, fromRoom } from 'utils/immutable-room'
-// import BUNKER from 'stamps/bunker'
+import BUNKER from 'stamps/bunker'
 import Empire from 'empire'
 import calculateRoadPositions from 'room-analysis/calculate-road-positions'
 import { each } from 'lodash'
@@ -15,6 +17,7 @@ import { hasBuildingAt } from 'utils/room'
 import { minCutWalls } from 'screeps-min-cut-wall'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.0'
 export const STATIONARY_POINTS_VERSION = '1.0.1'
 export const LINKS_VERSION = '1.0.0'
 
@@ -24,12 +27,15 @@ declare global {
          * @deprecated
          */
         stationaryPoints?: undefined
+        calculateConstructionFeaturesV3?: void
         constructionFeaturesV2?: ConstructionFeaturesV2
+        constructionFeaturesV3?: ConstructionFeaturesV3
         links?: Links
     }
 
     namespace NodeJS {
         interface Global {
+            setConstructionFeaturesV3(roomName: string): void
             clearConstructionFeatures(roomName: string): void
             clearAllConstructionFeatures(): void
             calculateSurveyImmutableRoom(room: Room): ImmutableRoom
@@ -37,6 +43,7 @@ declare global {
     }
 }
 
+global.setConstructionFeaturesV3 = setConstructionFeaturesV3
 global.clearConstructionFeatures = clearConstructionFeatures
 global.calculateSurveyImmutableRoom = calculateSurveyImmutableRoom
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
@@ -110,6 +117,21 @@ function saveConstructionFeatures(room: Room) {
     }
 }
 
+function setConstructionFeaturesV3(roomName: string) {
+    const room = Game.rooms[roomName]
+    const constructionFeatures = calculateConstructionFeaturesV3(room)
+    if (!constructionFeatures) {
+        Logger.error(
+            'setConstructionFeaturesV3:incomplete Failed to calculate construction features V3 for room',
+            room.name,
+        )
+        return
+    }
+    const links = calculateLinks(room)
+    room.memory.links = links
+    room.memory.constructionFeaturesV3 = constructionFeatures
+}
+
 function calculateLinks(room: Room): Links {
     const iroom = calculateSurveyImmutableRoom(room)
     const linkTypes = iroom.linkTypes()
@@ -170,6 +192,53 @@ function calculateConstructionFeatures(room: Room): ConstructionFeatures {
     return features
 }
 
+function calculateConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | undefined {
+    const iroom = calculateBunkerImmutableRoom(room)
+    if (!iroom) {
+        Logger.error('calculateBunkerImmutableRoom returned falsey for room', room.name)
+        return undefined
+    }
+
+    const features = {
+        [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
+        [STRUCTURE_TOWER]: iroom.sortedTowerPositions(),
+        [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_LINK]: iroom.sortedLinkPositions(),
+        [STRUCTURE_CONTAINER]: iroom
+            .getNonObstacles('container')
+            .map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_RAMPART]: [] as Position[],
+        [STRUCTURE_ROAD]: [] as Position[],
+    }
+    const positions = (Object.values(features) as Position[][]).reduce(
+        (acc: Position[], val: Position[]) => acc.concat(val),
+        [] as Position[],
+    )
+    features[STRUCTURE_RAMPART] = getRampartPositions(room, positions)
+    features[STRUCTURE_ROAD] = calculateRoadPositions(room, iroom, features)
+    const points = iroom.stationaryPoints
+    if (!points || !points.controllerLink || !points.sources || !points.storageLink) {
+        Logger.error(
+            'Failed to calculate stationary points for room',
+            room.name,
+            JSON.stringify(points),
+        )
+        return undefined
+    }
+    const stationaryPoints: StationaryPoints = {
+        version: STATIONARY_POINTS_VERSION,
+        sources: points.sources,
+        controllerLink: points.controllerLink,
+        storageLink: points.storageLink,
+    }
+    return {
+        version: CONSTRUCTION_FEATURES_V3_VERSION,
+        features,
+        points: stationaryPoints,
+    }
+}
+
 function calculateStationaryPoints(room: Room): StationaryPoints {
     const iroom = calculateSurveyImmutableRoom(room)
     const stationaryPoints = iroom.getStationaryPoints()
@@ -204,15 +273,16 @@ function calculateSurveyImmutableRoom(room: Room): ImmutableRoom {
     return iroom
 }
 
-/**
-function calculateBunkerImmutableRoom(room: Room): ImmutableRoom {
-    let iroom: ImmutableRoom = fromRoom(room)
+function calculateBunkerImmutableRoom(room: Room): ImmutableRoom | null {
+    let iroom: ImmutableRoom | null = fromRoom(room)
     iroom = iroom.setSourceValues()
     iroom = iroom.setControllerValues()
     iroom = iroom.setBunker(BUNKER)
+    if (!iroom) {
+        return null
+    }
     return iroom
 }
-*/
 
 function getRampartPositions(room: Room, features: Position[]): Position[] {
     type Position = [number, number]

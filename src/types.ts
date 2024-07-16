@@ -17,7 +17,7 @@ export interface SourceCreep extends Creep {
     memory: SourceMemory
 }
 
-export interface ConstructionFeaturesV2 {
+export interface ConstructionFeaturesV3 {
     version: string
     features: ConstructionFeatures
     points: StationaryPoints
@@ -25,6 +25,12 @@ export interface ConstructionFeaturesV2 {
     previousFeatures?: ConstructionFeatures
     diffFeatures?: diffFeatures
     wipe?: boolean
+}
+
+export interface ConstructionFeaturesV2 {
+    version: string
+    features: ConstructionFeatures
+    points: StationaryPoints
 }
 
 export type diffFeatures = {
@@ -62,4 +68,11 @@ export type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
 export function isObstacle(x: any): x is Obstacle {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return OBSTACLE_OBJECT_TYPES.includes(x)
+}
+
+export function isNonObstacle(x: unknown): x is NonObstacle {
+    if (typeof x !== 'string') {
+        return false
+    }
+    return ['road', 'constructionSite', 'rampart', 'container'].includes(x)
 }

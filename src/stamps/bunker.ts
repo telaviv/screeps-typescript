@@ -2,7 +2,7 @@ import { Stamp } from './types'
 
 export default {
     rcl: 8,
-    stationaryPoints: { controllerLink: { x: 22, y: 16 } },
+    stationaryPoints: { storageLink: { x: 22, y: 16 } },
     buildings: {
         spawn: [
             { x: 21, y: 15 },

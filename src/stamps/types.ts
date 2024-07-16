@@ -1,6 +1,6 @@
 export interface Stamp {
     rcl: number
-    stationaryPoints: { controllerLink: { x: number; y: number } }
+    stationaryPoints: { storageLink: { x: number; y: number } }
     buildings: Record<string, { x: number; y: number }[]>
 }
 

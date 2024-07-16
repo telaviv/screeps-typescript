@@ -161,9 +161,14 @@ const runAllRooms = wrap(() => {
         if (room.controller && room.controller.my && isSurveyComplete(room)) {
             runMyRoom(room)
         }
-        visualizeRoom(room)
     })
 }, 'main:runAllRooms')
+
+const runVisuals = wrap(() => {
+    for (const room of Object.values(Game.rooms)) {
+        visualizeRoom(room)
+    }
+}, 'main:runVisuals')
 
 const runAllCreeps = wrap(() => {
     for (const name of Object.keys(Game.creeps)) {
@@ -180,6 +185,10 @@ function unwrappedLoop(): void {
     if (Game.cpu.bucket === 10000 && Game.cpu.generatePixel) {
         Game.cpu.generatePixel()
         Logger.warning('PIXEL generated')
+    }
+
+    if (Game.cpu.bucket >= 1000) {
+        runVisuals()
     }
 }
 
