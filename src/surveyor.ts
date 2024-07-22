@@ -1,9 +1,14 @@
+import { each } from 'lodash'
+import { minCutWalls } from 'screeps-min-cut-wall'
+
 import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
 import {
     ConstructionFeatures,
     ConstructionFeaturesV2,
     ConstructionFeaturesV3,
+    ConstructionMovement,
+    isObstacle,
     Links,
     Position,
     StationaryPoints,
@@ -12,11 +17,9 @@ import { ImmutableRoom, addRoomStructures, fromRoom } from 'utils/immutable-room
 import calculateRoadPositions, {
     calculateBunkerRoadPositions,
 } from 'room-analysis/calculate-road-positions'
+import { getBuildableStructures, hasBuildingAt } from 'utils/room'
 import BUNKER from 'stamps/bunker'
 import Empire from 'empire'
-import { each } from 'lodash'
-import { hasBuildingAt } from 'utils/room'
-import { minCutWalls } from 'screeps-min-cut-wall'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
 export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.0'
@@ -238,12 +241,68 @@ function calculateConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | u
         storageLink: points.storageLink,
     }
     const links = calculateLinks(room)
+    const movement = calculateBuildingDiff(room, features) ?? undefined
     return {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
         features,
         points: stationaryPoints,
         links,
+        movement,
     }
+}
+
+function calculateBuildingDiff(room: Room, features: ConstructionFeatures): ConstructionMovement {
+    const diff = {} as ConstructionMovement
+    const builtStructures = getBuildableStructures(room)
+    for (const builtStructure of builtStructures) {
+        const match = features[builtStructure.structureType]?.find(
+            ({ x, y }) => x === builtStructure.pos.x && y === builtStructure.pos.y,
+        )
+        if (match) {
+            continue
+        }
+        if (!diff[builtStructure.structureType]) {
+            diff[builtStructure.structureType] = {
+                moveTo: [],
+                moveFrom: [{ x: builtStructure.pos.x, y: builtStructure.pos.y }],
+            }
+        } else {
+            diff[builtStructure.structureType].moveFrom.push({
+                x: builtStructure.pos.x,
+                y: builtStructure.pos.y,
+            })
+        }
+    }
+    for (const structureType of Object.keys(features)) {
+        const positions = features[structureType as BuildableStructureConstant]
+        if (positions === undefined) {
+            continue
+        }
+        for (const pos of positions) {
+            const match = builtStructures.find(
+                (structure) =>
+                    structure.pos.x === pos.x &&
+                    structure.pos.y === pos.y &&
+                    structure.structureType !== structureType &&
+                    isObstacle(structure.structureType),
+            )
+            if (!match) {
+                continue
+            }
+            if (!diff[structureType as BuildableStructureConstant]) {
+                diff[structureType as BuildableStructureConstant] = {
+                    moveTo: [{ x: match.pos.x, y: match.pos.y }],
+                    moveFrom: [],
+                }
+            } else {
+                diff[structureType as BuildableStructureConstant].moveTo.push({
+                    x: match.pos.x,
+                    y: match.pos.y,
+                })
+            }
+        }
+    }
+    return diff
 }
 
 function calculateStationaryPoints(room: Room): StationaryPoints {

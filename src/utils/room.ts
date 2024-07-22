@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/brace-style */
 
-import * as Logger from 'utils/logger'
 import filter from 'lodash/filter'
 import includes from 'lodash/includes'
 import minBy from 'lodash/minBy'
+
+import * as Logger from 'utils/logger'
+import { isBuildableStructureConstant } from '../constants'
 import { randomElement } from 'utils/utilities'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
@@ -334,6 +336,12 @@ export function hasConstructionSite(
     opts?: FilterOptions<FIND_CONSTRUCTION_SITES>,
 ): boolean {
     return getConstructionSites(room, opts).length > 0
+}
+
+export function getBuildableStructures(room: Room): Structure<BuildableStructureConstant>[] {
+    return room.find(FIND_MY_STRUCTURES, {
+        filter: (structure) => Boolean(isBuildableStructureConstant(structure.structureType)),
+    }) as Structure<BuildableStructureConstant>[]
 }
 
 export function makeConstructionSite(

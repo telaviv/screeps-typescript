@@ -17,14 +17,19 @@ export interface SourceCreep extends Creep {
     memory: SourceMemory
 }
 
+export type ConstructionMovement = {
+    [K in BuildableStructureConstant]: {
+        moveTo: Position[] // positions we need to clear to build our obstacles
+        moveFrom: Position[] // old locations for the building we want to move
+    }
+}
+
 export interface ConstructionFeaturesV3 {
     version: string
     features: ConstructionFeatures
     points: StationaryPoints
     links: Links
-    previousPoints?: StationaryPoints
-    previousFeatures?: ConstructionFeatures
-    diffFeatures?: diffFeatures
+    movement?: ConstructionMovement
     wipe?: boolean
 }
 
