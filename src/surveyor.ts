@@ -20,6 +20,7 @@ import calculateRoadPositions, {
 import { getBuildableStructures, hasBuildingAt } from 'utils/room'
 import BUNKER from 'stamps/bunker'
 import Empire from 'empire'
+import { destroyMovementStructures } from 'construction-movement'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
 export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.0'
@@ -101,24 +102,25 @@ function saveConstructionFeatures(room: Room) {
     ) {
         room.memory.constructionFeaturesV2.points = room.memory.stationaryPoints
     }
-    if (Game.cpu.bucket > 1000) {
-        // if we update construction features let's update everything
-        if (room.memory.constructionFeaturesV2?.version !== CONSTRUCTION_FEATURES_VERSION) {
-            const features = calculateConstructionFeatures(room)
-            const links = calculateLinks(room)
-            const stationaryPoints = calculateStationaryPoints(room)
-            room.memory.constructionFeaturesV2 = {
-                features,
-                version: CONSTRUCTION_FEATURES_VERSION,
-                points: stationaryPoints,
-            }
-            room.memory.links = links
-        } else {
-            const links = getCalculatedLinks(room) ?? calculateLinks(room)
-            const points = getStationaryPoints(room) ?? calculateStationaryPoints(room)
-            room.memory.links = links
-            room.memory.constructionFeaturesV2.points = points
+    if (Game.cpu.bucket <= 1000) {
+        return
+    }
+    // if we update construction features let's update everything
+    if (room.memory.constructionFeaturesV2?.version !== CONSTRUCTION_FEATURES_VERSION) {
+        const features = calculateConstructionFeatures(room)
+        const links = calculateLinks(room)
+        const stationaryPoints = calculateStationaryPoints(room)
+        room.memory.constructionFeaturesV2 = {
+            features,
+            version: CONSTRUCTION_FEATURES_VERSION,
+            points: stationaryPoints,
         }
+        room.memory.links = links
+    } else {
+        const links = getCalculatedLinks(room) ?? calculateLinks(room)
+        const points = getStationaryPoints(room) ?? calculateStationaryPoints(room)
+        room.memory.links = links
+        room.memory.constructionFeaturesV2.points = points
     }
 }
 
@@ -133,6 +135,10 @@ function setConstructionFeaturesV3(roomName: string) {
         return
     }
     room.memory.constructionFeaturesV3 = constructionFeatures
+    if (constructionFeatures.movement) {
+        destroyMovementStructures(room)
+        constructionFeatures.movement = undefined
+    }
 }
 
 function calculateLinks(room: Room): Links {

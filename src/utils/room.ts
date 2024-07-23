@@ -6,6 +6,7 @@ import minBy from 'lodash/minBy'
 
 import * as Logger from 'utils/logger'
 import { isBuildableStructureConstant } from '../constants'
+import { isObstacle } from 'types'
 import { randomElement } from 'utils/utilities'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
@@ -342,6 +343,45 @@ export function getBuildableStructures(room: Room): Structure<BuildableStructure
     return room.find(FIND_MY_STRUCTURES, {
         filter: (structure) => Boolean(isBuildableStructureConstant(structure.structureType)),
     }) as Structure<BuildableStructureConstant>[]
+}
+
+export function getBuildableStructuresAt(
+    room: Room,
+    x: number,
+    y: number,
+): Structure<BuildableStructureConstant>[] {
+    return room.lookForAt<LOOK_STRUCTURES>(LOOK_STRUCTURES, x, y).filter((structure) => {
+        return isBuildableStructureConstant(structure.structureType)
+    }) as Structure<BuildableStructureConstant>[]
+}
+
+export function getObstacleAt(
+    room: Room,
+    x: number,
+    y: number,
+): Structure<BuildableStructureConstant> | null {
+    const structures = getBuildableStructuresAt(room, x, y)
+    if (structures.length === 0) {
+        return null
+    } else if (isObstacle(structures[0].structureType)) {
+        return structures[0]
+    }
+    return null
+}
+
+export function getBuildingAt(
+    room: Room,
+    type: StructureConstant,
+    x: number,
+    y: number,
+): Structure<StructureConstant> | null {
+    const structures = room.lookForAt<LOOK_STRUCTURES>(LOOK_STRUCTURES, x, y)
+    for (const structure of structures) {
+        if (structure.structureType === type) {
+            return structure
+        }
+    }
+    return null
 }
 
 export function makeConstructionSite(
