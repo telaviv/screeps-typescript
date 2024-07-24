@@ -264,6 +264,13 @@ export function getConstructionSites(
     return room.find(FIND_CONSTRUCTION_SITES, opts)
 }
 
+export function clearConstructionSites(room: Room): void {
+    const sites = getConstructionSites(room)
+    for (const site of sites) {
+        site.remove()
+    }
+}
+
 export function getWallSites(room: Room): ConstructionSite<STRUCTURE_RAMPART | STRUCTURE_WALL>[] {
     return getConstructionSites(room, {
         filter: (site) =>
@@ -454,7 +461,7 @@ export const getRoomType = (roomName: string): RoomType => {
     return RoomType.ROOM
 }
 
-function findSpawnlessRooms() {
+export function findSpawnlessRooms(): Room[] {
     return Object.values(Game.rooms).filter((room) => {
         if (!(room.controller && room.controller.my)) {
             return false

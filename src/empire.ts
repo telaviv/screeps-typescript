@@ -2,8 +2,8 @@ import * as Logger from 'utils/logger'
 import { RoomDistanceInfo, World } from 'utils/world'
 import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
+import { findMyRooms, findSpawnlessRooms } from 'utils/room'
 import { ScoutManager } from 'managers/scout-manager'
-import { findMyRooms } from 'utils/room'
 import { profile } from 'utils/profiling'
 
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
@@ -98,6 +98,10 @@ export default class Empire {
         if (candidates.length === 0) return
         const roomName = candidates[0]
         Logger.info(`empire:autoclaim:candidates ${JSON.stringify(candidates)}`)
+
+        if (findSpawnlessRooms().length > 0) {
+            return
+        }
 
         const tasks = RoomManager.getAllClaimTasks()
         if (tasks.some((task) => task.data.name === roomName)) return

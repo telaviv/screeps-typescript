@@ -1,6 +1,6 @@
 import * as Logger from 'utils/logger'
 import { ConstructionFeaturesV3, ConstructionMovement } from 'types'
-import { getBuildingAt, getObstacleAt } from 'utils/room'
+import { getBuildableStructures, getBuildingAt, getObstacleAt } from 'utils/room'
 
 declare global {
     interface RoomMemory {
@@ -23,6 +23,22 @@ global.clearConstructionMovement = clearConstructionMovement
 
 export function isMoving(room: Room): boolean {
     return room.memory.constructionFeaturesV3?.movement !== undefined
+}
+
+export function wipeRoom(room: Room): void {
+    if (!room.memory.constructionFeaturesV3?.wipe) {
+        return
+    }
+    const creeps = room.find(FIND_MY_CREEPS)
+    for (const creep of creeps) {
+        creep.suicide()
+    }
+
+    const structures = getBuildableStructures(room)
+    for (const structure of structures) {
+        structure.destroy()
+    }
+    room.controller?.unclaim()
 }
 
 export function destroyMovementStructures(room: Room): void {
