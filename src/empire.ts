@@ -5,6 +5,7 @@ import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
 import { findMyRooms, findSpawnlessRooms, hasNoSpawns } from 'utils/room'
 import { ScoutManager } from 'managers/scout-manager'
+import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesFromMemory } from 'surveyor'
 import { profile } from 'utils/profiling'
 
@@ -34,17 +35,6 @@ function findClaimCandidates(): void {
             console.log(`room: ${room} claimer: ${claimer}`)
         }
     }
-}
-
-export function canBeClaimCandidate(roomMemory: RoomMemory): boolean {
-    const memory = roomMemory.scout
-    return Boolean(
-        memory &&
-            memory.sourceCount === 2 &&
-            !memory.controllerOwner &&
-            !memory.enemyThatsMining &&
-            !memory.controllerBlocked,
-    )
 }
 
 function enableAutoClaim(): void {

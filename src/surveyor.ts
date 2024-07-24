@@ -24,6 +24,7 @@ import {
 import { destroyMovementStructures, wipeRoom } from 'construction-movement'
 import BUNKER from 'stamps/bunker'
 import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
+import { canBeClaimCandidate } from 'claim'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
 export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.2'
@@ -99,11 +100,12 @@ export function getConstructionFeaturesFromMemory(
 
 export function getConstructionFeaturesV3FromMemory(
     roomMemory: RoomMemory,
+    valid = true,
 ): ConstructionFeaturesV3 | null {
-    if (
-        roomMemory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION &&
-        !roomMemory.constructionFeaturesV3.wipe
-    ) {
+    if (roomMemory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION) {
+        if (valid && roomMemory.constructionFeaturesV3.wipe) {
+            return null
+        }
         return roomMemory.constructionFeaturesV3
     }
     return null
@@ -149,14 +151,33 @@ function saveConstructionFeatures(room: Room) {
 
 function setConstructionFeaturesV3(roomName: string) {
     const room = Game.rooms[roomName]
-    console.log('setConstructionFeaturesV3', roomName)
-    let constructionFeatures = calculateConstructionFeaturesV3(room)
-    if (!constructionFeatures) {
-        Logger.warning(
-            'setConstructionFeaturesV3:incomplete Failed to calculate construction features V3 for room',
-            room.name,
-        )
-        constructionFeatures = { wipe: true } as ConstructionFeaturesV3
+    // we need to have already scouted the room so that we don't waste time
+    // on rooms with no controller or 1 source etc ....
+    if (!room.memory.scout) {
+        return
+    }
+    Logger.warning(
+        'setConstructionFeaturesV3:incomplete setting construction features for room',
+        roomName,
+    )
+    let constructionFeatures = {
+        wipe: true,
+        version: CONSTRUCTION_FEATURES_V3_VERSION,
+    } as ConstructionFeaturesV3
+    if (canBeClaimCandidate(room.memory)) {
+        const constructionFeaturesV3 = calculateConstructionFeaturesV3(room)
+        if (!constructionFeatures) {
+            Logger.warning(
+                'setConstructionFeaturesV3:incomplete Failed to calculate construction features V3 for room',
+                room.name,
+            )
+            constructionFeatures = {
+                wipe: true,
+                version: CONSTRUCTION_FEATURES_V3_VERSION,
+            } as ConstructionFeaturesV3
+        } else {
+            constructionFeatures = constructionFeaturesV3 as ConstructionFeaturesV3
+        }
     }
     room.memory.constructionFeaturesV3 = constructionFeatures
     if (constructionFeatures.movement) {
@@ -366,19 +387,10 @@ function getRampartPositions(room: Room, features: Position[]): Position[] {
 }
 
 const assignRoomFeatures = Profiling.wrap(() => {
-    const rooms = roomsBeingClaimed()
     each(Game.rooms, (room: Room) => {
-        if ((room.controller && room.controller.my) || rooms.includes(room.name)) {
-            saveConstructionFeatures(room)
-        }
+        saveConstructionFeatures(room)
     })
 }, 'assignRoomFeatures')
-
-function roomsBeingClaimed(): string[] {
-    return findMyRooms()
-        .map((room) => room.memory.war?.target)
-        .filter((roomName) => roomName !== undefined)
-}
 
 const clearRooms = Profiling.wrap(() => {
     const myRooms = findMyRooms()

@@ -1,7 +1,7 @@
 import * as Logger from 'utils/logger'
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
-import { getSources, getWallTerrainCount } from 'utils/room'
+import { getSources, getWallTerrainCount, hasNoSpawns } from 'utils/room'
 import { ConstructionFeaturesV3 } from 'types'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
@@ -38,6 +38,20 @@ declare global {
     interface RoomMemory {
         scout?: ScoutMemory
     }
+
+    namespace NodeJS {
+        interface Global {
+            scout: { next: () => void }
+        }
+    }
+}
+
+global.scout = {
+    next: () => {
+        const scoutManager = ScoutManager.create()
+        const room = scoutManager.findNextRoomToScout()
+        console.log(`next room to scout: ${room}`)
+    },
 }
 
 class ScoutManager {
@@ -75,7 +89,7 @@ class ScoutManager {
             if (memory.scout) {
                 scoutRoomData[name] = memory.scout
             }
-            const features = getConstructionFeaturesV3FromMemory(memory)
+            const features = getConstructionFeaturesV3FromMemory(memory, false)
             if (features) {
                 featureRoomData[name] = features
             }
@@ -119,6 +133,7 @@ class ScoutManager {
             Logger.error('scout-manager:run:no-scout-room:', roomToScout)
             return
         }
+        Logger.warning('scout-manager:run:scout-room:', scoutRoom, roomToScout)
         new RoomManager(Game.rooms[scoutRoom]).addScoutRoomTask(roomToScout)
     }
 
@@ -139,7 +154,9 @@ class ScoutManager {
     }
 
     findBestRoomToCreateScout(roomName: string): string | null {
-        return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress)
+        return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress, {
+            filter: (name) => !hasNoSpawns(Game.rooms[name]),
+        })
     }
 
     clearExpiredScoutData(): void {

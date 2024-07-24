@@ -83,11 +83,20 @@ export class World {
         targetRoom: string,
         maxDistance: number,
         ownedRoomProgress: OwnedRoomProgress,
+        opts?: { filter: (roomName: string) => boolean },
     ): string | null {
         const closestRooms = this.getClosestRooms([targetRoom], maxDistance)
         if (closestRooms.length === 0) return null
         const ownedRooms = Array.from(ownedRoomProgress.keys())
-        const candidates = closestRooms.filter(({ roomName }) => ownedRooms.includes(roomName))
+        const candidates = closestRooms.filter(({ roomName }) => {
+            if (!ownedRooms.includes(roomName)) {
+                return false
+            }
+            if (opts?.filter) {
+                return opts.filter(roomName)
+            }
+            return true
+        })
         if (candidates.length === 0) return null
         candidates.sort(({ roomName: ar, distance: ad }, { roomName: br, distance: bd }) => {
             const roomAProgress = ownedRoomProgress.get(ar) ?? Infinity
