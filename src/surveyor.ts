@@ -16,8 +16,10 @@ import {
 import { ImmutableRoom, addRoomStructures, fromRoom } from 'utils/immutable-room'
 import {
     clearConstructionSites,
+    findMyRooms,
     findSpawnlessRooms,
     getBuildableStructures,
+    getConstructionSites,
     hasBuildingAt,
 } from 'utils/room'
 import { destroyMovementStructures, wipeRoom } from 'construction-movement'
@@ -26,11 +28,11 @@ import Empire from 'empire'
 import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.1'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.2'
 export const STATIONARY_POINTS_VERSION = '1.0.1'
 export const LINKS_VERSION = '1.0.0'
 
-const MIN_SURVEY_CPU = 5000
+const MIN_SURVEY_CPU = 4000
 
 declare global {
     interface RoomMemory {
@@ -63,6 +65,13 @@ export function isSurveyComplete(room: Room): boolean {
     return Boolean(
         getConstructionFeatures(room) && getCalculatedLinks(room) && getStationaryPoints(room),
     )
+}
+
+export function getConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | null {
+    if (room.memory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION) {
+        return room.memory.constructionFeaturesV3
+    }
+    return null
 }
 
 export function getValidConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | null {
@@ -145,6 +154,20 @@ function setConstructionFeaturesV3(roomName: string) {
     }
     room.memory.constructionFeaturesV3 = constructionFeatures
     if (constructionFeatures.movement) {
+        const constructionSites = getConstructionSites(room)
+        for (const constructionSite of constructionSites) {
+            if (constructionSite.structureType === STRUCTURE_SPAWN) {
+                if (
+                    constructionFeatures.features[STRUCTURE_SPAWN]?.find(
+                        (pos) =>
+                            pos.x === constructionSite.pos.x && pos.y === constructionSite.pos.y,
+                    )
+                ) {
+                    continue
+                }
+                constructionSite.remove()
+            }
+        }
         clearConstructionSites(room)
         destroyMovementStructures(room)
         Logger.error(
@@ -153,9 +176,6 @@ function setConstructionFeaturesV3(roomName: string) {
             JSON.stringify(constructionFeatures.movement),
         )
         constructionFeatures.movement = undefined
-    }
-    if (constructionFeatures.wipe && room.controller?.my) {
-        wipeRoom(room)
     }
 }
 
@@ -348,21 +368,34 @@ const assignRoomFeatures = Profiling.wrap(() => {
     })
 }, 'assignRoomFeatures')
 
-const wipeRooms = Profiling.wrap(() => {
-    if (findSpawnlessRooms().length > 0) {
-        return
-    }
-    each(Game.rooms, (room: Room) => {
-        if (room.memory.constructionFeaturesV3?.wipe && room.controller?.my) {
-            wipeRoom(room)
+const clearRooms = Profiling.wrap(() => {
+    const myRooms = findMyRooms()
+    for (const room of myRooms) {
+        const constructionFeatures = getConstructionFeaturesV3(room)
+        if (constructionFeatures?.wipe) {
             return
         }
-    })
-}, 'wipeRooms')
+        wipeRoom(room)
+    }
+    for (const room of myRooms) {
+        const constructionFeatures = getValidConstructionFeaturesV3(room)
+        if (!constructionFeatures) {
+            return
+        }
+        if (constructionFeatures.movement) {
+            if (findSpawnlessRooms().length > 0) {
+                return
+            }
+            destroyMovementStructures(room)
+            constructionFeatures.movement = undefined
+            return
+        }
+    }
+}, 'clearRooms')
 
 const survey = Profiling.wrap(() => {
     assignRoomFeatures()
-    wipeRooms()
+    clearRooms()
 }, 'survey')
 
 export default survey

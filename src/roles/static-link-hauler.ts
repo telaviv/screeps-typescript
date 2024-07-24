@@ -69,6 +69,7 @@ class StaticLinkHaulerCreep {
                 this.creep.name,
                 this.creep.memory.sourceId,
             )
+            this.creep.suicide()
             return
         }
         if (source.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {

@@ -51,6 +51,12 @@ export function isAtSpawnCap(room: Room): boolean {
     return spawns.length >= SPAWN_COUNTS[room.controller.level]
 }
 
+export function getSpawnSites(room: Room): ConstructionSite<STRUCTURE_SPAWN>[] {
+    return room.find(FIND_MY_CONSTRUCTION_SITES, {
+        filter: { structureType: STRUCTURE_SPAWN },
+    })
+}
+
 export function getExtensions(room: Room): StructureExtension[] {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_EXTENSION },
@@ -347,7 +353,7 @@ export function hasConstructionSite(
 }
 
 export function getBuildableStructures(room: Room): Structure<BuildableStructureConstant>[] {
-    return room.find(FIND_MY_STRUCTURES, {
+    return room.find(FIND_STRUCTURES, {
         filter: (structure) => Boolean(isBuildableStructureConstant(structure.structureType)),
     }) as Structure<BuildableStructureConstant>[]
 }

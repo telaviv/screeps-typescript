@@ -67,7 +67,7 @@ export function calculateBunkerRoadPositions(
     iroom: ImmutableRoom,
     features: ConstructionFeatures,
 ): Position[] {
-    const existingRoads = iroom.getNonObstacles('road')
+    const existingRoads = iroom.getNonObstacles('road').map((structure) => structure.pos)
     const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
     const uniquePositions = uniqBy(
         [...existingRoads, ...roadSpinePositions],

@@ -1,8 +1,16 @@
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
-import { getEnergy, hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { getWallSites, getWeakestWall, hasFragileWall, hasWallSite, hasWeakWall } from 'utils/room'
+import {
+    getConstructionSites,
+    getSpawnSites,
+    getWallSites,
+    getWeakestWall,
+    hasFragileWall,
+    hasWallSite,
+    hasWeakWall,
+} from 'utils/room'
+import { getEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
 import { profile, wrap } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
@@ -78,6 +86,8 @@ export class MasonCreep {
         if (this.hasNoEnergy()) {
             this.repairTarget = null
             getEnergy(this.creep)
+        } else if (this.hasSpawnSite()) {
+            this.build(true)
         } else if (hasFragileWall(this.room) || this.repairTarget) {
             this.repair()
         } else if (hasWallSite(this.room)) {
@@ -89,17 +99,12 @@ export class MasonCreep {
         }
     }
 
-    private shouldRecycle(): boolean {
-        const ticksToLive: number = this.creep.ticksToLive || 0
-        return ticksToLive < 50
-    }
-
     private hasNoEnergy(): boolean {
         return hasNoEnergy(this.creep)
     }
 
-    private isFullOfEnergy(): boolean {
-        return isFullOfEnergy(this.creep)
+    private hasSpawnSite(): boolean {
+        return getSpawnSites(this.creep.room).length > 0
     }
 
     private repair() {
@@ -133,8 +138,10 @@ export class MasonCreep {
         }
     }
 
-    private build() {
-        const targets = getWallSites(this.creep.room)
+    private build(includeNonWallSites = false) {
+        const targets = includeNonWallSites
+            ? getConstructionSites(this.creep.room)
+            : getWallSites(this.creep.room)
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {

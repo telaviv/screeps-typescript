@@ -185,7 +185,7 @@ const roleHarvester = {
         }
         const stationaryPoints = getStationaryPoints(spawn.room)
         if (!stationaryPoints || !stationaryPoints.sources[sourceId]) {
-            Logger.error('harvester:create:stationary-points:not-found', sourceId)
+            Logger.warning('harvester:create:stationary-points:not-found', sourceId)
             return ERR_NOT_FOUND
         }
         const stationaryPosition = pos === null ? stationaryPoints.sources[sourceId] : pos
