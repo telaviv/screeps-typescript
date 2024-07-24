@@ -11,7 +11,7 @@ import {
     hasWeakWall,
 } from 'utils/room'
 import { getEnergy, hasNoEnergy } from 'utils/energy-harvesting'
-import { isAtEdge, moveToRoom, moveTowardsCenter, recycle } from 'utils/creep'
+import { isAtEdge, moveToRoom, moveTowardsCenter, moveWithinRoom, recycle } from 'utils/creep'
 import { profile, wrap } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlan } from 'utils/parts'
@@ -129,10 +129,7 @@ export class MasonCreep {
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(structure.pos, {
-                visualizePathStyle: { stroke: '#ffffff' },
-                range: 3,
-            })
+            moveWithinRoom(structure.pos, this.creep, 3)
         } else if (err !== OK) {
             Logger.warning('logistics:repair-wall:failure', this.creep.name, err)
         }
@@ -145,10 +142,7 @@ export class MasonCreep {
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(targets[0], {
-                    visualizePathStyle: { stroke: '#ffffff' },
-                    range: 3,
-                })
+                moveWithinRoom(targets[0].pos, this.creep, 3)
             } else if (err !== OK) {
                 Logger.warning('mason:build:failure', err, this.creep.name)
             }

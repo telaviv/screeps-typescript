@@ -89,8 +89,11 @@ export function getConstructionFeatures(room: Room): ConstructionFeatures | null
 }
 
 export function getConstructionFeaturesFromMemory(
-    roomMemory: RoomMemory,
+    roomMemory: RoomMemory | undefined,
 ): ConstructionFeatures | null {
+    if (!roomMemory) {
+        return null
+    }
     const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(roomMemory)
     if (constructionFeaturesV3) {
         return constructionFeaturesV3.features
@@ -99,9 +102,12 @@ export function getConstructionFeaturesFromMemory(
 }
 
 export function getConstructionFeaturesV3FromMemory(
-    roomMemory: RoomMemory,
+    roomMemory: RoomMemory | undefined,
     valid = true,
 ): ConstructionFeaturesV3 | null {
+    if (!roomMemory) {
+        return null
+    }
     if (roomMemory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION) {
         if (valid && roomMemory.constructionFeaturesV3.wipe) {
             return null
@@ -164,19 +170,16 @@ function setConstructionFeaturesV3(roomName: string) {
         wipe: true,
         version: CONSTRUCTION_FEATURES_V3_VERSION,
     } as ConstructionFeaturesV3
+    Logger.error('debug:construction-features:1', roomName, JSON.stringify(constructionFeatures))
     if (canBeClaimCandidate(room.memory)) {
         const constructionFeaturesV3 = calculateConstructionFeaturesV3(room)
-        if (!constructionFeatures) {
-            Logger.warning(
-                'setConstructionFeaturesV3:incomplete Failed to calculate construction features V3 for room',
-                room.name,
-            )
+        if (!constructionFeaturesV3) {
             constructionFeatures = {
                 wipe: true,
                 version: CONSTRUCTION_FEATURES_V3_VERSION,
             } as ConstructionFeaturesV3
         } else {
-            constructionFeatures = constructionFeaturesV3 as ConstructionFeaturesV3
+            constructionFeatures = constructionFeaturesV3
         }
     }
     room.memory.constructionFeaturesV3 = constructionFeatures

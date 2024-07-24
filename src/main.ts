@@ -17,6 +17,7 @@ import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
 import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
+import { MatrixCacheManager } from 'matrix-cache'
 import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
 import assignGlobals from 'utils/globals'
@@ -181,6 +182,7 @@ function unwrappedLoop(): void {
     runAllRooms()
     runAllCreeps()
     recordGameStats()
+    MatrixCacheManager.clearCaches()
 
     if (Game.cpu.bucket === 10000 && Game.cpu.generatePixel) {
         Game.cpu.generatePixel()

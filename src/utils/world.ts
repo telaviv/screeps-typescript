@@ -15,33 +15,42 @@ declare global {
     }
 }
 
+function isRoomUnsafe(roomName: string): boolean {
+    const exitType = getRoomType(roomName)
+    if ([RoomType.CENTER, RoomType.SOURCE_KEEPER].includes(exitType)) {
+        return true
+    }
+
+    if (Game.map.getRoomStatus(roomName).status !== 'normal') {
+        return true
+    }
+
+    if (Memory.rooms[roomName]?.scout?.enemyThatsMining) {
+        return true
+    }
+
+    // not every room has a controller owner.
+    // if it does, make sure it's not the enemys'
+    if (Memory.rooms[roomName]?.scout?.controllerOwner) {
+        if (Memory.rooms[roomName]?.scout?.controllerOwner !== global.USERNAME) {
+            return true
+        }
+    }
+    return false
+}
+
 function safeDescribeExits(roomName: string): ExitsInformation {
     const exits = Game.map.describeExits(roomName)
     const exitCopy = {} as ExitsInformation
     for (const [direction, exit] of Object.entries(exits)) {
-        const exitType = getRoomType(exit)
-        if ([RoomType.CENTER, RoomType.SOURCE_KEEPER].includes(exitType)) {
-            continue
-        }
-
-        if (Game.map.getRoomStatus(exit).status !== 'normal') {
-            continue
-        }
-
-        if (Memory.rooms[exit]?.scout?.enemyThatsMining) {
-            continue
-        }
-
-        // not every room has a controller owner.
-        // if it does, make sure it's not the enemys'
-        if (Memory.rooms[exit]?.scout?.controllerOwner) {
-            if (Memory.rooms[exit]?.scout?.controllerOwner !== global.USERNAME) {
-                continue
-            }
-        }
+        if (isRoomUnsafe(exit)) continue
         exitCopy[direction as keyof ExitsInformation] = exit
     }
     return exitCopy
+}
+
+export function safeRoomCallback(roomName: string): boolean {
+    return !isRoomUnsafe(roomName)
 }
 
 export class World {

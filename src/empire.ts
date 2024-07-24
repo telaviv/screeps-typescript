@@ -147,6 +147,7 @@ export default class Empire {
         if (closestRooms.length === 0) return []
         const candidates = closestRooms
             .filter(({ roomName }) => {
+                if (!Memory.rooms[roomName]) return false
                 const features = getConstructionFeaturesFromMemory(Memory.rooms[roomName])
                 if (!features || !canBeClaimCandidate(Memory.rooms[roomName])) return false
                 const neighbors = world.getClosestRooms([roomName], ENEMY_DISTANCE_BUFFER)

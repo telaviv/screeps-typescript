@@ -9,6 +9,7 @@ import {
     MIN_STORAGE_LEVEL,
     getConstructionSites,
     getContainers,
+    getExtensions,
     getLinks,
     getRamparts,
     getRoads,
@@ -23,6 +24,8 @@ import {
 } from 'utils/room'
 import { profile, wrap } from 'utils/profiling'
 import { getConstructionFeatures } from 'surveyor'
+
+const IMPORTANT_EXTENSION_MAX = 5
 
 declare global {
     interface RoomMemory {
@@ -108,7 +111,7 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_CONTAINER)
         }
 
-        if (this.canBuildExtension()) {
+        if (this.canBuildImportantExtension()) {
             return this.buildNextStructure(STRUCTURE_EXTENSION)
         }
 
@@ -126,6 +129,10 @@ export default class BuildManager {
 
         if (this.canBuildLinks()) {
             return this.buildNextStructure(STRUCTURE_LINK)
+        }
+
+        if (this.canBuildExtension()) {
+            return this.buildNextStructure(STRUCTURE_EXTENSION)
         }
 
         if (this.canBuildRoad()) {
@@ -295,6 +302,11 @@ export default class BuildManager {
         return this.constructionFeatures[STRUCTURE_ROAD].find((pos) => {
             return !hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
         })
+    }
+
+    private canBuildImportantExtension = (): boolean => {
+        const extensions = getExtensions(this.room)
+        return extensions.length < IMPORTANT_EXTENSION_MAX
     }
 
     private canBuildExtension = wrap(() => {
