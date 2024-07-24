@@ -104,6 +104,10 @@ export default class BuildManager {
             return false
         }
 
+        if (this.canBuildContainer()) {
+            return this.buildNextStructure(STRUCTURE_CONTAINER)
+        }
+
         if (this.canBuildExtension()) {
             return this.buildNextStructure(STRUCTURE_EXTENSION)
         }
@@ -116,16 +120,16 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_ROAD)
         }
 
-        if (this.canBuildContainer()) {
-            return this.buildNextStructure(STRUCTURE_CONTAINER)
-        }
-
         if (this.canBuildStorage()) {
             return this.buildNextStructure(STRUCTURE_STORAGE)
         }
 
         if (this.canBuildLinks()) {
             return this.buildNextStructure(STRUCTURE_LINK)
+        }
+
+        if (this.canBuildRoad()) {
+            return this.buildNextStructure(STRUCTURE_ROAD)
         }
 
         return false
@@ -262,6 +266,11 @@ export default class BuildManager {
         }
         return this.room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_SWAMP
     }, 'BuildManager:canBuildSwampRoad')
+
+    private canBuildRoad = wrap((): boolean => {
+        const pos = this.getNextRoad()
+        return Boolean(pos)
+    }, 'BuildManager:canBuildRoad')
 
     private getNextSwampRoad(): Position | undefined {
         if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
