@@ -1,9 +1,11 @@
 import * as Logger from 'utils/logger'
+import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE, MAX_SAVIOR_DISTANCE } from './constants'
 import { RoomDistanceInfo, World } from 'utils/world'
 import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
-import { findMyRooms, findSpawnlessRooms } from 'utils/room'
+import { findMyRooms, findSpawnlessRooms, hasNoSpawns } from 'utils/room'
 import { ScoutManager } from 'managers/scout-manager'
+import { getConstructionFeaturesFromMemory } from 'surveyor'
 import { profile } from 'utils/profiling'
 
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
@@ -34,6 +36,17 @@ function findClaimCandidates(): void {
     }
 }
 
+export function canBeClaimCandidate(roomMemory: RoomMemory): boolean {
+    const memory = roomMemory.scout
+    return Boolean(
+        memory &&
+            memory.sourceCount === 2 &&
+            !memory.controllerOwner &&
+            !memory.enemyThatsMining &&
+            !memory.controllerBlocked,
+    )
+}
+
 function enableAutoClaim(): void {
     Memory.autoclaim = true
 }
@@ -53,7 +66,13 @@ function getBestNearbyRoom(
 ): Room | null {
     const world = new World()
     const closestRooms = world.getClosestRooms([roomName], distance)
-    let candidates = closestRooms.filter(({ roomName: rn }) => Game.rooms[rn]?.controller?.my)
+    if (closestRooms.length === 0) return null
+    let candidates = closestRooms.filter(
+        ({ roomName: rn }) =>
+            Game.rooms[rn]?.controller?.my &&
+            !hasNoSpawns(Game.rooms[rn]) &&
+            new WarDepartment(Game.rooms[rn]).status === WarStatus.NONE,
+    )
     if (opts?.filter) {
         candidates = candidates.filter(opts.filter)
     }
@@ -134,19 +153,13 @@ export default class Empire {
     findClaimCandidates(): string[] {
         const world = new World()
         const roomNames = findMyRooms().map((room) => room.name)
-        const closestRooms = world.getClosestRooms(roomNames, 2)
+        const closestRooms = world.getClosestRooms(roomNames, MAX_CLAIM_DISTANCE)
+        if (closestRooms.length === 0) return []
         const candidates = closestRooms
             .filter(({ roomName }) => {
-                const memory = Memory.rooms[roomName]?.scout
-                if (
-                    !memory ||
-                    memory.sourceCount !== 2 ||
-                    memory.controllerOwner ||
-                    memory.enemyThatsMining ||
-                    memory.controllerBlocked
-                )
-                    return false
-                const neighbors = world.getClosestRooms([roomName], 1)
+                const features = getConstructionFeaturesFromMemory(Memory.rooms[roomName])
+                if (!features || !canBeClaimCandidate(Memory.rooms[roomName])) return false
+                const neighbors = world.getClosestRooms([roomName], ENEMY_DISTANCE_BUFFER)
                 // if any neighbor is owned by an enemy, don't claim
                 return !neighbors.some(
                     ({ roomName: name }) =>
@@ -164,7 +177,7 @@ export default class Empire {
     }
 
     findBestClaimer(roomName: string): string | null {
-        const maxDistance = 2
+        const maxDistance = MAX_CLAIM_DISTANCE
         const filterFn = ({ roomName: rn }: RoomDistanceInfo) =>
             Boolean(
                 Game.rooms[rn]?.controller?.my && Game.rooms[rn]?.energyCapacityAvailable >= 650,
@@ -182,7 +195,7 @@ export default class Empire {
             if (Object.values(Memory.rooms).some((r) => r.war?.target === room.name)) {
                 continue
             }
-            const savior = getBestNearbyRoom(room.name, 3)
+            const savior = getBestNearbyRoom(room.name, MAX_SAVIOR_DISTANCE)
             if (!savior) {
                 Logger.warning(`empire:find-saviors:not-found: no savior found for ${room.name}`)
                 continue

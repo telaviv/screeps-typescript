@@ -224,12 +224,11 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         return null
     }
 
-    if (status === WarStatus.ATTACK && attackers.length < ATTACKERS_COUNT) {
+    if (
+        (status === WarStatus.ATTACK || warDepartment.hasHostiles()) &&
+        attackers.length < ATTACKERS_COUNT
+    ) {
         return roleAttacker.create(spawn, warDepartment.target, capacity)
-    }
-
-    if (warDepartment.hasHostiles()) {
-        return null
     }
 
     if (status === WarStatus.CLAIM) {

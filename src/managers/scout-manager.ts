@@ -1,8 +1,11 @@
 import * as Logger from 'utils/logger'
+import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
 import { getSources, getWallTerrainCount } from 'utils/room'
+import { ConstructionFeaturesV3 } from 'types'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
+import { getConstructionFeaturesV3FromMemory } from 'surveyor'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
@@ -10,7 +13,7 @@ import { mprofile } from 'utils/profiling'
 
 const SCOUT_VERSION = '1.0.5'
 
-const MAX_SCOUT_DISTANCE = 3
+const MAX_SCOUT_DISTANCE = MAX_CLAIM_DISTANCE + ENEMY_DISTANCE_BUFFER
 const TIME_PER_TICK = 4.7 // seconds on shard 0
 export const DistanceTTL: Record<number, number> = {
     1: (60 * 60 * 24) / TIME_PER_TICK,
@@ -41,17 +44,20 @@ class ScoutManager {
     private world: World
     private ownedRoomProgress: OwnedRoomProgress
     private scoutRoomData: Record<string, ScoutMemory>
+    private featureRoomData: Record<string, ConstructionFeaturesV3>
     private gameTime: number
 
     constructor(
         world: World,
         ownedRoomProgress: Map<string, number>,
         scoutRoomData: Record<string, ScoutMemory>,
+        featureRoomData: Record<string, ConstructionFeaturesV3>,
         gameTime: number = Game.time,
     ) {
         this.world = world
         this.ownedRoomProgress = ownedRoomProgress
         this.scoutRoomData = scoutRoomData
+        this.featureRoomData = featureRoomData
         this.gameTime = gameTime
     }
 
@@ -59,6 +65,7 @@ class ScoutManager {
         const world = new World()
         const ownedRoomProgress = new Map<string, number>()
         const scoutRoomData: Record<string, ScoutMemory> = {}
+        const featureRoomData: Record<string, ConstructionFeaturesV3> = {}
         for (const room of Object.values(Game.rooms)) {
             if (room.controller?.my) {
                 ownedRoomProgress.set(room.name, room.controller.progressTotal)
@@ -68,8 +75,12 @@ class ScoutManager {
             if (memory.scout) {
                 scoutRoomData[name] = memory.scout
             }
+            const features = getConstructionFeaturesV3FromMemory(memory)
+            if (features) {
+                featureRoomData[name] = features
+            }
         }
-        return new ScoutManager(world, ownedRoomProgress, scoutRoomData)
+        return new ScoutManager(world, ownedRoomProgress, scoutRoomData, featureRoomData)
     }
 
     get ownedRooms(): string[] {
@@ -118,7 +129,8 @@ class ScoutManager {
             if (
                 !this.scoutRoomData[roomName] ||
                 !this.scoutRoomData[roomName].updatedAt ||
-                this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime
+                this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime ||
+                !this.featureRoomData[roomName]
             ) {
                 return roomName
             }

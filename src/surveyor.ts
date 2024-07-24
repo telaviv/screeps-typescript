@@ -5,7 +5,6 @@ import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
 import {
     ConstructionFeatures,
-    ConstructionFeaturesV2,
     ConstructionFeaturesV3,
     ConstructionMovement,
     isObstacle,
@@ -24,7 +23,6 @@ import {
 } from 'utils/room'
 import { destroyMovementStructures, wipeRoom } from 'construction-movement'
 import BUNKER from 'stamps/bunker'
-import Empire from 'empire'
 import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
@@ -39,11 +37,8 @@ declare global {
         /**
          * @deprecated
          */
-        stationaryPoints?: undefined
         calculateConstructionFeaturesV3?: void
-        constructionFeaturesV2?: ConstructionFeaturesV2
         constructionFeaturesV3?: ConstructionFeaturesV3
-        links?: Links
     }
 
     namespace NodeJS {
@@ -85,11 +80,31 @@ export function getValidConstructionFeaturesV3(room: Room): ConstructionFeatures
 }
 
 export function getConstructionFeatures(room: Room): ConstructionFeatures | null {
-    const constructionFeaturesV3 = getValidConstructionFeaturesV3(room)
+    const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(room.memory)
     if (constructionFeaturesV3) {
         return constructionFeaturesV3.features
-    } else if (room.memory.constructionFeaturesV2?.version === CONSTRUCTION_FEATURES_VERSION) {
-        return room.memory.constructionFeaturesV2.features
+    }
+    return null
+}
+
+export function getConstructionFeaturesFromMemory(
+    roomMemory: RoomMemory,
+): ConstructionFeatures | null {
+    const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(roomMemory)
+    if (constructionFeaturesV3) {
+        return constructionFeaturesV3.features
+    }
+    return null
+}
+
+export function getConstructionFeaturesV3FromMemory(
+    roomMemory: RoomMemory,
+): ConstructionFeaturesV3 | null {
+    if (
+        roomMemory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION &&
+        !roomMemory.constructionFeaturesV3.wipe
+    ) {
+        return roomMemory.constructionFeaturesV3
     }
     return null
 }
@@ -99,9 +114,6 @@ export function getCalculatedLinks(room: Room): Links | null {
     if (constructionFeaturesV3 && constructionFeaturesV3.links) {
         return constructionFeaturesV3.links
     }
-    if (room.memory.links?.version === LINKS_VERSION) {
-        return room.memory.links
-    }
     return null
 }
 
@@ -110,17 +122,11 @@ export function getStationaryPoints(room: Room): StationaryPoints | null {
     if (constructionFeaturesV3 && constructionFeaturesV3.points) {
         return constructionFeaturesV3.points
     }
-    if (
-        room.memory.constructionFeaturesV2?.version === CONSTRUCTION_FEATURES_VERSION &&
-        room.memory.constructionFeaturesV2?.points
-    ) {
-        return room.memory.constructionFeaturesV2.points
-    }
     return null
 }
 
 function clearConstructionFeatures(roomName: string) {
-    Memory.rooms[roomName].constructionFeaturesV2 = undefined
+    Memory.rooms[roomName].constructionFeaturesV3 = undefined
 }
 
 function clearAllConstructionFeatures() {
@@ -204,8 +210,8 @@ function calculateLinks(room: Room): Links {
 
 export function isConstructionFeaturesUpToDate(room: Room): boolean {
     return Boolean(
-        room.memory.constructionFeaturesV2 &&
-            room.memory.constructionFeaturesV2.version === CONSTRUCTION_FEATURES_VERSION,
+        room.memory.constructionFeaturesV3 &&
+            room.memory.constructionFeaturesV3.version === CONSTRUCTION_FEATURES_VERSION,
     )
 }
 
@@ -360,13 +366,19 @@ function getRampartPositions(room: Room, features: Position[]): Position[] {
 }
 
 const assignRoomFeatures = Profiling.wrap(() => {
-    const roomsBeingClaimed = new Empire().getRoomsBeingClaimed()
+    const rooms = roomsBeingClaimed()
     each(Game.rooms, (room: Room) => {
-        if ((room.controller && room.controller.my) || roomsBeingClaimed.includes(room.name)) {
+        if ((room.controller && room.controller.my) || rooms.includes(room.name)) {
             saveConstructionFeatures(room)
         }
     })
 }, 'assignRoomFeatures')
+
+function roomsBeingClaimed(): string[] {
+    return findMyRooms()
+        .map((room) => room.memory.war?.target)
+        .filter((roomName) => roomName !== undefined)
+}
 
 const clearRooms = Profiling.wrap(() => {
     const myRooms = findMyRooms()

@@ -9,7 +9,7 @@ describe('ScoutManager', () => {
             const world = { getClosestRooms: stub() }
             world.getClosestRooms.returns([])
             // Mock the scout room data
-            const scoutManager = new ScoutManager(world as any, new Map(), {}, 100)
+            const scoutManager = new ScoutManager(world as any, new Map(), {}, {}, 100)
             const nextRoomToScout = scoutManager.findNextRoomToScout()
             expect(nextRoomToScout).to.be.null
         })
@@ -24,7 +24,7 @@ describe('ScoutManager', () => {
                 { roomName: 'W3N8', distance: 2 },
             ])
 
-            const scoutManager = new ScoutManager(world as any, ownedRoomProgress, {}, 100)
+            const scoutManager = new ScoutManager(world as any, ownedRoomProgress, {}, {}, 100)
             const nextRoomToScout = scoutManager.findNextRoomToScout()
             expect(nextRoomToScout).to.equal('W5N8')
         })
@@ -37,6 +37,10 @@ describe('ScoutManager', () => {
             let scoutRoomData = {
                 W5N8: { updatedAt: 1 },
             }
+            const featureRoomData = {
+                W5N8: true,
+                W3N8: true,
+            }
             world.getClosestRooms.returns([
                 { roomName: 'W5N8', distance: 1 },
                 { roomName: 'W3N8', distance: 2 },
@@ -45,6 +49,35 @@ describe('ScoutManager', () => {
                 world as any,
                 ownedRoomProgress,
                 scoutRoomData as any,
+                featureRoomData as any,
+                2,
+            )
+            const nextRoomToScout = scoutManager.findNextRoomToScout()
+            expect(nextRoomToScout).to.equal('W3N8')
+        })
+
+        it('should return the room that has no features', () => {
+            const ownedRoomProgress = new Map()
+            ownedRoomProgress.set('W5N8', 0)
+            ownedRoomProgress.set('W3N8', 0)
+            const world = { getClosestRooms: stub() }
+            let scoutRoomData = {
+                W5N8: { updatedAt: 1 },
+                W3N8: { updatedAt: 1 },
+            }
+            const featureRoomData = {
+                W5N8: true,
+                W3N8: false,
+            }
+            world.getClosestRooms.returns([
+                { roomName: 'W5N8', distance: 1 },
+                { roomName: 'W3N8', distance: 2 },
+            ])
+            const scoutManager = new ScoutManager(
+                world as any,
+                ownedRoomProgress,
+                scoutRoomData as any,
+                featureRoomData as any,
                 2,
             )
             const nextRoomToScout = scoutManager.findNextRoomToScout()
@@ -60,6 +93,10 @@ describe('ScoutManager', () => {
                 W5N8: { updatedAt: DistanceTTL[1] },
                 W3N8: { updatedAt: 0 }, // should be passed ttl
             }
+            let featureRoomData = {
+                W5N8: true,
+                W3N8: true,
+            }
             world.getClosestRooms.returns([
                 { roomName: 'W5N8', distance: 1 },
                 { roomName: 'W3N8', distance: 2 },
@@ -68,6 +105,7 @@ describe('ScoutManager', () => {
                 world as any,
                 ownedRoomProgress,
                 scoutRoomData as any,
+                featureRoomData as any,
                 DistanceTTL[2] + 1,
             )
             const nextRoomToScout = scoutManager.findNextRoomToScout()

@@ -22,3 +22,7 @@ export function isBuildableStructureConstant(
 ): structure is BuildableStructureConstant {
     return ALL_BUILDABLE_STRUCTURES.includes(structure as BuildableStructureConstant)
 }
+
+export const MAX_SAVIOR_DISTANCE = 3
+export const MAX_CLAIM_DISTANCE = 3
+export const ENEMY_DISTANCE_BUFFER = 1

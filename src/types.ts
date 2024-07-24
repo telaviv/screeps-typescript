@@ -33,12 +33,6 @@ export interface ConstructionFeaturesV3 {
     wipe?: boolean
 }
 
-export interface ConstructionFeaturesV2 {
-    version: string
-    features: ConstructionFeatures
-    points: StationaryPoints
-}
-
 export type diffFeatures = {
     [K in BuildableStructureConstant]?: {
         clear: { pos: Position; structure: BuildableStructureConstant }[]
