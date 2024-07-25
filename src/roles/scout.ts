@@ -33,7 +33,11 @@ export class ScoutCreep {
     @profile
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     run(): void {
-        if (this.creep.spawning || this.creep.memory.tasks.length === 0) {
+        if (this.creep.spawning) {
+            this.creep.notifyWhenAttacked(false)
+            return
+        }
+        if (this.creep.memory.tasks.length === 0) {
             return
         }
         if (isTravelTask(this.creep.memory.tasks[0])) {

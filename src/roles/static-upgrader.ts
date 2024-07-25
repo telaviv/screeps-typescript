@@ -1,5 +1,5 @@
 import * as Logger from 'utils/logger'
-import { calculateBodyCost, moveTo } from 'utils/creep'
+import { calculateBodyCost, moveWithinRoom } from 'utils/creep'
 import { getCalculatedLinks, getStationaryPoints } from 'surveyor'
 import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
@@ -55,7 +55,7 @@ class StaticUpgraderCreep {
     }
 
     moveToPosition(): void {
-        const err = moveTo(this.pos, this.creep)
+        const err = moveWithinRoom(this.pos, this.creep, 0)
         if (err !== OK && err !== ERR_TIRED) {
             Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.pos, err)
         }

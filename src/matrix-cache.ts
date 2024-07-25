@@ -15,6 +15,34 @@ declare global {
     }
 }
 
+function getHostiles(room: Room): { ranged: _HasRoomPosition[]; melee: _HasRoomPosition[] } {
+    const hostiles = room.find(FIND_HOSTILE_CREEPS)
+    return {
+        ranged: hostiles.filter((creep) => creep.getActiveBodyparts(RANGED_ATTACK) > 0),
+        melee: hostiles.filter(
+            (creep) =>
+                creep.getActiveBodyparts(ATTACK) > 0 &&
+                creep.getActiveBodyparts(RANGED_ATTACK) === 0,
+        ),
+    }
+}
+
+function inRangeToHostiles(
+    room: Room,
+    x: number,
+    y: number,
+    ranged: _HasRoomPosition[],
+    melee: _HasRoomPosition[],
+): boolean {
+    if (ranged.some((creep) => creep.pos.inRangeTo(x, y, 4))) {
+        return true
+    }
+    if (melee.some((creep) => creep.pos.inRangeTo(x, y, 2))) {
+        return true
+    }
+    return false
+}
+
 export class MatrixCacheManager {
     private room: Room
 
@@ -56,37 +84,59 @@ export class MatrixCacheManager {
     }
 
     public setDefaultMatrixCache(): void {
-        const terrain = new Room.Terrain(this.room.name)
         if (this.matrixCache[MATRIX_DEFAULT]) {
             return
         }
+        const matrix = Game.rooms[this.room.name]
+            ? this.calculateDefaultMatrixCacheWithVision()
+            : this.calculateMatrixCacheWithoutVision()
+        this.matrixCache[MATRIX_DEFAULT] = {
+            matrix: JSON.stringify(matrix.serialize()),
+            time: Game.time,
+        }
+    }
+
+    private calculateDefaultMatrixCacheWithVision(): CostMatrix {
+        const terrain = new Room.Terrain(this.room.name)
         const harvesters = Object.values(Game.creeps).filter(
             (creep) => creep.memory.role === 'harvester' && creep.room.name === this.room.name,
         )
+        const { ranged, melee } = getHostiles(this.room)
         const matrix = new PathFinder.CostMatrix()
         for (let x = 0; x < 50; x++) {
             for (let y = 0; y < 50; y++) {
                 if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
                     matrix.set(x, y, 255)
-                } else if (Game.rooms[this.room.name]) {
+                } else {
                     const obstacle = getObstacleAt(this.room, x, y)
                     if (
                         obstacle ||
-                        harvesters.some((creep) => creep.pos.x === x && creep.pos.y === y)
+                        harvesters.some((creep) => creep.pos.x === x && creep.pos.y === y) ||
+                        inRangeToHostiles(this.room, x, y, ranged, melee)
                     ) {
                         matrix.set(x, y, 255)
                     } else if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) {
                         matrix.set(x, y, 5)
                     }
+                }
+            }
+        }
+        return matrix
+    }
+
+    private calculateMatrixCacheWithoutVision(): CostMatrix {
+        const terrain = new Room.Terrain(this.room.name)
+        const matrix = new PathFinder.CostMatrix()
+        for (let x = 0; x < 50; x++) {
+            for (let y = 0; y < 50; y++) {
+                if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+                    matrix.set(x, y, 255)
                 } else if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) {
                     matrix.set(x, y, 5)
                 }
             }
         }
-        this.matrixCache[MATRIX_DEFAULT] = {
-            matrix: JSON.stringify(matrix.serialize()),
-            time: Game.time,
-        }
+        return matrix
     }
 
     public setNoEdgesMatrixCache(): void {
