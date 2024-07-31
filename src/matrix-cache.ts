@@ -1,9 +1,10 @@
-import { getSources } from 'utils/room'
-import { getStationaryPoints } from 'surveyor'
+import * as Logger from 'utils/logger'
 import { getNeighbors } from 'utils/room-position'
+import { getObstacles, getSources } from 'utils/room'
+import { getStationaryPoints } from 'surveyor'
 
-type MatrixTag = 'no-edges' | 'no-sources' | 'no-stationary-points'
-const TAG_ORDER: MatrixTag[] = ['no-edges', 'no-sources', 'no-stationary-points']
+type MatrixTag = 'no-edges' | 'no-sources' | 'no-obstacles' | 'no-stationary-points'
+const TAG_ORDER: MatrixTag[] = ['no-edges', 'no-sources', 'no-obstacles', 'no-stationary-points']
 const MATRIX_DEFAULT = 'default'
 
 interface MatrixCache {
@@ -29,6 +30,18 @@ function splitTags(tags: MatrixTag[]): [MatrixTag[], MatrixTag | null] {
     const copy = tags.slice()
     const latest = copy.pop()
     return [copy, latest ?? null]
+}
+export function printMatrix(matrix: CostMatrix): void {
+    const rows = []
+    for (let y = 0; y < 50; y++) {
+        const row = []
+        for (let x = 0; x < 50; x++) {
+            const val = matrix.get(x, y)
+            row.push(val === 255 ? 'x' : val.toString())
+        }
+        rows.push(row.join(''))
+    }
+    Logger.error('\n' + rows.join('\n'))
 }
 
 export class MatrixCacheManager {
@@ -82,9 +95,11 @@ export class MatrixCacheManager {
         const [prefix, latest] = splitTags(tags)
         const prefixMatrix = this.getCostMatrix(prefix).clone()
         if (latest === 'no-edges') {
-            this.addNoEdges(prefixMatrix)
+            this.addEdges(prefixMatrix)
         } else if (latest === 'no-sources') {
-            this.addNoSources(prefixMatrix)
+            this.addSources(prefixMatrix)
+        } else if (latest === 'no-obstacles') {
+            this.addObstacles(prefixMatrix)
         } else if (latest === 'no-stationary-points') {
             this.addStationaryPoints(prefixMatrix)
         } else {
@@ -122,7 +137,7 @@ export class MatrixCacheManager {
         return matrix
     }
 
-    private addNoEdges(matrix: CostMatrix): void {
+    private addEdges(matrix: CostMatrix): void {
         for (let x = 0; x < 50; x++) {
             matrix.set(x, 0, 255)
             matrix.set(x, 49, 255)
@@ -133,12 +148,19 @@ export class MatrixCacheManager {
         }
     }
 
-    private addNoSources(matrix: CostMatrix): void {
+    private addSources(matrix: CostMatrix): void {
         const sources = getSources(this.room)
         for (const source of sources) {
             for (const neighbor of getNeighbors(source.pos)) {
                 matrix.set(neighbor.x, neighbor.y, 255)
             }
+        }
+    }
+
+    private addObstacles(matrix: CostMatrix): void {
+        const obstacles = getObstacles(this.room)
+        for (const obstacle of obstacles) {
+            matrix.set(obstacle.pos.x, obstacle.pos.y, 255)
         }
     }
 

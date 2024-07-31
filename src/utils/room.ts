@@ -368,6 +368,12 @@ export function getBuildableStructuresAt(
     }) as Structure<BuildableStructureConstant>[]
 }
 
+export function getObstacles(room: Room): Structure[] {
+    return room.find(FIND_STRUCTURES, {
+        filter: (structure) => isObstacle(structure.structureType),
+    }) as Structure<BuildableStructureConstant>[]
+}
+
 export function getObstacleAt(
     room: Room,
     x: number,
