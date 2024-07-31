@@ -34,9 +34,9 @@ export class ScoutCreep {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     run(): void {
         if (this.creep.spawning) {
-            this.creep.notifyWhenAttacked(false)
             return
         }
+        this.creep.notifyWhenAttacked(false)
         if (this.creep.memory.tasks.length === 0) {
             return
         }

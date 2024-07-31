@@ -29,6 +29,9 @@ import { runTower } from './tower'
 import { visualizeRoom } from 'room-visualizer'
 import { wrap } from 'utils/profiling'
 
+// cpu mins
+const VISUALS_CPU_MIN = 1000
+
 declare global {
     /*
       Example types, expand on these or remove them and add your own.
@@ -189,7 +192,7 @@ function unwrappedLoop(): void {
         Logger.warning('PIXEL generated')
     }
 
-    if (Game.cpu.bucket >= 1000) {
+    if (Game.cpu.bucket >= VISUALS_CPU_MIN) {
         runVisuals()
     }
 }

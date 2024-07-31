@@ -31,7 +31,7 @@ export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.2'
 export const STATIONARY_POINTS_VERSION = '1.0.1'
 export const LINKS_VERSION = '1.0.0'
 
-const MIN_SURVEY_CPU = 4000
+const MIN_SURVEY_CPU = 5000
 
 declare global {
     interface RoomMemory {

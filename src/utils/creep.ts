@@ -60,7 +60,7 @@ export const moveTo = wrap(
 
 export const moveWithinRoom = wrap(
     (pos: RoomPosition, creep: Creep, range = 1): MoveToReturnCode => {
-        const matrix = new MatrixCacheManager(Game.rooms[pos.roomName]).getCostMatrix('no-edges')
+        const matrix = MatrixCacheManager.getFullCostMatrix(creep.room)
         const callback = (roomName: string): CostMatrix | boolean => {
             if (roomName === pos.roomName) {
                 return matrix
