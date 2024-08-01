@@ -1,0 +1,3 @@
+export enum SubscriptionEvent {
+    CONSTRUCTION_FEATURES_UPDATES = 'CONSTRUCTION_FEATURES_UPDATES',
+}

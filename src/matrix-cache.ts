@@ -1,11 +1,14 @@
 import * as Logger from 'utils/logger'
-import { getNeighbors } from 'utils/room-position'
 import { getObstacles, getSources } from 'utils/room'
+import { SubscriptionEvent } from 'pub-sub/constants'
+import { getNeighbors } from 'utils/room-position'
 import { getStationaryPoints } from 'surveyor'
+import { subscribe } from 'pub-sub/pub-sub'
 
-type MatrixTag = 'no-edges' | 'no-sources' | 'no-obstacles' | 'no-stationary-points'
+export type MatrixTag = 'no-edges' | 'no-sources' | 'no-obstacles' | 'no-stationary-points'
 const TAG_ORDER: MatrixTag[] = ['no-edges', 'no-sources', 'no-obstacles', 'no-stationary-points']
 const MATRIX_DEFAULT = 'default'
+const MATRIX_CACHE_ID = 'matrix-cache'
 
 interface MatrixCache {
     [key: string]: { matrix: string; time: number }
@@ -49,6 +52,26 @@ export class MatrixCacheManager {
 
     constructor(room: Room) {
         this.room = room
+    }
+
+    public static addSubscriptions(): void {
+        for (const [roomName, { matrixCache }] of Object.entries(Memory.rooms)) {
+            if (!matrixCache) {
+                continue
+            }
+            subscribe(
+                SubscriptionEvent.CONSTRUCTION_FEATURES_UPDATES,
+                roomName,
+                MATRIX_CACHE_ID,
+                () => {
+                    Logger.error(
+                        'caught event',
+                        SubscriptionEvent.CONSTRUCTION_FEATURES_UPDATES,
+                        roomName,
+                    )
+                },
+            )
+        }
     }
 
     public static getFullCostMatrix(room: Room): CostMatrix {

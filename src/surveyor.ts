@@ -23,8 +23,10 @@ import {
 } from 'utils/room'
 import { destroyMovementStructures, wipeRoom } from 'construction-movement'
 import BUNKER from 'stamps/bunker'
+import { SubscriptionEvent } from 'pub-sub/constants'
 import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
 import { canBeClaimCandidate } from 'claim'
+import { publish } from 'pub-sub/pub-sub'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
 export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.2'
@@ -137,6 +139,10 @@ function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeaturesV3 = undefined
 }
 
+function publishConstructionFeatureChange(roomName: string) {
+    publish(SubscriptionEvent.CONSTRUCTION_FEATURES_UPDATES, roomName)
+}
+
 function clearAllConstructionFeatures() {
     each(Game.rooms, (room: Room) => {
         clearConstructionFeatures(room.name)
@@ -207,6 +213,7 @@ function setConstructionFeaturesV3(roomName: string) {
         )
         constructionFeatures.movement = undefined
     }
+    publishConstructionFeatureChange(roomName)
 }
 
 function calculateLinks(room: Room): Links {

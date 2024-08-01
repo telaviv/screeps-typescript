@@ -67,3 +67,7 @@ export function byPartCount(parts: Partial<Record<BodyPartConstant, number>>): B
 export function planCost(plan: BodyPartConstant[]): number {
     return plan.reduce((acc, val) => BODYPART_COST[val] + acc, 0)
 }
+
+export function partCount(creep: Creep, part: BodyPartConstant): number {
+    return creep.body.filter((p) => p.type === part).length
+}

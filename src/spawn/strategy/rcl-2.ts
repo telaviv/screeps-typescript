@@ -9,6 +9,7 @@ import WarDepartment, { WarStatus } from 'war-department'
 import { getConstructionSites, getLinks, hasWeakWall } from 'utils/room'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleMason, { MasonCreep } from 'roles/mason'
+import DefenseDepartment from 'defense-department'
 import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
@@ -50,6 +51,7 @@ export default function runStrategy(spawn: StructureSpawn): void {
     const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
     const warDepartment = new WarDepartment(spawn.room)
+    const defenseDepartment = new DefenseDepartment(spawn.room)
 
     if (roomManager.getScoutRoomTasks().length > 0) {
         roomManager.scoutRoom()
@@ -71,6 +73,15 @@ export default function runStrategy(spawn: StructureSpawn): void {
     if (hasWeakWall(room) && masons.length < MASON_COUNT) {
         roleMason.create(spawn)
         return
+    }
+
+    if (defenseDepartment.needsDefenders()) {
+        defenseDepartment.createDefender(spawn, room.energyAvailable)
+        return
+    }
+
+    if (defenseDepartment.needsHealer()) {
+        defenseDepartment.createHealer(spawn)
     }
 
     if (warDepartment.status !== WarStatus.NONE) {

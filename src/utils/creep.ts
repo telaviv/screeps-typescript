@@ -77,6 +77,19 @@ export const moveWithinRoom = wrap(
     'creep:moveWithinRoom',
 )
 
+export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): MoveToReturnCode => {
+    const matrix = MatrixCacheManager.getFullCostMatrix(creep.room).clone()
+    matrix.set(pos.x, pos.y, 0)
+    const callback = (roomName: string): CostMatrix | boolean => {
+        if (roomName === pos.roomName) {
+            return matrix
+        }
+        return false
+    }
+    const path = PathFinder.search(creep.pos, { pos, range: 0 }, { roomCallback: callback }).path
+    return creep.moveByPath(path)
+}, 'creep:moveWithinRoom')
+
 export function moveToRoom(roomName: string, creep: Creep): ReturnType<Creep['moveByPath']> {
     const path = PathFinder.search(
         creep.pos,

@@ -105,6 +105,10 @@ export function hasHostileCreeps(room: Room): boolean {
     return room.find(FIND_HOSTILE_CREEPS).length > 0
 }
 
+export function getInjuredCreeps(room: Room): Creep[] {
+    return room.find(FIND_MY_CREEPS).filter((creep: Creep) => creep.hits < creep.hitsMax)
+}
+
 export function getRamparts(room: Room): StructureRampart[] {
     return room.find(FIND_STRUCTURES, {
         filter: { structureType: STRUCTURE_RAMPART },

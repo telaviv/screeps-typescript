@@ -1,5 +1,5 @@
 import * as Logger from 'utils/logger'
-import { goHome, moveTo, recycle } from 'utils/creep'
+import { goHome, moveWithinRoom, recycle } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
 import { getInvaderCores } from 'utils/room'
 import { wrap } from 'utils/profiling'
@@ -53,8 +53,8 @@ const roleAttacker = {
         const err = creep.attack(target)
         if (err === ERR_NOT_IN_RANGE) {
             // eslint-disable-next-line @typescript-eslint/no-shadow
-            const err = moveTo(target.pos, creep, { range: 1 })
-            if (err !== OK) {
+            const err = moveWithinRoom(target.pos, creep, { range: 1 })
+            if (err !== OK && err !== ERR_TIRED) {
                 Logger.error(
                     'attacker:moveTo:target:failed',
                     creep.name,
@@ -77,9 +77,14 @@ const roleAttacker = {
         Logger.info('attacker:no-targets', creep.name)
     },
 
-    create(spawn: StructureSpawn, roomName: string, capacity: number | null = null): number {
+    create(
+        spawn: StructureSpawn,
+        roomName: string,
+        capacity: number | null = null,
+        maxAttackParts: number | null = null,
+    ): number {
         capacity = capacity ? capacity : spawn.room.energyCapacityAvailable
-        return spawn.spawnCreep(calculateParts(capacity), `${ROLE}:${Game.time}`, {
+        return spawn.spawnCreep(calculateParts(capacity, maxAttackParts), `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
@@ -89,8 +94,12 @@ const roleAttacker = {
     },
 }
 
-export function calculateParts(capacity: number): BodyPartConstant[] {
-    return fromBodyPlan(capacity, [ATTACK, MOVE])
+export function calculateParts(
+    capacity: number,
+    maxCopies: number | null = null,
+): BodyPartConstant[] {
+    maxCopies = maxCopies ? maxCopies : 50
+    return fromBodyPlan(capacity, [ATTACK, MOVE], [], maxCopies)
 }
 
 export default roleAttacker

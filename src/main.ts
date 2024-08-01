@@ -151,12 +151,17 @@ const runCreep = wrap((creepName: string) => {
 
 const initialize = wrap(() => {
     clearMemory()
+    addSubscriptions()
     ScoutManager.create().run()
     const empire = new Empire()
     empire.run()
     survey()
     TaskRunner.cleanup()
 }, 'main:initialize')
+
+function addSubscriptions() {
+    MatrixCacheManager.addSubscriptions()
+}
 
 const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
