@@ -1,7 +1,9 @@
 import * as Logger from 'utils/logger'
-import { goHome, moveWithinRoom, recycle } from 'utils/creep'
+import { goHome, moveToRoom, moveWithinRoom, recycle } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
 import { getInvaderCores } from 'utils/room'
+import { getRandomWalkablePosition } from 'utils/room-position'
+import { randomElement } from 'utils/utilities'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'attack'
@@ -37,6 +39,12 @@ const roleAttacker = {
             )
             return
         }
+
+        if (!roleAttacker.isInRoom(creep)) {
+            moveToRoom(targetRoom.name, creep)
+            return
+        }
+
         const structures = getInvaderCores(targetRoom)
         const hostiles = targetRoom.find(FIND_HOSTILE_CREEPS)
         const targets = [...structures, ...hostiles]
@@ -44,10 +52,37 @@ const roleAttacker = {
             roleAttacker.attack(creep, targets[0])
             return
         } else {
+            const pos = getRandomWalkablePosition(creep.pos)
+            Logger.error('attacker:no-targets', creep.name, pos)
+            if (pos) {
+                // we need to move simply to get out of the way of creeps
+                creep.move(
+                    randomElement([
+                        TOP,
+                        BOTTOM,
+                        LEFT,
+                        RIGHT,
+                        TOP_LEFT,
+                        TOP_RIGHT,
+                        BOTTOM_LEFT,
+                        BOTTOM_RIGHT,
+                    ]),
+                )
+            }
             // invader rooms require non stop vigilance
             // roleAttacker.cleanup(creep)
         }
     }, 'runAttacker'),
+
+    isInRoom(creep: Attacker): boolean {
+        return (
+            creep.room.name === creep.memory.roomName &&
+            creep.pos.x > 1 &&
+            creep.pos.y > 1 &&
+            creep.pos.x < 48 &&
+            creep.pos.y < 48
+        )
+    },
 
     attack(creep: Attacker, target: Creep | Structure): ScreepsReturnCode {
         const err = creep.attack(target)

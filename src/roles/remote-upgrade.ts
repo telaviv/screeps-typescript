@@ -5,6 +5,8 @@ import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { fromBodyPlan } from 'utils/parts'
+import { getConstructionSites } from 'utils/room'
+import { moveTo } from 'utils/creep'
 
 const ROLE = 'remote-upgrade'
 
@@ -61,7 +63,7 @@ class RemoteUpgradeCreep {
         if (this.collecting) {
             if (this.isFullOfEnergy()) {
                 this.memory.collecting = false
-                this.upgradeController()
+                this.deliverEnergy()
             } else {
                 this.collectEnergy()
             }
@@ -70,7 +72,7 @@ class RemoteUpgradeCreep {
                 this.memory.collecting = true
                 this.collectEnergy()
             } else {
-                this.upgradeController()
+                this.deliverEnergy()
             }
         }
     }
@@ -103,6 +105,40 @@ class RemoteUpgradeCreep {
 
     private roundTripTime(): number {
         return 2 * this.travelDistance() + this.creep.getActiveBodyparts(CARRY)
+    }
+
+    private deliverEnergy() {
+        const controller = this.destinationRoom.controller
+        if (!controller) {
+            Logger.error('remote-upgrade:deliver:no-controller', this.destination, this.creep.name)
+            return
+        }
+        if (controller.ticksToDowngrade > 5000) {
+            this.build()
+        } else {
+            this.upgradeController()
+        }
+    }
+
+    private build() {
+        this.creep.say('🏗️')
+        const targets = getConstructionSites(this.destinationRoom)
+        if (targets.length) {
+            const err = this.creep.build(targets[0])
+            if (err === ERR_NOT_IN_RANGE) {
+                moveTo(targets[0].pos, this.creep, { range: 3 })
+            } else if (err !== OK) {
+                Logger.warning('remote-upgrade:build:failure', err, this.creep.name, targets[0].pos)
+            }
+        } else {
+            Logger.warning(
+                'remote-upgrade:build:failure',
+                'nothing to build',
+                this.creep.memory.home,
+                this.creep.room.name,
+                this.destinationRoom.name,
+            )
+        }
     }
 
     private upgradeController() {

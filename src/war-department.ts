@@ -10,6 +10,7 @@ declare global {
 export interface WarMemory {
     status: WarStatus
     target: string
+    needsProtection?: boolean
 }
 
 export interface SpawnWarMemory extends WarMemory {
@@ -66,6 +67,10 @@ export default class WarDepartment {
         return this.warMemory.target
     }
 
+    public get needsProtection(): boolean {
+        return this.warMemory.needsProtection || false
+    }
+
     public hasInvaderCore(): boolean {
         const invaderCores = this.targetRoom?.find(FIND_STRUCTURES, {
             filter: { structureType: STRUCTURE_INVADER_CORE },
@@ -82,6 +87,11 @@ export default class WarDepartment {
         if (this.status === WarStatus.NONE) {
             return
         }
+
+        if (this.hasHostiles() || this.hasInvaderCore()) {
+            this.warMemory.needsProtection = true
+        }
+
         if (this.status === WarStatus.CLAIM) {
             if (this.targetRoom && this.targetRoom.controller && this.targetRoom.controller.my) {
                 Logger.info(
