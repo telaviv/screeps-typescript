@@ -1,6 +1,5 @@
 import * as Logger from 'utils/logger'
 import { getInjuredCreeps } from 'utils/room'
-import { moveWithinRoom } from 'utils/creep'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'healer'
@@ -28,7 +27,7 @@ const roleHealer = {
         const target = targets[0]
         const err = creep.heal(target)
         if (err === ERR_NOT_IN_RANGE) {
-            moveWithinRoom(target.pos, creep, 1)
+            creep.move(target)
         } else if (err !== OK) {
             Logger.warning(
                 'healer:heal:failed',
@@ -42,7 +41,7 @@ const roleHealer = {
     }, 'runHealer'),
 
     create(spawn: StructureSpawn, roomName: string): number {
-        return spawn.spawnCreep([HEAL], `${ROLE}:${Game.time}`, {
+        return spawn.spawnCreep([HEAL, MOVE], `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,

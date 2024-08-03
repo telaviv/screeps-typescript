@@ -29,7 +29,7 @@ export interface ConstructionFeaturesV3 {
     features: ConstructionFeatures
     points: StationaryPoints
     links: Links
-    movement?: ConstructionMovement
+    movement?: ConstructionMovement | null
     wipe?: boolean
 }
 

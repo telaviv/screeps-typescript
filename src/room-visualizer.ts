@@ -8,7 +8,7 @@ import {
     getWallTransform,
 } from 'room-analysis/distance-transform'
 import { ConstructionFeatures } from 'types'
-import { getConstructionFeatures } from 'surveyor'
+import { getConstructionFeatures } from 'construction-features'
 
 const MAX_BUNKER_DIMENSION = 13 // for now we have a 13 x 12 bunker
 type VisualType = 'construction' | 'transform'

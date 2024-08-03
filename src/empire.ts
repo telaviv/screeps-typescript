@@ -6,7 +6,7 @@ import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-departm
 import { findMyRooms, findSpawnlessRooms, hasNoSpawns } from 'utils/room'
 import { ScoutManager } from 'managers/scout-manager'
 import { canBeClaimCandidate } from 'claim'
-import { getConstructionFeaturesFromMemory } from 'surveyor'
+import { getConstructionFeaturesFromMemory } from 'construction-features'
 import { profile } from 'utils/profiling'
 
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN

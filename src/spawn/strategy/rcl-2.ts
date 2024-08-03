@@ -14,11 +14,10 @@ import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
-import { getStationaryPoints } from 'surveyor'
+import { getStationaryPoints } from 'construction-features'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
-import roleRemoteBuild from 'roles/remote-build'
-import roleRemoteUpgrade from 'roles/remote-upgrade'
+import roleRemoteWorker from 'roles/remote-worker'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
@@ -30,8 +29,6 @@ const RESCUE_WORKER_COUNT = 3
 
 const CLAIMERS_COUNT = 1
 const ATTACKERS_COUNT = 2
-const REMOTE_UPGRADE_COUNT = 1
-const REMOTE_BUILD_MINIMUM = 1
 
 const MAX_USEFUL_ENERGY = 1200 // roughly the biggest logistics bot
 
@@ -220,8 +217,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     const attackers = getCreeps('attack', room)
     const claimers = getCreeps('claimer', room)
     const scouts = getCreeps('scout', room)
-    const remoteUpgraders = getCreeps('remote-upgrade', room)
-    const remoteBuilders = getCreeps('remote-build', room)
+    const remoteWorker = getCreeps('remote-worker', room)
 
     if (warDepartment.targetRoom === undefined) {
         if (scouts.length === 0) {
@@ -255,16 +251,16 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
             }
         }
     } else if (status === WarStatus.SPAWN) {
-        if (remoteUpgraders.length < REMOTE_UPGRADE_COUNT) {
-            return roleRemoteUpgrade.create(spawn, warDepartment.target, capacity)
+        if (remoteWorker.length < 1) {
+            return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
         } else if (!sourcesManager.hasAHarvester()) {
             return sourcesManager.createHarvester(spawn, true)
-        } else if (remoteBuilders.length < REMOTE_BUILD_MINIMUM) {
-            return roleRemoteBuild.create(spawn, warDepartment.target, capacity)
+        } else if (remoteWorker.length < 2) {
+            return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
         } else if (!sourcesManager.hasAllContainerHarvesters()) {
             return sourcesManager.createHarvester(spawn, true)
         } else {
-            return roleRemoteBuild.create(spawn, warDepartment.target, capacity)
+            return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
         }
     }
     return null

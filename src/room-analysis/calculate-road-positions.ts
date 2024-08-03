@@ -1,19 +1,10 @@
-import * as Logger from '../utils/logger'
 import * as Profiling from '../utils/profiling'
-import * as RoomUtils from '../utils/room'
-import { ConstructionFeatures, FlatRoomPosition, Position } from '../types'
+import { ConstructionFeatures, FlatRoomPosition, isObstacle, Position } from '../types'
 import { Graph, GraphEdge, GraphVertex } from '../data-structures/graph'
 import { flatten, uniqBy } from 'lodash'
 import { ImmutableRoom } from 'utils/immutable-room'
+import { MatrixCacheManager } from 'matrix-cache'
 import prim from '../data-structures/prim'
-
-const SURROUNDED_BUILDING_TYPES = [
-    STRUCTURE_EXTENSION,
-    STRUCTURE_TOWER,
-    STRUCTURE_STORAGE,
-    STRUCTURE_LINK,
-    STRUCTURE_CONTAINER,
-]
 
 export interface PositionEdge {
     a: string
@@ -39,69 +30,27 @@ const posPairToString = (a: FlatRoomPosition, b: FlatRoomPosition): string => {
 }
 
 const roadSortOrder =
-    (room: Room) =>
+    (roomName: string) =>
     (a: Position, b: Position): number => {
-        const terrain = room.getTerrain()
+        const terrain = new Room.Terrain(roomName)
         const terrainValue = (pos: Position) =>
             terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP ? 0 : 1
         return terrainValue(a) - terrainValue(b)
     }
 
-export default function calculateRoadPositions(
-    room: Room,
-    iroom: ImmutableRoom,
-    features: ConstructionFeatures,
-): Position[] {
-    const surroundingRoadPositions = calculateSurroundingRoadPositions(room, iroom, features)
-    const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
-    const uniquePositions = uniqBy(
-        [...surroundingRoadPositions, ...roadSpinePositions],
-        (pos) => `${pos.x}:${pos.y}`,
-    )
-    uniquePositions.sort(roadSortOrder(room))
-    return uniquePositions
-}
-
 export function calculateBunkerRoadPositions(
-    room: Room,
+    roomName: string,
     iroom: ImmutableRoom,
     features: ConstructionFeatures,
 ): Position[] {
     const existingRoads = iroom.getNonObstacles('road').map((structure) => structure.pos)
-    const roadSpinePositions = calculateRoadSpinePositions(room, iroom, features)
+    const roadSpinePositions = calculateRoadSpinePositions(roomName, iroom, features)
     const uniquePositions = uniqBy(
         [...existingRoads, ...roadSpinePositions],
         (pos) => `${pos.x}:${pos.y}`,
     )
-    uniquePositions.sort(roadSortOrder(room))
+    uniquePositions.sort(roadSortOrder(roomName))
     return uniquePositions
-}
-
-function calculateSurroundingRoadPositions(
-    room: Room,
-    iroom: ImmutableRoom,
-    features: ConstructionFeatures,
-): Position[] {
-    const roadPositions: Position[] = []
-    const spawn = RoomUtils.getSpawns(room)
-    for (const pos of spawn.map((s) => s.pos)) {
-        for (const neighbor of iroom.getClosestNeighbors(pos.x, pos.y)) {
-            if (iroom.isGoodRoadPosition(neighbor.x, neighbor.y)) {
-                roadPositions.push(neighbor)
-            }
-        }
-    }
-
-    for (const structureType of SURROUNDED_BUILDING_TYPES) {
-        for (const pos of features[structureType] || []) {
-            for (const neighbor of iroom.getCardinalNeighbors(pos.x, pos.y)) {
-                if (iroom.isGoodRoadPosition(neighbor.x, neighbor.y)) {
-                    roadPositions.push(neighbor)
-                }
-            }
-        }
-    }
-    return roadPositions.map((pos) => ({ x: pos.x, y: pos.y }))
 }
 
 export const calculateMinPathPositions = (
@@ -134,46 +83,44 @@ export const calculateMinPathPositions = (
 }
 
 function calculateRoadSpinePositions(
-    room: Room,
+    roomName: string,
     iroom: ImmutableRoom,
     features: ConstructionFeatures,
 ): Position[] {
-    if (!features[STRUCTURE_STORAGE]) {
-        Logger.error('calculateRoadSpinePositions: no storage set in features')
-        throw new Error('no storage set in features')
+    const stationaryPoints = iroom.stationaryPoints
+    if (
+        !stationaryPoints ||
+        !stationaryPoints.controllerLink ||
+        !stationaryPoints.storageLink ||
+        !iroom.stationaryPoints.sources
+    ) {
+        throw new Error('incomplete stationary points')
     }
-
-    if (!room.controller) {
-        Logger.error('calculateRoadSpinePositions: no controller in room')
-        throw new Error('no controller in room')
-    }
-
-    const roomCallback = (roomName: string): CostMatrix | false => {
-        if (roomName !== room.name) {
+    const points = [
+        iroom.stationaryPoints.controllerLink as Position,
+        iroom.stationaryPoints.storageLink as Position,
+        ...Object.values(iroom.stationaryPoints.sources),
+    ]
+    const roomCallback = (rn: string): CostMatrix | false => {
+        if (roomName !== rn) {
             return false
         }
-        const costs = new PathFinder.CostMatrix()
-        for (const poss of Object.values(features)) {
-            for (const pos of poss) {
-                costs.set(pos.x, pos.y, 5)
+        const matrix = MatrixCacheManager.getDefaultCostMatrix(roomName).clone()
+        for (const [type, positions] of Object.entries(features)) {
+            if (!isObstacle(type)) {
+                continue
+            }
+            for (const pos of positions) {
+                matrix.set(pos.x, pos.y, 255)
             }
         }
-        return costs
+        return matrix
     }
-    const controllerPos = room.controller.pos
-    const storagePos = {
-        ...features[STRUCTURE_STORAGE][0],
-        roomName: room.name,
-    }
-    const sourcesPos = RoomUtils.getSources(room).map((source) => source.pos)
-    const mineralsPos = RoomUtils.getMinerals(room).map((mineral) => mineral.pos)
-    const positions = [controllerPos, storagePos, ...sourcesPos, ...mineralsPos]
-    const flatPositions = positions.map((pos) => ({
-        x: pos.x,
-        y: pos.y,
-        roomName: pos.roomName,
-    }))
-    const roadPositions = calculateMinPathPositions(flatPositions, roomCallback)
+
+    const roadPositions = calculateMinPathPositions(
+        points.map((p) => new RoomPosition(p.x, p.y, roomName)),
+        roomCallback,
+    )
     return roadPositions
         .filter((pos) => iroom.isGoodRoadPosition(pos.x, pos.y))
         .map((pos) => ({ x: pos.x, y: pos.y }))

@@ -1,6 +1,6 @@
 import * as Logger from 'utils/logger'
 import { Position } from 'types'
-import { getCalculatedLinks } from 'surveyor'
+import { getCalculatedLinks } from 'construction-features'
 
 declare global {
     namespace NodeJS {

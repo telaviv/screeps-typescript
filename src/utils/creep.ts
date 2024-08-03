@@ -60,7 +60,7 @@ export const moveTo = wrap(
 
 export const moveWithinRoom = wrap(
     (pos: RoomPosition, creep: Creep, range = 1): MoveToReturnCode => {
-        const matrix = MatrixCacheManager.getFullCostMatrix(creep.room)
+        const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name)
         const callback = (roomName: string): CostMatrix | boolean => {
             if (roomName === pos.roomName) {
                 return matrix
@@ -78,7 +78,7 @@ export const moveWithinRoom = wrap(
 )
 
 export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): MoveToReturnCode => {
-    const matrix = MatrixCacheManager.getFullCostMatrix(creep.room).clone()
+    const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name).clone()
     matrix.set(pos.x, pos.y, 0)
     const callback = (roomName: string): CostMatrix | boolean => {
         if (roomName === pos.roomName) {

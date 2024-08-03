@@ -2,7 +2,7 @@ import * as Logger from 'utils/logger'
 import { ResourceCreep } from '../types'
 import { TravelTask } from './types'
 import autoIncrement from 'utils/autoincrement'
-import { getConstructionFeaturesV3 } from 'surveyor'
+import { getConstructionFeaturesV3 } from 'construction-features'
 import { isTravelTask } from './utils'
 import { wrap } from 'utils/profiling'
 

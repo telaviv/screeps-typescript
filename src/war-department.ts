@@ -80,7 +80,13 @@ export default class WarDepartment {
 
     public hasHostiles(): boolean {
         const hostiles = this.targetRoom?.find(FIND_HOSTILE_CREEPS)
-        return hostiles ? hostiles.length > 0 : false
+        return Boolean(
+            hostiles &&
+                hostiles.some(
+                    (c) =>
+                        c.getActiveBodyparts(ATTACK) > 0 || c.getActiveBodyparts(RANGED_ATTACK) > 0,
+                ),
+        )
     }
 
     public update(): void {

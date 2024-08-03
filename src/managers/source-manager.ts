@@ -6,7 +6,7 @@ import { getAllHarvesters, getLogisticsCreeps } from 'utils/creep'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { MiningTask } from 'tasks/mining/types'
 import { getNonObstacleNeighbors } from 'utils/room-position'
-import { getStationaryPoints } from 'surveyor'
+import { getStationaryPoints } from 'construction-features'
 import { isMiningTask } from 'tasks/mining/utils'
 import { profile } from 'utils/profiling'
 

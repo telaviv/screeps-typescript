@@ -10,6 +10,9 @@ import {
     getConstructionSites,
     getContainers,
     getExtensions,
+    getExtractor,
+    getFactory,
+    getLabs,
     getLinks,
     getRamparts,
     getRoads,
@@ -23,7 +26,7 @@ import {
     makeSpawnConstructionSite,
 } from 'utils/room'
 import { profile, wrap } from 'utils/profiling'
-import { getConstructionFeatures } from 'surveyor'
+import { getConstructionFeatures } from 'construction-features'
 
 const IMPORTANT_EXTENSION_MAX = 5
 
@@ -129,6 +132,22 @@ export default class BuildManager {
 
         if (this.canBuildLinks()) {
             return this.buildNextStructure(STRUCTURE_LINK)
+        }
+
+        if (this.canBuildTerminal()) {
+            return this.buildNextStructure(STRUCTURE_TERMINAL)
+        }
+
+        if (this.canBuildLab()) {
+            return this.buildNextStructure(STRUCTURE_LAB)
+        }
+
+        if (this.canBuildExtractor()) {
+            return this.buildNextStructure(STRUCTURE_EXTRACTOR)
+        }
+
+        if (this.canBuildFactory()) {
+            return this.buildNextStructure(STRUCTURE_FACTORY)
         }
 
         if (this.canBuildExtension()) {
@@ -324,6 +343,28 @@ export default class BuildManager {
         })
         return missingRamparts.length > 0
     }, 'BuildManager:canBuildWall')
+
+    private canBuildTerminal = wrap((): boolean => {
+        return Boolean((this.room.controller?.level ?? 0) >= 6 && !this.room.terminal)
+    }, 'BuildManager:canBuildTerminal')
+
+    private canBuildLab = wrap((): boolean => {
+        const labs = getLabs(this.room)
+        return (
+            labs.length <
+            (CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller?.level ?? 0] ?? 0)
+        )
+    }, 'BuildManager:canBuildLab')
+
+    private canBuildExtractor = wrap((): boolean => {
+        const extractor = getExtractor(this.room)
+        return Boolean(extractor && (this.room.controller?.level ?? 0) >= 6)
+    }, 'BuildManager:canBuildExtractor')
+
+    private canBuildFactory = wrap((): boolean => {
+        const factory = getFactory(this.room)
+        return Boolean(factory && (this.room.controller?.level ?? 0) >= 7)
+    }, 'BuildManager:canBuildFactory')
 }
 
 export function getBuildManager(room: Room): BuildManager | null {

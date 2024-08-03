@@ -18,8 +18,20 @@ interface AttackerMemory extends CreepMemory {
     home: string
 }
 
+function sortHostiles(hostiles: Creep[]): Creep[] {
+    hostiles.sort((a, b) => {
+        if (a.getActiveBodyparts(ATTACK) > 0 && b.getActiveBodyparts(ATTACK) === 0) {
+            return -1
+        } else if (a.getActiveBodyparts(ATTACK) === 0 && b.getActiveBodyparts(ATTACK) > 0) {
+            return 1
+        }
+        return 0
+    })
+    return hostiles
+}
+
 const roleAttacker = {
-    run: wrap((creep: Attacker) => {
+    run: wrap((creep: Attacker): void => {
         if (creep.spawning) {
             return
         }
@@ -31,12 +43,13 @@ const roleAttacker = {
         }
 
         if (targetRoom.controller.safeMode) {
-            Logger.warning(
+            Logger.info(
                 'attacker:safeMode',
                 creep.name,
                 targetRoom.name,
                 targetRoom.controller.safeMode,
             )
+            roleAttacker.wander(creep)
             return
         }
 
@@ -46,33 +59,36 @@ const roleAttacker = {
         }
 
         const structures = getInvaderCores(targetRoom)
-        const hostiles = targetRoom.find(FIND_HOSTILE_CREEPS)
+        const hostiles = sortHostiles(targetRoom.find(FIND_HOSTILE_CREEPS))
         const targets = [...structures, ...hostiles]
         if (targets.length > 0) {
             roleAttacker.attack(creep, targets[0])
             return
         } else {
             const pos = getRandomWalkablePosition(creep.pos)
-            Logger.error('attacker:no-targets', creep.name, pos)
             if (pos) {
                 // we need to move simply to get out of the way of creeps
-                creep.move(
-                    randomElement([
-                        TOP,
-                        BOTTOM,
-                        LEFT,
-                        RIGHT,
-                        TOP_LEFT,
-                        TOP_RIGHT,
-                        BOTTOM_LEFT,
-                        BOTTOM_RIGHT,
-                    ]),
-                )
+                roleAttacker.wander(creep)
             }
             // invader rooms require non stop vigilance
             // roleAttacker.cleanup(creep)
         }
     }, 'runAttacker'),
+
+    wander(creep: Attacker): void {
+        creep.move(
+            randomElement([
+                TOP,
+                BOTTOM,
+                LEFT,
+                RIGHT,
+                TOP_LEFT,
+                TOP_RIGHT,
+                BOTTOM_LEFT,
+                BOTTOM_RIGHT,
+            ]),
+        )
+    },
 
     isInRoom(creep: Attacker): boolean {
         return (
@@ -88,14 +104,10 @@ const roleAttacker = {
         const err = creep.attack(target)
         if (err === ERR_NOT_IN_RANGE) {
             // eslint-disable-next-line @typescript-eslint/no-shadow
-            const err = moveWithinRoom(target.pos, creep, { range: 1 })
-            if (err !== OK && err !== ERR_TIRED) {
-                Logger.error(
-                    'attacker:moveTo:target:failed',
-                    creep.name,
-                    JSON.stringify(target.pos),
-                    err,
-                )
+            if (target instanceof Creep) {
+                creep.moveTo(target)
+            } else {
+                moveWithinRoom(target.pos, creep, { range: 1 })
             }
         } else if (err !== OK) {
             Logger.error('attacker:attack:failed', creep.name, err)

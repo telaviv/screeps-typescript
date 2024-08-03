@@ -8,23 +8,23 @@ import { fromBodyPlan } from 'utils/parts'
 import { getConstructionSites } from 'utils/room'
 import { moveTo } from 'utils/creep'
 
-const ROLE = 'remote-upgrade'
+const ROLE = 'remote-worker'
 
-export interface RemoteUpgrade extends ResourceCreep {
-    memory: RemoteUpgradeMemory
+export interface RemoteWorker extends ResourceCreep {
+    memory: RemoteWorkerMemory
 }
 
-interface RemoteUpgradeMemory extends ResourceCreepMemory {
-    role: 'remote-upgrade'
+interface RemoteWorkerMemory extends ResourceCreepMemory {
+    role: 'remote-worker'
     destination: string
     home: string
     collecting: boolean
 }
 
-class RemoteUpgradeCreep {
-    readonly creep: RemoteUpgrade
+class RemoteWorkerCreep {
+    readonly creep: RemoteWorker
 
-    constructor(creep: RemoteUpgrade) {
+    constructor(creep: RemoteWorker) {
         this.creep = creep
     }
 
@@ -40,7 +40,7 @@ class RemoteUpgradeCreep {
         return this.memory.home
     }
 
-    get memory(): RemoteUpgradeMemory {
+    get memory(): RemoteWorkerMemory {
         return this.creep.memory
     }
 
@@ -110,7 +110,7 @@ class RemoteUpgradeCreep {
     private deliverEnergy() {
         const controller = this.destinationRoom.controller
         if (!controller) {
-            Logger.error('remote-upgrade:deliver:no-controller', this.destination, this.creep.name)
+            Logger.error('remote-worker:deliver:no-controller', this.destination, this.creep.name)
             return
         }
         if (controller.ticksToDowngrade > 5000) {
@@ -128,11 +128,11 @@ class RemoteUpgradeCreep {
             if (err === ERR_NOT_IN_RANGE) {
                 moveTo(targets[0].pos, this.creep, { range: 3 })
             } else if (err !== OK) {
-                Logger.warning('remote-upgrade:build:failure', err, this.creep.name, targets[0].pos)
+                Logger.warning('remote-worker:build:failure', err, this.creep.name, targets[0].pos)
             }
         } else {
             Logger.warning(
-                'remote-upgrade:build:failure',
+                'remote-worker:build:failure',
                 'nothing to build',
                 this.creep.memory.home,
                 this.creep.room.name,
@@ -145,7 +145,7 @@ class RemoteUpgradeCreep {
         this.creep.say('🌃')
         const controller = this.destinationRoom.controller
         if (!controller) {
-            Logger.error('remote-upgrade:upgrade:no-controller', this.destination, this.creep.name)
+            Logger.error('remote-worker:upgrade:no-controller', this.destination, this.creep.name)
             return
         }
 
@@ -156,21 +156,22 @@ class RemoteUpgradeCreep {
                 range: 3,
             })
         } else if (err !== OK) {
-            Logger.error('remote-upgrade:upgrade:failure', controller, err, this.creep.name)
+            Logger.error('remote-worker:upgrade:failure', controller, err, this.creep.name)
         }
     }
 }
 
 export default {
-    run: wrap((creep: RemoteUpgrade) => {
-        const remoteUpgrade = new RemoteUpgradeCreep(creep)
-        remoteUpgrade.run()
-    }, 'roleRemoteUpgrade:run'),
+    run: wrap((creep: RemoteWorker) => {
+        const RemoteWorker = new RemoteWorkerCreep(creep)
+        RemoteWorker.run()
+    }, 'roleRemoteWorker:run'),
 
     create(spawn: StructureSpawn, destination: string, capacity: number | null = null): number {
         capacity = capacity || spawn.room.energyCapacityAvailable
         const parts = fromBodyPlan(capacity, [CARRY, MOVE], [WORK, MOVE])
-        return spawn.spawnCreep(parts, `${ROLE}:${Game.time}`, {
+        const sortedParts = [...parts.slice(1), parts[0]]
+        return spawn.spawnCreep(sortedParts, `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
@@ -178,7 +179,7 @@ export default {
                 tasks: [],
                 idleTimestamp: null,
                 collecting: true,
-            } as RemoteUpgradeMemory,
+            } as RemoteWorkerMemory,
         })
     },
 }

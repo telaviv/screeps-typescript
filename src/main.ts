@@ -4,9 +4,9 @@ import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleClaimer, { Claimer } from 'roles/claim'
 import roleHarvester, { Harvester } from 'roles/harvester'
+import roleHealer, { Healer } from 'roles/healer'
 import roleMason, { Mason } from 'roles/mason'
-import roleRemoteBuild, { RemoteBuild } from 'roles/remote-build'
-import roleRemoteUpgrade, { RemoteUpgrade } from 'roles/remote-upgrade'
+import roleRemoteUpgrade, { RemoteWorker } from 'roles/remote-worker'
 import roleScout, { Scout } from 'roles/scout'
 import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler'
 import roleStaticUpgrader, { StaticUpgrader } from 'roles/static-upgrader'
@@ -136,16 +136,16 @@ const runCreep = wrap((creepName: string) => {
         roleAttacker.run(creep as Attacker)
     } else if (creep.memory.role === 'scout') {
         roleScout.run(creep as Scout)
-    } else if (creep.memory.role === 'remote-upgrade') {
-        roleRemoteUpgrade.run(creep as RemoteUpgrade)
-    } else if (creep.memory.role === 'remote-build') {
-        roleRemoteBuild.run(creep as RemoteBuild)
+    } else if (creep.memory.role === 'remote-worker') {
+        roleRemoteUpgrade.run(creep as RemoteWorker)
     } else if (creep.memory.role === 'mason') {
         roleMason.run(creep as Mason)
     } else if (creep.memory.role === 'static-link-hauler') {
         roleStaticLinkHauler.run(creep as StaticLinkHauler)
     } else if (creep.memory.role === 'static-upgrader') {
         roleStaticUpgrader.run(creep as StaticUpgrader)
+    } else if (creep.memory.role === 'healer') {
+        roleHealer.run(creep as Healer)
     }
 }, 'main:runCreep')
 

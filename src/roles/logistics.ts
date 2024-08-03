@@ -224,7 +224,7 @@ class RoleLogistics {
     }
 
     @profile
-    build(): void {
+    private build(): void {
         const targets = this.getNonWallSites(this.creep.room)
         const target = this.creep.pos.findClosestByRange(targets)
         if (target) {

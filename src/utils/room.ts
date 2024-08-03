@@ -132,10 +132,11 @@ export function getLabs(room: Room): StructureLab[] {
     })
 }
 
-export function getNukers(room: Room): StructureNuker[] {
-    return room.find(FIND_MY_STRUCTURES, {
+export function getNuker(room: Room): StructureNuker | null {
+    const nukers = room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_NUKER },
     })
+    return (nukers[0] as StructureNuker) ?? null
 }
 
 export function getPowerSpawns(room: Room): StructurePowerSpawn[] {
@@ -144,22 +145,25 @@ export function getPowerSpawns(room: Room): StructurePowerSpawn[] {
     })
 }
 
-export function getFactories(room: Room): StructureFactory[] {
-    return room.find(FIND_MY_STRUCTURES, {
+export function getFactory(room: Room): StructureFactory | null {
+    const factories = room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_FACTORY },
     })
+    return (factories[0] as StructureFactory) ?? null
 }
 
-export function getTerminals(room: Room): StructureTerminal[] {
-    return room.find(FIND_MY_STRUCTURES, {
+export function getTerminal(room: Room): StructureTerminal | null {
+    const terminals = room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_TERMINAL },
     })
+    return (terminals[0] as StructureTerminal) ?? null
 }
 
-export function getExtractors(room: Room): StructureExtractor[] {
-    return room.find(FIND_MY_STRUCTURES, {
+export function getExtractor(room: Room): StructureExtractor | null {
+    const extractors = room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_EXTRACTOR },
     })
+    return (extractors[0] as StructureExtractor) ?? null
 }
 
 export function getInvaderCores(room: Room): StructureInvaderCore[] {

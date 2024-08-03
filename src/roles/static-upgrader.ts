@@ -1,6 +1,6 @@
 import * as Logger from 'utils/logger'
 import { calculateBodyCost, moveToStationaryPoint } from 'utils/creep'
-import { getCalculatedLinks, getStationaryPoints } from 'surveyor'
+import { getCalculatedLinks, getStationaryPoints } from 'construction-features'
 import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { byPartCount } from 'utils/parts'

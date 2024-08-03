@@ -1,5 +1,5 @@
 import { getContainerAtPosition, hasContainerAtPosition } from 'utils/room'
-import { getStationaryPoints } from 'surveyor'
+import { getStationaryPoints } from 'construction-features'
 
 export default class DroppedEnergyManager {
     static cache = new Map<number, DroppedEnergyManager>()

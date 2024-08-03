@@ -13,7 +13,10 @@ export default class DefenseDepartment {
     }
 
     public needsDefenders(): boolean {
-        return this.maxAttackPartsNeeded() > 0
+        return (
+            this.maxAttackPartsNeeded() > 0 &&
+            (this.room.controller?.safeMode === undefined || this.room.controller.safeMode <= 500)
+        )
     }
 
     public needsHealer(): boolean {

@@ -2,7 +2,7 @@ import * as Logger from 'utils/logger'
 import { getObstacles, getSources } from 'utils/room'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { getNeighbors } from 'utils/room-position'
-import { getStationaryPoints } from 'surveyor'
+import { getStationaryPoints } from 'construction-features'
 import { subscribe } from 'pub-sub/pub-sub'
 
 export type MatrixTag = 'no-edges' | 'no-sources' | 'no-obstacles' | 'no-stationary-points'
@@ -48,10 +48,14 @@ export function printMatrix(matrix: CostMatrix): void {
 }
 
 export class MatrixCacheManager {
-    private room: Room
+    private roomName: string
 
-    constructor(room: Room) {
-        this.room = room
+    constructor(roomName: string) {
+        this.roomName = roomName
+    }
+
+    get room(): Room {
+        return Game.rooms[this.roomName]
     }
 
     public static addSubscriptions(): void {
@@ -74,9 +78,14 @@ export class MatrixCacheManager {
         }
     }
 
-    public static getFullCostMatrix(room: Room): CostMatrix {
-        const manager = new MatrixCacheManager(room)
+    public static getFullCostMatrix(roomName: string): CostMatrix {
+        const manager = new MatrixCacheManager(roomName)
         return manager.getCostMatrix(TAG_ORDER)
+    }
+
+    public static getDefaultCostMatrix(roomName: string): CostMatrix {
+        const manager = new MatrixCacheManager(roomName)
+        return manager.getCostMatrix([])
     }
 
     public static clearCaches(): void {
@@ -86,10 +95,10 @@ export class MatrixCacheManager {
     }
 
     private get matrixCache(): MatrixCache {
-        if (!this.room.memory.matrixCache) {
-            this.room.memory.matrixCache = {}
+        if (!Memory.rooms[this.roomName].matrixCache) {
+            Memory.rooms[this.roomName].matrixCache = {}
         }
-        return this.room.memory.matrixCache
+        return Memory.rooms[this.roomName].matrixCache as MatrixCache
     }
 
     public getCostMatrix(tags: MatrixTag[]): CostMatrix {
@@ -190,7 +199,8 @@ export class MatrixCacheManager {
     private addStationaryPoints(matrix: CostMatrix): void {
         const points = getStationaryPoints(this.room)
         if (!points) {
-            throw new Error('No stationary points found for room: ' + this.room.name)
+            Logger.error('No stationary points found in room', this.room.name)
+            return
         }
         const { sources, controllerLink, storageLink } = points
         matrix.set(controllerLink.x, controllerLink.y, 255)

@@ -1,17 +1,17 @@
 import * as Logger from 'utils/logger'
+import { ConstructionFeaturesV3, Position } from 'types'
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
 import { getSources, getWallTerrainCount, hasNoSpawns } from 'utils/room'
-import { ConstructionFeaturesV3 } from 'types'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
-import { getConstructionFeaturesV3FromMemory } from 'surveyor'
+import { getConstructionFeaturesV3FromMemory } from 'construction-features'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
 import { mprofile } from 'utils/profiling'
 
-const SCOUT_VERSION = '1.0.5'
+const SCOUT_VERSION = '1.0.7'
 
 const MAX_SCOUT_DISTANCE = MAX_CLAIM_DISTANCE + ENEMY_DISTANCE_BUFFER
 const TIME_PER_TICK = 4.7 // seconds on shard 0
@@ -39,6 +39,9 @@ interface ScoutMemory {
     sourceCount?: number
     controllerBlocked?: boolean
     wallTerrain?: number
+    sourcePositions?: Record<Id<Source>, Position>
+    controllerPosition?: Position
+    mineralPosition?: Position
 }
 
 declare global {
@@ -193,10 +196,20 @@ class ScoutManager {
             scoutMemory.hasInvaderCore = ScoutManager.hasInvaderCore(room)
             scoutMemory.enemyThatsMining = ScoutManager.enemyThatsMining(room)
         }
-        scoutMemory.sourceCount = getSources(room).length
+        const sources = getSources(room)
+        scoutMemory.sourceCount = sources.length
+        scoutMemory.sourcePositions = {}
+        for (const source of sources) {
+            scoutMemory.sourcePositions[source.id] = { x: source.pos.x, y: source.pos.y }
+        }
         scoutMemory.wallTerrain = getWallTerrainCount(room)
         if (controller) {
+            scoutMemory.controllerPosition = { x: controller.pos.x, y: controller.pos.y }
             scoutMemory.controllerBlocked = getNonObstacleNeighbors(controller.pos).length === 0
+        }
+        const mineral = room.find(FIND_MINERALS)[0]
+        if (mineral) {
+            scoutMemory.mineralPosition = { x: mineral.pos.x, y: mineral.pos.y }
         }
         scoutMemory.version = SCOUT_VERSION
         scoutMemory.updatedAt = this.gameTime

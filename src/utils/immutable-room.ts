@@ -2,7 +2,7 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable @typescript-eslint/no-this-alias */
 
-import { List, Map, Record, RecordOf, Seq, ValueObject } from 'immutable'
+import { List, Map, Record as IRecord, RecordOf, Seq, ValueObject } from 'immutable'
 
 import * as Logger from 'utils/logger'
 import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
@@ -32,7 +32,7 @@ interface NonObstacles {
     container: boolean
 }
 
-const NonObstaclesRecord = Record<NonObstacles>({
+const NonObstaclesRecord = IRecord<NonObstacles>({
     road: false,
     rampart: false,
     container: false,
@@ -49,7 +49,7 @@ interface IImmutableRoomItem {
     id: string | null
 }
 
-const ImmutableRoomItemRecord = Record({
+const ImmutableRoomItemRecord = IRecord({
     x: 0,
     y: 0,
     terrain: 0,
@@ -67,6 +67,12 @@ export interface LinkTypes {
         container: FlatRoomPosition
         link: FlatRoomPosition
     }[]
+}
+
+interface ScoutData {
+    sourcePositions: Record<Id<Source>, Position>
+    controllerPosition: Position
+    mineralPosition: Position
 }
 
 export interface StationaryPointsLegacy {
@@ -1097,10 +1103,40 @@ export const fromRoomUncached = wrap((room: Room): ImmutableRoom => {
         immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source', source.id)
     }
 
-    updateCache(room, immutableRoom)
+    updateCache(room.name, immutableRoom)
 
     return immutableRoom
 }, 'immutable-room:fromRoomUncached')
+
+function fromScoutDataUncached(roomName: string, scoutData: ScoutData): ImmutableRoom {
+    let immutableRoom = new ImmutableRoom(roomName)
+    const terrain = new Room.Terrain(roomName)
+    for (let x = 0; x < 50; ++x) {
+        for (let y = 0; y < 50; ++y) {
+            const terrainItem = terrain.get(x, y)
+            if (terrainItem !== 0) {
+                immutableRoom = immutableRoom.setTerrain(x, y, terrainItem)
+            }
+        }
+    }
+
+    const { controllerPosition, sourcePositions, mineralPosition } = scoutData
+
+    immutableRoom = immutableRoom.setObstacle(
+        controllerPosition.x,
+        controllerPosition.y,
+        'controller',
+    )
+    immutableRoom = immutableRoom.setObstacle(mineralPosition.x, mineralPosition.y, 'mineral')
+
+    for (const [id, pos] of Object.entries(sourcePositions)) {
+        immutableRoom = immutableRoom.setObstacle(pos.x, pos.y, 'source', id as Id<Source>)
+    }
+
+    updateCache(roomName, immutableRoom)
+
+    return immutableRoom
+}
 
 export function addRoomStructures(room: Room, immutableRoom: ImmutableRoom): ImmutableRoom {
     const structures = room.find(FIND_STRUCTURES)
@@ -1163,8 +1199,21 @@ export const fromRoom = wrap((room: Room): ImmutableRoom => {
     return fromRoomUncached(room)
 }, 'immutable-room:fromRoom')
 
-export function updateCache(room: Room, immutableRoom: ImmutableRoom): void {
-    cache[Game.time][room.name] = immutableRoom
+export function fromScoutData(roomName: string, scoutData: ScoutData): ImmutableRoom {
+    if (cache[Game.time]) {
+        const timeCache = cache[Game.time]
+        if (timeCache[roomName]) {
+            return timeCache[roomName]
+        }
+    } else {
+        cache = {}
+        cache[Game.time] = {} as RoomCache
+    }
+    return fromScoutDataUncached(roomName, scoutData)
+}
+
+export function updateCache(roomName: string, immutableRoom: ImmutableRoom): void {
+    cache[Game.time][roomName] = immutableRoom
 }
 
 export function clearImmutableRoomCache(): void {
