@@ -155,7 +155,7 @@ export class MatrixCacheManager {
     }
 
     private calculateDefaultMatrix(): CostMatrix {
-        const terrain = new Room.Terrain(this.room.name)
+        const terrain = new Room.Terrain(this.roomName)
         const matrix = new PathFinder.CostMatrix()
         for (let x = 0; x < 50; x++) {
             for (let y = 0; y < 50; y++) {
