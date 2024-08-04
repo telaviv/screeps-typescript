@@ -3,7 +3,7 @@ export function canBeClaimCandidate(roomMemory: RoomMemory): boolean {
     return Boolean(
         memory &&
             memory.sourceCount === 2 &&
-            !memory.controllerOwner &&
+            (memory.controllerOwner ?? global.USERNAME) === global.USERNAME &&
             !memory.enemyThatsMining &&
             !memory.controllerBlocked,
     )

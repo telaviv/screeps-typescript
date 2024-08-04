@@ -481,6 +481,17 @@ export const getRoomType = (roomName: string): RoomType => {
     return RoomType.ROOM
 }
 
+export function findSpawnRooms(): Room[] {
+    return Object.values(Game.rooms).filter((room) => {
+        if (!(room.controller && room.controller.my)) {
+            return false
+        }
+
+        const spawns = room.find(FIND_MY_SPAWNS)
+        return spawns.length > 0
+    })
+}
+
 export function findSpawnlessRooms(): Room[] {
     return Object.values(Game.rooms).filter((room) => {
         if (!(room.controller && room.controller.my)) {

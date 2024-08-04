@@ -21,8 +21,14 @@ import {
     StationaryPoints,
 } from 'types'
 import { ImmutableRoom, fromScoutData } from 'utils/immutable-room'
+import {
+    findMyRooms,
+    findSpawnlessRooms,
+    findSpawnRooms,
+    getBuildableStructures,
+    getConstructionSites,
+} from 'utils/room'
 import { destroyMovementStructures, wipeRoom } from 'construction-movement'
-import { clearConstructionSites, findMyRooms, findSpawnlessRooms, getBuildableStructures, getConstructionSites } from 'utils/room'
 import BUNKER from 'stamps/bunker'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
@@ -320,7 +326,8 @@ const clearRooms = Profiling.wrap(() => {
     for (const room of myRooms) {
         const constructionFeatures = getConstructionFeaturesV3(room)
         if (constructionFeatures?.wipe) {
-            wipeRoom(room)
+            // wipeRoom(room)
+            Logger.error('wiping room', room.name)
             return
         }
     }
@@ -330,9 +337,14 @@ const clearRooms = Profiling.wrap(() => {
             return
         }
         if (constructionFeatures.movement) {
-            if (findSpawnlessRooms().length > 0) {
+            if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
                 return
             }
+            constructionFeatures.movement = calculateBuildingDiff(
+                room,
+                constructionFeatures.features,
+            )
+            clearInvalidConstructionSites(room, constructionFeatures.features)
             destroyMovementStructures(room)
             constructionFeatures.movement = undefined
             return
@@ -340,35 +352,27 @@ const clearRooms = Profiling.wrap(() => {
     }
 }, 'clearRooms')
 
+function clearInvalidConstructionSites(room: Room, features: ConstructionFeatures) {
+    const sites = getConstructionSites(room)
+    for (const site of sites) {
+        const buildings = features[site.structureType]
+        if (buildings?.some((pos) => pos.x === site.pos.x && pos.y === site.pos.y)) {
+            continue
+        }
+        site.remove()
+    }
+}
+
 function calculateRoomMovement() {
     for (const room of Object.values(Game.rooms)) {
         const constructionFeaturesV3 = getConstructionFeaturesV3(room)
         if (!constructionFeaturesV3 || constructionFeaturesV3.movement !== null) {
             continue
         }
-        constructionFeaturesV3.movement = calculateBuildingDiff(room, constructionFeaturesV3.features)
-        const constructionSites = getConstructionSites(room)
-        for (const constructionSite of constructionSites) {
-            if (constructionSite.structureType === STRUCTURE_SPAWN) {
-                if (
-                    constructionFeaturesV3.features[STRUCTURE_SPAWN]?.find(
-                        (pos) =>
-                            pos.x === constructionSite.pos.x && pos.y === constructionSite.pos.y,
-                    )
-                ) {
-                    continue
-                }
-                constructionSite.remove()
-            }
-        }
-        clearConstructionSites(room)
-        destroyMovementStructures(room)
-        Logger.warning(
-            'setConstructionFeaturesV3:incomplete movement structures found in',
-            room.name,
-            JSON.stringify(constructionFeaturesV3.movement),
+        constructionFeaturesV3.movement = calculateBuildingDiff(
+            room,
+            constructionFeaturesV3.features,
         )
-        constructionFeaturesV3.movement = undefined
     }
 }
 

@@ -1,5 +1,6 @@
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
+import assignGlobals, { findUsername } from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleClaimer, { Claimer } from 'roles/claim'
@@ -20,7 +21,6 @@ import { LogisticsCreep } from 'roles/logistics-constants'
 import { MatrixCacheManager } from 'matrix-cache'
 import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
-import assignGlobals from 'utils/globals'
 import { clearImmutableRoomCache } from 'utils/immutable-room'
 import { getBuildManager } from 'managers/build-manager'
 import migrate from 'migrations'
@@ -150,6 +150,10 @@ const runCreep = wrap((creepName: string) => {
 }, 'main:runCreep')
 
 const initialize = wrap(() => {
+    if (!global.USERNAME) {
+        global.USERNAME = findUsername()
+    }
+
     clearMemory()
     addSubscriptions()
     ScoutManager.create().run()

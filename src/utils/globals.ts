@@ -75,7 +75,7 @@ function isOwnedStructure(obj: any): obj is OwnedStructure {
     return 'owner' in obj
 }
 
-function findUsername(): string {
+export function findUsername(): string {
     for (const structure of Object.values(Game.structures)) {
         if (structure && isOwnedStructure(structure)) {
             return structure.owner?.username ?? ''
@@ -89,9 +89,6 @@ export default function assignGlobals(): void {
         Memory.logLevel = 'warning'
     }
 
-    if (!global.USERNAME) {
-        global.USERNAME = findUsername()
-    }
     global.killAllCreeps = killAllCreeps
     global.setLogLevel = Logger.setLogLevel
     global.saveSnapshot = saveSnapshot
@@ -105,6 +102,7 @@ export default function assignGlobals(): void {
     global.resetSnapshot = resetSnapshot
     global.printTasks = printTasks
     global.sendScout = sendScout
+    global.findUsername = findUsername
 }
 
 declare global {
@@ -123,6 +121,7 @@ declare global {
             resetSnapshot: (roomName: string) => void
             printTasks: (type?: Task<any>) => void
             sendScout: (destination: string, startRoom: string) => void
+            findUsername: () => string
         }
     }
 }
