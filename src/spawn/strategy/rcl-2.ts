@@ -14,6 +14,7 @@ import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
+import { getSlidingEnergy } from 'room-window'
 import { getStationaryPoints } from 'construction-features'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
@@ -31,6 +32,7 @@ const CLAIMERS_COUNT = 1
 const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 1200 // roughly the biggest logistics bot
+const MIN_AVAILABLE_ENERGY = 0.1 // % of 2 containers
 
 export default function runStrategy(spawn: StructureSpawn): void {
     updateRescueStatus(spawn.room)
@@ -141,6 +143,18 @@ function swarmStrategy(spawn: StructureSpawn): void {
         roleMason.create(spawn)
         return
     } else if (RoleLogistics.shouldCreateCreep(spawn)) {
+        if (
+            getSlidingEnergy(spawn.room.memory, 99) < MIN_AVAILABLE_ENERGY ||
+            getSlidingEnergy(spawn.room.memory, 999) < MIN_AVAILABLE_ENERGY
+        ) {
+            Logger.warning(
+                'rcl-2:create-latent-workers:lowEnergy',
+                getSlidingEnergy(spawn.room.memory, 99),
+                getSlidingEnergy(spawn.room.memory, 999),
+                spawn.room.name,
+            )
+            return
+        }
         RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
         return
     }
