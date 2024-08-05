@@ -28,11 +28,11 @@ import {
     getBuildableStructures,
     getConstructionSites,
 } from 'utils/room'
-import { destroyMovementStructures, wipeRoom } from 'construction-movement'
 import BUNKER from 'stamps/bunker'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
 import { canBeClaimCandidate } from 'claim'
+import { destroyMovementStructures } from 'construction-movement'
 import { publish } from 'pub-sub/pub-sub'
 
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
@@ -187,11 +187,7 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
         [STRUCTURE_RAMPART]: [] as Position[],
         [STRUCTURE_ROAD]: [] as Position[],
     }
-    const positions = (Object.values(features) as Position[][]).reduce(
-        (acc: Position[], val: Position[]) => acc.concat(val),
-        [] as Position[],
-    )
-    features[STRUCTURE_RAMPART] = getRampartPositions(roomName, iroom, positions)
+    features[STRUCTURE_RAMPART] = getRampartPositions(iroom)
     features[STRUCTURE_ROAD] = calculateBunkerRoadPositions(roomName, iroom, features)
     const points = iroom.stationaryPoints
     if (!points || !points.controllerLink || !points.sources || !points.storageLink) {
@@ -299,17 +295,13 @@ function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
     return iroom
 }
 
-function getRampartPositions(
-    roomName: string,
-    iroom: ImmutableRoom,
-    features: Position[],
-): Position[] {
+function getRampartPositions(iroom: ImmutableRoom): Position[] {
     type Position = [number, number]
     const isCenter = (pos: Position): boolean => {
-        return features.some((feature) => feature.x === pos[0] && feature.y === pos[1])
+        return Boolean(iroom.get(pos[0], pos[1]).obstacle)
     }
     const isWall = ([x, y]: Position): boolean => {
-        return iroom.get(x, y).isObstacle()
+        return iroom.get(x, y).terrain === TERRAIN_MASK_WALL
     }
     const positions = minCutWalls({ isCenter, isWall })
     return positions.map((pos) => ({ x: pos[0], y: pos[1] }))
