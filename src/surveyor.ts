@@ -348,7 +348,10 @@ function clearInvalidConstructionSites(room: Room, features: ConstructionFeature
     const sites = getConstructionSites(room)
     for (const site of sites) {
         const buildings = features[site.structureType]
-        if (buildings?.some((pos) => pos.x === site.pos.x && pos.y === site.pos.y)) {
+        if (
+            site.structureType === 'spawn' &&
+            buildings?.some((pos) => pos.x === site.pos.x && pos.y === site.pos.y)
+        ) {
             continue
         }
         site.remove()

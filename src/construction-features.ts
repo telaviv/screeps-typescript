@@ -6,7 +6,7 @@ declare global {
     }
 }
 
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.3'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.4'
 
 export function getConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | null {
     if (room.memory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION) {

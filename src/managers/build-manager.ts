@@ -87,7 +87,7 @@ export default class BuildManager {
 
     private ensureSpawnSite(): boolean {
         const sites = getConstructionSites(this.room)
-        if (sites.length > 0) {
+        if (sites.length > 0 && sites.some((site) => site.structureType !== STRUCTURE_RAMPART)) {
             return false
         }
         return this.buildNextSpawn()

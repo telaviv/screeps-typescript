@@ -145,26 +145,20 @@ export default class Empire {
         const roomNames = findMyRooms().map((room) => room.name)
         const closestRooms = world.getClosestRooms(roomNames, MAX_CLAIM_DISTANCE)
         if (closestRooms.length === 0) return []
-        const candidates = closestRooms
-            .filter(({ roomName }) => {
-                if (!Memory.rooms[roomName]) return false
-                const features = getConstructionFeaturesFromMemory(Memory.rooms[roomName])
-                if (!features || !canBeClaimCandidate(Memory.rooms[roomName])) return false
-                const neighbors = world.getClosestRooms([roomName], ENEMY_DISTANCE_BUFFER)
-                // if any neighbor is owned by an enemy, don't claim
-                return !neighbors.some(
-                    ({ roomName: name }) =>
-                        Memory.rooms[name]?.scout?.controllerOwner &&
-                        Memory.rooms[name]?.scout?.controllerOwner !== global.USERNAME,
-                )
-            })
-            .map((room) => room.roomName)
-        candidates.sort(
-            (a, b) =>
-                (Memory.rooms[a].scout?.wallTerrain ?? Infinity) -
-                (Memory.rooms[b].scout?.wallTerrain ?? Infinity),
-        )
-        return candidates
+        const candidates = closestRooms.filter(({ roomName }) => {
+            if (!Memory.rooms[roomName]) return false
+            const features = getConstructionFeaturesFromMemory(Memory.rooms[roomName])
+            if (!features || !canBeClaimCandidate(Memory.rooms[roomName])) return false
+            const neighbors = world.getClosestRooms([roomName], ENEMY_DISTANCE_BUFFER)
+            // if any neighbor is owned by an enemy, don't claim
+            return !neighbors.some(
+                ({ roomName: name }) =>
+                    Memory.rooms[name]?.scout?.controllerOwner &&
+                    Memory.rooms[name]?.scout?.controllerOwner !== global.USERNAME,
+            )
+        })
+        candidates.sort(({ distance: a }, { distance: b }) => a - b)
+        return candidates.map(({ roomName }) => roomName)
     }
 
     findBestClaimer(roomName: string): string | null {
