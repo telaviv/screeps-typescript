@@ -29,6 +29,10 @@ import { runTower } from './tower'
 import { visualizeRoom } from 'room-visualizer'
 import { wrap } from 'utils/profiling'
 
+if (!global.USERNAME) {
+    global.USERNAME = findUsername()
+}
+
 // cpu mins
 const VISUALS_CPU_MIN = 1000
 

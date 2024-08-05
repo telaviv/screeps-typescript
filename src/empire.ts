@@ -24,7 +24,7 @@ declare global {
     }
 }
 
-if (!Memory.autoclaim) Memory.autoclaim = false
+if (!Memory.autoclaim) Memory.autoclaim = true
 
 function findClaimCandidates(): void {
     const empire = new Empire()
