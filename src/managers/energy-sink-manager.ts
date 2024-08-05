@@ -24,7 +24,9 @@ export default class EnergySinkManager {
     }
 
     private static isRepairableNonWall(this: void, structure: Structure): boolean {
-        if (includes([STRUCTURE_RAMPART, STRUCTURE_WALL], structure.structureType)) {
+        if (
+            includes([STRUCTURE_RAMPART, STRUCTURE_WALL, STRUCTURE_ROAD], structure.structureType)
+        ) {
             return false
         }
         if (structure.structureType === STRUCTURE_ROAD) {

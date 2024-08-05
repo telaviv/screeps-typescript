@@ -154,9 +154,11 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_EXTENSION)
         }
 
+        /**
         if (this.canBuildRoad()) {
             return this.buildNextStructure(STRUCTURE_ROAD)
         }
+        */
 
         return false
     }

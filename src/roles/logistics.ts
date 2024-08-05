@@ -33,6 +33,7 @@ import { addEnergyTask } from 'tasks/usage-utils'
 import { findTaskByType } from 'tasks/utils'
 import { getBuildManager } from 'managers/build-manager'
 import { getRandomWalkablePosition } from 'utils/room-position'
+import { getSlidingEnergy } from 'room-window'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
 
@@ -41,6 +42,7 @@ const SUICIDE_TIME = 40
 const RESPAWN_IDLE_LIMIT = 0
 const SLEEP_SAY_TIME = 10
 const MAX_TICKS_TO_DOWNGRADE = 5000
+const MIN_AVAILABLE_ENERGY = 0.1 // % of 2 containers
 
 const TASK_EMOJIS = {
     [TASK_HAULING]: '🚚',
@@ -385,6 +387,19 @@ class RoleLogistics {
 
     @profile
     public static shouldCreateCreep(spawn: StructureSpawn): boolean {
+        if (
+            getSlidingEnergy(spawn.room.memory, 99) < MIN_AVAILABLE_ENERGY ||
+            getSlidingEnergy(spawn.room.memory, 999) < MIN_AVAILABLE_ENERGY
+        ) {
+            Logger.warning(
+                'logistics:shouldCreateCreep:lowEnergy',
+                getSlidingEnergy(spawn.room.memory, 99),
+                getSlidingEnergy(spawn.room.memory, 999),
+                spawn.room.name,
+            )
+            return false
+        }
+
         const logistics = filter(Object.keys(Memory.creeps), (creepName: string) => {
             const creep = Game.creeps[creepName] as LogisticsCreep
             return creep && creep.memory.role === 'logistics' && creep.room.name === spawn.room.name
