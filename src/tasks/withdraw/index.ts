@@ -174,6 +174,14 @@ const getEligibleTargets = wrap((room: Room, capacity: number): Withdrawable[] =
     return [bestTarget.withdrawable]
 }, 'withdraw:getEligibleTargets')
 
+export function getTotalWithdrawableResources(room: Room): number {
+    const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
+    return withdrawObjects.reduce(
+        (acc, target) => acc + target.resourcesAvailable(RESOURCE_ENERGY),
+        0,
+    )
+}
+
 export default {
     verifyType: isWithdrawTask,
     run,

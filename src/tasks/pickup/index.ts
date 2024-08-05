@@ -123,6 +123,13 @@ function getDroppedResources(room: Room, capacity: number, resource: ResourceCon
     return eligibles.map((eligible) => eligible.resource)
 }
 
+export function getTotalDroppedResources(room: Room): number {
+    return PickupTarget.findInRoom(room, RESOURCE_ENERGY).reduce(
+        (acc, target) => acc + target.resourcesAvailable(),
+        0,
+    )
+}
+
 export default {
     verifyType: isPickupTask,
     run,

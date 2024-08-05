@@ -2,7 +2,7 @@
 
 const ARRAY_SIZE = 10
 
-interface SlidingWindow {
+export interface SlidingWindow {
     elements: Record<number, number[] | undefined>
     time: number
     maxSize: number
@@ -51,7 +51,7 @@ export class SlidingWindowManager {
             }
             magnitude *= ARRAY_SIZE
         }
-        if (this.calculateElementCount() > this.window.maxSize) {
+        if (this.calculateElementCount() >= this.window.maxSize) {
             this.removeOldestElement()
         }
     }
@@ -70,7 +70,7 @@ export class SlidingWindowManager {
         return sum
     }
 
-    public getAverage(): number {
+    public average(): number {
         return this.sum() / this.calculateElementCount()
     }
 
@@ -79,6 +79,9 @@ export class SlidingWindowManager {
             .map(Number)
             .sort((a, b) => b - a)
         this.window.elements[keys[0]]?.shift()
+        if (this.window.elements[keys[0]]?.length === 0) {
+            delete this.window.elements[keys[0]]
+        }
     }
 
     private calculateElementCount(): number {

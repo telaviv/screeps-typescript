@@ -22,6 +22,7 @@ import { MatrixCacheManager } from 'matrix-cache'
 import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
 import { clearImmutableRoomCache } from 'utils/immutable-room'
+import { ensureSlidingWindow } from 'room-window'
 import { getBuildManager } from 'managers/build-manager'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
@@ -87,6 +88,7 @@ const clearMemory = wrap(() => {
 
 const runMyRoom = wrap((room: Room) => {
     recordRoomStats(room)
+    ensureSlidingWindow(room)
     const buildManager = getBuildManager(room)
     if (!buildManager) {
         return

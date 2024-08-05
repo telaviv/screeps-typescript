@@ -3,6 +3,7 @@
 import includes from 'lodash/includes'
 
 import { LogisticsCreep } from 'roles/logistics-constants'
+import { getTowers } from 'utils/room'
 
 export default class EnergySinkManager {
     static canRepairNonWalls(room: Room): boolean {
@@ -23,10 +24,14 @@ export default class EnergySinkManager {
     }
 
     private static isRepairableNonWall(this: void, structure: Structure): boolean {
-        if (
-            includes([STRUCTURE_RAMPART, STRUCTURE_WALL, STRUCTURE_ROAD], structure.structureType)
-        ) {
+        if (includes([STRUCTURE_RAMPART, STRUCTURE_WALL], structure.structureType)) {
             return false
+        }
+        if (structure.structureType === STRUCTURE_ROAD) {
+            const towers = getTowers(structure.room)
+            if (towers.length > 0) {
+                return false
+            }
         }
         const hitsDifference = structure.hitsMax - structure.hits
         if (structure.structureType === STRUCTURE_TOWER) {
