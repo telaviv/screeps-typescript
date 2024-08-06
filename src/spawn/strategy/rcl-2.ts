@@ -28,7 +28,7 @@ const BUILDERS_COUNT = 1
 const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 
-const CLAIMERS_COUNT = 1
+const CLAIMERS_COUNT = 2
 const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 1200 // roughly the biggest logistics bot
@@ -259,7 +259,8 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
             } else if (
                 warDepartment.targetRoom.controller &&
                 (warDepartment.targetRoom.controller.upgradeBlocked < 100 ||
-                    warDepartment.targetRoom.controller.reservation)
+                    (warDepartment.targetRoom.controller.reservation &&
+                        warDepartment.targetRoom.controller.reservation.ticksToEnd > 500))
             ) {
                 return roleClaimer.create(spawn, warDepartment.target)
             }

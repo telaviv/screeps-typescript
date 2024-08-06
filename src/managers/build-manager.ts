@@ -28,7 +28,7 @@ import {
 import { profile, wrap } from 'utils/profiling'
 import { getConstructionFeatures } from 'construction-features'
 
-const IMPORTANT_EXTENSION_MAX = 5
+const IMPORTANT_EXTENSION_MAX = 7 // this should let us get a claim going
 
 declare global {
     interface RoomMemory {
@@ -110,16 +110,16 @@ export default class BuildManager {
             return false
         }
 
-        if (this.canBuildContainer()) {
-            return this.buildNextStructure(STRUCTURE_CONTAINER)
-        }
-
         if (this.canBuildImportantExtension()) {
             return this.buildNextStructure(STRUCTURE_EXTENSION)
         }
 
         if (this.canBuildTower()) {
             return this.buildNextStructure(STRUCTURE_TOWER)
+        }
+
+        if (this.canBuildContainer()) {
+            return this.buildNextStructure(STRUCTURE_CONTAINER)
         }
 
         if (this.canBuildSwampRoad()) {

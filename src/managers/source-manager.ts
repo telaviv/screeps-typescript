@@ -97,6 +97,17 @@ export default class SourceManager {
         )
     }
 
+    public hasContainerHarvester(): boolean {
+        return this.harvesters.some((harvester: Creep) => {
+            return (
+                isHarvester(harvester) &&
+                harvester.memory.source === this.id &&
+                harvester.memory.pos.x === this.containerPosition.x &&
+                harvester.memory.pos.y === this.containerPosition.y
+            )
+        })
+    }
+
     public hasEnoughHarvesters(): boolean {
         if (!this.hasStaticHarvester()) {
             return false

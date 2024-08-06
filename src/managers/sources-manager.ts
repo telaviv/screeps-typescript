@@ -61,7 +61,7 @@ export default class SourcesManager {
     }
 
     public hasAllContainerHarvesters(): boolean {
-        return this.sourceManagers.every((sourceManager) => sourceManager.hasStaticHarvester())
+        return this.sourceManagers.every((sourceManager) => sourceManager.hasContainerHarvester())
     }
 
     public getNextHarvesterMiningTarget(): {
@@ -71,7 +71,7 @@ export default class SourcesManager {
         let source: Id<Source> | null = null
         let pos: RoomPosition | null = null
         for (const sourceManager of this.sourceManagers) {
-            if (!sourceManager.hasStaticHarvester()) {
+            if (!sourceManager.hasContainerHarvester()) {
                 pos = sourceManager.containerPosition
                 source = sourceManager.id
             }
