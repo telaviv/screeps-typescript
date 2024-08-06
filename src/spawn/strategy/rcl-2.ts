@@ -27,12 +27,10 @@ const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
 const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
-
-const CLAIMERS_COUNT = 2
 const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 1200 // roughly the biggest logistics bot
-const MIN_AVAILABLE_ENERGY = 0.1 // % of 2 containers
+const MIN_AVAILABLE_ENERGY = 0.15 // % of 2 containers
 
 export default function runStrategy(spawn: StructureSpawn): void {
     updateRescueStatus(spawn.room)
@@ -99,14 +97,18 @@ export default function runStrategy(spawn: StructureSpawn): void {
 
 function swarmStrategy(spawn: StructureSpawn): void {
     const room = spawn.room
-    const constructionSites = getConstructionSites(room)
+    const constructionSites = getConstructionSites(room).filter(
+        (site) => site.structureType !== STRUCTURE_RAMPART,
+    )
     const masons = getCreeps('mason', room)
     const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
     const upgraders = getLogisticsCreeps({ preference: TASK_UPGRADING, room })
     const builders = getLogisticsCreeps({ preference: TASK_BUILDING, room })
-    const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
+    const workers = getLogisticsCreeps({ room }).filter(
+        (creep) => creep.getActiveBodyparts(WORK) > 0,
+    )
 
     if (RoleLogistics.shouldCreateCreep(spawn)) {
         if (haulers.length < 1) {
@@ -171,7 +173,9 @@ function linkStrategy(spawn: StructureSpawn): void {
     const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
     const upgraders = getLogisticsCreeps({ preference: TASK_UPGRADING, room })
     const builders = getLogisticsCreeps({ preference: TASK_BUILDING, room })
-    const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
+    const workers = getLogisticsCreeps({ room }).filter(
+        (creep) => creep.getActiveBodyparts(WORK) > 0,
+    )
     const upgraderCount = upgraders.length + staticUpgraders.length
 
     if (RoleLogistics.shouldCreateCreep(spawn)) {
@@ -253,17 +257,18 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     }
 
     if (status === WarStatus.CLAIM) {
-        if (claimers.length < CLAIMERS_COUNT) {
-            if (claimers.length === 0) {
-                return roleClaimer.create(spawn, warDepartment.target)
-            } else if (
-                warDepartment.targetRoom.controller &&
-                (warDepartment.targetRoom.controller.upgradeBlocked < 100 ||
-                    (warDepartment.targetRoom.controller.reservation &&
-                        warDepartment.targetRoom.controller.reservation.ticksToEnd > 500))
-            ) {
-                return roleClaimer.create(spawn, warDepartment.target)
-            }
+        if (warDepartment.hasStrongInvaderCore() && warDepartment.claimerSpotsAvailable() <= 1) {
+            return null
+        } else if (claimers.length === 0) {
+            return roleClaimer.create(spawn, warDepartment.target)
+        } else if (
+            warDepartment.targetRoom.controller &&
+            warDepartment.claimerSpotsAvailable() > claimers.length &&
+            (warDepartment.targetRoom.controller.upgradeBlocked < 100 ||
+                (warDepartment.targetRoom.controller.reservation &&
+                    warDepartment.targetRoom.controller.reservation.ticksToEnd > 500))
+        ) {
+            return roleClaimer.create(spawn, warDepartment.target)
         }
     } else if (status === WarStatus.SPAWN) {
         if (remoteWorker.length < 1) {
@@ -282,6 +287,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 }
 
 function createRescueCreeps(spawn: StructureSpawn) {
+    Logger.error('createRescueCreeps:collapsed', spawn.room.name)
     const room = spawn.room
     const stationaryPoints = getStationaryPoints(room)
     if (!stationaryPoints) {
@@ -291,7 +297,9 @@ function createRescueCreeps(spawn: StructureSpawn) {
     const sourcesManager = new SourcesManager(room)
     const sourceCount = Object.keys(stationaryPoints.sources).length
     const harvesters = getCreeps('harvester', room)
-    const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
+    const workers = getLogisticsCreeps({ room }).filter(
+        (creep) => creep.getActiveBodyparts(WORK) > 0,
+    )
     const defenseDepartment = new DefenseDepartment(spawn.room)
 
     if (defenseDepartment.needsDefenders()) {
@@ -310,17 +318,17 @@ function updateRescueStatus(room: Room) {
         return
     }
     const sourceCount = Object.keys(stationaryPoints.sources).length
-    const haulers = getLogisticsCreeps({ preference: TASK_HAULING, room })
-    const workers = getLogisticsCreeps({ preference: PREFERENCE_WORKER, room })
-    const haulerCount = haulers.length + workers.length
+    const rescueCount = getLogisticsCreeps({ room }).filter(
+        (creep) => creep.getActiveBodyparts(CARRY) > 0 && creep.getActiveBodyparts(WORK) > 0,
+    ).length
     const harvesters = getCreeps('harvester', room)
     if (
         room.memory.collapsed &&
-        haulerCount >= RESCUE_WORKER_COUNT &&
+        rescueCount >= RESCUE_WORKER_COUNT &&
         harvesters.length >= sourceCount
     ) {
         room.memory.collapsed = false
-    } else if (!room.memory.collapsed && haulerCount < sourceCount) {
+    } else if (!room.memory.collapsed && rescueCount < sourceCount) {
         room.memory.collapsed = true
     }
 }

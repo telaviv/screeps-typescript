@@ -354,6 +354,7 @@ function clearInvalidConstructionSites(room: Room, features: ConstructionFeature
         ) {
             continue
         }
+        Logger.warning('clearInvalidConstructionSites:removed', site.structureType, site.pos)
         site.remove()
     }
 }

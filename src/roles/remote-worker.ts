@@ -1,17 +1,25 @@
 import * as Logger from 'utils/logger'
+import * as Logistics from 'roles/logistics'
 import * as TaskRunner from 'tasks/runner'
+import { LogisticsMemory, TASK_COLLECTING, TASK_HAULING } from './logistics-constants'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { getConstructionSites, hasNoSpawns } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { fromBodyPlan } from 'utils/parts'
-import { getConstructionSites } from 'utils/room'
 import { moveTo } from 'utils/creep'
 
 const ROLE = 'remote-worker'
 
 export interface RemoteWorker extends ResourceCreep {
-    memory: RemoteWorkerMemory
+    memory: RemoteWorkerMemory | LogisticsMemory
+}
+
+function isRemoteWorkerMemory(
+    memory: ResourceCreepMemory | LogisticsMemory,
+): memory is RemoteWorkerMemory {
+    return memory.role === 'remote-worker'
 }
 
 interface RemoteWorkerMemory extends ResourceCreepMemory {
@@ -41,6 +49,9 @@ class RemoteWorkerCreep {
     }
 
     get memory(): RemoteWorkerMemory {
+        if (!isRemoteWorkerMemory(this.creep.memory)) {
+            throw new Error('Invalid remote worker memory')
+        }
         return this.creep.memory
     }
 
@@ -57,6 +68,11 @@ class RemoteWorkerCreep {
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
             TaskRunner.run(task, this.creep)
+            return
+        }
+
+        if (this.shouldTransform()) {
+            this.transform()
             return
         }
 
@@ -77,6 +93,24 @@ class RemoteWorkerCreep {
         }
     }
 
+    private shouldTransform(): boolean {
+        return this.destinationRoom && !hasNoSpawns(this.destinationRoom)
+    }
+
+    private transform() {
+        const currentTask = this.hasNoEnergy() ? TASK_COLLECTING : TASK_HAULING
+        const memory = {
+            role: Logistics.ROLE,
+            home: this.memory.destination,
+            preference: TASK_HAULING,
+            currentTask,
+            currentTarget: undefined,
+            idleTimestamp: null,
+            tasks: [],
+        } as LogisticsMemory
+        this.creep.memory = memory
+    }
+
     private collectEnergy(): void {
         this.creep.say('⚡')
         if (!addEnergyTask(this.creep)) {
@@ -85,26 +119,12 @@ class RemoteWorkerCreep {
         }
     }
 
-    private shouldRecycle() {
-        const roundTripTime: number = this.roundTripTime()
-        const ticksToLive: number = this.creep.ticksToLive || 0
-        return ticksToLive < roundTripTime + 50
-    }
-
     private hasNoEnergy() {
         return hasNoEnergy(this.creep)
     }
 
     private isFullOfEnergy() {
         return isFullOfEnergy(this.creep)
-    }
-
-    private travelDistance(): number {
-        return Game.map.getRoomLinearDistance(this.home, this.destination) * 50
-    }
-
-    private roundTripTime(): number {
-        return 2 * this.travelDistance() + this.creep.getActiveBodyparts(CARRY)
     }
 
     private deliverEnergy() {

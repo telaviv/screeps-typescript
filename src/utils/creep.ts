@@ -5,6 +5,7 @@ import { Harvester } from 'roles/harvester'
 import { MatrixCacheManager } from 'matrix-cache'
 import { getSpawns } from 'utils/room'
 import { isTravelTask } from 'tasks/travel/utils'
+import { randomElement } from './utilities'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 
@@ -116,6 +117,29 @@ export function moveTowardsCenter(creep: Creep): void {
 
 export function isAtEdge(creep: Creep): boolean {
     return creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49
+}
+
+export function wander(creep: Creep): MoveToReturnCode {
+    const set = new Set([TOP, BOTTOM, LEFT, RIGHT, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT])
+    if (creep.pos.x === 1) {
+        set.delete(LEFT)
+        set.delete(TOP_LEFT)
+        set.delete(BOTTOM_LEFT)
+    } else if (creep.pos.x === 48) {
+        set.delete(RIGHT)
+        set.delete(TOP_RIGHT)
+        set.delete(BOTTOM_RIGHT)
+    }
+    if (creep.pos.y === 1) {
+        set.delete(TOP)
+        set.delete(TOP_LEFT)
+        set.delete(TOP_RIGHT)
+    } else if (creep.pos.y === 48) {
+        set.delete(BOTTOM)
+        set.delete(BOTTOM_LEFT)
+        set.delete(BOTTOM_RIGHT)
+    }
+    return creep.move(randomElement([...set]))
 }
 
 export function recycle(creep: Creep): void {

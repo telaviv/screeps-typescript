@@ -1,4 +1,5 @@
 import * as Logger from 'utils/logger'
+import { getNonObstacleNeighbors } from 'utils/room-position'
 import { hasNoSpawns } from 'utils/room'
 
 declare global {
@@ -76,6 +77,20 @@ export default class WarDepartment {
             filter: { structureType: STRUCTURE_INVADER_CORE },
         })
         return invaderCores ? invaderCores.length > 0 : false
+    }
+
+    public hasStrongInvaderCore(): boolean {
+        const invaderCores = this.targetRoom?.find(FIND_STRUCTURES, {
+            filter: { structureType: STRUCTURE_INVADER_CORE },
+        })
+        return invaderCores?.some((c) => c.hits > 1000) || false
+    }
+
+    public claimerSpotsAvailable(): number {
+        if (!this.targetRoom?.controller) {
+            return 0
+        }
+        return getNonObstacleNeighbors(this.targetRoom.controller.pos).length
     }
 
     public hasHostiles(): boolean {

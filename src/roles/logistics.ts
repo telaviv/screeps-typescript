@@ -24,6 +24,7 @@ import {
     getConstructionSites,
     getOwnWeakestWall,
     hasHostileCreeps,
+    hasNoSpawns,
     hasOwnFragileWall,
 } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
@@ -36,7 +37,7 @@ import { getRandomWalkablePosition } from 'utils/room-position'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
 
-const ROLE = 'logistics'
+export const ROLE = 'logistics'
 const SUICIDE_TIME = 40
 const RESPAWN_IDLE_LIMIT = 0
 const SLEEP_SAY_TIME = 10
@@ -172,6 +173,8 @@ class RoleLogistics {
         ) {
             memory.currentTask = TASK_UPGRADING
             return
+        } else if (hasNoSpawns(this.creep.room)) {
+            memory.currentTask = TASK_BUILDING
         } else if (TransferTask.makeRequest(this.creep)) {
             memory.currentTask = TASK_HAULING
         } else if (buildManager && buildManager.canBuildImportant()) {

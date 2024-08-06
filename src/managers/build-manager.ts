@@ -326,11 +326,17 @@ export default class BuildManager {
     }
 
     private canBuildImportantExtension = (): boolean => {
+        if ((this.room.controller?.level ?? 0) < 2) {
+            return false
+        }
         const extensions = getExtensions(this.room)
         return extensions.length < IMPORTANT_EXTENSION_MAX
     }
 
     private canBuildExtension = wrap(() => {
+        if ((this.room.controller?.level ?? 0) < 2) {
+            return false
+        }
         return !isAtExtensionCap(this.room)
     }, 'BuildManager:canBuildExtension')
 
