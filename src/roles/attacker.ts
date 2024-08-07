@@ -1,7 +1,7 @@
 import * as Logger from 'utils/logger'
+import { getHostileConstructionSites, getInvaderCores } from 'utils/room'
 import { goHome, moveTo, recycle, wander } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
-import { getInvaderCores } from 'utils/room'
 import { moveToRoom } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
@@ -59,15 +59,15 @@ const roleAttacker = {
 
         const structures = getInvaderCores(targetRoom)
         const hostiles = sortHostiles(targetRoom.find(FIND_HOSTILE_CREEPS))
+        const constructionSites = getHostileConstructionSites(targetRoom)
         const targets = [...structures, ...hostiles]
         if (targets.length > 0) {
             roleAttacker.attack(creep, targets[0])
-            return
+        } else if (constructionSites.length > 0) {
+            moveTo(constructionSites[0].pos, creep, { range: 0 })
         } else {
             wander(creep)
         }
-        // invader rooms require non stop vigilance
-        // roleAttacker.cleanup(creep)
     }, 'runAttacker'),
 
     isInRoom: (creep: Attacker): boolean => {
@@ -84,11 +84,7 @@ const roleAttacker = {
         const err = creep.attack(target)
         if (err === ERR_NOT_IN_RANGE) {
             // eslint-disable-next-line @typescript-eslint/no-shadow
-            if (target instanceof Creep) {
-                creep.moveTo(target)
-            } else {
-                moveTo(target.pos, creep, { range: 1 })
-            }
+            moveTo(target.pos, creep, { range: 1 })
         } else if (err !== OK) {
             Logger.error('attacker:attack:failed', creep.name, err)
         }

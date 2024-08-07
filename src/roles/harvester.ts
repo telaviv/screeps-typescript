@@ -85,7 +85,10 @@ export class HarvesterCreep {
 
     private isHarvestTick(): boolean {
         const workParts = this.creep.getActiveBodyparts(WORK)
-        return Game.time % Math.floor(workParts / MAX_WORK_PARTS) === 0 && this.source.energy > 0
+        return (
+            Game.time % Math.max(Math.floor(workParts / MAX_WORK_PARTS), 1) === 0 &&
+            this.source.energy > 0
+        )
     }
 
     private isAtHarvestPos(): boolean {

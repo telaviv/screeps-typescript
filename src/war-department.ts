@@ -72,6 +72,15 @@ export default class WarDepartment {
         return this.warMemory.needsProtection || false
     }
 
+    public hasSafeMode(): boolean {
+        return (
+            this.targetRoom?.controller?.safeMode !== undefined ||
+            (this.targetRoom?.memory.scout?.safeMode ?? 0) +
+                (this.targetRoom?.memory.scout?.updatedAt ?? 0) >
+                Game.time
+        )
+    }
+
     public hasInvaderCore(): boolean {
         const invaderCores = this.targetRoom?.find(FIND_STRUCTURES, {
             filter: { structureType: STRUCTURE_INVADER_CORE },
@@ -91,6 +100,15 @@ export default class WarDepartment {
             return 0
         }
         return getNonObstacleNeighbors(this.targetRoom.controller.pos).length
+    }
+
+    public hasHostileController(): boolean {
+        return Boolean(
+            this.targetRoom &&
+                this.targetRoom.controller &&
+                this.targetRoom.controller.owner &&
+                this.targetRoom.controller.my === false,
+        )
     }
 
     public hasHostiles(): boolean {
@@ -139,7 +157,10 @@ export default class WarDepartment {
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
         } else if (this.status === WarStatus.ATTACK) {
-            if (!this.hasHostiles() && !this.hasInvaderCore()) {
+            if (this.targetRoom && this.targetRoom.controller && this.targetRoom.controller.my) {
+                Logger.warning(
+                    `war-department:update: cancelling attack on ${this.target} from ${this.room.name}`,
+                )
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
         }
