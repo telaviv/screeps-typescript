@@ -121,7 +121,7 @@ const ensureSafeMode = wrap((room: Room) => {
         return
     }
     for (const event of room.getEventLog()) {
-        if (event.event === EVENT_OBJECT_DESTROYED && event.data.type === STRUCTURE_RAMPART) {
+        if (event.event === EVENT_OBJECT_DESTROYED && event.data.type !== STRUCTURE_ROAD) {
             room.controller.activateSafeMode()
             return
         }
