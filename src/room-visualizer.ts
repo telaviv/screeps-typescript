@@ -193,14 +193,10 @@ export function visualizeRoom(room: Room): void {
     }
     const roomVisual = new RoomVisualizer(room)
     if (visuals.visualType === 'construction') {
-        let constructionFeatures: ConstructionFeatures | null
-        if (room.memory.constructionFeaturesV3) {
-            constructionFeatures = room.memory.constructionFeaturesV3.features
-        } else {
-            constructionFeatures = getConstructionFeatures(room)
-            if (!constructionFeatures) {
-                return
-            }
+        const constructionFeatures = getConstructionFeatures(room)
+        if (!constructionFeatures) {
+            Logger.info('room-visualizer:visualizeRoom:missing-features', room.name)
+            return
         }
         roomVisual.renderConstructionFeatures(constructionFeatures, visuals.showRoads)
     } else if (visuals.visualType === 'transform') {

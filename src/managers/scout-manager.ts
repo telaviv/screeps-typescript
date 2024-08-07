@@ -2,7 +2,14 @@ import * as Logger from 'utils/logger'
 import { ConstructionFeaturesV3, Position } from 'types'
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
-import { findSpawnRooms, getSources, getWallTerrainCount, hasNoSpawns } from 'utils/room'
+import {
+    findSpawnRooms,
+    getRoomType,
+    getSources,
+    getWallTerrainCount,
+    hasNoSpawns,
+    RoomType,
+} from 'utils/room'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getConstructionFeaturesV3FromMemory } from 'construction-features'
@@ -29,7 +36,7 @@ if (Object.keys(DistanceTTL).length < MAX_SCOUT_DISTANCE) {
 
 export const EXPIRATION_TTL = (60 * 60 * 48) / TIME_PER_TICK
 
-interface ScoutMemory {
+export interface ScoutMemory {
     version: string
     updatedAt: number
     controllerOwner?: string
@@ -150,6 +157,9 @@ class ScoutManager {
     findNextRoomToScout(): string | null {
         const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
         for (const { roomName, distance } of closestRooms) {
+            if (getRoomType(roomName) !== RoomType.ROOM) {
+                continue
+            }
             const ttl = DistanceTTL[distance] ?? 0
             if (
                 !this.scoutRoomData[roomName] ||

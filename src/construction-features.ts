@@ -18,7 +18,7 @@ export function getConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | 
 export function getConstructionFeatures(room: Room): ConstructionFeatures | null {
     const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(room.memory)
     if (constructionFeaturesV3) {
-        return constructionFeaturesV3.features
+        return constructionFeaturesV3.features ?? null
     }
     return null
 }
@@ -44,7 +44,7 @@ export function getStationaryPointsFromMemory(
 ): StationaryPoints | null {
     const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(roomMemory)
     if (constructionFeaturesV3) {
-        return constructionFeaturesV3.points
+        return constructionFeaturesV3.points ?? null
     }
     return null
 }
@@ -57,7 +57,7 @@ export function getConstructionFeaturesFromMemory(
     }
     const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(roomMemory)
     if (constructionFeaturesV3) {
-        return constructionFeaturesV3.features
+        return constructionFeaturesV3.features ?? null
     }
     return null
 }

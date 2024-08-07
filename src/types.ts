@@ -24,11 +24,13 @@ export type ConstructionMovement = {
     }
 }
 
+export type BaseRoomType = 'base' | 'mine' | 'none'
 export interface ConstructionFeaturesV3 {
     version: string
-    features: ConstructionFeatures
-    points: StationaryPoints
-    links: Links
+    type: BaseRoomType
+    features?: ConstructionFeatures
+    points?: StationaryPoints
+    links?: Links
     movement?: ConstructionMovement | null
     wipe?: boolean
 }

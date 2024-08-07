@@ -4,14 +4,7 @@ import { minCutWalls } from 'screeps-min-cut-wall'
 import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
 import {
-    CONSTRUCTION_FEATURES_V3_VERSION,
-    getCalculatedLinks,
-    getConstructionFeatures,
-    getConstructionFeaturesV3,
-    getStationaryPoints,
-    getValidConstructionFeaturesV3,
-} from 'construction-features'
-import {
+    BaseRoomType,
     ConstructionFeatures,
     ConstructionFeaturesV3,
     ConstructionMovement,
@@ -20,6 +13,14 @@ import {
     Position,
     StationaryPoints,
 } from 'types'
+import {
+    CONSTRUCTION_FEATURES_V3_VERSION,
+    getCalculatedLinks,
+    getConstructionFeatures,
+    getConstructionFeaturesV3,
+    getStationaryPoints,
+    getValidConstructionFeaturesV3,
+} from 'construction-features'
 import { ImmutableRoom, fromScoutData } from 'utils/immutable-room'
 import {
     findMyRooms,
@@ -27,6 +28,8 @@ import {
     findSpawnRooms,
     getBuildableStructures,
     getConstructionSites,
+    getRoomType,
+    RoomType,
 } from 'utils/room'
 import BUNKER from 'stamps/bunker'
 import { SubscriptionEvent } from 'pub-sub/constants'
@@ -62,6 +65,14 @@ declare global {
 global.setConstructionFeaturesV3 = setConstructionFeaturesV3
 global.clearConstructionFeatures = clearConstructionFeatures
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
+
+function createConstructionFeaturesV3(type: BaseRoomType): ConstructionFeaturesV3 {
+    return {
+        version: CONSTRUCTION_FEATURES_V3_VERSION,
+        type,
+        wipe: true,
+    }
+}
 
 export function isSurveyComplete(room: Room): boolean {
     return Boolean(
@@ -99,10 +110,6 @@ function setConstructionFeaturesV3(roomName: string) {
     // we need to have already scouted the room so that we don't waste time
     // on rooms with no controller or 1 source etc ....
     const roomMemory = Memory.rooms[roomName]
-    if (!roomMemory?.scout) {
-        Logger.warning('no scout data for room', roomName)
-        return
-    }
     Logger.warning(
         'setConstructionFeaturesV3:incomplete setting construction features for room',
         roomName,
@@ -163,13 +170,14 @@ export function isConstructionFeaturesUpToDate(room: Room): boolean {
     )
 }
 
-function calculateConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 | undefined {
+function calculateConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 {
+    if (getRoomType(roomName) !== RoomType.ROOM) {
+        return createConstructionFeaturesV3('none')
+    }
     const iroom = calculateBunkerImmutableRoom(roomName)
     if (!iroom) {
-        Logger.info('calculateBunkerImmutableRoom returned falsey for room', roomName)
-        return undefined
+        return createConstructionFeaturesV3('mine')
     }
-
     const features = {
         [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
         [STRUCTURE_TOWER]: iroom.sortedTowerPositions(),
@@ -191,12 +199,7 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     features[STRUCTURE_ROAD] = calculateBunkerRoadPositions(roomName, iroom, features)
     const points = iroom.stationaryPoints
     if (!points || !points.controllerLink || !points.sources || !points.storageLink) {
-        Logger.error(
-            'Failed to calculate stationary points for room',
-            roomName,
-            JSON.stringify(points),
-        )
-        return undefined
+        throw new Error('no stationary points')
     }
     const stationaryPoints: StationaryPoints = {
         version: STATIONARY_POINTS_VERSION,
@@ -211,6 +214,7 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     const links = calculateLinks(roomName, sourcePositions, iroom)
     return {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
+        type: 'base',
         features,
         points: stationaryPoints,
         links,
@@ -325,18 +329,16 @@ const clearRooms = Profiling.wrap(() => {
     }
     for (const room of myRooms) {
         const constructionFeatures = getValidConstructionFeaturesV3(room)
-        if (!constructionFeatures) {
+        const features = getConstructionFeatures(room)
+        if (!constructionFeatures || !features) {
             return
         }
         if (constructionFeatures.movement) {
             if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
                 return
             }
-            constructionFeatures.movement = calculateBuildingDiff(
-                room,
-                constructionFeatures.features,
-            )
-            clearInvalidConstructionSites(room, constructionFeatures.features)
+            constructionFeatures.movement = calculateBuildingDiff(room, features)
+            clearInvalidConstructionSites(room, features)
             destroyMovementStructures(room)
             constructionFeatures.movement = undefined
             return
@@ -362,13 +364,11 @@ function clearInvalidConstructionSites(room: Room, features: ConstructionFeature
 function calculateRoomMovement() {
     for (const room of Object.values(Game.rooms)) {
         const constructionFeaturesV3 = getConstructionFeaturesV3(room)
-        if (!constructionFeaturesV3 || constructionFeaturesV3.movement !== null) {
+        const features = getConstructionFeatures(room)
+        if (!constructionFeaturesV3 || constructionFeaturesV3.movement !== null || !features) {
             continue
         }
-        constructionFeaturesV3.movement = calculateBuildingDiff(
-            room,
-            constructionFeaturesV3.features,
-        )
+        constructionFeaturesV3.movement = calculateBuildingDiff(room, features)
     }
 }
 
