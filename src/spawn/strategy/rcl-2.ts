@@ -276,14 +276,14 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
             return roleClaimer.create(spawn, warDepartment.target)
         }
     } else if (status === WarStatus.SPAWN) {
-        if (remoteWorker.length < 1) {
-            return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
-        } else if (!sourcesManager.hasAHarvester()) {
-            return sourcesManager.createHarvester(spawn, true)
-        } else if (remoteWorker.length < 2) {
+        if (remoteWorker.length === 0) {
             return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
         } else if (isEnergyRestricted(room)) {
-            if (!sourcesManager.hasAllContainerHarvesters()) {
+            if (!sourcesManager.hasAHarvester()) {
+                return sourcesManager.createHarvester(spawn, true)
+            } else if (remoteWorker.length < 2) {
+                return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
+            } else if (!sourcesManager.hasAllContainerHarvesters()) {
                 return sourcesManager.createHarvester(spawn, true)
             } else {
                 return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
