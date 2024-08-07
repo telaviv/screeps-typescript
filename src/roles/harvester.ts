@@ -1,9 +1,10 @@
 import * as Logger from 'utils/logger'
 import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
 import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
+import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
+import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
-import { isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveTo } from 'utils/creep'
 import { spawnCreep } from 'utils/spawn'
 
@@ -16,6 +17,8 @@ const BODY_PLANS = [
     byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 4 }),
     byPartCount({ [MOVE]: 8, [WORK]: 8, [CARRY]: 2 }),
     byPartCount({ [MOVE]: 7, [WORK]: 7, [CARRY]: 2 }),
+    byPartCount({ [MOVE]: 6, [WORK]: 6, [CARRY]: 2 }),
+    byPartCount({ [MOVE]: 6, [WORK]: 6 }),
     byPartCount({ [MOVE]: 5, [WORK]: 5 }),
 ]
 
@@ -39,6 +42,10 @@ export class HarvesterCreep {
         this.creep = creep
     }
 
+    get container(): StructureContainer | null {
+        return getContainerAt(this.harvestPos)
+    }
+
     @profile
     public run(): void {
         if (this.creep.spawning) {
@@ -53,6 +60,8 @@ export class HarvesterCreep {
         if (this.canTransferEnergy()) {
             this.transferEnergyToLink()
             return
+        } else if (this.canRepairContainer()) {
+            this.repairContainer()
         }
 
         this.harvestSource()
@@ -76,10 +85,7 @@ export class HarvesterCreep {
 
     private isHarvestTick(): boolean {
         const workParts = this.creep.getActiveBodyparts(WORK)
-        return (
-            (this.creep.ticksToLive || 0) % (workParts / MAX_WORK_PARTS) === 0 ||
-            this.source.energy === 0
-        )
+        return Game.time % Math.floor(workParts / MAX_WORK_PARTS) === 0 && this.source.energy > 0
     }
 
     private isAtHarvestPos(): boolean {
@@ -146,8 +152,41 @@ export class HarvesterCreep {
         }
     }
 
+    @profile
+    private canRepairContainer(): boolean {
+        if (
+            this.creep.getActiveBodyparts(CARRY) === 0 ||
+            !this.hasEnergy() ||
+            this.isHarvestTick() ||
+            !this.isAtHarvestPos()
+        ) {
+            return false
+        }
+        const container = this.container
+        if (container === null) {
+            return false
+        }
+        return container.hits < container.hitsMax
+    }
+
+    private repairContainer(): void {
+        const container = this.container
+        if (container === null) {
+            Logger.error('harvester:repair:container:not-found', this.creep.name)
+            return
+        }
+        const err = this.creep.repair(container)
+        if (err !== OK) {
+            Logger.error('harvester:repair:failure', this.creep.name, "couldn't repair", err)
+        }
+    }
+
     private isFullOfEnergy(): boolean {
         return isFullOfEnergy(this.creep)
+    }
+
+    private hasEnergy(): boolean {
+        return !hasNoEnergy(this.creep)
     }
 
     @profile

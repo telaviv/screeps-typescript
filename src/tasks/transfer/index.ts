@@ -19,7 +19,10 @@ export const makeRequest = wrap((creep: ResourceCreep): AnyStoreStructure | null
         return getStructure(currentRequest)
     }
 
-    if (creep.room.energyAvailable > MINIMUM_EXTENSION_ENERGY) {
+    if (
+        creep.room.energyAvailable >
+        Math.min(MINIMUM_EXTENSION_ENERGY, creep.room.energyCapacityAvailable * 0.75)
+    ) {
         const towers = fillableTowers(creep.room)
         if (towers.length > 0) {
             const tower = creep.pos.findClosestByRange(towers) as StructureTower

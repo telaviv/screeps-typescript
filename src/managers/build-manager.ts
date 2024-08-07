@@ -329,6 +329,9 @@ export default class BuildManager {
         if ((this.room.controller?.level ?? 0) < 2) {
             return false
         }
+        if (isAtExtensionCap(this.room)) {
+            return false
+        }
         const extensions = getExtensions(this.room)
         return extensions.length < IMPORTANT_EXTENSION_MAX
     }

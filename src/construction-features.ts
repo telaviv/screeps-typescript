@@ -39,6 +39,16 @@ export function getConstructionFeaturesV3FromMemory(
     return null
 }
 
+export function getStationaryPointsFromMemory(
+    roomMemory: RoomMemory | undefined,
+): StationaryPoints | null {
+    const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(roomMemory)
+    if (constructionFeaturesV3) {
+        return constructionFeaturesV3.points
+    }
+    return null
+}
+
 export function getConstructionFeaturesFromMemory(
     roomMemory: RoomMemory | undefined,
 ): ConstructionFeatures | null {

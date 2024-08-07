@@ -99,8 +99,19 @@ export default class WarDepartment {
             hostiles &&
                 hostiles.some(
                     (c) =>
-                        c.getActiveBodyparts(ATTACK) > 0 || c.getActiveBodyparts(RANGED_ATTACK) > 0,
+                        c.getActiveBodyparts(ATTACK) > 0 ||
+                        c.getActiveBodyparts(RANGED_ATTACK) > 0 ||
+                        c.getActiveBodyparts(CLAIM) > 0,
                 ),
+        )
+    }
+
+    public canMinimallyClaim(): boolean {
+        return Boolean(
+            !this.needsProtection &&
+                this.targetRoom &&
+                this.targetRoom.controller &&
+                !this.targetRoom.controller.reservation,
         )
     }
 

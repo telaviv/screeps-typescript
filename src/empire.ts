@@ -3,7 +3,7 @@ import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE, MAX_SAVIOR_DISTANCE } from '
 import { RoomDistanceInfo, World } from 'utils/world'
 import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
-import { findMyRooms, findSpawnlessRooms, hasNoSpawns } from 'utils/room'
+import { findMyRooms, findSpawnlessRooms, findSpawnRooms, hasNoSpawns } from 'utils/room'
 import { ScoutManager } from 'managers/scout-manager'
 import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesFromMemory } from 'construction-features'
@@ -18,6 +18,7 @@ declare global {
     namespace NodeJS {
         interface Global {
             findClaimCandidates: () => void
+            nextScoutRoom: () => void
             enableAutoClaim: () => void
             disableAutoClaim: () => void
         }
@@ -29,11 +30,21 @@ if (!Memory.autoclaim) Memory.autoclaim = true
 function findClaimCandidates(): void {
     const empire = new Empire()
     const candidates = empire.findClaimCandidates()
-    for (const room of candidates) {
-        const claimer = empire.findBestClaimer(room)
-        if (claimer) {
-            console.log(`room: ${room} claimer: ${claimer}`)
-        }
+    const match = empire.findBestClaimPair(candidates)
+    if (!match) {
+        console.log('no match')
+        return
+    }
+    const { candidate, claimer, distance } = match
+    console.log(`candidate: ${candidate} claimer: ${claimer} distance: ${distance}`)
+}
+
+function nextScoutRoom(): void {
+    const scout = ScoutManager.create().findNextRoomToScout()
+    if (scout) {
+        console.log(`scout: ${scout}`)
+    } else {
+        console.log('no scout')
     }
 }
 
@@ -46,6 +57,7 @@ function disableAutoClaim(): void {
 }
 
 global.findClaimCandidates = findClaimCandidates
+global.nextScoutRoom = nextScoutRoom
 global.enableAutoClaim = enableAutoClaim
 global.disableAutoClaim = disableAutoClaim
 
@@ -101,37 +113,36 @@ export default class Empire {
     }
 
     autoClaim(): void {
+        if (findSpawnlessRooms().length > 0) {
+            return
+        }
         const scout = ScoutManager.create().findNextRoomToScout()
         if (scout) return
         const candidates = this.findClaimCandidates()
         if (candidates.length === 0) return
-        const roomName = candidates[0]
-        Logger.info(`empire:autoclaim:candidates ${JSON.stringify(candidates)}`)
-
-        if (findSpawnlessRooms().length > 0) {
-            return
-        }
 
         const tasks = RoomManager.getAllClaimTasks()
-        if (tasks.some((task) => task.data.name === roomName)) return
-        for (const r of this.rooms) {
-            if (r.memory.war?.target === roomName) return
-        }
 
-        const claimerName = this.findBestClaimer(roomName)
-        Logger.info(`empire:autoclaim:claimer ${claimerName} for ${roomName}`)
-        if (!claimerName) {
-            Logger.info(`empire:autoclaim: no claimer found for ${roomName}`)
+        const match = this.findBestClaimPair(candidates)
+        if (!match) {
+            Logger.error(`empire:autoclaim: no claimer found for ${JSON.stringify(candidates)}`)
             return
         }
+        const { candidate, claimer: claimerName } = match
+
         const claimer = Game.rooms[claimerName]
         if (!claimer) {
             Logger.warning(`empire:autoclaim: no vision for ${claimerName}`)
             return
         }
+        if (tasks.some((task) => task.data.name === candidate)) return
+        for (const r of this.rooms) {
+            if (r.memory.war?.target === candidate) return
+        }
         if ((claimer.memory.war?.status ?? WarStatus.NONE) !== WarStatus.NONE) return
 
-        new RoomManager(claimer).addClaimRoomTask(roomName)
+        Logger.warning(`empire:autoclaim:addClaimRoomTask ${claimerName} for ${candidate}`)
+        new RoomManager(claimer).addClaimRoomTask(candidate)
     }
 
     getRoomsBeingClaimed(): string[] {
@@ -142,7 +153,7 @@ export default class Empire {
 
     findClaimCandidates(): string[] {
         const world = new World()
-        const roomNames = findMyRooms().map((room) => room.name)
+        const roomNames = findSpawnRooms().map((room) => room.name)
         const closestRooms = world.getClosestRooms(roomNames, MAX_CLAIM_DISTANCE)
         if (closestRooms.length === 0) return []
         const candidates = closestRooms.filter(({ roomName }) => {
@@ -161,14 +172,28 @@ export default class Empire {
         return candidates.map(({ roomName }) => roomName)
     }
 
-    findBestClaimer(roomName: string): string | null {
-        const maxDistance = MAX_CLAIM_DISTANCE
-        const filterFn = ({ roomName: rn }: RoomDistanceInfo) =>
-            Boolean(
-                Game.rooms[rn]?.controller?.my && Game.rooms[rn]?.energyCapacityAvailable >= 650,
-            ) // min claimer cost
-
-        return getBestNearbyRoom(roomName, maxDistance, { filter: filterFn })?.name ?? null
+    findBestClaimPair(
+        candidates: string[],
+    ): { candidate: string; claimer: string; distance: number } | null {
+        const world = new World()
+        const claimers = findSpawnRooms()
+            .filter((room) => room.energyCapacityAvailable >= 650)
+            .map((room) => room.name)
+        const pairs: { candidate: string; claimer: string; distance: number }[] = []
+        for (const candidate of candidates) {
+            const ri = world.getClosestRoom(candidate, claimers, MAX_CLAIM_DISTANCE)
+            if (!ri) continue
+            pairs.push({ candidate, claimer: ri.roomName, distance: ri.distance })
+        }
+        pairs.sort((a, b) => {
+            if (a.distance !== b.distance) return a.distance - b.distance
+            return (
+                Game.rooms[b.claimer].energyCapacityAvailable -
+                Game.rooms[a.claimer].energyCapacityAvailable
+            )
+        })
+        if (pairs.length === 0) return null
+        return pairs[0]
     }
 
     private findSaviors(): void {

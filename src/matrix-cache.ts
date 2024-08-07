@@ -2,7 +2,7 @@ import * as Logger from 'utils/logger'
 import { getObstacles, getSources } from 'utils/room'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { getNeighbors } from 'utils/room-position'
-import { getStationaryPoints } from 'construction-features'
+import { getStationaryPointsFromMemory } from 'construction-features'
 import { subscribe } from 'pub-sub/pub-sub'
 
 export type MatrixTag = 'no-edges' | 'no-sources' | 'no-obstacles' | 'no-stationary-points'
@@ -83,6 +83,11 @@ export class MatrixCacheManager {
         return manager.getCostMatrix(TAG_ORDER)
     }
 
+    public static getRoomTravelMatrix(roomName: string): CostMatrix {
+        const manager = new MatrixCacheManager(roomName)
+        return manager.getCostMatrix(['no-obstacles', 'no-stationary-points'])
+    }
+
     public static getDefaultCostMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
         return manager.getCostMatrix([])
@@ -95,6 +100,9 @@ export class MatrixCacheManager {
     }
 
     private get matrixCache(): MatrixCache {
+        if (!Memory.rooms[this.roomName]) {
+            throw new Error(`No memory for room ${this.roomName}`)
+        }
         if (!Memory.rooms[this.roomName].matrixCache) {
             Memory.rooms[this.roomName].matrixCache = {}
         }
@@ -190,6 +198,9 @@ export class MatrixCacheManager {
     }
 
     private addObstacles(matrix: CostMatrix): void {
+        if (!this.room) {
+            return
+        }
         const obstacles = getObstacles(this.room)
         for (const obstacle of obstacles) {
             matrix.set(obstacle.pos.x, obstacle.pos.y, 255)
@@ -197,9 +208,8 @@ export class MatrixCacheManager {
     }
 
     private addStationaryPoints(matrix: CostMatrix): void {
-        const points = getStationaryPoints(this.room)
+        const points = getStationaryPointsFromMemory(Memory.rooms[this.roomName])
         if (!points) {
-            Logger.error('No stationary points found in room', this.room.name)
             return
         }
         const { sources, controllerLink, storageLink } = points

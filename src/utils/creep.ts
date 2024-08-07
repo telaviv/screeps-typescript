@@ -5,8 +5,8 @@ import { Harvester } from 'roles/harvester'
 import { MatrixCacheManager } from 'matrix-cache'
 import { getSpawns } from 'utils/room'
 import { isTravelTask } from 'tasks/travel/utils'
+import { moveToRoom } from './travel'
 import { randomElement } from './utilities'
-import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 
 export function freeEnergyCapacity(creep: Creep): number {
@@ -90,15 +90,6 @@ export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): Mov
     const path = PathFinder.search(creep.pos, { pos, range: 0 }, { roomCallback: callback }).path
     return creep.moveByPath(path)
 }, 'creep:moveWithinRoom')
-
-export function moveToRoom(roomName: string, creep: Creep): ReturnType<Creep['moveByPath']> {
-    const path = PathFinder.search(
-        creep.pos,
-        { pos: new RoomPosition(25, 25, roomName), range: 18 },
-        { roomCallback: safeRoomCallback },
-    ).path
-    return creep.moveByPath(path)
-}
 
 export function goHome(creep: Creep): void {
     if (creep.memory.home) {

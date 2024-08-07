@@ -1,7 +1,8 @@
 import * as Logger from 'utils/logger'
-import { goHome, moveTo, moveToRoom, recycle, wander } from 'utils/creep'
+import { goHome, moveTo, recycle, wander } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
 import { getInvaderCores } from 'utils/room'
+import { moveToRoom } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'attack'
@@ -60,16 +61,13 @@ const roleAttacker = {
         const hostiles = sortHostiles(targetRoom.find(FIND_HOSTILE_CREEPS))
         const targets = [...structures, ...hostiles]
         if (targets.length > 0) {
-            const err = roleAttacker.attack(creep, targets[0])
-            if (err !== OK) {
-                Logger.error('attacker:attack:failed', creep.name, err)
-            }
+            roleAttacker.attack(creep, targets[0])
             return
         } else {
             wander(creep)
         }
         // invader rooms require non stop vigilance
-        // roleAttacker.cleanup(creep)q
+        // roleAttacker.cleanup(creep)
     }, 'runAttacker'),
 
     isInRoom: (creep: Attacker): boolean => {

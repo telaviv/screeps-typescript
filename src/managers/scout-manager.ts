@@ -2,7 +2,7 @@ import * as Logger from 'utils/logger'
 import { ConstructionFeaturesV3, Position } from 'types'
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
-import { getSources, getWallTerrainCount, hasNoSpawns } from 'utils/room'
+import { findSpawnRooms, getSources, getWallTerrainCount, hasNoSpawns } from 'utils/room'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getConstructionFeaturesV3FromMemory } from 'construction-features'
@@ -90,7 +90,7 @@ class ScoutManager {
         const ownedRoomProgress = new Map<string, number>()
         const scoutRoomData: Record<string, ScoutMemory> = {}
         const featureRoomData: Record<string, ConstructionFeaturesV3> = {}
-        for (const room of Object.values(Game.rooms)) {
+        for (const room of findSpawnRooms()) {
             if (room.controller?.my) {
                 ownedRoomProgress.set(room.name, room.controller.progressTotal)
             }

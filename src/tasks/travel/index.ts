@@ -4,6 +4,7 @@ import { TravelTask } from './types'
 import autoIncrement from 'utils/autoincrement'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { isTravelTask } from './utils'
+import { moveToRoom } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 export const makeRequest = wrap((creep: ResourceCreep, destination: string): boolean => {
@@ -14,7 +15,7 @@ export const makeRequest = wrap((creep: ResourceCreep, destination: string): boo
 export function run(task: TravelTask, creep: ResourceCreep): boolean {
     if (
         creep.room.name === task.destination &&
-        creep.pos.inRangeTo(25, 25, 18) &&
+        creep.pos.inRangeTo(25, 25, 23) &&
         getConstructionFeaturesV3(creep.room)
     ) {
         if (task.permanent) {
@@ -23,7 +24,7 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     }
-    creep.moveTo(new RoomPosition(25, 25, task.destination), { range: 18 })
+    moveToRoom(task.destination, creep)
     return false
 }
 

@@ -75,6 +75,12 @@ export function hasObstacle(pos: RoomPosition): boolean {
     return pos.lookFor(LOOK_STRUCTURES).some((s) => isObstacle(s.structureType))
 }
 
+export function getContainerAt(pos: RoomPosition): StructureContainer | null {
+    return pos
+        .lookFor(LOOK_STRUCTURES)
+        .find((s) => s.structureType === STRUCTURE_CONTAINER) as StructureContainer | null
+}
+
 export function getNonObstacleNeighbors(pos: RoomPosition, range = 1): RoomPosition[] {
     return getNeighbors(pos, range).filter((p) => !hasObstacle(p))
 }

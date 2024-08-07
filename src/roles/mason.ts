@@ -11,10 +11,11 @@ import {
     hasWeakWall,
 } from 'utils/room'
 import { getEnergy, hasNoEnergy } from 'utils/energy-harvesting'
-import { isAtEdge, moveToRoom, moveTowardsCenter, moveWithinRoom, recycle } from 'utils/creep'
+import { isAtEdge, moveTowardsCenter, moveWithinRoom, recycle } from 'utils/creep'
 import { profile, wrap } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlan } from 'utils/parts'
+import { moveToRoom } from 'utils/travel'
 
 const ROLE = 'mason'
 type Wall = StructureWall | StructureRampart

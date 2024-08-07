@@ -10,7 +10,7 @@ import { getStationaryPoints } from 'construction-features'
 import { isMiningTask } from 'tasks/mining/utils'
 import { profile } from 'utils/profiling'
 
-const MAX_WORK_PARTS = 5
+const MAX_WORK_PARTS = 5 + 1 // allow for some buffer
 
 export default class SourceManager {
     public readonly id: Id<Source>
@@ -109,7 +109,7 @@ export default class SourceManager {
     }
 
     public hasEnoughHarvesters(): boolean {
-        if (!this.hasStaticHarvester()) {
+        if (!this.hasContainerHarvester()) {
             return false
         }
         if (hasEnoughWorkParts(this.harvesters)) {

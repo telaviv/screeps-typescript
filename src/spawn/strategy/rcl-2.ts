@@ -30,7 +30,14 @@ const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 1200 // roughly the biggest logistics bot
-const MIN_AVAILABLE_ENERGY = 0.15 // % of 2 containers
+const MIN_AVAILABLE_ENERGY = 0.11 // % of 2 containers
+
+function isEnergyRestricted(room: Room): boolean {
+    return (
+        getSlidingEnergy(room.memory, 99) < MIN_AVAILABLE_ENERGY ||
+        getSlidingEnergy(room.memory, 999) < MIN_AVAILABLE_ENERGY
+    )
+}
 
 export default function runStrategy(spawn: StructureSpawn): void {
     updateRescueStatus(spawn.room)
@@ -62,6 +69,11 @@ export default function runStrategy(spawn: StructureSpawn): void {
         return
     }
 
+    if (defenseDepartment.needsDefenders()) {
+        defenseDepartment.createDefender(spawn, room.energyAvailable)
+        return
+    }
+
     if (!sourcesManager.hasAllContainerHarvesters()) {
         sourcesManager.createHarvester(spawn)
         return
@@ -69,11 +81,6 @@ export default function runStrategy(spawn: StructureSpawn): void {
 
     if (hasWeakWall(room) && masons.length < MASON_COUNT) {
         roleMason.create(spawn)
-        return
-    }
-
-    if (defenseDepartment.needsDefenders()) {
-        defenseDepartment.createDefender(spawn, room.energyAvailable)
         return
     }
 
@@ -114,7 +121,7 @@ function swarmStrategy(spawn: StructureSpawn): void {
         if (haulers.length < 1) {
             RoleLogistics.createCreep(spawn, TASK_HAULING)
             return
-        } else if (workers.length < 1) {
+        } else if (workers.length < 2) {
             RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
             return
         } else if (upgraders.length < UPGRADERS_COUNT) {
@@ -145,11 +152,8 @@ function swarmStrategy(spawn: StructureSpawn): void {
         roleMason.create(spawn)
         return
     } else if (RoleLogistics.shouldCreateCreep(spawn)) {
-        if (
-            getSlidingEnergy(spawn.room.memory, 99) < MIN_AVAILABLE_ENERGY ||
-            getSlidingEnergy(spawn.room.memory, 999) < MIN_AVAILABLE_ENERGY
-        ) {
-            Logger.warning(
+        if (isEnergyRestricted(room)) {
+            Logger.debug(
                 'rcl-2:create-latent-workers:lowEnergy',
                 getSlidingEnergy(spawn.room.memory, 99),
                 getSlidingEnergy(spawn.room.memory, 999),
@@ -260,13 +264,14 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         if (warDepartment.hasStrongInvaderCore() && warDepartment.claimerSpotsAvailable() <= 1) {
             return null
         } else if (claimers.length === 0) {
-            return roleClaimer.create(spawn, warDepartment.target)
+            return roleClaimer.create(
+                spawn,
+                warDepartment.target,
+                warDepartment.canMinimallyClaim(),
+            )
         } else if (
-            warDepartment.targetRoom.controller &&
             warDepartment.claimerSpotsAvailable() > claimers.length &&
-            (warDepartment.targetRoom.controller.upgradeBlocked < 100 ||
-                (warDepartment.targetRoom.controller.reservation &&
-                    warDepartment.targetRoom.controller.reservation.ticksToEnd > 500))
+            !warDepartment.canMinimallyClaim()
         ) {
             return roleClaimer.create(spawn, warDepartment.target)
         }
@@ -277,10 +282,12 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
             return sourcesManager.createHarvester(spawn, true)
         } else if (remoteWorker.length < 2) {
             return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
-        } else if (!sourcesManager.hasAllContainerHarvesters()) {
-            return sourcesManager.createHarvester(spawn, true)
-        } else {
-            return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
+        } else if (isEnergyRestricted(room)) {
+            if (!sourcesManager.hasAllContainerHarvesters()) {
+                return sourcesManager.createHarvester(spawn, true)
+            } else {
+                return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
+            }
         }
     }
     return null

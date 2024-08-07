@@ -50,7 +50,8 @@ function safeDescribeExits(roomName: string): ExitsInformation {
 }
 
 export function safeRoomCallback(roomName: string): boolean {
-    return !isRoomUnsafe(roomName)
+    const safe = !isRoomUnsafe(roomName)
+    return safe
 }
 
 export class World {
@@ -86,6 +87,16 @@ export class World {
             }
         }
         return results
+    }
+
+    getClosestRoom(start: string, end: string[], maxDistance: number): RoomDistanceInfo | null {
+        const closestRooms = this.getClosestRooms([start], maxDistance)
+        if (closestRooms.length === 0) return null
+        const endSet = new Set(end)
+        for (const { roomName, distance } of closestRooms) {
+            if (endSet.has(roomName)) return { roomName, distance }
+        }
+        return null
     }
 
     findBestOwnedRoom(
