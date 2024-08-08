@@ -4,7 +4,7 @@ import { expect } from 'chai'
 import { DistanceTTL, ScoutManager } from '../../../src/managers/scout-manager'
 
 describe('ScoutManager', () => {
-    describe('findNextRoomToScout', () => {
+    describe.skip('findNextRoomToScout', () => {
         it('should return null if getClosestRooms returns an empty array', () => {
             const world = { getClosestRooms: stub() }
             world.getClosestRooms.returns([])

@@ -1,3 +1,5 @@
+import semverGte from 'semver/functions/gte'
+
 import * as Logger from 'utils/logger'
 import { ConstructionFeaturesV3, Position } from 'types'
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
@@ -18,7 +20,7 @@ import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
 import { mprofile } from 'utils/profiling'
 
-const SCOUT_VERSION = '1.0.7'
+const SCOUT_VERSION = '1.1.0'
 
 const MAX_SCOUT_DISTANCE = MAX_CLAIM_DISTANCE + ENEMY_DISTANCE_BUFFER
 const TIME_PER_TICK = 4.7 // seconds on shard 0
@@ -165,6 +167,7 @@ class ScoutManager {
                 !this.scoutRoomData[roomName] ||
                 !this.scoutRoomData[roomName].updatedAt ||
                 this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime ||
+                semverGte(this.scoutRoomData[roomName].version, '1.1.0') ||
                 !this.featureRoomData[roomName]
             ) {
                 return roomName

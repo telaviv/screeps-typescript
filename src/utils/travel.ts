@@ -28,7 +28,7 @@ export const moveToRoom = wrap((roomName: string, creep: Creep):
         { roomCallback: roomTravelCallback, maxOps: 7500 },
     )
     if (ret.incomplete) {
-        Logger.error('travel:moveToRoom:incomplete', roomName, creep.name)
+        Logger.info('travel:moveToRoom:incomplete', roomName, creep.name)
         return creep.moveTo(new RoomPosition(25, 25, roomName), { range: MAX_ROOM_RANGE })
     }
     return creep.moveByPath(ret.path)

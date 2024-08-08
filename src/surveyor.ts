@@ -1,5 +1,6 @@
 import { each } from 'lodash'
 import { minCutWalls } from 'screeps-min-cut-wall'
+import semverGte from 'semver/functions/gte'
 
 import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
@@ -34,7 +35,6 @@ import {
 import BUNKER from 'stamps/bunker'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
-import { canBeClaimCandidate } from 'claim'
 import { destroyMovementStructures } from 'construction-movement'
 import { publish } from 'pub-sub/pub-sub'
 
@@ -94,15 +94,15 @@ function clearAllConstructionFeatures() {
     })
 }
 
-function saveConstructionFeatures(room: Room) {
+function saveConstructionFeatures(name: string, memory: RoomMemory) {
     if (Game.cpu.bucket <= MIN_SURVEY_CPU) {
         return
     }
     if (
-        !room.memory.constructionFeaturesV3 ||
-        room.memory.constructionFeaturesV3.version !== CONSTRUCTION_FEATURES_V3_VERSION
+        !memory.constructionFeaturesV3 ||
+        memory.constructionFeaturesV3.version !== CONSTRUCTION_FEATURES_V3_VERSION
     ) {
-        setConstructionFeaturesV3(room.name)
+        setConstructionFeaturesV3(name)
     }
 }
 
@@ -110,26 +110,8 @@ function setConstructionFeaturesV3(roomName: string) {
     // we need to have already scouted the room so that we don't waste time
     // on rooms with no controller or 1 source etc ....
     const roomMemory = Memory.rooms[roomName]
-    Logger.warning(
-        'setConstructionFeaturesV3:incomplete setting construction features for room',
-        roomName,
-    )
-    let constructionFeatures = {
-        wipe: true,
-        version: CONSTRUCTION_FEATURES_V3_VERSION,
-    } as ConstructionFeaturesV3
-    if (canBeClaimCandidate(roomMemory)) {
-        const constructionFeaturesV3 = calculateConstructionFeaturesV3(roomName)
-        if (!constructionFeaturesV3) {
-            constructionFeatures = {
-                wipe: true,
-                version: CONSTRUCTION_FEATURES_V3_VERSION,
-            } as ConstructionFeaturesV3
-        } else {
-            constructionFeatures = constructionFeaturesV3
-        }
-    }
-    roomMemory.constructionFeaturesV3 = constructionFeatures
+    Logger.warning('setConstructionFeaturesV3:setting', roomName)
+    roomMemory.constructionFeaturesV3 = calculateConstructionFeaturesV3(roomName)
     publishConstructionFeatureChange(roomName)
 }
 
@@ -312,9 +294,11 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
 }
 
 const assignRoomFeatures = Profiling.wrap(() => {
-    each(Game.rooms, (room: Room) => {
-        saveConstructionFeatures(room)
-    })
+    for (const [name, memory] of Object.entries(Memory.rooms)) {
+        if (memory.scout && semverGte(memory.scout.version, '1.1.0')) {
+            saveConstructionFeatures(name, memory)
+        }
+    }
 }, 'assignRoomFeatures')
 
 const clearRooms = Profiling.wrap(() => {

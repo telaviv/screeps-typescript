@@ -113,6 +113,10 @@ export default class Empire {
     }
 
     autoClaim(): void {
+        if (findMyRooms().length >= Game.gcl.level) {
+            return
+        }
+
         if (findSpawnlessRooms().length > 0) {
             return
         }
