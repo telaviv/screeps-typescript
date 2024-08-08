@@ -94,6 +94,20 @@ export default class WarDepartment {
         })
         return invaderCores?.some((c) => c.hits > 1000) || false
     }
+    public hasOverwhelmingForce(): boolean {
+        if (!this.targetRoom?.controller?.my && !this.targetRoom?.controller?.safeMode) {
+            return false
+        }
+        const hostiles = this.targetRoom?.find(FIND_HOSTILE_CREEPS)
+        if (!hostiles) {
+            return false
+        }
+        const hostilePower = hostiles.reduce(
+            (acc, c) => acc + c.getActiveBodyparts(ATTACK) + c.getActiveBodyparts(RANGED_ATTACK),
+            0,
+        )
+        return hostilePower > 20
+    }
 
     public claimerSpotsAvailable(): number {
         if (!this.targetRoom?.controller) {

@@ -249,7 +249,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
     )
     const remoteWorker = getCreeps('remote-worker', room)
 
-    if (warDepartment.hasSafeMode()) {
+    if (warDepartment.hasSafeMode() || warDepartment.hasOverwhelmingForce()) {
         return null
     }
 
@@ -299,12 +299,12 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
             return roleClaimer.create(spawn, warDepartment.target)
         }
     } else if (status === WarStatus.SPAWN) {
-        if (remoteWorker.length === 0) {
+        if (!sourcesManager.hasAHarvester()) {
+            return sourcesManager.createHarvester(spawn, true)
+        } else if (remoteWorker.length === 0) {
             return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
         } else if (isEnergyRestricted(room)) {
-            if (!sourcesManager.hasAHarvester()) {
-                return sourcesManager.createHarvester(spawn, true)
-            } else if (remoteWorker.length < 2) {
+            if (remoteWorker.length < 2) {
                 return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
             } else if (!sourcesManager.hasAllContainerHarvesters()) {
                 return sourcesManager.createHarvester(spawn, true)

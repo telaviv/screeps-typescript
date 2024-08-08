@@ -5,10 +5,10 @@ import { LogisticsMemory, TASK_COLLECTING, TASK_HAULING } from './logistics-cons
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { getConstructionSites, hasNoSpawns } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { moveToRoom, moveToSafe } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { fromBodyPlan } from 'utils/parts'
-import { moveTo } from 'utils/creep'
 
 const ROLE = 'remote-worker'
 
@@ -65,6 +65,14 @@ class RemoteWorkerCreep {
             return
         }
 
+        if (this.creep.room.name !== this.destination) {
+            moveToRoom(this.destination, this.creep)
+        }
+
+        if (!this.creep.memory.tasks) {
+            this.creep.memory.tasks = []
+        }
+
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
             TaskRunner.run(task, this.creep)
@@ -113,7 +121,7 @@ class RemoteWorkerCreep {
 
     private collectEnergy(): void {
         this.creep.say('⚡')
-        if (!addEnergyTask(this.creep)) {
+        if (!addEnergyTask(this.creep, { includeMining: true })) {
             this.creep.say('🤔')
             return
         }
@@ -146,7 +154,7 @@ class RemoteWorkerCreep {
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {
-                moveTo(targets[0].pos, this.creep, { range: 3 })
+                moveToSafe(this.creep, targets[0].pos, 3)
             } else if (err !== OK) {
                 Logger.warning('remote-worker:build:failure', err, this.creep.name, targets[0].pos)
             }
@@ -176,7 +184,12 @@ class RemoteWorkerCreep {
                 range: 3,
             })
         } else if (err !== OK) {
-            Logger.error('remote-worker:upgrade:failure', controller, err, this.creep.name)
+            Logger.error(
+                'remote-worker:upgrade:failure',
+                controller.room.name,
+                err,
+                this.creep.name,
+            )
         }
     }
 }
@@ -194,7 +207,7 @@ export default {
         return spawn.spawnCreep(sortedParts, `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
-                home: spawn.room.name,
+                home: destination,
                 destination,
                 tasks: [],
                 idleTimestamp: null,

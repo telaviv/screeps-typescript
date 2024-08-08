@@ -3,6 +3,7 @@ import includes from 'lodash/includes'
 import * as Logger from 'utils/logger'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
+import { moveToSafe } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'claimer'
@@ -27,6 +28,7 @@ const roleClaimer = {
         if (creep.spawning) {
             return
         }
+
         const targetRoom = Game.rooms[creep.memory.roomName]
         if (!targetRoom || !targetRoom.controller) {
             Logger.info('claimer:no-controller', creep.name)
@@ -40,31 +42,26 @@ const roleClaimer = {
         if (targetRoom.controller?.safeMode) {
             return
         }
-
+        let err
         if (targetRoom.controller.owner || targetRoom.controller.reservation) {
-            const err = creep.attackController(targetRoom.controller)
+            err = creep.attackController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(targetRoom.controller, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
+                moveToSafe(creep, targetRoom.controller.pos)
             } else if (!includes([OK, ERR_TIRED], err)) {
                 Logger.warning('claimer:attack:failed', creep.name, err)
             }
         } else if (creep.memory.attack) {
-            const err = creep.reserveController(targetRoom.controller)
+            err = creep.reserveController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(targetRoom.controller, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
+                moveToSafe(creep, targetRoom.controller.pos)
             } else if (err !== OK) {
                 Logger.warning('claimer:reservation:failed', creep.name, err)
             }
         } else {
-            const err = creep.claimController(targetRoom.controller)
+            err = creep.claimController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(targetRoom.controller, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
+                err = moveToSafe(creep, targetRoom.controller.pos)
+                console.log('move to safe', creep.name, err)
             } else if (err !== OK) {
                 Logger.warning('claimer:claim:failed', creep.name, err)
             }
