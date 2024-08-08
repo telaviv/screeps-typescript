@@ -27,7 +27,7 @@ const roleHealer = {
         const target = targets[0]
         const err = creep.heal(target)
         if (err === ERR_NOT_IN_RANGE) {
-            creep.move(target)
+            creep.moveTo(target)
         } else if (err !== OK) {
             Logger.warning(
                 'healer:heal:failed',

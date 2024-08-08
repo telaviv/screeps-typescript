@@ -278,6 +278,10 @@ export function getConstructionSites(
     return room.find(FIND_CONSTRUCTION_SITES, opts)
 }
 
+export function getHostileConstructionSites(room: Room): ConstructionSite[] {
+    return room.find(FIND_HOSTILE_CONSTRUCTION_SITES)
+}
+
 export function clearConstructionSites(room: Room): void {
     const sites = getConstructionSites(room)
     for (const site of sites) {
@@ -479,6 +483,10 @@ export const getRoomType = (roomName: string): RoomType => {
     }
 
     return RoomType.ROOM
+}
+
+export function findClaimCapableRooms(): Room[] {
+    return findSpawnRooms().filter((room) => room.energyCapacityAvailable >= 650)
 }
 
 export function findSpawnRooms(): Room[] {

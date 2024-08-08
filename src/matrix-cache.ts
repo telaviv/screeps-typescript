@@ -5,8 +5,19 @@ import { getNeighbors } from 'utils/room-position'
 import { getStationaryPointsFromMemory } from 'construction-features'
 import { subscribe } from 'pub-sub/pub-sub'
 
-export type MatrixTag = 'no-edges' | 'no-sources' | 'no-obstacles' | 'no-stationary-points'
-const TAG_ORDER: MatrixTag[] = ['no-edges', 'no-sources', 'no-obstacles', 'no-stationary-points']
+export type MatrixTag =
+    | 'no-edges'
+    | 'no-sources'
+    | 'no-obstacles'
+    | 'no-stationary-points'
+    | 'no-creeps'
+const TAG_ORDER: MatrixTag[] = [
+    'no-edges',
+    'no-sources',
+    'no-obstacles',
+    'no-stationary-points',
+    'no-creeps',
+]
 const MATRIX_DEFAULT = 'default'
 const MATRIX_CACHE_ID = 'matrix-cache'
 
@@ -85,7 +96,7 @@ export class MatrixCacheManager {
 
     public static getRoomTravelMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        return manager.getCostMatrix(['no-obstacles', 'no-stationary-points'])
+        return manager.getCostMatrix(['no-obstacles', 'no-stationary-points', 'no-creeps'])
     }
 
     public static getDefaultCostMatrix(roomName: string): CostMatrix {
@@ -142,6 +153,8 @@ export class MatrixCacheManager {
             this.addObstacles(prefixMatrix)
         } else if (latest === 'no-stationary-points') {
             this.addStationaryPoints(prefixMatrix)
+        } else if (latest === 'no-creeps') {
+            this.addCreeps(prefixMatrix)
         } else {
             throw new Error(`Unknown matrix tag: ${latest}`)
         }
@@ -204,6 +217,16 @@ export class MatrixCacheManager {
         const obstacles = getObstacles(this.room)
         for (const obstacle of obstacles) {
             matrix.set(obstacle.pos.x, obstacle.pos.y, 255)
+        }
+    }
+
+    private addCreeps(matrix: CostMatrix): void {
+        if (!this.room) {
+            return
+        }
+        const creeps = this.room.find(FIND_CREEPS)
+        for (const creep of creeps) {
+            matrix.set(creep.pos.x, creep.pos.y, 255)
         }
     }
 

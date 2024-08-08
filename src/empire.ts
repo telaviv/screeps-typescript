@@ -3,7 +3,13 @@ import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE, MAX_SAVIOR_DISTANCE } from '
 import { RoomDistanceInfo, World } from 'utils/world'
 import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
-import { findMyRooms, findSpawnlessRooms, findSpawnRooms, hasNoSpawns } from 'utils/room'
+import {
+    findClaimCapableRooms,
+    findMyRooms,
+    findSpawnlessRooms,
+    findSpawnRooms,
+    hasNoSpawns,
+} from 'utils/room'
 import { ScoutManager } from 'managers/scout-manager'
 import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesFromMemory } from 'construction-features'
@@ -157,11 +163,12 @@ export default class Empire {
 
     findClaimCandidates(): string[] {
         const world = new World()
-        const roomNames = findSpawnRooms().map((room) => room.name)
+        const roomNames = findClaimCapableRooms().map((room) => room.name)
         const closestRooms = world.getClosestRooms(roomNames, MAX_CLAIM_DISTANCE)
         if (closestRooms.length === 0) return []
         const candidates = closestRooms.filter(({ roomName }) => {
             if (!Memory.rooms[roomName]) return false
+            if (Game.rooms[roomName]?.controller?.my) return false
             const features = getConstructionFeaturesFromMemory(Memory.rooms[roomName])
             if (!features || !canBeClaimCandidate(Memory.rooms[roomName])) return false
             const neighbors = world.getClosestRooms([roomName], ENEMY_DISTANCE_BUFFER)

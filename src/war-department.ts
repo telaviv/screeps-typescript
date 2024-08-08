@@ -72,6 +72,15 @@ export default class WarDepartment {
         return this.warMemory.needsProtection || false
     }
 
+    public hasSafeMode(): boolean {
+        return (
+            this.targetRoom?.controller?.safeMode !== undefined ||
+            (this.targetRoom?.memory.scout?.safeMode ?? 0) +
+                (this.targetRoom?.memory.scout?.updatedAt ?? 0) >
+                Game.time
+        )
+    }
+
     public hasInvaderCore(): boolean {
         const invaderCores = this.targetRoom?.find(FIND_STRUCTURES, {
             filter: { structureType: STRUCTURE_INVADER_CORE },
@@ -85,12 +94,35 @@ export default class WarDepartment {
         })
         return invaderCores?.some((c) => c.hits > 1000) || false
     }
+    public hasOverwhelmingForce(): boolean {
+        if (!this.targetRoom?.controller?.my && !this.targetRoom?.controller?.safeMode) {
+            return false
+        }
+        const hostiles = this.targetRoom?.find(FIND_HOSTILE_CREEPS)
+        if (!hostiles) {
+            return false
+        }
+        const hostilePower = hostiles.reduce(
+            (acc, c) => acc + c.getActiveBodyparts(ATTACK) + c.getActiveBodyparts(RANGED_ATTACK),
+            0,
+        )
+        return hostilePower > 20
+    }
 
     public claimerSpotsAvailable(): number {
         if (!this.targetRoom?.controller) {
             return 0
         }
         return getNonObstacleNeighbors(this.targetRoom.controller.pos).length
+    }
+
+    public hasHostileController(): boolean {
+        return Boolean(
+            this.targetRoom &&
+                this.targetRoom.controller &&
+                this.targetRoom.controller.owner &&
+                this.targetRoom.controller.my === false,
+        )
     }
 
     public hasHostiles(): boolean {
@@ -139,7 +171,10 @@ export default class WarDepartment {
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
         } else if (this.status === WarStatus.ATTACK) {
-            if (!this.hasHostiles() && !this.hasInvaderCore()) {
+            if (this.targetRoom && this.targetRoom.controller && this.targetRoom.controller.my) {
+                Logger.warning(
+                    `war-department:update: cancelling attack on ${this.target} from ${this.room.name}`,
+                )
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
         }

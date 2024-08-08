@@ -5,7 +5,7 @@ import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
 import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
-import { moveTo } from 'utils/creep'
+import { moveToSafe } from 'utils/travel'
 import { spawnCreep } from 'utils/spawn'
 
 const MAX_WORK_PARTS = 5
@@ -85,7 +85,10 @@ export class HarvesterCreep {
 
     private isHarvestTick(): boolean {
         const workParts = this.creep.getActiveBodyparts(WORK)
-        return Game.time % Math.floor(workParts / MAX_WORK_PARTS) === 0 && this.source.energy > 0
+        return (
+            Game.time % Math.max(Math.floor(workParts / MAX_WORK_PARTS), 1) === 0 &&
+            this.source.energy > 0
+        )
     }
 
     private isAtHarvestPos(): boolean {
@@ -97,7 +100,7 @@ export class HarvesterCreep {
     }
 
     private moveToHarvestPos(): void {
-        const err = moveTo(this.harvestPos, this.creep)
+        const err = moveToSafe(this.creep, this.harvestPos, 0)
         if (err !== OK && err !== ERR_TIRED) {
             Logger.error(
                 'harvester:moveToHarvestPos:failure',

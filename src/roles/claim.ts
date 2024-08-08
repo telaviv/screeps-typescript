@@ -3,6 +3,7 @@ import includes from 'lodash/includes'
 import * as Logger from 'utils/logger'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
+import { moveToSafe } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'claimer'
@@ -14,6 +15,12 @@ export interface Claimer extends Creep {
 interface ClaimerMemory extends CreepMemory {
     role: 'claimer'
     roomName: string
+    attack?: boolean
+}
+
+interface CreateOptions {
+    minimal?: boolean
+    attack?: boolean
 }
 
 const roleClaimer = {
@@ -21,6 +28,7 @@ const roleClaimer = {
         if (creep.spawning) {
             return
         }
+
         const targetRoom = Game.rooms[creep.memory.roomName]
         if (!targetRoom || !targetRoom.controller) {
             Logger.info('claimer:no-controller', creep.name)
@@ -31,22 +39,29 @@ const roleClaimer = {
             creep.suicide()
             return
         }
-
+        if (targetRoom.controller?.safeMode) {
+            return
+        }
+        let err
         if (targetRoom.controller.owner || targetRoom.controller.reservation) {
-            const err = creep.attackController(targetRoom.controller)
+            err = creep.attackController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(targetRoom.controller, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
+                moveToSafe(creep, targetRoom.controller.pos)
             } else if (!includes([OK, ERR_TIRED], err)) {
                 Logger.warning('claimer:attack:failed', creep.name, err)
             }
-        } else {
-            const err = creep.claimController(targetRoom.controller)
+        } else if (creep.memory.attack) {
+            err = creep.reserveController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                creep.moveTo(targetRoom.controller, {
-                    visualizePathStyle: { stroke: '#ffaa00' },
-                })
+                moveToSafe(creep, targetRoom.controller.pos)
+            } else if (err !== OK) {
+                Logger.warning('claimer:reservation:failed', creep.name, err)
+            }
+        } else {
+            err = creep.claimController(targetRoom.controller)
+            if (err === ERR_NOT_IN_RANGE) {
+                err = moveToSafe(creep, targetRoom.controller.pos)
+                console.log('move to safe', creep.name, err)
             } else if (err !== OK) {
                 Logger.warning('claimer:claim:failed', creep.name, err)
             }
@@ -59,22 +74,26 @@ const roleClaimer = {
         return parts !== null
     },
 
-    create(spawn: StructureSpawn, roomName: string, minimal = false): number {
+    create(spawn: StructureSpawn, roomName: string, opts?: CreateOptions): number {
         const energyAvailable = spawn.room.energyAvailable
         let parts = calculateParts(energyAvailable)
         if (parts === null || parts.length === 0) {
             Logger.warning('claimer:create:failed', spawn.room.name, parts, energyAvailable)
         }
-        if (minimal) {
+        if (opts?.minimal) {
             parts = [CLAIM, MOVE]
+        }
+        const memory = {
+            role: ROLE,
+            home: spawn.room.name,
+            roomName,
+        } as ClaimerMemory
+        if (opts?.attack) {
+            memory.attack = true
         }
 
         const err = spawn.spawnCreep(parts as BodyPartConstant[], `${ROLE}:${autoIncrement()}`, {
-            memory: {
-                role: ROLE,
-                home: spawn.room.name,
-                roomName,
-            } as ClaimerMemory,
+            memory,
         })
         if (err === ERR_NOT_ENOUGH_ENERGY) {
             throw new Error('not enough energy to make claimer')

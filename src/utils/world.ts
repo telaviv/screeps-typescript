@@ -25,16 +25,23 @@ function isRoomUnsafe(roomName: string): boolean {
         return true
     }
 
-    if (Memory.rooms[roomName]?.scout?.enemyThatsMining) {
+    const scout = Memory.rooms[roomName]?.scout
+
+    if (!scout) {
+        return false
+    }
+
+    if (scout.enemyThatsMining) {
         return true
     }
 
     // not every room has a controller owner.
     // if it does, make sure it's not the enemys'
-    if (Memory.rooms[roomName]?.scout?.controllerOwner) {
-        if (Memory.rooms[roomName]?.scout?.controllerOwner !== global.USERNAME) {
-            return true
+    if (scout.controllerOwner && scout.controllerOwner !== global.USERNAME) {
+        if (scout.safeMode && scout.updatedAt + scout.safeMode > Game.time) {
+            return false
         }
+        return true
     }
     return false
 }

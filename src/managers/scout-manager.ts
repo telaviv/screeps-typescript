@@ -51,6 +51,7 @@ export interface ScoutMemory {
     sourcePositions?: Record<Id<Source>, Position>
     controllerPosition?: Position
     mineralPosition?: Position
+    safeMode?: number
 }
 
 declare global {
@@ -226,6 +227,9 @@ class ScoutManager {
         }
         scoutMemory.version = SCOUT_VERSION
         scoutMemory.updatedAt = this.gameTime
+        if (controller?.safeMode) {
+            scoutMemory.safeMode = controller.safeMode
+        }
         room.memory.scout = scoutMemory
     }
 
