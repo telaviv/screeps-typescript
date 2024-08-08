@@ -485,6 +485,10 @@ export const getRoomType = (roomName: string): RoomType => {
     return RoomType.ROOM
 }
 
+export function findClaimCapableRooms(): Room[] {
+    return findSpawnRooms().filter((room) => room.energyCapacityAvailable >= 650)
+}
+
 export function findSpawnRooms(): Room[] {
     return Object.values(Game.rooms).filter((room) => {
         if (!(room.controller && room.controller.my)) {
