@@ -100,7 +100,7 @@ export class HarvesterCreep {
     }
 
     private moveToHarvestPos(): void {
-        const err = moveToSafe(this.creep, this.harvestPos, 0 )
+        const err = moveToSafe(this.creep, this.harvestPos, 0)
         if (err !== OK && err !== ERR_TIRED) {
             Logger.error(
                 'harvester:moveToHarvestPos:failure',
