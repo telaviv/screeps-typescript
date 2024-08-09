@@ -8,6 +8,7 @@ import { WithdrawObject } from './object'
 import { findClosestByRange } from 'utils/room-position'
 import { getHome } from 'roles/utils'
 import { isWithdrawTask } from './utils'
+import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
@@ -59,10 +60,7 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
     const amount = Math.min(task.amount, creepCapacity)
     const err = creep.withdraw(storeable, task.resourceType, amount)
     if (err === ERR_NOT_IN_RANGE) {
-        creep.moveTo(storeable, {
-            visualizePathStyle: { stroke: '#ffffff' },
-            range: 1,
-        })
+        moveTo(creep, storeable)
     } else if (err === OK) {
         Logger.info('withdraw:complete', creep.name, task.amount)
         completeRequest(creep)

@@ -6,6 +6,7 @@ import { TransferStructure } from 'tasks/transfer/structure'
 import { TransferTask } from './types'
 import { currentEnergyHeld } from 'utils/creep'
 import { isTransferTask } from './utils'
+import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 export const makeRequest = wrap((creep: ResourceCreep): AnyStoreStructure | null => {
@@ -52,9 +53,7 @@ export function run(task: TransferTask, creep: ResourceCreep): boolean {
     const structure = getStructure(task)
     const err = creep.transfer(structure, RESOURCE_ENERGY)
     if (err === ERR_NOT_IN_RANGE) {
-        creep.moveTo(structure, {
-            visualizePathStyle: { stroke: '#ffffff' },
-        })
+        moveTo(creep, structure)
     } else if (err === OK) {
         completeRequest(creep)
         return true

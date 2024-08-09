@@ -3,7 +3,7 @@ import includes from 'lodash/includes'
 import * as Logger from 'utils/logger'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
-import { moveToSafe } from 'utils/travel'
+import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'claimer'
@@ -46,21 +46,21 @@ const roleClaimer = {
         if (targetRoom.controller.owner || targetRoom.controller.reservation) {
             err = creep.attackController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                moveToSafe(creep, targetRoom.controller.pos)
+                moveTo(creep, targetRoom.controller.pos)
             } else if (!includes([OK, ERR_TIRED], err)) {
                 Logger.warning('claimer:attack:failed', creep.name, err)
             }
         } else if (creep.memory.attack) {
             err = creep.reserveController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                moveToSafe(creep, targetRoom.controller.pos)
+                moveTo(creep, targetRoom.controller.pos)
             } else if (err !== OK) {
                 Logger.warning('claimer:reservation:failed', creep.name, err)
             }
         } else {
             err = creep.claimController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                err = moveToSafe(creep, targetRoom.controller.pos)
+                err = moveTo(creep, targetRoom.controller.pos)
                 console.log('move to safe', creep.name, err)
             } else if (err !== OK) {
                 Logger.warning('claimer:claim:failed', creep.name, err)

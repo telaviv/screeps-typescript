@@ -24,7 +24,7 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     }
-    moveToRoom(task.destination, creep)
+    moveToRoom(creep, task.destination)
     return false
 }
 

@@ -4,6 +4,7 @@ import { ResourceCreep } from '../types'
 import SourcesManager from 'managers/sources-manager'
 import autoIncrement from 'utils/autoincrement'
 import { isMiningTask } from './utils'
+import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
@@ -39,11 +40,10 @@ export function run(task: MiningTask, creep: ResourceCreep): boolean {
     }
     const err = creep.harvest(source)
     if (err === ERR_NOT_IN_RANGE) {
-        const moveToError = creep.moveTo(
+        const moveToError = moveTo(
+            creep,
             new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName),
-            {
-                visualizePathStyle: { stroke: '#ffaa00' },
-            },
+            { visualizePathStyle: { stroke: '#ffaa00' } },
         )
         return moveToError === OK
     } else if (err !== OK) {

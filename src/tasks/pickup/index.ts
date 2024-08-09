@@ -5,6 +5,7 @@ import { ResourceCreep } from '../types'
 import { findClosestByRange } from 'utils/room-position'
 import { getFreeCapacity } from 'utils/store'
 import { isPickupTask } from './utils'
+import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
@@ -48,10 +49,7 @@ export function run(task: PickupTask, creep: ResourceCreep): boolean {
     const resource = getResource(task)
     const err = creep.pickup(resource)
     if (err === ERR_NOT_IN_RANGE) {
-        creep.moveTo(resource, {
-            visualizePathStyle: { stroke: '#ffffff' },
-            range: 1,
-        })
+        moveTo(creep, { pos: resource.pos, range: 1 })
     } else if (err === OK) {
         Logger.info('task:pickup:complete', creep.name, task.amount)
         completeRequest(creep)

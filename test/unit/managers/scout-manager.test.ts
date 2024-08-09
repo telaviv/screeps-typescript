@@ -1,3 +1,6 @@
+import { Game } from '../mock'
+global.Game = Game
+
 import { stub } from 'sinon'
 import { expect } from 'chai'
 

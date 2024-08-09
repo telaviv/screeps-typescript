@@ -1,4 +1,5 @@
 import * as Logger from 'utils/logger'
+import { moveTo, moveToRoom } from 'utils/travel'
 import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 
@@ -17,10 +18,7 @@ interface WreckerMemory extends CreepMemory {
 const roleWrecker = {
     run: wrap((creep: Wrecker) => {
         if (creep.room.name !== creep.memory.roomName) {
-            creep.moveTo(new RoomPosition(25, 25, creep.memory.roomName), {
-                range: 20,
-                visualizePathStyle: { stroke: '#ffaa00' },
-            })
+            moveToRoom(creep, creep.memory.roomName)
             return
         }
 
@@ -44,10 +42,11 @@ const roleWrecker = {
         const target = targets[0]
         const err = creep.dismantle(target)
         if (err === ERR_NOT_IN_RANGE) {
-            creep.moveTo(target, {
-                visualizePathStyle: { stroke: '#ffaa00' },
-                range: 1,
-            })
+            moveTo(
+                creep,
+                { pos: target.pos, range: 1 },
+                { visualizePathStyle: { stroke: '#ffaa00' } },
+            )
         } else if (err !== OK) {
             Logger.warning(
                 'wrecker:dismantle:failed',
