@@ -42,7 +42,7 @@ export function run(task: MiningTask, creep: ResourceCreep): boolean {
     if (err === ERR_NOT_IN_RANGE) {
         const moveToError = moveTo(
             creep,
-            new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName),
+            { pos: new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName), range: 0 },
             { visualizePathStyle: { stroke: '#ffaa00' } },
         )
         return moveToError === OK

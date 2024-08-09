@@ -30,7 +30,7 @@ const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
-const MAX_USEFUL_ENERGY = 900 // roughly the biggest logistics bot
+const MAX_USEFUL_ENERGY = 1000 // roughly the biggest logistics bot
 const MIN_AVAILABLE_ENERGY = 0.11 // % of 2 containers
 
 function isEnergyRestricted(room: Room): boolean {
@@ -47,7 +47,6 @@ export default function runStrategy(spawn: StructureSpawn): void {
     }
 
     if (spawn.room.memory.collapsed) {
-        Logger.error('rescue creeps: collapsed', spawn.room.name)
         createRescueCreeps(spawn)
         return
     }
@@ -317,7 +316,6 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 }
 
 function createRescueCreeps(spawn: StructureSpawn) {
-    Logger.error('createRescueCreeps:collapsed', spawn.room.name)
     const room = spawn.room
     const stationaryPoints = getStationaryPoints(room)
     if (!stationaryPoints) {

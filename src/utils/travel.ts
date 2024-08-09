@@ -25,15 +25,24 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
     return moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
-        { roomCallback: roomTravelCallback, ...opts },
+        { roomCallback: roomTravelCallback, maxOps: 4000, ...opts },
     )
-}, 'travel:moveToSafe')
+}, 'travel:moveToRoom')
 
 export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
-    return moveToCartographer(creep, target, { roomCallback: roomTravelCallback, ...opts })
-}, 'travel:moveToSafe')
+    const err = moveToCartographer(creep, target, { roomCallback: roomTravelCallback, ...opts })
+    if (err === ERR_NO_PATH) {
+        return moveToCartographer(creep, target, {
+            swampCost: 5,
+            maxOps: 4000,
+            roomCallback: roomTravelCallback,
+            ...opts,
+        })
+    }
+    return err
+}, 'travel:moveTo')
 
 export const moveWithinRoom = wrap((creep: Creep, target: MoveTarget): MoveToReturnCode => {
     const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name)

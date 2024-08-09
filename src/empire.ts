@@ -118,6 +118,7 @@ export default class Empire {
         }
     }
 
+    @profile
     autoClaim(): void {
         if (findSpawnlessRooms().length > 0) {
             return

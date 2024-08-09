@@ -14,8 +14,8 @@ import { getEnergy, hasNoEnergy } from 'utils/energy-harvesting'
 import { moveTo, moveToRoom, moveWithinRoom } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
-import { recycle } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
+import { recycle } from 'utils/creep'
 
 const ROLE = 'mason'
 type Wall = StructureWall | StructureRampart
@@ -138,7 +138,10 @@ export class MasonCreep {
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {
-                moveTo(this.creep, targets[0])
+                const nerr = moveTo(this.creep, targets[0])
+                if (nerr !== OK) {
+                    Logger.warning('mason:build:moveTo:failure', nerr, this.creep.name)
+                }
             } else if (err !== OK) {
                 Logger.warning('mason:build:failure', err, this.creep.name)
             }

@@ -1,28 +1,41 @@
+/* eslint-disable no-bitwise */
+
 import * as Logger from 'utils/logger'
-import { getObstacles, getSources } from 'utils/room'
 import { SubscriptionEvent } from 'pub-sub/constants'
-import { getNeighbors } from 'utils/room-position'
+import { getObstacles } from 'utils/room'
 import { getStationaryPointsFromMemory } from 'construction-features'
 import { subscribe } from 'pub-sub/pub-sub'
 
 export type MatrixTag =
     | 'no-edges'
-    | 'no-sources'
+    | 'no-sources' // deprecated
     | 'no-obstacles'
     | 'no-stationary-points'
     | 'no-creeps'
-const TAG_ORDER: MatrixTag[] = [
-    'no-edges',
-    'no-sources',
-    'no-obstacles',
-    'no-stationary-points',
-    'no-creeps',
-]
+const TAG_ORDER: MatrixTag[] = ['no-edges', 'no-obstacles', 'no-stationary-points', 'no-creeps']
 const MATRIX_DEFAULT = 'default'
 const MATRIX_CACHE_ID = 'matrix-cache'
 
+const DEPRECATED_TAGS = ['no-sources']
+
 interface MatrixCache {
     [key: string]: { matrix: string; time: number }
+}
+
+const cyrb53 = (str: string, seed = 0) => {
+    let h1 = 0xdeadbeef ^ seed
+    let h2 = 0x41c6ce57 ^ seed
+    for (let i = 0, ch; i < str.length; i++) {
+        ch = str.charCodeAt(i)
+        h1 = Math.imul(h1 ^ ch, 2654435761)
+        h2 = Math.imul(h2 ^ ch, 1597334677)
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507)
+    h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507)
+    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+
+    return 4294967296 * (2097151 & h2) + (h1 >>> 0)
 }
 
 declare global {
@@ -38,6 +51,13 @@ function tagsToKey(tags: MatrixTag[]): string {
     const tagSet = new Set(tags)
     const sortedTags = TAG_ORDER.filter((tag) => tagSet.has(tag))
     return sortedTags.join(':')
+}
+
+function keyToTags(key: string): MatrixTag[] {
+    if (key === MATRIX_DEFAULT) {
+        return []
+    }
+    return key.split(':') as MatrixTag[]
 }
 
 function splitTags(tags: MatrixTag[]): [MatrixTag[], MatrixTag | null] {
@@ -105,7 +125,22 @@ export class MatrixCacheManager {
     }
 
     public static clearCaches(): void {
-        for (const roomMemory of Object.values(Memory.rooms)) {
+        for (const [roomName, roomMemory] of Object.entries(Memory.rooms)) {
+            for (const key of Object.keys(roomMemory.matrixCache ?? {})) {
+                if (!roomMemory.matrixCache) {
+                    continue
+                } else if (
+                    DEPRECATED_TAGS.some((tag) => keyToTags(key).includes(tag as MatrixTag))
+                ) {
+                    delete roomMemory.matrixCache[key as keyof MatrixCache]
+                } else if ([tagsToKey([]), tagsToKey(['no-edges'])].includes(key)) {
+                    continue
+                } else if (keyToTags(key).includes('no-creeps') && roomMemory.matrixCache) {
+                    delete roomMemory.matrixCache[key as keyof MatrixCache]
+                } else if (cyrb53(`${roomName}:${key}`) % 100 === 0 && roomMemory.matrixCache) {
+                    delete roomMemory.matrixCache[key as keyof MatrixCache]
+                }
+            }
             delete roomMemory.matrixCache
         }
     }
@@ -147,8 +182,6 @@ export class MatrixCacheManager {
         const prefixMatrix = this.getCostMatrix(prefix).clone()
         if (latest === 'no-edges') {
             this.addEdges(prefixMatrix)
-        } else if (latest === 'no-sources') {
-            this.addSources(prefixMatrix)
         } else if (latest === 'no-obstacles') {
             this.addObstacles(prefixMatrix)
         } else if (latest === 'no-stationary-points') {
@@ -198,15 +231,6 @@ export class MatrixCacheManager {
         for (let y = 0; y < 50; y++) {
             matrix.set(0, y, 255)
             matrix.set(49, y, 255)
-        }
-    }
-
-    private addSources(matrix: CostMatrix): void {
-        const sources = getSources(this.room)
-        for (const source of sources) {
-            for (const neighbor of getNeighbors(source.pos)) {
-                matrix.set(neighbor.x, neighbor.y, 255)
-            }
         }
     }
 

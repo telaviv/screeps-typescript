@@ -61,7 +61,6 @@ const roleClaimer = {
             err = creep.claimController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
                 err = moveTo(creep, targetRoom.controller.pos)
-                console.log('move to safe', creep.name, err)
             } else if (err !== OK) {
                 Logger.warning('claimer:claim:failed', creep.name, err)
             }

@@ -5,7 +5,7 @@ import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
 import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
-import { moveTo } from 'utils/travel'
+import { moveTo } from 'screeps-cartographer'
 import { spawnCreep } from 'utils/spawn'
 
 const MAX_WORK_PARTS = 5

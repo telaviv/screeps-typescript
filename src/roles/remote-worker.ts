@@ -9,6 +9,7 @@ import { moveToRoom, moveTo } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { fromBodyPlan } from 'utils/parts'
+import { wander } from 'utils/creep'
 
 const ROLE = 'remote-worker'
 
@@ -121,8 +122,9 @@ class RemoteWorkerCreep {
 
     private collectEnergy(): void {
         this.creep.say('⚡')
-        if (!addEnergyTask(this.creep, { includeMining: true })) {
+        if (!addEnergyTask(this.creep)) {
             this.creep.say('🤔')
+            wander(this.creep)
             return
         }
     }
