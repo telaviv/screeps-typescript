@@ -159,6 +159,7 @@ export class HarvesterCreep {
     private canRepairContainer(): boolean {
         if (
             this.creep.getActiveBodyparts(CARRY) === 0 ||
+            !this.container ||
             !this.hasEnergy() ||
             this.isHarvestTick() ||
             !this.isAtHarvestPos()
@@ -174,7 +175,7 @@ export class HarvesterCreep {
 
     private repairContainer(): void {
         const container = this.container
-        if (container === null) {
+        if (!container) {
             Logger.error('harvester:repair:container:not-found', this.creep.name)
             return
         }

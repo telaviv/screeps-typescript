@@ -2,7 +2,14 @@ import * as Logger from 'utils/logger'
 import { ConstructionFeaturesV3, Position } from 'types'
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
-import { findSpawnRooms, getSources, getWallTerrainCount, hasNoSpawns } from 'utils/room'
+import {
+    findSpawnRooms,
+    getRoomType,
+    getSources,
+    getWallTerrainCount,
+    hasNoSpawns,
+    RoomType,
+} from 'utils/room'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getConstructionFeaturesV3FromMemory } from 'construction-features'
@@ -52,7 +59,7 @@ declare global {
 
     namespace NodeJS {
         interface Global {
-            scout: { next: () => void }
+            scout: { next: () => void; location: () => void }
         }
     }
 }
@@ -62,6 +69,14 @@ global.scout = {
         const scoutManager = ScoutManager.create()
         const room = scoutManager.findNextRoomToScout()
         console.log(`next room to scout: ${room}`)
+    },
+    location: () => {
+        const creep = Object.values(Game.creeps).find((c) => c.memory.role === 'scout')
+        if (creep) {
+            console.log(`scout location: ${creep.pos}`)
+        } else {
+            console.log('no scout currently')
+        }
     },
 }
 
@@ -153,10 +168,11 @@ class ScoutManager {
         for (const { roomName, distance } of closestRooms) {
             const ttl = DistanceTTL[distance] ?? 0
             if (
-                !this.scoutRoomData[roomName] ||
-                !this.scoutRoomData[roomName].updatedAt ||
-                this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime ||
-                !this.featureRoomData[roomName]
+                getRoomType(roomName) === RoomType.ROOM &&
+                (!this.scoutRoomData[roomName] ||
+                    !this.scoutRoomData[roomName].updatedAt ||
+                    this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime ||
+                    !this.featureRoomData[roomName])
             ) {
                 return roomName
             }

@@ -106,7 +106,7 @@ export default class WarDepartment {
             (acc, c) => acc + c.getActiveBodyparts(ATTACK) + c.getActiveBodyparts(RANGED_ATTACK),
             0,
         )
-        return hostilePower > 20
+        return hostilePower > 10
     }
 
     public claimerSpotsAvailable(): number {
