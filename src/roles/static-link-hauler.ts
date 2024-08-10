@@ -1,10 +1,11 @@
 import * as Logger from 'utils/logger'
-import { calculateBodyCost, moveTo } from 'utils/creep'
 import { getCalculatedLinks, getStationaryPoints } from 'construction-features'
 import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { byPartCount } from 'utils/parts'
+import { calculateBodyCost } from 'utils/creep'
 import { hasNoEnergy } from 'utils/energy-harvesting'
+import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'static-link-hauler'
@@ -55,7 +56,7 @@ class StaticLinkHaulerCreep {
     }
 
     moveToPosition(): void {
-        const err = moveTo(this.pos, this.creep)
+        const err = moveTo(this.creep, this.pos)
         if (err !== OK && err !== ERR_TIRED) {
             Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.pos, err)
         }

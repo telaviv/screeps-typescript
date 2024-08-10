@@ -5,7 +5,8 @@ import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
 import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
-import { moveToSafe } from 'utils/travel'
+import { moveToRoom } from 'utils/travel'
+import { moveToStationaryPoint } from 'utils/creep'
 import { spawnCreep } from 'utils/spawn'
 
 const MAX_WORK_PARTS = 5
@@ -100,7 +101,12 @@ export class HarvesterCreep {
     }
 
     private moveToHarvestPos(): void {
-        const err = moveToSafe(this.creep, this.harvestPos, 0)
+        let err
+        if (this.creep.room.name !== this.harvestPos.roomName) {
+            err = moveToRoom(this.creep, this.harvestPos.roomName)
+        } else {
+            err = moveToStationaryPoint(this.harvestPos, this.creep)
+        }
         if (err !== OK && err !== ERR_TIRED) {
             Logger.error(
                 'harvester:moveToHarvestPos:failure',
@@ -159,6 +165,7 @@ export class HarvesterCreep {
     private canRepairContainer(): boolean {
         if (
             this.creep.getActiveBodyparts(CARRY) === 0 ||
+            !this.container ||
             !this.hasEnergy() ||
             this.isHarvestTick() ||
             !this.isAtHarvestPos()
@@ -174,7 +181,7 @@ export class HarvesterCreep {
 
     private repairContainer(): void {
         const container = this.container
-        if (container === null) {
+        if (!container) {
             Logger.error('harvester:repair:container:not-found', this.creep.name)
             return
         }

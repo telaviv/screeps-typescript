@@ -28,14 +28,15 @@ import {
     hasOwnFragileWall,
 } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
+import { moveTo, moveToRoom } from 'utils/travel'
 import { mprofile, profile } from 'utils/profiling'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { findTaskByType } from 'tasks/utils'
 import { getBuildManager } from 'managers/build-manager'
-import { getRandomWalkablePosition } from 'utils/room-position'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
+import { wander } from 'utils/creep'
 
 export const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -66,6 +67,11 @@ const PREFERENCE_EMOJIS = {
 }
 
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
+
+interface CreateOpts {
+    home?: string
+    rescue?: boolean
+}
 
 class RoleLogistics {
     private creep: LogisticsCreep
@@ -167,7 +173,9 @@ class RoleLogistics {
     private assignWorkerPreference() {
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
-        if (
+        if (this.creep.room.name !== memory.home) {
+            moveToRoom(this.creep, memory.home)
+        } else if (
             this.creep.room.controller &&
             this.creep.room.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
         ) {
@@ -232,10 +240,11 @@ class RoleLogistics {
         const target = this.creep.pos.findClosestByRange(targets)
         if (target) {
             if (this.creep.build(target) === ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(target, {
-                    visualizePathStyle: { stroke: '#ffffff' },
-                    range: 3,
-                })
+                moveTo(
+                    this.creep,
+                    { pos: target.pos, range: 3 },
+                    { visualizePathStyle: { stroke: '#ffffff' } },
+                )
             }
         } else if (isFullOfEnergy(this.creep)) {
             this.assignWorkerPreference()
@@ -279,10 +288,11 @@ class RoleLogistics {
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(structure.pos, {
-                visualizePathStyle: { stroke: '#ffffff' },
-                range: 3,
-            })
+            moveTo(
+                this.creep,
+                { pos: structure.pos, range: 3 },
+                { visualizePathStyle: { stroke: '#ffffff' } },
+            )
         } else if (err !== OK) {
             Logger.warning('logistics:repair-wall:failure', this.creep.name, err)
         }
@@ -298,10 +308,11 @@ class RoleLogistics {
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(structure.pos, {
-                visualizePathStyle: { stroke: '#ffffff' },
-                range: 3,
-            })
+            moveTo(
+                this.creep,
+                { pos: structure.pos, range: 3 },
+                { visualizePathStyle: { stroke: '#ffffff' } },
+            )
         } else if (err !== OK) {
             Logger.warning('logistics:repair:failure', this.creep.name, err)
         }
@@ -315,10 +326,11 @@ class RoleLogistics {
             return
         }
         if (this.creep.upgradeController(home.controller) === ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(home.controller, {
-                visualizePathStyle: { stroke: '#ffffff' },
-                range: 3,
-            })
+            moveTo(
+                this.creep,
+                { pos: home.controller.pos, range: 3 },
+                { visualizePathStyle: { stroke: '#ffffff' } },
+            )
         }
     }
 
@@ -335,10 +347,7 @@ class RoleLogistics {
 
     @profile
     private wander(): void {
-        const pos = getRandomWalkablePosition(this.creep.pos)
-        if (pos !== null) {
-            this.creep.moveTo(pos)
-        }
+        wander(this.creep)
     }
 
     @profile
@@ -357,9 +366,9 @@ class RoleLogistics {
     public static createCreep(
         spawn: StructureSpawn,
         preference: LogisticsPreference = TASK_HAULING,
-        rescue = false,
+        opts: CreateOpts = { rescue: false },
     ): ScreepsReturnCode {
-        const capacity = rescue
+        const capacity = opts.rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyAvailable
         return spawnCreep(
@@ -370,7 +379,7 @@ class RoleLogistics {
             {
                 memory: {
                     role: ROLE,
-                    home: spawn.room.name,
+                    home: opts.home ?? spawn.room.name,
                     preference,
                     currentTask: TASK_COLLECTING,
                     currentTarget: undefined,

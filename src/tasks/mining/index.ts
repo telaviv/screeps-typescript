@@ -3,7 +3,9 @@ import { MiningTask } from './types'
 import { ResourceCreep } from '../types'
 import SourcesManager from 'managers/sources-manager'
 import autoIncrement from 'utils/autoincrement'
+import { getHarvesters } from 'utils/creep'
 import { isMiningTask } from './utils'
+import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
@@ -39,11 +41,10 @@ export function run(task: MiningTask, creep: ResourceCreep): boolean {
     }
     const err = creep.harvest(source)
     if (err === ERR_NOT_IN_RANGE) {
-        const moveToError = creep.moveTo(
-            new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName),
-            {
-                visualizePathStyle: { stroke: '#ffaa00' },
-            },
+        const moveToError = moveTo(
+            creep,
+            { pos: new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName), range: 0 },
+            { visualizePathStyle: { stroke: '#ffaa00' } },
         )
         return moveToError === OK
     } else if (err !== OK) {
@@ -89,6 +90,15 @@ export function cleanup(task: MiningTask, creep: ResourceCreep): boolean {
     }
     if (source.energy === 0) {
         Logger.info('task:mining:cleanup:empty', creep.name, JSON.stringify(task.pos))
+        return true
+    }
+    const harvesters = getHarvesters(creep.room)
+    const hasHarvester = harvesters.some((harvester) => {
+        const pos = harvester.memory.pos
+        return pos.x === task.pos.x && pos.y === task.pos.y && pos.roomName === task.pos.roomName
+    })
+    if (hasHarvester) {
+        Logger.info('task:mining:cleanup:harvester', creep.name, JSON.stringify(task.pos))
         return true
     }
 

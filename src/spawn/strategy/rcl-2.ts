@@ -19,7 +19,6 @@ import { getStationaryPoints } from 'construction-features'
 import { isTravelTask } from 'tasks/travel/utils'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
-import roleRemoteWorker from 'roles/remote-worker'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
@@ -30,7 +29,7 @@ const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
-const MAX_USEFUL_ENERGY = 900 // roughly the biggest logistics bot
+const MAX_USEFUL_ENERGY = 1000 // roughly the biggest logistics bot
 const MIN_AVAILABLE_ENERGY = 0.11 // % of 2 containers
 
 function isEnergyRestricted(room: Room): boolean {
@@ -47,7 +46,6 @@ export default function runStrategy(spawn: StructureSpawn): void {
     }
 
     if (spawn.room.memory.collapsed) {
-        Logger.error('rescue creeps: collapsed', spawn.room.name)
         createRescueCreeps(spawn)
         return
     }
@@ -247,7 +245,6 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
             creep.memory.tasks[0].destination === warDepartment.target &&
             creep.memory.tasks[0].permanent,
     )
-    const remoteWorker = getCreeps('remote-worker', room)
 
     if (warDepartment.hasSafeMode() || warDepartment.hasOverwhelmingForce()) {
         return null
@@ -259,6 +256,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         }
         return null
     }
+    const remoteWorkers = getLogisticsCreeps({ room: warDepartment.targetRoom })
 
     if (
         (status === WarStatus.ATTACK || warDepartment.needsProtection) &&
@@ -299,17 +297,21 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
             return roleClaimer.create(spawn, warDepartment.target)
         }
     } else if (status === WarStatus.SPAWN) {
-        if (!sourcesManager.hasAHarvester()) {
-            return sourcesManager.createHarvester(spawn, true)
-        } else if (remoteWorker.length === 0) {
-            return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
+        if (remoteWorkers.length === 0) {
+            return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                home: warDepartment.target,
+            })
         } else if (isEnergyRestricted(room)) {
-            if (remoteWorker.length < 2) {
-                return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
+            if (remoteWorkers.length < 2) {
+                return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                    home: warDepartment.target,
+                })
             } else if (!sourcesManager.hasAllContainerHarvesters()) {
                 return sourcesManager.createHarvester(spawn, true)
             } else {
-                return roleRemoteWorker.create(spawn, warDepartment.target, capacity)
+                return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                    home: warDepartment.target,
+                })
             }
         }
     }
@@ -317,7 +319,6 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
 }
 
 function createRescueCreeps(spawn: StructureSpawn) {
-    Logger.error('createRescueCreeps:collapsed', spawn.room.name)
     const room = spawn.room
     const stationaryPoints = getStationaryPoints(room)
     if (!stationaryPoints) {
@@ -335,7 +336,7 @@ function createRescueCreeps(spawn: StructureSpawn) {
     if (defenseDepartment.needsDefenders()) {
         defenseDepartment.createDefender(spawn, room.energyAvailable)
     } else if (workers.length < RESCUE_WORKER_COUNT) {
-        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, true)
+        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, { rescue: true })
     } else if (harvesters.length < sourceCount) {
         sourcesManager.createHarvester(spawn, true)
     }

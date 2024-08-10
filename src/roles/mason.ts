@@ -11,11 +11,11 @@ import {
     hasWeakWall,
 } from 'utils/room'
 import { getEnergy, hasNoEnergy } from 'utils/energy-harvesting'
-import { isAtEdge, moveTo, moveTowardsCenter, moveWithinRoom, recycle } from 'utils/creep'
+import { moveTo, moveToRoom, moveWithinRoom } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlan } from 'utils/parts'
-import { moveToRoom } from 'utils/travel'
+import { recycle } from 'utils/creep'
 
 const ROLE = 'mason'
 type Wall = StructureWall | StructureRampart
@@ -79,11 +79,6 @@ export class MasonCreep {
             return
         }
 
-        if (isAtEdge(this.creep)) {
-            moveTowardsCenter(this.creep)
-            return
-        }
-
         if (this.hasNoEnergy()) {
             this.repairTarget = null
             getEnergy(this.creep)
@@ -130,7 +125,7 @@ export class MasonCreep {
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
-            moveWithinRoom(structure.pos, this.creep, 3)
+            moveWithinRoom(this.creep, { pos: structure.pos, range: 3 })
         } else if (err !== OK) {
             Logger.warning('logistics:repair-wall:failure', this.creep.name, err)
         }
@@ -143,7 +138,10 @@ export class MasonCreep {
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {
-                moveTo(targets[0].pos, this.creep)
+                const nerr = moveTo(this.creep, targets[0])
+                if (nerr !== OK) {
+                    Logger.warning('mason:build:moveTo:failure', nerr, this.creep.name)
+                }
             } else if (err !== OK) {
                 Logger.warning('mason:build:failure', err, this.creep.name)
             }
@@ -153,7 +151,7 @@ export class MasonCreep {
     }
 
     private goHome() {
-        moveToRoom(this.home, this.creep)
+        moveToRoom(this.creep, this.home)
     }
 
     private isAtHome() {

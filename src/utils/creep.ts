@@ -1,11 +1,11 @@
 import * as Logger from 'utils/logger'
 import { LogisticsCreep, LogisticsPreference, isLogisticsCreep } from 'roles/logistics-constants'
 import { Scout, isScout } from 'roles/scout'
+import { moveTo, moveToRoom } from './travel'
 import { Harvester } from 'roles/harvester'
 import { MatrixCacheManager } from 'matrix-cache'
 import { getSpawns } from 'utils/room'
 import { isTravelTask } from 'tasks/travel/utils'
-import { moveToRoom } from './travel'
 import { randomElement } from './utilities'
 import { wrap } from './profiling'
 
@@ -25,7 +25,7 @@ export function calculateBodyCost(parts: BodyPartConstant[]): number {
     return sum
 }
 
-type MoveToReturnCode =
+export type MoveToReturnCode =
     | CreepMoveReturnCode
     | ERR_NOT_FOUND
     | ERR_INVALID_ARGS
@@ -39,47 +39,8 @@ declare global {
     }
 }
 
-export const moveTo = wrap(
-    (pos: RoomPosition, creep: Creep, opts: MoveToOpts = {}): MoveToReturnCode => {
-        const original = pos
-        const err: MoveToReturnCode = creep.moveTo(pos, {
-            ...opts,
-            visualizePathStyle: { stroke: '#ffaa00' },
-        })
-        if (err === ERR_NO_PATH) {
-            Logger.warning('moveTo:noPath', creep.name, original, pos)
-            const path = PathFinder.search(original, pos, {
-                maxRooms: 6,
-                swampCost: 1,
-            }).path
-            return creep.moveByPath(path)
-        }
-        return err
-    },
-    'creep:moveTo',
-)
-
-export const moveWithinRoom = wrap(
-    (pos: RoomPosition, creep: Creep, range = 1): MoveToReturnCode => {
-        const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name)
-        const callback = (roomName: string): CostMatrix | boolean => {
-            if (roomName === pos.roomName) {
-                return matrix
-            }
-            return false
-        }
-        const path = PathFinder.search(
-            creep.pos,
-            { pos, range: range as number },
-            { roomCallback: callback },
-        ).path
-        return creep.moveByPath(path)
-    },
-    'creep:moveWithinRoom',
-)
-
 export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): MoveToReturnCode => {
-    const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name).clone()
+    const matrix = MatrixCacheManager.getRoomTravelMatrix(creep.room.name).clone()
     matrix.set(pos.x, pos.y, 0)
     const callback = (roomName: string): CostMatrix | boolean => {
         if (roomName === pos.roomName) {
@@ -87,23 +48,15 @@ export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): Mov
         }
         return false
     }
-    const path = PathFinder.search(creep.pos, { pos, range: 0 }, { roomCallback: callback }).path
-    return creep.moveByPath(path)
+    return moveTo(creep, { pos, range: 0 }, { roomCallback: callback })
 }, 'creep:moveWithinRoom')
 
 export function goHome(creep: Creep): void {
     if (creep.memory.home) {
-        moveToRoom(creep.memory.home, creep)
+        moveToRoom(creep, creep.memory.home)
     } else {
         Logger.warning('goHome:noHome', creep.name)
     }
-}
-
-export function moveTowardsCenter(creep: Creep): void {
-    creep.moveTo(new RoomPosition(25, 25, creep.room.name), {
-        range: 21,
-        visualizePathStyle: { stroke: '#ffaa00' },
-    })
 }
 
 export function isAtEdge(creep: Creep): boolean {
@@ -143,10 +96,13 @@ export function recycle(creep: Creep): void {
 
     const err = spawn.recycleCreep(creep)
     if (err === ERR_NOT_IN_RANGE) {
-        creep.moveTo(spawn, {
-            visualizePathStyle: { stroke: '#ffaa00' },
-            range: 1,
-        })
+        moveTo(
+            creep,
+            { pos: spawn.pos, range: 1 },
+            {
+                visualizePathStyle: { stroke: '#ffaa00' },
+            },
+        )
         creep.say('♻')
     } else if (err !== OK) {
         Logger.warning('recycle:failed', err, creep.name)

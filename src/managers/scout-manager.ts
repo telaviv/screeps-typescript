@@ -61,7 +61,7 @@ declare global {
 
     namespace NodeJS {
         interface Global {
-            scout: { next: () => void }
+            scout: { next: () => void; location: () => void }
         }
     }
 }
@@ -71,6 +71,14 @@ global.scout = {
         const scoutManager = ScoutManager.create()
         const room = scoutManager.findNextRoomToScout()
         console.log(`next room to scout: ${room}`)
+    },
+    location: () => {
+        const creep = Object.values(Game.creeps).find((c) => c.memory.role === 'scout')
+        if (creep) {
+            console.log(`scout location: ${creep.pos}`)
+        } else {
+            console.log('no scout currently')
+        }
     },
 }
 
@@ -165,11 +173,12 @@ class ScoutManager {
             }
             const ttl = DistanceTTL[distance] ?? 0
             if (
-                !this.scoutRoomData[roomName] ||
-                !this.scoutRoomData[roomName].updatedAt ||
-                this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime ||
-                semverGte(this.scoutRoomData[roomName].version, '1.1.0') ||
-                !this.featureRoomData[roomName]
+                getRoomType(roomName) === RoomType.ROOM &&
+                (!this.scoutRoomData[roomName] ||
+                    semverGte(this.scoutRoomData[roomName].version, '1.1.0') ||
+                    !this.scoutRoomData[roomName].updatedAt ||
+                    this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime ||
+                    !this.featureRoomData[roomName])
             ) {
                 return roomName
             }

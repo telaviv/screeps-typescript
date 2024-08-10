@@ -118,6 +118,7 @@ export default class Empire {
         }
     }
 
+    @profile
     autoClaim(): void {
         if (findMyRooms().length >= Game.gcl.level) {
             return

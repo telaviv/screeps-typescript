@@ -31,6 +31,7 @@ export class TransferStructure {
         return new TransferStructure(structure, tasks)
     }
 
+    @mprofile('TransferStructure:get')
     public static get(id: Id<AnyStoreStructure>): TransferStructure {
         return TransferStructure.create(id)
     }

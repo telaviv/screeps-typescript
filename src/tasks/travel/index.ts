@@ -24,7 +24,10 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     }
-    moveToRoom(task.destination, creep)
+    const err = moveToRoom(creep, task.destination)
+    if (err === ERR_NO_PATH) {
+        creep.suicide()
+    }
     return false
 }
 

@@ -5,10 +5,11 @@ import { LogisticsMemory, TASK_COLLECTING, TASK_HAULING } from './logistics-cons
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { getConstructionSites, hasNoSpawns } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { moveToRoom, moveToSafe } from 'utils/travel'
+import { moveToRoom, moveTo } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { fromBodyPlan } from 'utils/parts'
+import { wander } from 'utils/creep'
 
 const ROLE = 'remote-worker'
 
@@ -66,7 +67,7 @@ class RemoteWorkerCreep {
         }
 
         if (this.creep.room.name !== this.destination) {
-            moveToRoom(this.destination, this.creep)
+            moveToRoom(this.creep, this.destination)
         }
 
         if (!this.creep.memory.tasks) {
@@ -121,8 +122,9 @@ class RemoteWorkerCreep {
 
     private collectEnergy(): void {
         this.creep.say('⚡')
-        if (!addEnergyTask(this.creep, { includeMining: true })) {
+        if (!addEnergyTask(this.creep)) {
             this.creep.say('🤔')
+            wander(this.creep)
             return
         }
     }
@@ -154,7 +156,7 @@ class RemoteWorkerCreep {
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {
-                moveToSafe(this.creep, targets[0].pos, 3)
+                moveTo(this.creep, { pos: targets[0].pos, range: 3 })
             } else if (err !== OK) {
                 Logger.warning('remote-worker:build:failure', err, this.creep.name, targets[0].pos)
             }

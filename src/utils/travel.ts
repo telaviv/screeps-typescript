@@ -1,9 +1,17 @@
-import * as Logger from './logger'
+import { MoveOpts, MoveTarget, moveTo as moveToCartographer } from 'screeps-cartographer'
+
 import { MatrixCacheManager } from 'matrix-cache'
+import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 
 const MAX_ROOM_RANGE = 18
+
+type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
+
+function hasRoomPosition(target: MoveToTarget): target is _HasRoomPosition {
+    return (target as _HasRoomPosition).pos !== undefined
+}
 
 function roomTravelCallback(roomName: string): CostMatrix | boolean {
     if (!safeRoomCallback(roomName)) {
@@ -15,50 +23,46 @@ function roomTravelCallback(roomName: string): CostMatrix | boolean {
     return MatrixCacheManager.getRoomTravelMatrix(roomName)
 }
 
-const createInRoomCallback =
-    (roomName: string) =>
-    (innerRoomName: string): boolean => {
-        if (roomName === innerRoomName) {
-            return true
+export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
+    typeof moveToCartographer
+> => {
+    return moveToCartographer(
+        creep,
+        { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
+        { roomCallback: roomTravelCallback, maxOps: 3000, ...opts },
+    )
+}, 'travel:moveToRoom')
+
+export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts = {}): ReturnType<
+    typeof moveToCartographer
+> => {
+    const err = moveToCartographer(creep, target, { roomCallback: roomTravelCallback, ...opts })
+    if (err === ERR_NO_PATH) {
+        if (Array.isArray(target)) {
+            target = target[0]
+        }
+        const pos = hasRoomPosition(target) ? target.pos : target
+        if (creep.room.name === pos.roomName) {
+            return moveToRoom(creep, pos.roomName, opts)
+        } else {
+            return moveToCartographer(creep, target, {
+                swampCost: 5,
+                maxOps: 2000,
+                roomCallback: roomTravelCallback,
+                ...opts,
+            })
+        }
+    }
+    return err
+}, 'travel:moveTo')
+
+export const moveWithinRoom = wrap((creep: Creep, target: MoveTarget): MoveToReturnCode => {
+    const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name)
+    const callback = (roomName: string): CostMatrix | boolean => {
+        if (roomName === target.pos.roomName) {
+            return matrix
         }
         return false
     }
-
-export const moveToRoom = wrap((roomName: string, creep: Creep):
-    | ReturnType<Creep['moveByPath']>
-    | ReturnType<Creep['moveTo']> => {
-    if (creep.room.name === roomName) {
-        return creep.moveTo(new RoomPosition(25, 25, roomName), { range: MAX_ROOM_RANGE })
-    }
-
-    const ret = PathFinder.search(
-        creep.pos,
-        { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
-        { roomCallback: roomTravelCallback, maxOps: 2000 },
-    )
-    if (ret.incomplete) {
-        Logger.info('travel:moveToRoom:incomplete', roomName, creep.name)
-        return creep.moveTo(new RoomPosition(25, 25, roomName), { range: MAX_ROOM_RANGE })
-    }
-    return creep.moveByPath(ret.path)
-}, 'travel:moveToRoom')
-
-/* eslint-disable @typescript-eslint/no-inferrable-types */
-export const moveToSafe = wrap((creep: Creep, pos: RoomPosition, range: number = 1):
-    | ReturnType<Creep['moveByPath']>
-    | ReturnType<Creep['moveTo']> => {
-    if (creep.room.name === pos.roomName) {
-        return creep.moveTo(pos, { range })
-    }
-    const roomCallback =
-        creep.room.name === pos.roomName ? createInRoomCallback(pos.roomName) : roomTravelCallback
-    const ret = PathFinder.search(creep.pos, { pos, range }, { roomCallback, maxOps: 2000 })
-    if (ret.incomplete) {
-        Logger.info('travel:moveToSafe:incomplete', pos, creep.name)
-        if (creep.room.name === pos.roomName) {
-            return creep.moveTo(pos, { range, swampCost: 1 })
-        }
-        return moveToRoom(pos.roomName, creep)
-    }
-    return creep.moveByPath(ret.path)
-}, 'travel:moveToSafe')
+    return moveTo(creep, target, { roomCallback: callback })
+}, 'creep:moveWithinRoom')
