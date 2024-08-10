@@ -3,6 +3,7 @@ import { MiningTask } from './types'
 import { ResourceCreep } from '../types'
 import SourcesManager from 'managers/sources-manager'
 import autoIncrement from 'utils/autoincrement'
+import { getHarvesters } from 'utils/creep'
 import { isMiningTask } from './utils'
 import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
@@ -89,6 +90,15 @@ export function cleanup(task: MiningTask, creep: ResourceCreep): boolean {
     }
     if (source.energy === 0) {
         Logger.info('task:mining:cleanup:empty', creep.name, JSON.stringify(task.pos))
+        return true
+    }
+    const harvesters = getHarvesters(creep.room)
+    const hasHarvester = harvesters.some((harvester) => {
+        const pos = harvester.memory.pos
+        return pos.x === task.pos.x && pos.y === task.pos.y && pos.roomName === task.pos.roomName
+    })
+    if (hasHarvester) {
+        Logger.info('task:mining:cleanup:harvester', creep.name, JSON.stringify(task.pos))
         return true
     }
 

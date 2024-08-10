@@ -40,7 +40,7 @@ declare global {
 }
 
 export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): MoveToReturnCode => {
-    const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name).clone()
+    const matrix = MatrixCacheManager.getRoomTravelMatrix(creep.room.name).clone()
     matrix.set(pos.x, pos.y, 0)
     const callback = (roomName: string): CostMatrix | boolean => {
         if (roomName === pos.roomName) {

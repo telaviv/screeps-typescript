@@ -5,7 +5,8 @@ import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
 import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
-import { moveTo } from 'screeps-cartographer'
+import { moveToRoom } from 'utils/travel'
+import { moveToStationaryPoint } from 'utils/creep'
 import { spawnCreep } from 'utils/spawn'
 
 const MAX_WORK_PARTS = 5
@@ -100,7 +101,12 @@ export class HarvesterCreep {
     }
 
     private moveToHarvestPos(): void {
-        const err = moveTo(this.creep, { pos: this.harvestPos, range: 0 })
+        let err
+        if (this.creep.room.name !== this.harvestPos.roomName) {
+            err = moveToRoom(this.creep, this.harvestPos.roomName)
+        } else {
+            err = moveToStationaryPoint(this.harvestPos, this.creep)
+        }
         if (err !== OK && err !== ERR_TIRED) {
             Logger.error(
                 'harvester:moveToHarvestPos:failure',

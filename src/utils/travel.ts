@@ -9,6 +9,10 @@ const MAX_ROOM_RANGE = 18
 
 type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
 
+function hasRoomPosition(target: MoveToTarget): target is _HasRoomPosition {
+    return (target as _HasRoomPosition).pos !== undefined
+}
+
 function roomTravelCallback(roomName: string): CostMatrix | boolean {
     if (!safeRoomCallback(roomName)) {
         return false
@@ -25,7 +29,7 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
     return moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
-        { roomCallback: roomTravelCallback, maxOps: 4000, ...opts },
+        { roomCallback: roomTravelCallback, maxOps: 3000, ...opts },
     )
 }, 'travel:moveToRoom')
 
@@ -34,12 +38,20 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
 > => {
     const err = moveToCartographer(creep, target, { roomCallback: roomTravelCallback, ...opts })
     if (err === ERR_NO_PATH) {
-        return moveToCartographer(creep, target, {
-            swampCost: 5,
-            maxOps: 4000,
-            roomCallback: roomTravelCallback,
-            ...opts,
-        })
+        if (Array.isArray(target)) {
+            target = target[0]
+        }
+        const pos = hasRoomPosition(target) ? target.pos : target
+        if (creep.room.name === pos.roomName) {
+            return moveToRoom(creep, pos.roomName, opts)
+        } else {
+            return moveToCartographer(creep, target, {
+                swampCost: 5,
+                maxOps: 2000,
+                roomCallback: roomTravelCallback,
+                ...opts,
+            })
+        }
     }
     return err
 }, 'travel:moveTo')
