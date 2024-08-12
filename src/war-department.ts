@@ -1,6 +1,8 @@
 import * as Logger from 'utils/logger'
+import { HostileRecorder } from 'hostiles'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { hasNoSpawns } from 'utils/room'
+import { profile } from 'utils/profiling'
 
 declare global {
     interface RoomMemory {
@@ -11,7 +13,6 @@ declare global {
 export interface WarMemory {
     status: WarStatus
     target: string
-    needsProtection?: boolean
 }
 
 export interface SpawnWarMemory extends WarMemory {
@@ -69,16 +70,19 @@ export default class WarDepartment {
     }
 
     public get needsProtection(): boolean {
-        return this.warMemory.needsProtection || false
+        if (!this.targetRoom) {
+            return false
+        }
+        const hostileRecorder = new HostileRecorder(this.targetRoom)
+        const dangerLevel = hostileRecorder.dangerLevel()
+        if ((dangerLevel > 0 && dangerLevel < 10) || this.hasInvaderCore()) {
+            return true
+        }
+        return false
     }
 
     public hasSafeMode(): boolean {
-        return (
-            this.targetRoom?.controller?.safeMode !== undefined ||
-            (this.targetRoom?.memory.scout?.safeMode ?? 0) +
-                (this.targetRoom?.memory.scout?.updatedAt ?? 0) >
-                Game.time
-        )
+        return false
     }
 
     public hasInvaderCore(): boolean {
@@ -94,6 +98,7 @@ export default class WarDepartment {
         })
         return invaderCores?.some((c) => c.hits > 1000) || false
     }
+
     public hasOverwhelmingForce(): boolean {
         if (!this.targetRoom?.controller?.my && !this.targetRoom?.controller?.safeMode) {
             return false
@@ -147,13 +152,10 @@ export default class WarDepartment {
         )
     }
 
+    @profile
     public update(): void {
         if (this.status === WarStatus.NONE) {
             return
-        }
-
-        if (this.hasHostiles() || this.hasInvaderCore()) {
-            this.warMemory.needsProtection = true
         }
 
         if (this.status === WarStatus.CLAIM) {
@@ -166,7 +168,7 @@ export default class WarDepartment {
         } else if (this.status === WarStatus.SPAWN) {
             if (this.targetRoom && !hasNoSpawns(this.targetRoom)) {
                 Logger.info(
-                    `war-department:update: switching status from CLAIM to SPAWN for ${this.target}`,
+                    `war-department:update: switching status from SPAWN to NONE for ${this.target}`,
                 )
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }

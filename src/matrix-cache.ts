@@ -1,6 +1,7 @@
 /* eslint-disable no-bitwise */
 
 import * as Logger from 'utils/logger'
+import { mprofile, profile, wrap } from 'utils/profiling'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { getObstacles } from 'utils/room'
 import { getStationaryPointsFromMemory } from 'construction-features'
@@ -44,14 +45,14 @@ declare global {
     }
 }
 
-function tagsToKey(tags: MatrixTag[]): string {
+const tagsToKey = wrap((tags: MatrixTag[]): string => {
     if (tags.length === 0) {
         return MATRIX_DEFAULT
     }
     const tagSet = new Set(tags)
     const sortedTags = TAG_ORDER.filter((tag) => tagSet.has(tag))
     return sortedTags.join(':')
-}
+}, 'matrix-cache:tagsToKey')
 
 function keyToTags(key: string): MatrixTag[] {
     if (key === MATRIX_DEFAULT) {
@@ -109,21 +110,26 @@ export class MatrixCacheManager {
         }
     }
 
+    @mprofile('MatrixCacheManager.getFullCostMatrix')
     public static getFullCostMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
         return manager.getCostMatrix(TAG_ORDER)
     }
 
+    @mprofile('MatrixCacheManager.getRoomTravelMatrix')
     public static getRoomTravelMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        return manager.getCostMatrix(['no-obstacles', 'no-stationary-points', 'no-creeps'])
+        const cm = manager.getCostMatrix(['no-obstacles', 'no-stationary-points', 'no-creeps'])
+        return cm
     }
 
+    @mprofile('MatrixCacheManager.getDefaultCostMatrix')
     public static getDefaultCostMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
         return manager.getCostMatrix([])
     }
 
+    @mprofile('MatrixCacheManager.clearCaches')
     public static clearCaches(): void {
         for (const [roomName, roomMemory] of Object.entries(Memory.rooms)) {
             for (const key of Object.keys(roomMemory.matrixCache ?? {})) {
@@ -155,6 +161,7 @@ export class MatrixCacheManager {
         return Memory.rooms[this.roomName].matrixCache as MatrixCache
     }
 
+    @profile
     public getCostMatrix(tags: MatrixTag[]): CostMatrix {
         this.ensureCache(tags)
         const key = tagsToKey(tags)
@@ -163,12 +170,14 @@ export class MatrixCacheManager {
         )
     }
 
+    @profile
     public getSerializedMatrix(tags: MatrixTag[]): number[] {
         this.ensureCache(tags)
         const key = tagsToKey(tags)
         return JSON.parse(this.matrixCache[key].matrix) as number[]
     }
 
+    @profile
     private ensureCache(tags: MatrixTag[]): void {
         if (tags.length === 0) {
             this.setDefaultMatrixCache()
@@ -179,15 +188,15 @@ export class MatrixCacheManager {
             return
         }
         const [prefix, latest] = splitTags(tags)
-        const prefixMatrix = this.getCostMatrix(prefix).clone()
+        let prefixMatrix = this.getCostMatrix(prefix)
         if (latest === 'no-edges') {
-            this.addEdges(prefixMatrix)
+            prefixMatrix = this.addEdges(prefixMatrix)
         } else if (latest === 'no-obstacles') {
-            this.addObstacles(prefixMatrix)
+            prefixMatrix = this.addObstacles(prefixMatrix)
         } else if (latest === 'no-stationary-points') {
-            this.addStationaryPoints(prefixMatrix)
+            prefixMatrix = this.addStationaryPoints(prefixMatrix)
         } else if (latest === 'no-creeps') {
-            this.addCreeps(prefixMatrix)
+            prefixMatrix = this.addCreeps(prefixMatrix)
         } else {
             throw new Error(`Unknown matrix tag: ${latest}`)
         }
@@ -197,6 +206,7 @@ export class MatrixCacheManager {
         }
     }
 
+    @profile
     public setDefaultMatrixCache(): void {
         if (this.matrixCache[MATRIX_DEFAULT]) {
             return
@@ -208,6 +218,7 @@ export class MatrixCacheManager {
         }
     }
 
+    @profile
     private calculateDefaultMatrix(): CostMatrix {
         const terrain = new Room.Terrain(this.roomName)
         const matrix = new PathFinder.CostMatrix()
@@ -223,7 +234,9 @@ export class MatrixCacheManager {
         return matrix
     }
 
-    private addEdges(matrix: CostMatrix): void {
+    @profile
+    private addEdges(matrix: CostMatrix): CostMatrix {
+        matrix = matrix.clone()
         for (let x = 0; x < 50; x++) {
             matrix.set(x, 0, 255)
             matrix.set(x, 49, 255)
@@ -232,38 +245,48 @@ export class MatrixCacheManager {
             matrix.set(0, y, 255)
             matrix.set(49, y, 255)
         }
+        return matrix
     }
 
-    private addObstacles(matrix: CostMatrix): void {
+    @profile
+    private addObstacles(matrix: CostMatrix): CostMatrix {
         if (!this.room) {
-            return
+            return matrix
         }
+        matrix = matrix.clone()
         const obstacles = getObstacles(this.room)
         for (const obstacle of obstacles) {
             matrix.set(obstacle.pos.x, obstacle.pos.y, 255)
         }
+        return matrix
     }
 
-    private addCreeps(matrix: CostMatrix): void {
+    @profile
+    private addCreeps(matrix: CostMatrix): CostMatrix {
         if (!this.room) {
-            return
+            return matrix
         }
+        matrix = matrix.clone()
         const creeps = this.room.find(FIND_CREEPS)
         for (const creep of creeps) {
             matrix.set(creep.pos.x, creep.pos.y, 255)
         }
+        return matrix
     }
 
-    private addStationaryPoints(matrix: CostMatrix): void {
+    @profile
+    private addStationaryPoints(matrix: CostMatrix): CostMatrix {
         const points = getStationaryPointsFromMemory(Memory.rooms[this.roomName])
         if (!points) {
-            return
+            return matrix
         }
+        matrix = matrix.clone()
         const { sources, controllerLink, storageLink } = points
         matrix.set(controllerLink.x, controllerLink.y, 255)
         matrix.set(storageLink.x, storageLink.y, 255)
         for (const source of Object.values(sources)) {
             matrix.set(source.x, source.y, 255)
         }
+        return matrix
     }
 }

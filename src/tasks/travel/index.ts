@@ -1,3 +1,5 @@
+import { moveTo } from 'screeps-cartographer'
+
 import * as Logger from 'utils/logger'
 import { ResourceCreep } from '../types'
 import { TravelTask } from './types'
@@ -24,9 +26,15 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     }
-    const err = moveToRoom(creep, task.destination)
+    let err = moveToRoom(creep, task.destination)
     if (err === ERR_NO_PATH) {
-        creep.suicide()
+        err = moveTo(creep, new RoomPosition(25, 25, task.destination), {
+            swampCost: 5,
+            avoidSourceKeepers: true,
+        })
+        if (err === ERR_NO_PATH) {
+            creep.suicide()
+        }
     }
     return false
 }

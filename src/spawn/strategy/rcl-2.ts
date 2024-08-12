@@ -23,13 +23,20 @@ import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
 
+declare global {
+    interface Memory {
+        lastLatentWorker?: number
+    }
+}
+const LATENT_WORKER_INTERVAL = 100
+
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
 const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
-const MAX_USEFUL_ENERGY = 1000 // roughly the biggest logistics bot
+const MAX_USEFUL_ENERGY = 750
 const MIN_AVAILABLE_ENERGY = 0.11 // % of 2 containers
 
 function isEnergyRestricted(room: Room): boolean {
@@ -74,6 +81,10 @@ export default function runStrategy(spawn: StructureSpawn): void {
         return
     }
 
+    if (defenseDepartment.needsHealer()) {
+        defenseDepartment.createHealer(spawn)
+    }
+
     if (!sourcesManager.hasAllContainerHarvesters()) {
         sourcesManager.createHarvester(spawn)
         return
@@ -82,10 +93,6 @@ export default function runStrategy(spawn: StructureSpawn): void {
     if (hasWeakWall(room) && masons.length < MASON_COUNT) {
         roleMason.create(spawn)
         return
-    }
-
-    if (defenseDepartment.needsHealer()) {
-        defenseDepartment.createHealer(spawn)
     }
 
     if (warDepartment.status !== WarStatus.NONE) {
@@ -161,7 +168,23 @@ function swarmStrategy(spawn: StructureSpawn): void {
             )
             return
         }
-        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+        let cerr: ScreepsReturnCode | null = null
+        if (Memory.lastLatentWorker) {
+            if (Game.time - Memory.lastLatentWorker >= LATENT_WORKER_INTERVAL) {
+                cerr = RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+            } else {
+                Logger.info(
+                    'rcl-2:create-latent-workers:too-soon',
+                    spawn.room.name,
+                    Memory.lastLatentWorker + LATENT_WORKER_INTERVAL - Game.time,
+                )
+            }
+        } else {
+            cerr = RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+        }
+        if (cerr === OK) {
+            Memory.lastLatentWorker = Game.time
+        }
         return
     }
 }
@@ -256,6 +279,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         }
         return null
     }
+
     const remoteWorkers = getLogisticsCreeps({ room: warDepartment.targetRoom })
 
     if (
@@ -298,7 +322,7 @@ function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): n
         }
     } else if (status === WarStatus.SPAWN) {
         if (remoteWorkers.length === 0) {
-            return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: warDepartment.target,
             })
         } else if (isEnergyRestricted(room)) {

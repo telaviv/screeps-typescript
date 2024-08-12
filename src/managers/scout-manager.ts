@@ -10,13 +10,13 @@ import {
     hasNoSpawns,
     RoomType,
 } from 'utils/room'
+import { mprofile, profile } from 'utils/profiling'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getConstructionFeaturesV3FromMemory } from 'construction-features'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
-import { mprofile } from 'utils/profiling'
 
 const SCOUT_VERSION = '1.0.7'
 
@@ -163,6 +163,7 @@ class ScoutManager {
         new RoomManager(Game.rooms[scoutRoom]).addScoutRoomTask(roomToScout)
     }
 
+    @profile
     findNextRoomToScout(): string | null {
         const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
         for (const { roomName, distance } of closestRooms) {

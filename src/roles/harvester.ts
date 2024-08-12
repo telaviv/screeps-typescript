@@ -118,6 +118,10 @@ export class HarvesterCreep {
     }
 
     private harvestSource(): void {
+        if (this.creep.getActiveBodyparts(WORK) === 0) {
+            Logger.info('harvester:harvest:no-work', this.creep.name)
+            return
+        }
         const err = this.creep.harvest(this.source)
         if (err === ERR_NOT_IN_RANGE) {
             this.moveToHarvestPos()

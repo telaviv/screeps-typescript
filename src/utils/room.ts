@@ -101,8 +101,16 @@ export function getWalls(room: Room): StructureWall[] {
     })
 }
 
+export function getEnemyCreeps(room: Room): Creep[] {
+    return getHostileCreeps(room).filter((creep) => creep.owner.username !== SYSTEM_USERNAME)
+}
+
+export function getHostileCreeps(room: Room): Creep[] {
+    return room.find(FIND_HOSTILE_CREEPS)
+}
+
 export function hasHostileCreeps(room: Room): boolean {
-    return room.find(FIND_HOSTILE_CREEPS).length > 0
+    return getHostileCreeps(room).length > 0
 }
 
 export function getInjuredCreeps(room: Room): Creep[] {

@@ -42,6 +42,7 @@ class StaticUpgraderCreep {
         }
         if (!this.isAtPosition()) {
             this.moveToPosition()
+            return
         }
 
         if (hasNoEnergy(this.creep)) {

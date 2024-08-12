@@ -29,7 +29,7 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
     return moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
-        { roomCallback: roomTravelCallback, maxOps: 3000, ...opts },
+        { roomCallback: roomTravelCallback, swampCost: 3, maxOps: 4000, ...opts },
     )
 }, 'travel:moveToRoom')
 

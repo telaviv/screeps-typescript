@@ -12,10 +12,12 @@ import roleScout, { Scout } from 'roles/scout'
 import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler'
 import roleStaticUpgrader, { StaticUpgrader } from 'roles/static-upgrader'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
+import { preTick, reconcileTraffic } from 'screeps-cartographer'
 import survey, { isSurveyComplete } from './surveyor'
 import updateStrategy, { StrategyPhase } from './strategy'
 import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
+import { HostileRecorder } from 'hostiles'
 import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { MatrixCacheManager } from 'matrix-cache'
@@ -160,6 +162,7 @@ const initialize = wrap(() => {
     if (!global.USERNAME) {
         global.USERNAME = findUsername()
     }
+    preTick()
 
     clearMemory()
     addSubscriptions()
@@ -178,6 +181,8 @@ const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
         room.memory.updated = Game.time
         updateStrategy(room)
+        const hostileRecorder = new HostileRecorder(room)
+        hostileRecorder.record()
         if (room.controller && room.controller.my && isSurveyComplete(room)) {
             runMyRoom(room)
         }
@@ -211,6 +216,7 @@ function unwrappedLoop(): void {
     if (Game.cpu.bucket >= VISUALS_CPU_MIN) {
         runVisuals()
     }
+    reconcileTraffic()
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change

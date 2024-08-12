@@ -3,13 +3,7 @@ import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE, MAX_SAVIOR_DISTANCE } from '
 import { RoomDistanceInfo, World } from 'utils/world'
 import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
-import {
-    findClaimCapableRooms,
-    findMyRooms,
-    findSpawnlessRooms,
-    findSpawnRooms,
-    hasNoSpawns,
-} from 'utils/room'
+import { findClaimCapableRooms, findMyRooms, findSpawnRooms, hasNoSpawns } from 'utils/room'
 import { ScoutManager } from 'managers/scout-manager'
 import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesFromMemory } from 'construction-features'
@@ -120,9 +114,7 @@ export default class Empire {
 
     @profile
     autoClaim(): void {
-        if (findSpawnlessRooms().length > 0) {
-            return
-        }
+        if (Game.gcl.level <= findMyRooms().length) return
         const scout = ScoutManager.create().findNextRoomToScout()
         if (scout) return
         const candidates = this.findClaimCandidates()
@@ -158,6 +150,7 @@ export default class Empire {
             .filter((roomName) => roomName !== undefined)
     }
 
+    @profile
     findClaimCandidates(): string[] {
         const world = new World()
         const roomNames = findClaimCapableRooms().map((room) => room.name)
