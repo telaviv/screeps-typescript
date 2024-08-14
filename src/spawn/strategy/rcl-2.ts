@@ -9,6 +9,7 @@ import WarDepartment, { WarStatus } from 'war-department'
 import { getConstructionSites, getLinks, hasWeakWall } from 'utils/room'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleMason, { MasonCreep } from 'roles/mason'
+import roleRebalancer, { getVirtualStorage } from 'roles/rebalancer'
 import DefenseDepartment from 'defense-department'
 import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
@@ -16,6 +17,7 @@ import { RoomManager } from 'managers/room-manager'
 import SourcesManager from 'managers/sources-manager'
 import { getSlidingEnergy } from 'room-window'
 import { getStationaryPoints } from 'construction-features'
+import { getTotalDroppedResources } from 'tasks/pickup'
 import { isTravelTask } from 'tasks/travel/utils'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
@@ -38,6 +40,7 @@ const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 750
 const MIN_AVAILABLE_ENERGY = 0.11 // % of 2 containers
+const MAX_DROPPED_RESOURCES = 1000
 
 function isEnergyRestricted(room: Room): boolean {
     return (
@@ -111,6 +114,7 @@ export default function runStrategy(spawn: StructureSpawn): void {
 
 function swarmStrategy(spawn: StructureSpawn): void {
     const room = spawn.room
+    const droppedResources = getTotalDroppedResources(room)
     const constructionSites = getConstructionSites(room).filter(
         (site) => site.structureType !== STRUCTURE_RAMPART,
     )
@@ -123,6 +127,8 @@ function swarmStrategy(spawn: StructureSpawn): void {
     const workers = getLogisticsCreeps({ room }).filter(
         (creep) => creep.getActiveBodyparts(WORK) > 0,
     )
+    const rebalancers = getCreeps('rebalancer', room)
+    const virtualStorage = getVirtualStorage(room.name)
 
     if (RoleLogistics.shouldCreateCreep(spawn)) {
         if (haulers.length < 1) {
@@ -136,6 +142,16 @@ function swarmStrategy(spawn: StructureSpawn): void {
             return
         } else if (builders.length < BUILDERS_COUNT && constructionSites.length > 0) {
             RoleLogistics.createCreep(spawn, TASK_BUILDING)
+            return
+        } else if (rebalancers.length < 1 && virtualStorage) {
+            roleRebalancer.create(spawn)
+            return
+        } else if (
+            rebalancers.length < 2 &&
+            virtualStorage &&
+            droppedResources > MAX_DROPPED_RESOURCES
+        ) {
+            roleRebalancer.create(spawn)
             return
         }
     }
@@ -162,8 +178,7 @@ function swarmStrategy(spawn: StructureSpawn): void {
         if (isEnergyRestricted(room)) {
             Logger.debug(
                 'rcl-2:create-latent-workers:lowEnergy',
-                getSlidingEnergy(spawn.room.memory, 99),
-                getSlidingEnergy(spawn.room.memory, 999),
+                isEnergyRestricted(room),
                 spawn.room.name,
             )
             return
@@ -171,16 +186,18 @@ function swarmStrategy(spawn: StructureSpawn): void {
         let cerr: ScreepsReturnCode | null = null
         if (Memory.lastLatentWorker) {
             if (Game.time - Memory.lastLatentWorker >= LATENT_WORKER_INTERVAL) {
-                cerr = RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+                if (room.energyAvailable === room.energyCapacityAvailable) {
+                    cerr = RoleLogistics.createCreep(spawn, TASK_UPGRADING)
+                } else {
+                    cerr = RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+                }
             } else {
                 Logger.info(
                     'rcl-2:create-latent-workers:too-soon',
                     spawn.room.name,
-                    Memory.lastLatentWorker + LATENT_WORKER_INTERVAL - Game.time,
+                    (Memory.lastLatentWorker ?? 0) + LATENT_WORKER_INTERVAL - Game.time,
                 )
             }
-        } else {
-            cerr = RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
         }
         if (cerr === OK) {
             Memory.lastLatentWorker = Game.time
@@ -204,9 +221,11 @@ function linkStrategy(spawn: StructureSpawn): void {
         (creep) => creep.getActiveBodyparts(WORK) > 0,
     )
     const upgraderCount = upgraders.length + staticUpgraders.length
+    const rebalancers = getCreeps('rebalancer', room)
+    const virtualStorage = getVirtualStorage(room.name)
 
     if (RoleLogistics.shouldCreateCreep(spawn)) {
-        if (haulers.length < 1) {
+        if (haulers.length + rebalancers.length < 1) {
             RoleLogistics.createCreep(spawn, TASK_HAULING)
             return
         } else if (workers.length === 0) {
@@ -217,6 +236,9 @@ function linkStrategy(spawn: StructureSpawn): void {
             return
         } else if (builders.length < BUILDERS_COUNT && constructionSites.length > 0) {
             RoleLogistics.createCreep(spawn, TASK_BUILDING)
+            return
+        } else if (rebalancers.length < 1 && virtualStorage) {
+            roleRebalancer.create(spawn)
             return
         }
     }

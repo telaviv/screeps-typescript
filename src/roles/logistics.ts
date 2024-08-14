@@ -105,6 +105,7 @@ class RoleLogistics {
 
         if (tasks.length > 0) {
             this.runTask()
+            return
         } else if (this.canSign()) {
             SignTask.makeRequest(this.creep)
         } else if (currentTask === TASK_COLLECTING) {
@@ -124,6 +125,10 @@ class RoleLogistics {
         } else if (currentTask === NO_TASK) {
             this.wander()
             this.assignWorkerPreference()
+        }
+        if (tasks.length > 0) {
+            this.runTask()
+            return
         }
     }
 
@@ -459,16 +464,7 @@ class RoleLogistics {
  * @returns true if the creep can be spawned.
  */
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    const fixed = [...BODY_PLAN_UNIT, ...BODY_PLAN_UNIT, ...BODY_PLAN_UNIT]
-    const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
-    let plan: BodyPartConstant[]
-    if (fixedCost > capacity) {
-        plan = fromBodyPlan(capacity, BODY_PLAN_UNIT)
-    } else {
-        plan = fromBodyPlan(capacity, [MOVE, CARRY], fixed, 4)
-    }
-    Logger.debug('logistics:calculateParts', JSON.stringify(plan), capacity)
-    return plan
+    return fromBodyPlan(capacity, BODY_PLAN_UNIT)
 }
 
 export default RoleLogistics

@@ -9,45 +9,60 @@ import { isTransferTask } from './utils'
 import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
-export const makeRequest = wrap((creep: ResourceCreep): AnyStoreStructure | null => {
-    const energy = currentEnergyHeld(creep)
-    if (energy === 0) {
-        return null
-    }
+interface RequestOpts {
+    structure?: AnyStoreStructure
+}
+export const makeRequest = wrap(
+    (creep: ResourceCreep, opts?: RequestOpts): AnyStoreStructure | null => {
+        const energy = currentEnergyHeld(creep)
+        if (energy === 0) {
+            return null
+        }
 
-    const currentRequest = getCurrentTransferRequest(creep)
-    if (currentRequest !== null) {
-        return getStructure(currentRequest)
-    }
+        const currentRequest = getCurrentTransferRequest(creep)
+        if (currentRequest !== null) {
+            return getStructure(currentRequest)
+        }
 
-    if (
-        creep.room.energyAvailable >
-        Math.min(MINIMUM_EXTENSION_ENERGY, creep.room.energyCapacityAvailable * 0.75)
-    ) {
-        const towers = fillableTowers(creep.room)
-        if (towers.length > 0) {
-            const tower = creep.pos.findClosestByRange(towers) as StructureTower
-            const request = addTransferTask(creep, tower)
+        if (opts && opts.structure) {
+            const fillable = filterFillableStructures([opts.structure])
+            if (fillable.length === 0) {
+                return null
+            }
+            const request = addTransferTask(creep, fillable[0])
             return getStructure(request)
         }
-    }
 
-    const extensions = fillableExtensions(creep.room)
-    if (extensions.length > 0) {
-        const extension = creep.pos.findClosestByRange(extensions) as StructureExtension
-        const request = addTransferTask(creep, extension)
-        return getStructure(request)
-    }
+        if (
+            creep.room.energyAvailable >
+            Math.min(MINIMUM_EXTENSION_ENERGY, creep.room.energyCapacityAvailable * 0.75)
+        ) {
+            const towers = fillableTowers(creep.room)
+            if (towers.length > 0) {
+                const tower = creep.pos.findClosestByRange(towers) as StructureTower
+                const request = addTransferTask(creep, tower)
+                return getStructure(request)
+            }
+        }
 
-    const spawns = fillableSpawns(creep.room)
-    if (spawns.length > 0) {
-        const spawn = creep.pos.findClosestByRange(spawns) as StructureSpawn
-        const request = addTransferTask(creep, spawn)
-        return getStructure(request)
-    }
+        const extensions = fillableExtensions(creep.room)
+        if (extensions.length > 0) {
+            const extension = creep.pos.findClosestByRange(extensions) as StructureExtension
+            const request = addTransferTask(creep, extension)
+            return getStructure(request)
+        }
 
-    return null
-}, 'transfer:makeRequest')
+        const spawns = fillableSpawns(creep.room)
+        if (spawns.length > 0) {
+            const spawn = creep.pos.findClosestByRange(spawns) as StructureSpawn
+            const request = addTransferTask(creep, spawn)
+            return getStructure(request)
+        }
+
+        return null
+    },
+    'transfer:makeRequest',
+)
 
 export function run(task: TransferTask, creep: ResourceCreep): boolean {
     const structure = getStructure(task)

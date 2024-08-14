@@ -4,6 +4,7 @@ import { RoomDistanceInfo, World } from 'utils/world'
 import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
 import { findClaimCapableRooms, findMyRooms, findSpawnRooms, hasNoSpawns } from 'utils/room'
+import { HostileRecorder } from 'hostiles'
 import { ScoutManager } from 'managers/scout-manager'
 import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesFromMemory } from 'construction-features'
@@ -187,6 +188,9 @@ export default class Empire {
             pairs.push({ candidate, claimer: ri.roomName, distance: ri.distance })
         }
         pairs.sort((a, b) => {
+            const dangerA = HostileRecorder.getDangerLevel(a.candidate)
+            const dangerB = HostileRecorder.getDangerLevel(b.candidate)
+            if (dangerA !== dangerB) return dangerA - dangerB
             if (a.distance !== b.distance) return a.distance - b.distance
             return (
                 Game.rooms[b.claimer].energyCapacityAvailable -

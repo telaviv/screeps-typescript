@@ -3,6 +3,7 @@ import includes from 'lodash/includes'
 import { WithdrawTask, Withdrawable } from './types'
 import autoIncrement from 'utils/autoincrement'
 import { getAllTasks } from 'tasks/utils'
+import { getConstructionFeatures } from 'construction-features'
 import { getUsedCapacity } from 'utils/store'
 import { isWithdrawTask } from './utils'
 
@@ -34,9 +35,28 @@ export class WithdrawObject {
         return WithdrawObject.create(id)
     }
 
-    public static getTargetsInRoom(room: Room): WithdrawObject[] {
+    public static getTargetsInRoom(
+        room: Room,
+        opts?: { excludeVirtualStorage?: boolean },
+    ): WithdrawObject[] {
         const structures = room.find<StructureContainer | StructureStorage>(FIND_STRUCTURES, {
-            filter: (r) => includes([STRUCTURE_CONTAINER, STRUCTURE_STORAGE], r.structureType),
+            filter: (r) => {
+                if (!includes([STRUCTURE_CONTAINER, STRUCTURE_STORAGE], r.structureType)) {
+                    return false
+                }
+                if (opts?.excludeVirtualStorage) {
+                    const features = getConstructionFeatures(room)
+                    if (features) {
+                        const storagePos = features[STRUCTURE_STORAGE]
+                        if (storagePos) {
+                            if (r.pos.x === storagePos[0].x && r.pos.y === storagePos[0].y) {
+                                return false
+                            }
+                        }
+                    }
+                }
+                return true
+            },
         })
         const tombstones = room.find(FIND_TOMBSTONES)
         const ruins = room.find(FIND_RUINS)

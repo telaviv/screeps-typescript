@@ -7,12 +7,12 @@ import roleClaimer, { Claimer } from 'roles/claim'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleHealer, { Healer } from 'roles/healer'
 import roleMason, { Mason } from 'roles/mason'
+import roleRebalancer, { Rebalancer } from 'roles/rebalancer'
 import roleRemoteUpgrade, { RemoteWorker } from 'roles/remote-worker'
 import roleScout, { Scout } from 'roles/scout'
 import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler'
 import roleStaticUpgrader, { StaticUpgrader } from 'roles/static-upgrader'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
-import { preTick, reconcileTraffic } from 'screeps-cartographer'
 import survey, { isSurveyComplete } from './surveyor'
 import updateStrategy, { StrategyPhase } from './strategy'
 import Empire from 'empire'
@@ -155,6 +155,8 @@ const runCreep = wrap((creepName: string) => {
         roleStaticUpgrader.run(creep as StaticUpgrader)
     } else if (creep.memory.role === 'healer') {
         roleHealer.run(creep as Healer)
+    } else if (creep.memory.role === 'rebalancer') {
+        roleRebalancer.run(creep as Rebalancer)
     }
 }, 'main:runCreep')
 
@@ -162,7 +164,6 @@ const initialize = wrap(() => {
     if (!global.USERNAME) {
         global.USERNAME = findUsername()
     }
-    preTick()
 
     clearMemory()
     addSubscriptions()
@@ -181,7 +182,7 @@ const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
         room.memory.updated = Game.time
         updateStrategy(room)
-        const hostileRecorder = new HostileRecorder(room)
+        const hostileRecorder = new HostileRecorder(room.name)
         hostileRecorder.record()
         if (room.controller && room.controller.my && isSurveyComplete(room)) {
             runMyRoom(room)
@@ -216,7 +217,6 @@ function unwrappedLoop(): void {
     if (Game.cpu.bucket >= VISUALS_CPU_MIN) {
         runVisuals()
     }
-    reconcileTraffic()
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
