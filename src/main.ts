@@ -5,6 +5,7 @@ import assignGlobals, { findUsername } from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleClaimer, { Claimer } from 'roles/claim'
+import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleHealer, { Healer } from 'roles/healer'
 import roleMason, { Mason } from 'roles/mason'
@@ -158,6 +159,8 @@ const runCreep = wrap((creepName: string) => {
         roleHealer.run(creep as Healer)
     } else if (creep.memory.role === 'rebalancer') {
         roleRebalancer.run(creep as Rebalancer)
+    } else if (creep.memory.role === 'energy-hauler') {
+        roleEnergyHauler.run(creep as EnergyHauler)
     }
 }, 'main:runCreep')
 

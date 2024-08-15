@@ -126,7 +126,10 @@ function getResource(task: PickupTask): Resource {
 
 function getDroppedResources(room: Room, capacity: number, resource: ResourceConstant): Resource[] {
     const targets = PickupTarget.findInRoom(room, resource)
-    const eligibles = targets.filter((target) => target.resourcesAvailable() >= capacity)
+    const eligibles = targets.filter((target) => {
+        const available = target.resourcesAvailable()
+        return available >= capacity && available > 50
+    })
     return eligibles.map((eligible) => eligible.resource)
 }
 
