@@ -1,10 +1,17 @@
+/* eslint-disable import/no-named-as-default-member */
+
 import * as Logger from 'utils/logger'
-import { FlatRoomPosition, SourceCreep, SourceMemory } from 'types'
+import { FlatRoomPosition, SourceMemory } from 'types'
+import PickupRunner, { addPickupTask } from 'tasks/pickup'
+import WithdrawRunner, { addWithdrawTask } from 'tasks/withdraw'
 import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { profile, wrap } from 'utils/profiling'
+import { ResourceCreep } from 'tasks/types'
 import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
+import { isPickupTask } from 'tasks/pickup/utils'
+import { isWithdrawTask } from 'tasks/withdraw/utils'
 import { moveToRoom } from 'utils/travel'
 import { moveToStationaryPoint } from 'utils/creep'
 import { spawnCreep } from 'utils/spawn'
@@ -23,13 +30,14 @@ const BODY_PLANS = [
     byPartCount({ [MOVE]: 5, [WORK]: 5 }),
 ]
 
-export interface Harvester extends SourceCreep {
+export interface Harvester extends ResourceCreep {
     memory: HarvesterMemory
 }
 
 interface HarvesterMemory extends SourceMemory {
     role: 'harvester'
     pos: FlatRoomPosition
+    idleTimestamp: number
 }
 
 export function isHarvester(creep: Creep): creep is Harvester {
@@ -52,20 +60,38 @@ export class HarvesterCreep {
         if (this.creep.spawning) {
             return
         }
+        if (this.creep.memory.tasks.length > 1) {
+            Logger.error('harvester:run:tasks:too-many', this.creep.name, this.creep.memory.tasks)
+            this.creep.memory.tasks = []
+        }
 
         if (!this.isAtHarvestPos()) {
             this.moveToHarvestPos()
             return
         }
 
+        if (this.isHarvestTick()) {
+            this.harvestSource()
+            return
+        }
         if (this.canTransferEnergy()) {
             this.transferEnergyToLink()
             return
         } else if (this.canRepairContainer()) {
             this.repairContainer()
         }
-
-        this.harvestSource()
+        if (this.creep.getActiveBodyparts(CARRY) === 0 || this.isFullOfEnergy()) {
+            return
+        }
+        this.collectNonSourceEnergy()
+        if (this.creep.memory.tasks && this.creep.memory.tasks.length > 0) {
+            const task = this.creep.memory.tasks[0]
+            if (isPickupTask(task)) {
+                PickupRunner.run(task, this.creep)
+            } else if (isWithdrawTask(task)) {
+                WithdrawRunner.run(task, this.creep)
+            }
+        }
     }
 
     get harvestPos(): RoomPosition {
@@ -133,6 +159,7 @@ export class HarvesterCreep {
     @profile
     private canTransferEnergy(): boolean {
         if (
+            this.creep.memory.tasks.length > 0 ||
             this.creep.getActiveBodyparts(CARRY) === 0 ||
             !this.isFullOfEnergy() ||
             this.isHarvestTick()
@@ -181,6 +208,27 @@ export class HarvesterCreep {
             return false
         }
         return container.hits < container.hitsMax
+    }
+
+    @profile
+    private collectNonSourceEnergy(): void {
+        if (this.creep.memory.tasks.length === 1) {
+            return
+        }
+        const droppedEnergy = this.creep.pos
+            .lookFor(LOOK_RESOURCES)
+            .find((r) => r.resourceType === RESOURCE_ENERGY)
+        if (droppedEnergy) {
+            const task = addPickupTask(this.creep, droppedEnergy)
+            if (task !== null) {
+                return
+            }
+        }
+        const container = this.container
+        if (container === null) {
+            return
+        }
+        addWithdrawTask(this.creep, container)
     }
 
     private repairContainer(): void {
@@ -258,6 +306,7 @@ const roleHarvester = {
                     roomName: source.room.name,
                 },
                 source: sourceId,
+                idleTimestamp: 0,
             } as HarvesterMemory,
         })
         return err

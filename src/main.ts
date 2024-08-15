@@ -1,5 +1,6 @@
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
+import * as TimeCache from 'utils/time-cache'
 import assignGlobals, { findUsername } from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
@@ -208,6 +209,7 @@ function unwrappedLoop(): void {
     runAllCreeps()
     recordGameStats()
     MatrixCacheManager.clearCaches()
+    TimeCache.clearAll()
 
     if (Game.cpu.bucket === 10000 && Game.cpu.generatePixel) {
         Game.cpu.generatePixel()

@@ -86,12 +86,15 @@ export class RebalancerCreep {
             return
         }
 
-        success = WithdrawTask.makeRequest(this.creep, { excludeVirtualStorage: true })
+        success = WithdrawTask.makeRequest(this.creep, {
+            excludeVirtualStorage: true,
+            sortBy: 'amount',
+        })
         if (success) {
             return
         }
 
-        success = WithdrawTask.makeRequest(this.creep)
+        success = WithdrawTask.makeRequest(this.creep, { sortBy: 'amount' })
         if (!success) {
             this.rebalance()
             return

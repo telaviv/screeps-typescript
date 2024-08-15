@@ -42,18 +42,16 @@ export class PickupTarget {
         return Math.max(this.resource.amount - this.sumOfPickups(), 0)
     }
 
-    public makeRequest(creep: Creep): PickupTask {
+    public makeRequest(creep: Creep): PickupTask | null {
         const creepCapacity = creep.store.getFreeCapacity(this.resource.resourceType)
         const resourcesAvailable = this.resourcesAvailable()
         if (creepCapacity <= 0) {
             throw new Error(
-                `creep ${creep.name} was trying to make request: ${JSON.stringify(creep)}`,
+                `creep ${creep.name} was trying to make pickup request: ${JSON.stringify(creep)}`,
             )
         }
         if (resourcesAvailable <= 0) {
-            throw new Error(
-                `creep ${creep.name} was trying to make request: ${JSON.stringify(this.resource)}`,
-            )
+            return null
         }
         const amountToPickup = Math.min(creepCapacity, resourcesAvailable)
         const task = {

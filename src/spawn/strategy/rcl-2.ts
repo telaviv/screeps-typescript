@@ -24,9 +24,10 @@ import roleClaimer from 'roles/claim'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
+import { wrap } from 'utils/profiling'
 
 declare global {
-    interface Memory {
+    interface RoomMemory {
         lastLatentWorker?: number
     }
 }
@@ -42,12 +43,12 @@ const MAX_USEFUL_ENERGY = 750
 const MIN_AVAILABLE_ENERGY = 0.11 // % of 2 containers
 const MAX_DROPPED_RESOURCES = 1000
 
-function isEnergyRestricted(room: Room): boolean {
+const isEnergyRestricted = wrap((room: Room): boolean => {
     return (
         getSlidingEnergy(room.memory, 99) < MIN_AVAILABLE_ENERGY ||
         getSlidingEnergy(room.memory, 999) < MIN_AVAILABLE_ENERGY
     )
-}
+}, 'rcl-2:isEnergyRestricted')
 
 export default function runStrategy(spawn: StructureSpawn): void {
     updateRescueStatus(spawn.room)
@@ -184,8 +185,8 @@ function swarmStrategy(spawn: StructureSpawn): void {
             return
         }
         let cerr: ScreepsReturnCode | null = null
-        if (Memory.lastLatentWorker) {
-            if (Game.time - Memory.lastLatentWorker >= LATENT_WORKER_INTERVAL) {
+        if (room.memory.lastLatentWorker) {
+            if (Game.time - room.memory.lastLatentWorker >= LATENT_WORKER_INTERVAL) {
                 if (room.energyAvailable === room.energyCapacityAvailable) {
                     cerr = RoleLogistics.createCreep(spawn, TASK_UPGRADING)
                 } else {
@@ -195,12 +196,12 @@ function swarmStrategy(spawn: StructureSpawn): void {
                 Logger.info(
                     'rcl-2:create-latent-workers:too-soon',
                     spawn.room.name,
-                    (Memory.lastLatentWorker ?? 0) + LATENT_WORKER_INTERVAL - Game.time,
+                    (room.memory.lastLatentWorker ?? 0) + LATENT_WORKER_INTERVAL - Game.time,
                 )
             }
         }
         if (cerr === OK) {
-            Memory.lastLatentWorker = Game.time
+            room.memory.lastLatentWorker = Game.time
         }
         return
     }

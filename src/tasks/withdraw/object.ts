@@ -74,15 +74,21 @@ export class WithdrawObject {
         )
     }
 
-    public makeRequest(creep: Creep, resource: ResourceConstant = RESOURCE_ENERGY): WithdrawTask {
+    public makeRequest(
+        creep: Creep,
+        resource: ResourceConstant = RESOURCE_ENERGY,
+    ): WithdrawTask | null {
         const creepCapacity = creep.store.getFreeCapacity(resource)
         if (creepCapacity <= 0) {
             throw new Error(
-                `creep ${creep.name} was trying to make request: ${JSON.stringify(creep)}`,
+                `creep ${creep.name} was trying to make withdraw request: ${JSON.stringify(creep)}`,
             )
         }
         const resourcesAvailable = this.resourcesAvailable(resource)
         const amountToWithdraw = Math.min(creepCapacity, resourcesAvailable)
+        if (amountToWithdraw <= 0) {
+            return null
+        }
         const task = {
             type: 'withdraw' as const,
             id: autoIncrement().toString(),

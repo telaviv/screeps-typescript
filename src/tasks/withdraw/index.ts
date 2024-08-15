@@ -1,6 +1,7 @@
 import maxBy from 'lodash/maxBy'
 
 import * as Logger from 'utils/logger'
+import * as TimeCache from 'utils/time-cache'
 import { WithdrawTask, Withdrawable } from './types'
 import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import { ResourceCreep } from '../types'
@@ -12,16 +13,26 @@ import { isWithdrawTask } from './utils'
 import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
-const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
-    const withdrawObject = WithdrawObject.get(withdrawable.id)
-    const task = withdrawObject.makeRequest(creep)
-    Logger.info('withdraw:create', creep.name, task.id, task.withdrawId, task.amount)
-    creep.memory.tasks.push(task)
-    return task
-}, 'withdraw:addWithdrawTask')
+const KEY = 'withdraw-total-resources'
+
+export const addWithdrawTask = wrap(
+    (creep: ResourceCreep, withdrawable: Withdrawable): WithdrawTask | null => {
+        const withdrawObject = WithdrawObject.get(withdrawable.id)
+        const task = withdrawObject.makeRequest(creep)
+        if (!task) {
+            return null
+        }
+        Logger.info('withdraw:create', creep.name, task.id, task.withdrawId, task.amount)
+        creep.memory.tasks.push(task)
+        TimeCache.clearRecord(`${KEY}:${withdrawable.room?.name ?? 'no-room'}`)
+        return task
+    },
+    'withdraw:addWithdrawTask',
+)
 
 interface RequestOpts {
     excludeVirtualStorage?: boolean
+    sortBy?: 'distance' | 'amount'
 }
 export const makeRequest = wrap((creep: ResourceCreep, opts?: RequestOpts): boolean => {
     const capacity = creep.store.getFreeCapacity()
@@ -51,9 +62,14 @@ export const makeRequest = wrap((creep: ResourceCreep, opts?: RequestOpts): bool
             addWithdrawTask(creep, target)
             return true
         }
-        target = findClosestByRange(creep.pos, withdrawTargets, {
-            range: 1,
-        }) as Withdrawable
+        const sortBy = opts?.sortBy || 'distance'
+        if (sortBy === 'distance') {
+            target = findClosestByRange(creep.pos, withdrawTargets, {
+                range: 1,
+            }) as Withdrawable
+        } else {
+            target = maxBy(withdrawTargets, (t) => t.store.getUsedCapacity(RESOURCE_ENERGY))
+        }
         if (!target) {
             Logger.error('withdraw::makeRequest:failure:no-target', creep.name)
             return false
@@ -195,11 +211,13 @@ const getEligibleTargets = wrap(
 )
 
 export function getTotalWithdrawableResources(room: Room): number {
-    const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
-    return withdrawObjects.reduce(
-        (acc, target) => acc + target.resourcesAvailable(RESOURCE_ENERGY),
-        0,
-    )
+    return TimeCache.get<number>(`${KEY}:${room.name}`, () => {
+        const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
+        return withdrawObjects.reduce(
+            (acc, target) => acc + target.resourcesAvailable(RESOURCE_ENERGY),
+            0,
+        )
+    })
 }
 
 export default {
