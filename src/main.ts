@@ -81,14 +81,18 @@ if (!Memory.creeps) {
     Memory.creeps = {}
 }
 
-const clearMemory = wrap(() => {
+const CREEP_MEMORY_TIMEOUT = 500
+
+const clearCreepMemory = wrap(() => {
+    if (Game.time % CREEP_MEMORY_TIMEOUT !== 0) {
+        return
+    }
     for (const name in Memory.creeps) {
         if (!(name in Game.creeps)) {
             delete Memory.creeps[name]
         }
     }
-    clearImmutableRoomCache()
-}, 'main:clearMemory')
+}, 'main:clearCreepMemory')
 
 const runMyRoom = wrap((room: Room) => {
     recordRoomStats(room)
@@ -125,10 +129,14 @@ const ensureSafeMode = wrap((room: Room) => {
         return
     }
     for (const event of room.getEventLog()) {
-        if (event.event === EVENT_OBJECT_DESTROYED && event.data.type !== 'creep') {
-            const err = room.controller.activateSafeMode()
-            Logger.error(`ensure safe mode for ${room.name}: ${event.data.type} destroyed.`, err)
-            return
+        if (event.event === EVENT_OBJECT_DESTROYED) {
+            if (event.data.type !== 'creep') {
+                const err = room.controller.activateSafeMode()
+                Logger.error(
+                    `ensure safe mode for ${room.name}: ${event.data.type} destroyed.`,
+                    err,
+                )
+            }
         }
     }
 }, 'ensureSafeMode')
@@ -169,7 +177,8 @@ const initialize = wrap(() => {
         global.USERNAME = findUsername()
     }
 
-    clearMemory()
+    clearCreepMemory()
+    clearImmutableRoomCache()
     addSubscriptions()
     ScoutManager.create().run()
     const empire = new Empire()

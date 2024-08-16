@@ -18,7 +18,7 @@ const MATRIX_DEFAULT = 'default'
 const MATRIX_CACHE_ID = 'matrix-cache'
 
 const DEPRECATED_TAGS = ['no-sources']
-const EVICTION_TIME = 5000
+const EVICTION_TIME = 2500
 
 interface MatrixCache {
     [key: string]: { matrix: string; time: number }
@@ -139,7 +139,7 @@ export class MatrixCacheManager {
                     continue
                 }
                 const time = roomMemory.matrixCache[key as keyof MatrixCache].time
-                if (Game.time - time > EVICTION_TIME) {
+                if (Game.time - time > EVICTION_TIME && cyrb53(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 } else if (
                     DEPRECATED_TAGS.some((tag) => keyToTags(key).includes(tag as MatrixTag))
@@ -147,9 +147,9 @@ export class MatrixCacheManager {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 } else if ([tagsToKey([]), tagsToKey(['no-edges'])].includes(key)) {
                     continue
-                } else if (keyToTags(key).includes('no-creeps') && roomMemory.matrixCache) {
+                } else if (keyToTags(key).includes('no-creeps')) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
-                } else if (cyrb53(`${roomName}:${key}`) % 100 === 0 && roomMemory.matrixCache) {
+                } else if (cyrb53(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 }
             }
