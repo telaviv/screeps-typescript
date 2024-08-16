@@ -5,6 +5,7 @@ import { Game } from '../mock'
 
 config.showDiff = true
 config.truncateThreshold = 0
+global.Game = Game
 
 type ExitDescriptions = Map<string, ExitsInformation>
 const createExitDescriptions = (): ExitDescriptions => {
@@ -32,6 +33,7 @@ const describeExitsFn =
 describe('World', () => {
     let exitDescriptions: ExitDescriptions
     beforeEach(() => {
+        global.Game = Game
         exitDescriptions = createExitDescriptions()
     })
     describe('#getClosestRooms', () => {

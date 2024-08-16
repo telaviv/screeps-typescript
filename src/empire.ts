@@ -3,13 +3,8 @@ import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE, MAX_SAVIOR_DISTANCE } from '
 import { RoomDistanceInfo, World } from 'utils/world'
 import { RoomManager, RoomTask } from 'managers/room-manager'
 import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-department'
-import {
-    findClaimCapableRooms,
-    findMyRooms,
-    findSpawnlessRooms,
-    findSpawnRooms,
-    hasNoSpawns,
-} from 'utils/room'
+import { findClaimCapableRooms, findMyRooms, findSpawnRooms, hasNoSpawns } from 'utils/room'
+import { HostileRecorder } from 'hostiles'
 import { ScoutManager } from 'managers/scout-manager'
 import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesFromMemory } from 'construction-features'
@@ -120,13 +115,7 @@ export default class Empire {
 
     @profile
     autoClaim(): void {
-        if (findMyRooms().length >= Game.gcl.level) {
-            return
-        }
-
-        if (findSpawnlessRooms().length > 0) {
-            return
-        }
+        if (Game.gcl.level <= findMyRooms().length) return
         const scout = ScoutManager.create().findNextRoomToScout()
         if (scout) return
         const candidates = this.findClaimCandidates()
@@ -162,6 +151,7 @@ export default class Empire {
             .filter((roomName) => roomName !== undefined)
     }
 
+    @profile
     findClaimCandidates(): string[] {
         const world = new World()
         const roomNames = findClaimCapableRooms().map((room) => room.name)
@@ -198,6 +188,9 @@ export default class Empire {
             pairs.push({ candidate, claimer: ri.roomName, distance: ri.distance })
         }
         pairs.sort((a, b) => {
+            const dangerA = HostileRecorder.getDangerLevel(a.candidate)
+            const dangerB = HostileRecorder.getDangerLevel(b.candidate)
+            if (dangerA !== dangerB) return dangerA - dangerB
             if (a.distance !== b.distance) return a.distance - b.distance
             return (
                 Game.rooms[b.claimer].energyCapacityAvailable -

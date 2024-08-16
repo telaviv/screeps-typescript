@@ -1,13 +1,15 @@
 import * as Logger from 'utils/logger'
-import { calculateBodyCost, moveToStationaryPoint } from 'utils/creep'
 import { getCalculatedLinks, getStationaryPoints } from 'construction-features'
 import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
-import { byPartCount } from 'utils/parts'
+import { fromBodyPlanSafe } from 'utils/parts'
+import { getTotalWithdrawableResources } from 'tasks/withdraw'
 import { hasNoEnergy } from 'utils/energy-harvesting'
+import { moveToStationaryPoint } from 'utils/creep'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'static-upgrader'
+const FULL_ENERGY_THRESHOLD = 20000
 
 export interface StaticUpgrader extends Creep {
     memory: StaticUpgraderMemory
@@ -42,6 +44,7 @@ class StaticUpgraderCreep {
         }
         if (!this.isAtPosition()) {
             this.moveToPosition()
+            return
         }
 
         if (hasNoEnergy(this.creep)) {
@@ -103,6 +106,11 @@ class StaticUpgraderCreep {
     }
 
     getUpgradeMod(room: Room): number {
+        const withdrawEnergy = getTotalWithdrawableResources(room)
+        if (withdrawEnergy > FULL_ENERGY_THRESHOLD) {
+            return 1
+        }
+
         const total = room.energyCapacityAvailable - SPAWN_ENERGY_CAPACITY
         const available = room.energyAvailable
         if (available < total / 2) {
@@ -181,15 +189,7 @@ const roleStaticUpgrader = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] | null {
-    const multiples = [16, 8, 4, 2, 1]
-    for (const multiple of multiples) {
-        const parts = byPartCount({ [CARRY]: multiple, [WORK]: multiple, [MOVE]: multiple })
-        const cost = calculateBodyCost(parts)
-        if (cost <= capacity) {
-            return parts
-        }
-    }
-    return null
+    return fromBodyPlanSafe(capacity, [WORK, CARRY, MOVE])
 }
 
 export default roleStaticUpgrader

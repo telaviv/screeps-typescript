@@ -1,21 +1,26 @@
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
+import * as TimeCache from 'utils/time-cache'
 import assignGlobals, { findUsername } from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleClaimer, { Claimer } from 'roles/claim'
+import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleHarvester, { Harvester } from 'roles/harvester'
 import roleHealer, { Healer } from 'roles/healer'
 import roleMason, { Mason } from 'roles/mason'
+import roleRebalancer, { Rebalancer } from 'roles/rebalancer'
 import roleRemoteUpgrade, { RemoteWorker } from 'roles/remote-worker'
 import roleScout, { Scout } from 'roles/scout'
 import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler'
 import roleStaticUpgrader, { StaticUpgrader } from 'roles/static-upgrader'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
 import survey, { isSurveyComplete } from './surveyor'
+import { trackProfiler, wrap } from 'utils/profiling'
 import updateStrategy, { StrategyPhase } from './strategy'
 import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
+import { HostileRecorder } from 'hostiles'
 import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { MatrixCacheManager } from 'matrix-cache'
@@ -28,7 +33,6 @@ import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
 import { visualizeRoom } from 'room-visualizer'
-import { wrap } from 'utils/profiling'
 
 if (!global.USERNAME) {
     global.USERNAME = findUsername()
@@ -77,14 +81,18 @@ if (!Memory.creeps) {
     Memory.creeps = {}
 }
 
-const clearMemory = wrap(() => {
+const CREEP_MEMORY_TIMEOUT = 500
+
+const clearCreepMemory = wrap(() => {
+    if (Game.time % CREEP_MEMORY_TIMEOUT !== 0) {
+        return
+    }
     for (const name in Memory.creeps) {
         if (!(name in Game.creeps)) {
             delete Memory.creeps[name]
         }
     }
-    clearImmutableRoomCache()
-}, 'main:clearMemory')
+}, 'main:clearCreepMemory')
 
 const runMyRoom = wrap((room: Room) => {
     recordRoomStats(room)
@@ -121,10 +129,14 @@ const ensureSafeMode = wrap((room: Room) => {
         return
     }
     for (const event of room.getEventLog()) {
-        if (event.event === EVENT_OBJECT_DESTROYED && event.data.type !== 'creep') {
-            const err = room.controller.activateSafeMode()
-            Logger.error(`ensure safe mode for ${room.name}: ${event.data.type} destroyed.`, err)
-            return
+        if (event.event === EVENT_OBJECT_DESTROYED) {
+            if (event.data.type !== 'creep') {
+                const err = room.controller.activateSafeMode()
+                Logger.error(
+                    `ensure safe mode for ${room.name}: ${event.data.type} destroyed.`,
+                    err,
+                )
+            }
         }
     }
 }, 'ensureSafeMode')
@@ -153,6 +165,10 @@ const runCreep = wrap((creepName: string) => {
         roleStaticUpgrader.run(creep as StaticUpgrader)
     } else if (creep.memory.role === 'healer') {
         roleHealer.run(creep as Healer)
+    } else if (creep.memory.role === 'rebalancer') {
+        roleRebalancer.run(creep as Rebalancer)
+    } else if (creep.memory.role === 'energy-hauler') {
+        roleEnergyHauler.run(creep as EnergyHauler)
     }
 }, 'main:runCreep')
 
@@ -161,7 +177,8 @@ const initialize = wrap(() => {
         global.USERNAME = findUsername()
     }
 
-    clearMemory()
+    clearCreepMemory()
+    clearImmutableRoomCache()
     addSubscriptions()
     ScoutManager.create().run()
     const empire = new Empire()
@@ -170,14 +187,16 @@ const initialize = wrap(() => {
     TaskRunner.cleanup()
 }, 'main:initialize')
 
-function addSubscriptions() {
+const addSubscriptions = wrap(() => {
     MatrixCacheManager.addSubscriptions()
-}
+}, 'main:addSubscriptions')
 
 const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
         room.memory.updated = Game.time
         updateStrategy(room)
+        const hostileRecorder = new HostileRecorder(room.name)
+        hostileRecorder.record()
         if (room.controller && room.controller.my && isSurveyComplete(room)) {
             runMyRoom(room)
         }
@@ -202,6 +221,8 @@ function unwrappedLoop(): void {
     runAllCreeps()
     recordGameStats()
     MatrixCacheManager.clearCaches()
+    TimeCache.clearAll()
+    trackProfiler()
 
     if (Game.cpu.bucket === 10000 && Game.cpu.generatePixel) {
         Game.cpu.generatePixel()

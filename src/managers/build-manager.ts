@@ -110,6 +110,22 @@ export default class BuildManager {
             return false
         }
 
+        if (this.canBuildContainer()) {
+            const containers = getContainers(this.room)
+            const containerPositions = this.constructionFeatures[STRUCTURE_CONTAINER] as Position[]
+            if (containerPositions.length > containers.length) {
+                return this.buildNextStructure(STRUCTURE_CONTAINER)
+            }
+            // here we build a temporary container where storage is supposed to be
+            const storage = (this.constructionFeatures[STRUCTURE_STORAGE] as Position[])[0]
+            return (
+                makeConstructionSite(
+                    new RoomPosition(storage.x, storage.y, this.room.name),
+                    STRUCTURE_CONTAINER,
+                ) === OK
+            )
+        }
+
         if (this.canBuildImportantExtension()) {
             return this.buildNextStructure(STRUCTURE_EXTENSION)
         }
@@ -118,15 +134,19 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_TOWER)
         }
 
-        if (this.canBuildContainer()) {
-            return this.buildNextStructure(STRUCTURE_CONTAINER)
-        }
-
         if (this.canBuildSwampRoad()) {
             return this.buildNextStructure(STRUCTURE_ROAD)
         }
 
         if (this.canBuildStorage()) {
+            const storage = (this.constructionFeatures[STRUCTURE_STORAGE] as Position[])[0]
+            const container = this.room
+                .lookForAt(LOOK_STRUCTURES, storage.x, storage.y)
+                .find((s) => s.structureType === STRUCTURE_CONTAINER)
+            if (container) {
+                Logger.warning('ensureNonWallSite:storage:container-exists', this.room.name)
+                container.destroy()
+            }
             return this.buildNextStructure(STRUCTURE_STORAGE)
         }
 
@@ -194,7 +214,11 @@ export default class BuildManager {
         if (this.constructionFeatures[STRUCTURE_CONTAINER] === undefined) {
             return false
         }
-        return containers.length < this.constructionFeatures[STRUCTURE_CONTAINER].length
+        const extraContainers = (this.room.controller?.level ?? 0) < 4 ? 1 : 0
+        return (
+            containers.length <
+            this.constructionFeatures[STRUCTURE_CONTAINER].length + extraContainers
+        )
     }, 'BuildManager:canBuildContainer')
 
     private nextBuildPosition(type: BuildableStructureConstant): RoomPosition | null {

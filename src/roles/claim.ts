@@ -1,9 +1,10 @@
 import includes from 'lodash/includes'
 
 import * as Logger from 'utils/logger'
+import { moveTo, moveToRoom } from 'utils/travel'
 import autoIncrement from 'utils/autoincrement'
+import { clearConstructionSites } from 'utils/room'
 import { fromBodyPlanSafe } from 'utils/parts'
-import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'claimer'
@@ -36,31 +37,37 @@ const roleClaimer = {
         }
         if (targetRoom.controller.my) {
             Logger.info('claimer:room-is-mine', creep.name, targetRoom.name)
+            clearConstructionSites(targetRoom)
             creep.suicide()
             return
         }
         if (targetRoom.controller?.safeMode) {
             return
         }
+
+        if (creep.memory.roomName !== creep.room.name) {
+            moveToRoom(creep, creep.memory.roomName)
+        }
+
         let err
         if (targetRoom.controller.owner || targetRoom.controller.reservation) {
             err = creep.attackController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                moveTo(creep, targetRoom.controller.pos)
+                moveTo(creep, { pos: targetRoom.controller.pos, range: 1 })
             } else if (!includes([OK, ERR_TIRED], err)) {
                 Logger.warning('claimer:attack:failed', creep.name, err)
             }
         } else if (creep.memory.attack) {
             err = creep.reserveController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                moveTo(creep, targetRoom.controller.pos)
+                moveTo(creep, { pos: targetRoom.controller.pos, range: 1 })
             } else if (err !== OK) {
                 Logger.warning('claimer:reservation:failed', creep.name, err)
             }
         } else {
             err = creep.claimController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                err = moveTo(creep, targetRoom.controller.pos)
+                err = moveTo(creep, { pos: targetRoom.controller.pos, range: 1 })
             } else if (err !== OK) {
                 Logger.warning('claimer:claim:failed', creep.name, err)
             }

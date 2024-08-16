@@ -12,13 +12,13 @@ import {
     hasNoSpawns,
     RoomType,
 } from 'utils/room'
+import { mprofile, profile } from 'utils/profiling'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getConstructionFeaturesV3FromMemory } from 'construction-features'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
-import { mprofile } from 'utils/profiling'
 
 const SCOUT_VERSION = '1.1.0'
 
@@ -129,6 +129,7 @@ class ScoutManager {
         return Array.from(this.ownedRoomProgress.keys())
     }
 
+    @profile
     run(): void {
         this.clearExpiredScoutData()
         for (const room of Object.values(Game.rooms)) {
@@ -165,6 +166,7 @@ class ScoutManager {
         new RoomManager(Game.rooms[scoutRoom]).addScoutRoomTask(roomToScout)
     }
 
+    @profile
     findNextRoomToScout(): string | null {
         const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
         for (const { roomName, distance } of closestRooms) {
@@ -186,12 +188,14 @@ class ScoutManager {
         return null
     }
 
+    @profile
     findBestRoomToCreateScout(roomName: string): string | null {
         return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress, {
             filter: (name) => !hasNoSpawns(Game.rooms[name]),
         })
     }
 
+    @profile
     clearExpiredScoutData(): void {
         for (const roomMemory of Object.values(Memory.rooms)) {
             const memory = roomMemory.scout

@@ -21,7 +21,8 @@ export default class DefenseDepartment {
 
     public needsHealer(): boolean {
         const healers = getCreeps('healer', this.room)
-        return healers.length === 0 && getInjuredCreeps(this.room).length > 0
+        const injuredCreeps = getInjuredCreeps(this.room)
+        return healers.length === 0 && injuredCreeps.length > 0
     }
 
     public hasInvaders(): boolean {

@@ -1,4 +1,5 @@
 import * as Logger from 'utils/logger'
+import * as TimeCache from 'utils/time-cache'
 import { PickupTarget } from './target'
 import { PickupTask } from './types'
 import { ResourceCreep } from '../types'
@@ -8,6 +9,7 @@ import { isPickupTask } from './utils'
 import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
+const KEY = 'pickup-total-resources'
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
@@ -55,16 +57,23 @@ export function run(task: PickupTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     } else if (err !== ERR_BUSY) {
-        Logger.warning('task:pickup:run:failed', creep.name, err)
+        Logger.warning('task:pickup:run:failed', creep.name, task, err)
     }
     return false
 }
 
-function addPickupTask(creep: ResourceCreep, resource: Resource) {
+export function addPickupTask(creep: ResourceCreep, resource: Resource): PickupTask | null {
     const pickupTarget = PickupTarget.get(resource.id)
+    if (pickupTarget.resourcesAvailable() < 50) {
+        return null
+    }
     const task = pickupTarget.makeRequest(creep)
+    if (task === null) {
+        return null
+    }
     Logger.info('pickup:create', creep.name, task.resourceId, task.amount)
     creep.memory.tasks.push(task)
+    TimeCache.clearRecord(`${KEY}:${resource.room?.name ?? 'no-room'}`)
     return task
 }
 
@@ -117,15 +126,20 @@ function getResource(task: PickupTask): Resource {
 
 function getDroppedResources(room: Room, capacity: number, resource: ResourceConstant): Resource[] {
     const targets = PickupTarget.findInRoom(room, resource)
-    const eligibles = targets.filter((target) => target.resourcesAvailable() >= capacity)
+    const eligibles = targets.filter((target) => {
+        const available = target.resourcesAvailable()
+        return available >= capacity && available > 50
+    })
     return eligibles.map((eligible) => eligible.resource)
 }
 
 export function getTotalDroppedResources(room: Room): number {
-    return PickupTarget.findInRoom(room, RESOURCE_ENERGY).reduce(
-        (acc, target) => acc + target.resourcesAvailable(),
-        0,
-    )
+    return TimeCache.get(`${KEY}:${room.name}`, () => {
+        return PickupTarget.findInRoom(room, RESOURCE_ENERGY).reduce(
+            (acc, target) => acc + target.resourcesAvailable(),
+            0,
+        )
+    })
 }
 
 export default {

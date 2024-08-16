@@ -15,6 +15,7 @@ interface ProfilerMemory {
     data: ProfilerData
     start?: number
     stop?: number
+    waitLength?: number
 }
 
 declare global {
@@ -23,50 +24,54 @@ declare global {
     }
     namespace NodeJS {
         interface Global {
+            profile: { start: (time: number) => void }
             calculateMemory: () => void
         }
     }
 }
 
-export function start(): void {
+global.profile = { start: startRecordedProfiler }
+
+function startRecordedProfiler(time = 5): void {
+    if (time <= 0) {
+        console.log('Invalid time ${time} for startRecordedProfiler')
+        return
+    }
+    Memory.profiler.waitLength = time
+    clear()
+    start()
+}
+
+export function trackProfiler(): void {
+    if (!Memory.profiler.start) {
+        return
+    }
+    if (Game.time === Memory.profiler.start + (Memory.profiler.waitLength ?? 0)) {
+        stop()
+        output()
+    }
+}
+
+function start(): void {
     Memory.profiler.recording = true
     Memory.profiler.start = Game.time
 }
 
-export function stop(): void {
+function stop(): void {
     Memory.profiler.recording = false
     Memory.profiler.stop = Game.time
 }
 
-export function init(): void {
+function init(): void {
     if (!Memory.profiler) {
         Memory.profiler = { recording: false, data: {} }
     }
 }
 
-export function clear(): void {
+function clear(): void {
     Memory.profiler.data = {}
     Memory.profiler.recording = false
 }
-
-declare global {
-    // Syntax for adding proprties to `global` (ex "global.log")
-    namespace NodeJS {
-        interface Global {
-            initProfiler: () => void
-            startProfiler: () => void
-            stopProfiler: () => void
-            clearProfiler: () => void
-            outputProfiler: () => void
-        }
-    }
-}
-
-global.initProfiler = init
-global.startProfiler = start
-global.stopProfiler = stop
-global.clearProfiler = clear
-global.outputProfiler = output
 
 export function wrap<T extends (...args: any[]) => any>(
     fn: T,

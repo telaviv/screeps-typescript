@@ -6,20 +6,37 @@ import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import { ResourceCreep } from '../types'
 import { WithdrawObject } from './object'
 import { findClosestByRange } from 'utils/room-position'
+import { getConstructionFeaturesFromMemory } from 'construction-features'
 import { getHome } from 'roles/utils'
 import { isWithdrawTask } from './utils'
 import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
-const addWithdrawTask = wrap((creep: ResourceCreep, withdrawable: Withdrawable) => {
-    const withdrawObject = WithdrawObject.get(withdrawable.id)
-    const task = withdrawObject.makeRequest(creep)
-    Logger.info('withdraw:create', creep.name, task.id, task.withdrawId, task.amount)
-    creep.memory.tasks.push(task)
-    return task
-}, 'withdraw:addWithdrawTask')
+export const addWithdrawTask = wrap(
+    (creep: ResourceCreep, withdrawable: Withdrawable): WithdrawTask | null => {
+        const withdrawObject = WithdrawObject.get(withdrawable.id)
+        const task = withdrawObject.makeRequest(creep)
+        if (!task) {
+            return null
+        }
+        Logger.info(
+            'withdraw:addWithdrawTask:create',
+            creep.name,
+            task.id,
+            task.withdrawId,
+            task.amount,
+        )
+        creep.memory.tasks.push(task)
+        return task
+    },
+    'withdraw:addWithdrawTask',
+)
 
-export const makeRequest = wrap((creep: ResourceCreep): boolean => {
+interface RequestOpts {
+    excludeVirtualStorage?: boolean
+    sortBy?: 'distance' | 'amount'
+}
+export const makeRequest = wrap((creep: ResourceCreep, opts?: RequestOpts): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
         return false
@@ -35,15 +52,26 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
         Logger.error('withdraw::makeRequest:failure:no-home', creep.name)
         return false
     }
-    let withdrawTargets = getEligibleTargets(home, capacity)
+    let withdrawTargets = getEligibleTargets(home, capacity, opts)
     if (creep.memory.home !== creep.room.name) {
-        const remoteTargets = getEligibleTargets(creep.room, capacity)
+        const remoteTargets = getEligibleTargets(creep.room, capacity, opts)
         withdrawTargets = withdrawTargets.concat(remoteTargets)
     }
     if (withdrawTargets.length > 0) {
-        const target = findClosestByRange(creep.pos, withdrawTargets, {
-            range: 1,
-        }) as Withdrawable
+        let target
+        target = withdrawTargets.find((t) => isVirtualStorage(t))
+        if (target) {
+            addWithdrawTask(creep, target)
+            return true
+        }
+        const sortBy = opts?.sortBy || 'distance'
+        if (sortBy === 'distance') {
+            target = findClosestByRange(creep.pos, withdrawTargets, {
+                range: 1,
+            }) as Withdrawable
+        } else {
+            target = maxBy(withdrawTargets, (t) => t.store.getUsedCapacity(RESOURCE_ENERGY))
+        }
         if (!target) {
             Logger.error('withdraw::makeRequest:failure:no-target', creep.name)
             return false
@@ -140,37 +168,49 @@ function isTemporary(withdrawable: WithdrawObject): boolean {
     return isRuin(object) || isTombstone(object)
 }
 
-const getEligibleTargets = wrap((room: Room, capacity: number): Withdrawable[] => {
-    const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
-    const nonEmpties = withdrawObjects.filter(
-        (target) =>
-            target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
-            (target.resourcesAvailable(RESOURCE_ENERGY) > 0 && isTemporary(target)),
-    )
-
-    const temporaries = nonEmpties.filter(isTemporary)
-
-    if (temporaries.length > 0) {
-        return temporaries.map((eligible) => eligible.withdrawable)
+export function isVirtualStorage(structure: Withdrawable): boolean {
+    const features = getConstructionFeaturesFromMemory(Memory.rooms[(structure.room as Room).name])
+    if (!features || !features[STRUCTURE_STORAGE] || features[STRUCTURE_STORAGE].length === 0) {
+        return false
     }
+    const pos = features[STRUCTURE_STORAGE][0]
+    return pos.x === structure.pos.x && pos.y === structure.pos.y
+}
 
-    const eligibles = nonEmpties.filter(
-        (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
-    )
+const getEligibleTargets = wrap(
+    (room: Room, capacity: number, opts?: RequestOpts): Withdrawable[] => {
+        const withdrawObjects = WithdrawObject.getTargetsInRoom(room, opts)
+        const nonEmpties = withdrawObjects.filter(
+            (target) =>
+                target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
+                (target.resourcesAvailable(RESOURCE_ENERGY) > 0 && isTemporary(target)),
+        )
 
-    if (eligibles.length > 0) {
-        return eligibles.map((eligible) => eligible.withdrawable)
-    }
+        const temporaries = nonEmpties.filter(isTemporary)
 
-    if (nonEmpties.length === 0) {
-        return []
-    }
-    const bestTarget = maxBy(nonEmpties, (t) => t.resourcesAvailable(RESOURCE_ENERGY))
-    if (!bestTarget) {
-        return []
-    }
-    return [bestTarget.withdrawable]
-}, 'withdraw:getEligibleTargets')
+        if (temporaries.length > 0) {
+            return temporaries.map((eligible) => eligible.withdrawable)
+        }
+
+        const eligibles = nonEmpties.filter(
+            (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
+        )
+
+        if (eligibles.length > 0) {
+            return eligibles.map((eligible) => eligible.withdrawable)
+        }
+
+        if (nonEmpties.length === 0) {
+            return []
+        }
+        const bestTarget = maxBy(nonEmpties, (t) => t.resourcesAvailable(RESOURCE_ENERGY))
+        if (!bestTarget) {
+            return []
+        }
+        return [bestTarget.withdrawable]
+    },
+    'withdraw:getEligibleTargets',
+)
 
 export function getTotalWithdrawableResources(room: Room): number {
     const withdrawObjects = WithdrawObject.getTargetsInRoom(room)

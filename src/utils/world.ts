@@ -1,3 +1,4 @@
+import { profile } from './profiling'
 import { RoomType, getRoomType } from './room'
 
 export interface RoomDistanceInfo {
@@ -69,6 +70,7 @@ export class World {
         this.describeExits = describeExits
     }
 
+    @profile
     getClosestRooms(roomNames: string[], maxDistance: number): RoomDistanceInfo[] {
         const distanceQueue: RoomDistanceInfo[] = roomNames.map((roomName) => ({
             roomName,

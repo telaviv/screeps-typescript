@@ -16,6 +16,7 @@ import {
     TASK_MINING,
     TASK_REPAIRING,
     TASK_STORE,
+    TASK_TRAVELING,
     TASK_UPGRADING,
     TASK_WALL_REPAIRS,
 } from './logistics-constants'
@@ -53,6 +54,7 @@ const TASK_EMOJIS = {
     [TASK_MINING]: '⛏️',
     [TASK_STORE]: '🏪',
     [TASK_WALL_REPAIRS]: '🧱',
+    [TASK_TRAVELING]: '🚎',
     [NO_TASK]: '🤔',
 }
 
@@ -103,6 +105,7 @@ class RoleLogistics {
 
         if (tasks.length > 0) {
             this.runTask()
+            return
         } else if (this.canSign()) {
             SignTask.makeRequest(this.creep)
         } else if (currentTask === TASK_COLLECTING) {
@@ -117,16 +120,22 @@ class RoleLogistics {
             this.repair()
         } else if (currentTask === TASK_WALL_REPAIRS) {
             this.repairWalls()
+        } else if (currentTask === TASK_TRAVELING) {
+            this.travel()
         } else if (currentTask === NO_TASK) {
             this.wander()
             this.assignWorkerPreference()
+        }
+        if (tasks.length > 0) {
+            this.runTask()
+            return
         }
     }
 
     @profile
     private canSign(): boolean {
         const home = Game.rooms[this.creep.memory.home]
-        if (home.memory.signed) {
+        if (!home || home.memory.signed) {
             return false
         }
         const task = findTaskByType('sign')
@@ -174,7 +183,7 @@ class RoleLogistics {
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
         if (this.creep.room.name !== memory.home) {
-            moveToRoom(this.creep, memory.home)
+            memory.currentTask = TASK_TRAVELING
         } else if (
             this.creep.room.controller &&
             this.creep.room.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
@@ -336,6 +345,9 @@ class RoleLogistics {
 
     @mprofile('logistics:haulEnergy')
     haulEnergy(): void {
+        if ((this.creep.ticksToLive ?? Infinity) < 50) {
+            this.creep.suicide()
+        }
         if (TransferTask.makeRequest(this.creep)) {
             this.runTask()
         } else if (hasHostileCreeps(this.creep.room)) {
@@ -348,6 +360,26 @@ class RoleLogistics {
     @profile
     private wander(): void {
         wander(this.creep)
+    }
+
+    @profile
+    travel(): void {
+        if (
+            this.creep.room.name === this.creep.memory.home &&
+            this.creep.pos.inRangeTo(25, 25, 23)
+        ) {
+            this.assignWorkerPreference()
+            return
+        }
+        const err = moveToRoom(this.creep, this.creep.memory.home)
+        if (err !== OK) {
+            Logger.warning(
+                'logistics:travel:moveToRoom:failure',
+                this.creep.name,
+                this.creep.memory.home,
+                err,
+            )
+        }
     }
 
     @profile
@@ -432,16 +464,7 @@ class RoleLogistics {
  * @returns true if the creep can be spawned.
  */
 export function calculateParts(capacity: number): BodyPartConstant[] {
-    const fixed = [...BODY_PLAN_UNIT, ...BODY_PLAN_UNIT, ...BODY_PLAN_UNIT]
-    const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
-    let plan: BodyPartConstant[]
-    if (fixedCost > capacity) {
-        plan = fromBodyPlan(capacity, BODY_PLAN_UNIT)
-    } else {
-        plan = fromBodyPlan(capacity, [MOVE, CARRY], fixed, 4)
-    }
-    Logger.debug('logistics:calculateParts', JSON.stringify(plan), capacity)
-    return plan
+    return fromBodyPlan(capacity, BODY_PLAN_UNIT)
 }
 
 export default RoleLogistics

@@ -8,6 +8,7 @@ export const TASK_WALL_REPAIRS = 'wall-repairs'
 export const TASK_COLLECTING = 'collecting'
 export const TASK_STORE = 'store'
 export const TASK_MINING = 'mining'
+export const TASK_TRAVELING = 'traveling'
 export const NO_TASK = 'no-task'
 export const PREFERENCE_WORKER = 'worker'
 
@@ -18,6 +19,7 @@ export type DeliveryTask =
     | typeof TASK_REPAIRING
     | typeof TASK_WALL_REPAIRS
     | typeof TASK_STORE
+    | typeof TASK_TRAVELING
 export type LogisticsTask = typeof NO_TASK | DeliveryTask | typeof TASK_COLLECTING
 export type LogisticsPreference =
     | typeof TASK_HAULING

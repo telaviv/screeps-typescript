@@ -1,8 +1,6 @@
-import * as Logger from './logger'
-
 const TIME_CACHE: Map<number, Map<string, unknown>> = new Map()
 
-export function get<T>(key: string, ttl: number, fn: () => T): T {
+export function get<T>(key: string, fn: () => T): T {
     const now = Game.time
     if (!TIME_CACHE.has(now)) {
         TIME_CACHE.set(now, new Map())
@@ -20,7 +18,6 @@ export function clearRecord(key: string): void {
         const cache = TIME_CACHE.get(now) as Map<string, unknown>
         cache.delete(key)
     }
-    Logger.warning('time-cache:clear-record:key-not-found', key)
 }
 
 export function clearAll(): void {
