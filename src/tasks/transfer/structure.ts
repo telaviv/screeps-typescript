@@ -1,3 +1,4 @@
+import * as TimeCache from 'utils/time-cache'
 import { mprofile, profile } from 'utils/profiling'
 import { ResourceCreep } from 'tasks/types'
 import { TransferTask } from 'tasks/transfer/types'
@@ -6,6 +7,7 @@ import { currentEnergyHeld } from 'utils/creep'
 import { getAllTasks } from 'tasks/utils'
 import { isTransferTask } from 'tasks/transfer/utils'
 
+const CACHE_KEY = 'transfer-structure:remainingCapacity'
 export class TransferStructure {
     public readonly structure: AnyStoreStructure
     public readonly tasks: TransferTask[]
@@ -38,11 +40,13 @@ export class TransferStructure {
 
     @profile
     public remainingCapacity(resource: ResourceConstant = RESOURCE_ENERGY): number {
-        if (this.structure.store === null) {
-            return 0
-        }
-        const capacity = this.structure.store.getFreeCapacity(resource) || 0
-        return capacity - this.sumOfTransfers(resource)
+        return TimeCache.get(`${CACHE_KEY}:${this.structure.id}`, () => {
+            if (this.structure.store === null) {
+                return 0
+            }
+            const capacity = this.structure.store.getFreeCapacity(resource) || 0
+            return capacity - this.sumOfTransfers(resource)
+        })
     }
 
     public makeRequest(
@@ -66,6 +70,7 @@ export class TransferStructure {
             complete: false,
         }
         this.tasks.push(task)
+        TimeCache.clearRecord(`${CACHE_KEY}:${this.structure.id}`)
         return task
     }
 

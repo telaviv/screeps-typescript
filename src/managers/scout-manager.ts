@@ -127,6 +127,7 @@ class ScoutManager {
         return Array.from(this.ownedRoomProgress.keys())
     }
 
+    @profile
     run(): void {
         this.clearExpiredScoutData()
         for (const room of Object.values(Game.rooms)) {
@@ -181,12 +182,14 @@ class ScoutManager {
         return null
     }
 
+    @profile
     findBestRoomToCreateScout(roomName: string): string | null {
         return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress, {
             filter: (name) => !hasNoSpawns(Game.rooms[name]),
         })
     }
 
+    @profile
     clearExpiredScoutData(): void {
         for (const roomMemory of Object.values(Memory.rooms)) {
             const memory = roomMemory.scout

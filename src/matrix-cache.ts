@@ -18,6 +18,7 @@ const MATRIX_DEFAULT = 'default'
 const MATRIX_CACHE_ID = 'matrix-cache'
 
 const DEPRECATED_TAGS = ['no-sources']
+const EVICTION_TIME = 5000
 
 interface MatrixCache {
     [key: string]: { matrix: string; time: number }
@@ -66,6 +67,7 @@ function splitTags(tags: MatrixTag[]): [MatrixTag[], MatrixTag | null] {
     const latest = copy.pop()
     return [copy, latest ?? null]
 }
+
 export function printMatrix(matrix: CostMatrix): void {
     const rows = []
     for (let y = 0; y < 50; y++) {
@@ -135,6 +137,10 @@ export class MatrixCacheManager {
             for (const key of Object.keys(roomMemory.matrixCache ?? {})) {
                 if (!roomMemory.matrixCache) {
                     continue
+                }
+                const time = roomMemory.matrixCache[key as keyof MatrixCache].time
+                if (Game.time - time > EVICTION_TIME) {
+                    delete roomMemory.matrixCache[key as keyof MatrixCache]
                 } else if (
                     DEPRECATED_TAGS.some((tag) => keyToTags(key).includes(tag as MatrixTag))
                 ) {
@@ -147,7 +153,6 @@ export class MatrixCacheManager {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 }
             }
-            delete roomMemory.matrixCache
         }
     }
 
@@ -212,6 +217,7 @@ export class MatrixCacheManager {
             return
         }
         const matrix = this.calculateDefaultMatrix()
+        console.log('Setting default matrix cache', this.roomName)
         this.matrixCache[MATRIX_DEFAULT] = {
             matrix: JSON.stringify(matrix.serialize()),
             time: Game.time,

@@ -1,40 +1,56 @@
-import includes from 'lodash/includes'
+import { includes, groupBy } from 'lodash'
 
 import { WithdrawTask, Withdrawable } from './types'
+import { mprofile, profile } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
 import { getAllTasks } from 'tasks/utils'
 import { getConstructionFeatures } from 'construction-features'
 import { getUsedCapacity } from 'utils/store'
 import { isWithdrawTask } from './utils'
 
+const TASK_CACHE: Record<Id<Withdrawable>, WithdrawTask[]> = {}
+
 export class WithdrawObject {
     public readonly withdrawable: Withdrawable
     public readonly tasks: WithdrawTask[]
+    private static cacheTime: null | number = null
 
     public constructor(withdrawable: Withdrawable, tasks: WithdrawTask[]) {
         this.withdrawable = withdrawable
         this.tasks = tasks
     }
 
+    @mprofile('WithdrawObject:ensureCache')
+    private static ensureCache() {
+        if (WithdrawObject.cacheTime === Game.time) {
+            return
+        }
+        const withdrawTasks = Array.from(getAllTasks()).filter(isWithdrawTask)
+        const groupedTasks = groupBy(withdrawTasks, 'withdrawId')
+        for (const [withdrawId, tasks] of Object.entries(groupedTasks)) {
+            TASK_CACHE[withdrawId as Id<Withdrawable>] = tasks
+        }
+        WithdrawObject.cacheTime = Game.time
+    }
+
+    @mprofile('WithdrawObject:create')
     public static create(id: Id<Withdrawable>): WithdrawObject {
-        const tasks: WithdrawTask[] = []
+        WithdrawObject.ensureCache()
+        const tasks: WithdrawTask[] = TASK_CACHE[id] ?? []
+        TASK_CACHE[id] = tasks
         const withdrawable = Game.getObjectById<Withdrawable>(id)
         if (withdrawable === null) {
             throw new Error(`withdrawable id ${id} doesn't exist`)
         }
-
-        for (const task of getAllTasks()) {
-            if (isWithdrawTask(task) && task.withdrawId === id) {
-                tasks.push(task)
-            }
-        }
         return new WithdrawObject(withdrawable, tasks)
     }
 
+    @mprofile('WithdrawObject:get')
     public static get(id: Id<Withdrawable>): WithdrawObject {
         return WithdrawObject.create(id)
     }
 
+    @mprofile('WithdrawObject:getTargetsInRoom')
     public static getTargetsInRoom(
         room: Room,
         opts?: { excludeVirtualStorage?: boolean },
@@ -67,6 +83,7 @@ export class WithdrawObject {
         return structureTargets.concat(tombstoneTargets, ruinTargets)
     }
 
+    @profile
     public resourcesAvailable(resource: ResourceConstant = RESOURCE_ENERGY): number {
         return Math.max(
             getUsedCapacity(this.withdrawable, resource) - this.sumOfWithdraws(resource),

@@ -1,7 +1,6 @@
 import maxBy from 'lodash/maxBy'
 
 import * as Logger from 'utils/logger'
-import * as TimeCache from 'utils/time-cache'
 import { WithdrawTask, Withdrawable } from './types'
 import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import { ResourceCreep } from '../types'
@@ -13,8 +12,6 @@ import { isWithdrawTask } from './utils'
 import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
-const KEY = 'withdraw-total-resources'
-
 export const addWithdrawTask = wrap(
     (creep: ResourceCreep, withdrawable: Withdrawable): WithdrawTask | null => {
         const withdrawObject = WithdrawObject.get(withdrawable.id)
@@ -22,9 +19,14 @@ export const addWithdrawTask = wrap(
         if (!task) {
             return null
         }
-        Logger.info('withdraw:create', creep.name, task.id, task.withdrawId, task.amount)
+        Logger.info(
+            'withdraw:addWithdrawTask:create',
+            creep.name,
+            task.id,
+            task.withdrawId,
+            task.amount,
+        )
         creep.memory.tasks.push(task)
-        TimeCache.clearRecord(`${KEY}:${withdrawable.room?.name ?? 'no-room'}`)
         return task
     },
     'withdraw:addWithdrawTask',
@@ -211,13 +213,11 @@ const getEligibleTargets = wrap(
 )
 
 export function getTotalWithdrawableResources(room: Room): number {
-    return TimeCache.get<number>(`${KEY}:${room.name}`, () => {
-        const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
-        return withdrawObjects.reduce(
-            (acc, target) => acc + target.resourcesAvailable(RESOURCE_ENERGY),
-            0,
-        )
-    })
+    const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
+    return withdrawObjects.reduce(
+        (acc, target) => acc + target.resourcesAvailable(RESOURCE_ENERGY),
+        0,
+    )
 }
 
 export default {

@@ -110,14 +110,6 @@ export default class BuildManager {
             return false
         }
 
-        if (this.canBuildImportantExtension()) {
-            return this.buildNextStructure(STRUCTURE_EXTENSION)
-        }
-
-        if (this.canBuildTower()) {
-            return this.buildNextStructure(STRUCTURE_TOWER)
-        }
-
         if (this.canBuildContainer()) {
             const containers = getContainers(this.room)
             const containerPositions = this.constructionFeatures[STRUCTURE_CONTAINER] as Position[]
@@ -132,6 +124,14 @@ export default class BuildManager {
                     STRUCTURE_CONTAINER,
                 ) === OK
             )
+        }
+
+        if (this.canBuildImportantExtension()) {
+            return this.buildNextStructure(STRUCTURE_EXTENSION)
+        }
+
+        if (this.canBuildTower()) {
+            return this.buildNextStructure(STRUCTURE_TOWER)
         }
 
         if (this.canBuildSwampRoad()) {

@@ -38,6 +38,9 @@ function routeCallback(fromRoom: string, toRoom: string): number | undefined {
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
+    if (creep.fatigue > 0) {
+        return ERR_TIRED
+    }
     return moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
@@ -64,6 +67,9 @@ export function generatePathToRoom(
 export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
+    if (creep.fatigue > 0) {
+        return ERR_TIRED
+    }
     const err = moveToCartographer(creep, target, { roomCallback, routeCallback, ...opts })
     if (err === ERR_NO_PATH) {
         if (Array.isArray(target)) {

@@ -16,6 +16,7 @@ import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler
 import roleStaticUpgrader, { StaticUpgrader } from 'roles/static-upgrader'
 import roleWrecker, { Wrecker } from 'roles/wrecker'
 import survey, { isSurveyComplete } from './surveyor'
+import { trackProfiler, wrap } from 'utils/profiling'
 import updateStrategy, { StrategyPhase } from './strategy'
 import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
@@ -32,7 +33,6 @@ import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
 import { visualizeRoom } from 'room-visualizer'
-import { wrap } from 'utils/profiling'
 
 if (!global.USERNAME) {
     global.USERNAME = findUsername()
@@ -178,9 +178,9 @@ const initialize = wrap(() => {
     TaskRunner.cleanup()
 }, 'main:initialize')
 
-function addSubscriptions() {
+const addSubscriptions = wrap(() => {
     MatrixCacheManager.addSubscriptions()
-}
+}, 'main:addSubscriptions')
 
 const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
@@ -213,6 +213,7 @@ function unwrappedLoop(): void {
     recordGameStats()
     MatrixCacheManager.clearCaches()
     TimeCache.clearAll()
+    trackProfiler()
 
     if (Game.cpu.bucket === 10000 && Game.cpu.generatePixel) {
         Game.cpu.generatePixel()
