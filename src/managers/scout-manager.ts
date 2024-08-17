@@ -197,17 +197,14 @@ class ScoutManager {
 
     @profile
     clearExpiredScoutData(): void {
-        for (const roomMemory of Object.values(Memory.rooms)) {
-            const memory = roomMemory.scout
-            if (!memory) {
-                continue
-            }
+        for (const [name, memory] of Object.entries(Memory.rooms)) {
             if (
-                !memory.updatedAt ||
-                memory.updatedAt + EXPIRATION_TTL < this.gameTime ||
-                memory.version !== SCOUT_VERSION
+                !memory.scout ||
+                !memory.scout.updatedAt ||
+                memory.scout.updatedAt + EXPIRATION_TTL < this.gameTime ||
+                memory.scout.version !== SCOUT_VERSION
             ) {
-                delete roomMemory.scout
+                delete Memory.rooms[name]
             }
         }
     }
