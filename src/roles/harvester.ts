@@ -6,7 +6,6 @@ import PickupRunner, { addPickupTask } from 'tasks/pickup'
 import WithdrawRunner, { addWithdrawTask } from 'tasks/withdraw'
 import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { profile, wrap } from 'utils/profiling'
 import { ResourceCreep } from 'tasks/types'
 import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
@@ -14,6 +13,7 @@ import { isPickupTask } from 'tasks/pickup/utils'
 import { isWithdrawTask } from 'tasks/withdraw/utils'
 import { moveToRoom } from 'utils/travel'
 import { moveToStationaryPoint } from 'utils/creep'
+import { profile } from 'utils/profiling'
 import { spawnCreep } from 'utils/spawn'
 
 const MAX_WORK_PARTS = 5
@@ -268,10 +268,10 @@ export class HarvesterCreep {
 }
 
 const roleHarvester = {
-    run: wrap((creep: Harvester) => {
+    run(creep: Harvester): void {
         const harvester = new HarvesterCreep(creep)
         harvester.run()
-    }, 'harvester:run'),
+    },
 
     create(
         spawn: StructureSpawn,

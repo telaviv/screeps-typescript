@@ -8,7 +8,8 @@ import { getConstructionFeatures } from 'construction-features'
 import { getUsedCapacity } from 'utils/store'
 import { isWithdrawTask } from './utils'
 
-const TASK_CACHE: Record<Id<Withdrawable>, WithdrawTask[]> = {}
+const TASK_CACHE: Map<Id<Withdrawable>, WithdrawTask[]> = new Map()
+const OBJECT_CACHE: Map<Id<Withdrawable>, WithdrawObject> = new Map()
 
 export class WithdrawObject {
     public readonly withdrawable: Withdrawable
@@ -25,10 +26,13 @@ export class WithdrawObject {
         if (WithdrawObject.cacheTime === Game.time) {
             return
         }
+
         const withdrawTasks = Array.from(getAllTasks()).filter(isWithdrawTask)
         const groupedTasks = groupBy(withdrawTasks, 'withdrawId')
+        TASK_CACHE.clear()
+        OBJECT_CACHE.clear()
         for (const [withdrawId, tasks] of Object.entries(groupedTasks)) {
-            TASK_CACHE[withdrawId as Id<Withdrawable>] = tasks
+            TASK_CACHE.set(withdrawId as Id<Withdrawable>, tasks)
         }
         WithdrawObject.cacheTime = Game.time
     }
@@ -36,8 +40,8 @@ export class WithdrawObject {
     @mprofile('WithdrawObject:create')
     public static create(id: Id<Withdrawable>): WithdrawObject {
         WithdrawObject.ensureCache()
-        const tasks: WithdrawTask[] = TASK_CACHE[id] ?? []
-        TASK_CACHE[id] = tasks
+        const tasks: WithdrawTask[] = TASK_CACHE.get(id) ?? []
+        TASK_CACHE.set(id, tasks)
         const withdrawable = Game.getObjectById<Withdrawable>(id)
         if (withdrawable === null) {
             throw new Error(`withdrawable id ${id} doesn't exist`)
@@ -47,7 +51,12 @@ export class WithdrawObject {
 
     @mprofile('WithdrawObject:get')
     public static get(id: Id<Withdrawable>): WithdrawObject {
-        return WithdrawObject.create(id)
+        if (OBJECT_CACHE.has(id)) {
+            return OBJECT_CACHE.get(id) as WithdrawObject
+        }
+        const obj = WithdrawObject.create(id)
+        OBJECT_CACHE.set(id, obj)
+        return obj
     }
 
     @mprofile('WithdrawObject:getTargetsInRoom')

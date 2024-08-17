@@ -88,7 +88,7 @@ const clearCreepMemory = wrap(() => {
         return
     }
     for (const name in Memory.creeps) {
-        if (!(name in Game.creeps)) {
+        if (!Game.creeps[name]) {
             delete Memory.creeps[name]
         }
     }
@@ -209,11 +209,11 @@ const runVisuals = wrap(() => {
     }
 }, 'main:runVisuals')
 
-const runAllCreeps = wrap(() => {
+const runAllCreeps = () => {
     for (const name of Object.keys(Game.creeps)) {
         runCreep(name)
     }
-}, 'main:runAllCreeps')
+}
 
 function unwrappedLoop(): void {
     initialize()
@@ -237,13 +237,14 @@ function unwrappedLoop(): void {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 
-const loop = wrap(
+const loop = wrap(() => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore : global trickery in tests
-    !global.Game || global.Game.cpu.tickLimit < 30
-        ? unwrappedLoop
-        : ErrorMapper.wrap(unwrappedLoop),
-    'main:loop',
-)
+    if (!global.Game || global.Game.cpu.tickLimit < 30) {
+        unwrappedLoop()
+    } else {
+        ErrorMapper.wrap(unwrappedLoop)()
+    }
+}, 'main:loop')
 
 export { loop, unwrappedLoop }
