@@ -9,6 +9,7 @@ import { getUsedCapacity } from 'utils/store'
 import { isWithdrawTask } from './utils'
 
 const TASK_CACHE: Map<Id<Withdrawable>, WithdrawTask[]> = new Map()
+const OBJECT_CACHE: Map<Id<Withdrawable>, WithdrawObject> = new Map()
 
 export class WithdrawObject {
     public readonly withdrawable: Withdrawable
@@ -29,6 +30,7 @@ export class WithdrawObject {
         const withdrawTasks = Array.from(getAllTasks()).filter(isWithdrawTask)
         const groupedTasks = groupBy(withdrawTasks, 'withdrawId')
         TASK_CACHE.clear()
+        OBJECT_CACHE.clear()
         for (const [withdrawId, tasks] of Object.entries(groupedTasks)) {
             TASK_CACHE.set(withdrawId as Id<Withdrawable>, tasks)
         }
@@ -49,7 +51,12 @@ export class WithdrawObject {
 
     @mprofile('WithdrawObject:get')
     public static get(id: Id<Withdrawable>): WithdrawObject {
-        return WithdrawObject.create(id)
+        if (OBJECT_CACHE.has(id)) {
+            return OBJECT_CACHE.get(id) as WithdrawObject
+        }
+        const obj = WithdrawObject.create(id)
+        OBJECT_CACHE.set(id, obj)
+        return obj
     }
 
     @mprofile('WithdrawObject:getTargetsInRoom')

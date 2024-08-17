@@ -156,6 +156,9 @@ function fillableSpawns(room: Room): AnyStoreStructure[] {
 
 function filterFillableStructures(structures: AnyStoreStructure[]) {
     return structures.filter((structure) => {
+        if (structure.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+            return false
+        }
         const transfer = TransferStructure.get(structure.id)
         return transfer.remainingCapacity(RESOURCE_ENERGY) > 0
     })
