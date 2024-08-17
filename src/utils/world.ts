@@ -1,5 +1,5 @@
-import { profile } from './profiling'
 import { RoomType, getRoomType } from './room'
+import { profile } from './profiling'
 
 export interface RoomDistanceInfo {
     roomName: string

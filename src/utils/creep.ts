@@ -48,7 +48,7 @@ export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): Mov
         }
         return false
     }
-    return moveTo(creep, { pos, range: 0 }, { roomCallback: callback })
+    return moveTo(creep, { pos, range: 0 }, { roomCallback: callback, priority: 10 })
 }, 'creep:moveWithinRoom')
 
 export function goHome(creep: Creep): void {

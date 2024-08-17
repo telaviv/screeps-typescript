@@ -3,9 +3,9 @@ import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
 import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
-import { profile, wrap } from 'utils/profiling'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
+import { profile } from 'utils/profiling'
 
 const ROLE = 'energy-hauler'
 
@@ -78,10 +78,10 @@ export class EnergyHaulerCreep {
 }
 
 const roleEnergyHauler = {
-    run: wrap((creep: EnergyHauler) => {
+    run(creep: EnergyHauler): void {
         const energyHauler = new EnergyHaulerCreep(creep)
         energyHauler.run()
-    }, 'roleEnergyHauler:run'),
+    },
 
     create(spawn: StructureSpawn): number {
         const name = `${ROLE}:${spawn.room.name}:${Game.time}`
