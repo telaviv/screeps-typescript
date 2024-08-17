@@ -1,6 +1,13 @@
 Features
 ----------------------------
 
+[ ] - Long Distance Energy Mining
+[ ] - Mineral Extraction
+[ ] - Room Defense
+   [ ] - Change the routing in a room while under attack
+   [ ] - Have no path caching
+   [ ] - Have pathing ignore edges and attackers
+[ ] - Build non-swamp roads with the builder and no one else when there's nothing better to build
 [x] - Scouting
    [x] - Write function that gets closest rooms from a list of rooms
    [x] - Create a data structure called ScoutedFeatures that talks about some aspects of a room visited
@@ -12,12 +19,11 @@ Features
    [x] - Every 24 hours a scout is sent out to rooms distance 2 and 36 hours for rooms 3 distance away
       [x] - Scout is sent from room sorted by distance->highest level
 [x] - Autoclaim
-[ ] - Link Usage
+[x] - Link Usage
    [x] - Record data about which link is for what
    [x] - First 3 links should be about sending energy to the storage
    [x] - Create a static link hauler to move stuff from link to the storage
-   [ ] - create a static controller upgrader
-[ ] - Long Distance Energy Mining
+   [x] - create a static controller upgrader
 [x] - Workers can wall repair really weak walls
 [x] - Logistics become workers when preference doesn't work.
 [x] - Builders don't make construction sites, the build manager does
@@ -32,43 +38,14 @@ Features
    [x] - Extension
    [x] - Ramparts
 [x] - Safe Mode Usage
-[ ] - Mineral Extraction
-[ ] - Hauler
-   [ ] - When running creeps make sure to prioritize ones without WORK parts
-[ ] - Bunker
-   [ ] - Add the bunker to a new "stamps" folder
-   [ ] - Implement distance transforms. Only cache them when visualizing
+[x] - Hauler
+[x] - Bunker
+   [x] - Add the bunker to a new "stamps" folder
+   [x] - Implement distance transforms. Only cache them when visualizing
       [x] - 1) Distance from walls
       [x] - 2) Distance from sources and controller
       [x] - 3) Sum of source + controller transforms
       [x] - 4) We pick a spot far enough from the walls to place the bunker with a minimum sum distance
-   [ ] Dismantler
-      [ ] - ConstructionFeaturesV3
-         [ ] - add stationaryPoints as points
-         [ ] - add optional values:
-            [ ] - previousFeatures
-            [ ] - diffFeatures
-               [ ] - this is a map with building type as key.
-                   - the value is is an object with keys "clear" and "vestigial"
-                     - clear needs to be dismantled first or else vestigial can't go anywhere
-               [ ] - dismantle spots in order of importance starting with spawn
-               [ ] - don't repair anything in the dismantle list
-               [ ] - delete diffFeatures and previousFeatures after dismantling is done
-            [ ] - previousPoints
-               [ ] - only exists long enough to switch stationary creeps positions
-               [ ] - don't switch stationary positions until diffFeatures is gone
-            [ ] - wipe. True if the entire room is invalid
-   [ ] Long distance Dismantler + Hauler to clear rooms and bring energy to storage
-      [ ] - Let's start with 1 dismantler and 2 energy haulers
-      [ ] - Use the closest room that's not level 8 but still has highest controller progress
-      [ ] - All the creeps in the invalid room should go to the dismantling room and recycle themselves
-      [ ] - After all buildings are dismantled, unclaim the controller
-[ ] - Room Defense
-   [ ] - Change the routing in a room while under attack
-   [ ] - Have no path caching
-   [ ] - Have pathing ignore edges and attackers
-[ ] - Build non-swamp roads with the builder and no one else when there's nothing better to build
-[ ] - Have a manager assign jobs to available workers instead of having workers search for their own jobs
 
 Optimizations
 ----------------------------
@@ -79,4 +56,5 @@ Optimizations
 
 Nice To Have
 ----------------------------
-[x] - Color code Logger
+[ ] - Color code Logger
+[ ] - Have a manager assign jobs to available workers instead of having workers search for their own jobs

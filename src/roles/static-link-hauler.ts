@@ -2,10 +2,9 @@ import * as Logger from 'utils/logger'
 import { getCalculatedLinks, getStationaryPoints } from 'construction-features'
 import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
-import { byPartCount } from 'utils/parts'
-import { calculateBodyCost } from 'utils/creep'
+import { fromBodyPlanSafe } from 'utils/parts'
 import { hasNoEnergy } from 'utils/energy-harvesting'
-import { moveTo } from 'utils/travel'
+import { moveToStationaryPoint } from 'utils/creep'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'static-link-hauler'
@@ -43,6 +42,7 @@ class StaticLinkHaulerCreep {
         }
         if (!this.isAtPosition()) {
             this.moveToPosition()
+            return
         }
 
         if (hasNoEnergy(this.creep)) {
@@ -56,9 +56,15 @@ class StaticLinkHaulerCreep {
     }
 
     moveToPosition(): void {
-        const err = moveTo(this.creep, this.pos)
+        const err = moveToStationaryPoint(this.pos, this.creep)
         if (err !== OK && err !== ERR_TIRED) {
-            Logger.error('harvester:moveToHarvestPos:failure', this.creep.name, this.pos, err)
+            Logger.error(
+                'static-link-hauler:moveToHarvestPos:failure',
+                this.creep.name,
+                this.creep.pos,
+                this.pos,
+                err,
+            )
         }
     }
 
@@ -165,15 +171,7 @@ const roleStaticLinkHauler = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] | null {
-    const multiples = [16, 8, 4, 2, 1]
-    for (const multiple of multiples) {
-        const parts = byPartCount({ [CARRY]: multiple, [MOVE]: 1 })
-        const cost = calculateBodyCost(parts)
-        if (cost <= capacity) {
-            return parts
-        }
-    }
-    return null
+    return fromBodyPlanSafe(capacity, [MOVE], [CARRY], 9)
 }
 
 export default roleStaticLinkHauler

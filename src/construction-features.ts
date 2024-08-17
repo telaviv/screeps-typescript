@@ -1,3 +1,5 @@
+import semverGte from 'semver/functions/gte'
+
 import { ConstructionFeatures, ConstructionFeaturesV3, Links, StationaryPoints } from 'types'
 
 declare global {
@@ -6,11 +8,13 @@ declare global {
     }
 }
 
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.4'
 export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.5'
 
 export function getConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | null {
-    if (room.memory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION) {
-        return room.memory.constructionFeaturesV3
+    const version = room.memory.constructionFeaturesV3?.version ?? '0.0.0'
+    if (semverGte(version, MIN_CONSTRUCTION_FEATURES_V3_VERSION)) {
+        return room.memory.constructionFeaturesV3 ?? null
     }
     return null
 }
