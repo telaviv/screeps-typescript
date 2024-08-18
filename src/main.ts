@@ -24,6 +24,7 @@ import { HostileRecorder } from 'hostiles'
 import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { MatrixCacheManager } from 'matrix-cache'
+import { MineManager } from 'managers/mine-manager'
 import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
 import { clearImmutableRoomCache } from 'utils/immutable-room'
@@ -36,6 +37,10 @@ import { visualizeRoom } from 'room-visualizer'
 
 if (!global.USERNAME) {
     global.USERNAME = findUsername()
+}
+
+if (Game.time === 0) {
+    MineManager.create().assignMines()
 }
 
 // cpu mins

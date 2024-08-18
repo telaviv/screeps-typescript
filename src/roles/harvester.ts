@@ -225,7 +225,7 @@ export class HarvesterCreep {
             }
         }
         const container = this.container
-        if (container === null) {
+        if (!container) {
             return
         }
         addWithdrawTask(this.creep, container)
