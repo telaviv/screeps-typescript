@@ -204,7 +204,7 @@ export default {
 
     create(spawn: StructureSpawn, destination: string, capacity: number | null = null): number {
         capacity = capacity || spawn.room.energyCapacityAvailable
-        const parts = fromBodyPlan(capacity, [CARRY, MOVE], [WORK, MOVE])
+        const parts = fromBodyPlan(capacity, [CARRY, MOVE], { fixed: [WORK, MOVE] })
         const sortedParts = [...parts.slice(1), parts[0]]
         return spawn.spawnCreep(sortedParts, `${ROLE}:${Game.time}`, {
             memory: {

@@ -1,6 +1,6 @@
 import * as Logger from 'utils/logger'
+import { followCreep } from 'utils/travel'
 import { getInjuredCreeps } from 'utils/room'
-import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'healer'
@@ -24,12 +24,14 @@ const roleHealer = {
         if (targets.length === 0) {
             return
         }
+        if (creep.getActiveBodyparts(HEAL) === 0) {
+            return
+        }
 
         const target = targets[0]
+        followCreep(creep, target)
         const err = creep.heal(target)
-        if (err === ERR_NOT_IN_RANGE) {
-            moveTo(creep, target)
-        } else if (err !== OK) {
+        if (err !== OK && err !== ERR_NOT_IN_RANGE) {
             Logger.warning(
                 'healer:heal:failed',
                 creep.name,

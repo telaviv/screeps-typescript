@@ -61,7 +61,11 @@ declare global {
 
     namespace NodeJS {
         interface Global {
-            scout: { next: () => void; location: () => void }
+            scout: {
+                next: () => void
+                location: () => void
+                now: (destination: string, start: string) => void
+            }
         }
     }
 }
@@ -79,6 +83,9 @@ global.scout = {
         } else {
             console.log('no scout currently')
         }
+    },
+    now: (destination: string, start: string): void => {
+        new RoomManager(Game.rooms[start]).addScoutRoomTask(destination)
     },
 }
 

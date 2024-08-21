@@ -35,11 +35,11 @@ export default class EnergySinkManager {
                 return false
             }
         }
-        const hitsDifference = structure.hitsMax - structure.hits
         if (structure.structureType === STRUCTURE_TOWER) {
             // [FIX] - dedupe this
+            const hitsDifference = structure.hitsMax - structure.hits
             return hitsDifference >= CARRY_CAPACITY
         }
-        return hitsDifference > 0
+        return structure.hits / structure.hitsMax < 0.66
     }
 }

@@ -1,7 +1,7 @@
 import * as Logger from 'utils/logger'
+import { followCreep, moveTo, moveToRoom } from 'utils/travel'
 import { getHostileConstructionSites, getInvaderCores } from 'utils/room'
 import { goHome, moveToStationaryPoint, recycle, wander } from 'utils/creep'
-import { moveTo, moveToRoom } from 'utils/travel'
 import { fromBodyPlan } from 'utils/parts'
 import { wrap } from 'utils/profiling'
 
@@ -17,17 +17,27 @@ interface AttackerMemory extends CreepMemory {
     home: string
 }
 
-function sortHostiles(hostiles: Creep[]): Creep[] {
-    hostiles.sort((a, b) => {
-        if (a.getActiveBodyparts(ATTACK) > 0 && b.getActiveBodyparts(ATTACK) === 0) {
-            return -1
-        } else if (a.getActiveBodyparts(ATTACK) === 0 && b.getActiveBodyparts(ATTACK) > 0) {
-            return 1
-        }
-        return 0
-    })
-    return hostiles
+function isCreep(target: Creep | Structure): target is Creep {
+    return (target as Creep).hits !== undefined
 }
+
+const sortHostiles =
+    (pos: RoomPosition) =>
+    (hostiles: Creep[]): Creep[] => {
+        hostiles.sort((a, b) => {
+            if (a.getActiveBodyparts(ATTACK) > 0 && b.getActiveBodyparts(ATTACK) === 0) {
+                return -1
+            } else if (a.getActiveBodyparts(ATTACK) === 0 && b.getActiveBodyparts(ATTACK) > 0) {
+                return 1
+            }
+            const claimDiff = b.getActiveBodyparts(CLAIM) - a.getActiveBodyparts(CLAIM)
+            if (claimDiff !== 0) {
+                return claimDiff
+            }
+            return pos.getRangeTo(a) - pos.getRangeTo(b)
+        })
+        return hostiles
+    }
 
 const roleAttacker = {
     run: wrap((creep: Attacker): void => {
@@ -41,24 +51,13 @@ const roleAttacker = {
             return
         }
 
-        if (targetRoom.controller.safeMode) {
-            Logger.info(
-                'attacker:safeMode',
-                creep.name,
-                targetRoom.name,
-                targetRoom.controller.safeMode,
-            )
-            wander(creep)
-            return
-        }
-
         if (!roleAttacker.isInRoom(creep)) {
             moveToRoom(creep, targetRoom.name)
             return
         }
 
         const structures = getInvaderCores(targetRoom)
-        const hostiles = sortHostiles(targetRoom.find(FIND_HOSTILE_CREEPS))
+        const hostiles = sortHostiles(creep.pos)(targetRoom.find(FIND_HOSTILE_CREEPS))
         const constructionSites = getHostileConstructionSites(targetRoom)
         const targets = [...structures, ...hostiles]
         if (targets.length > 0) {
@@ -81,11 +80,13 @@ const roleAttacker = {
     },
 
     attack: (creep: Attacker, target: Creep | Structure): ScreepsReturnCode => {
+        if (isCreep(target)) {
+            followCreep(creep, target)
+        } else {
+            moveTo(creep, target)
+        }
         const err = creep.attack(target)
-        if (err === ERR_NOT_IN_RANGE) {
-            // eslint-disable-next-line @typescript-eslint/no-shadow
-            moveTo(creep, { pos: target.pos, range: 1 })
-        } else if (err !== OK) {
+        if (err !== OK && err !== ERR_NOT_IN_RANGE) {
             Logger.error('attacker:attack:failed', creep.name, err)
         }
         return err
@@ -122,7 +123,7 @@ export function calculateParts(
     maxCopies: number | null = null,
 ): BodyPartConstant[] {
     maxCopies = maxCopies ? maxCopies : 50
-    return fromBodyPlan(capacity, [ATTACK, MOVE], [], maxCopies)
+    return fromBodyPlan(capacity, [ATTACK, MOVE], { maxCopies })
 }
 
 export default roleAttacker

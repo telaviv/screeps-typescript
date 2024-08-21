@@ -70,6 +70,7 @@ export class MasonCreep {
 
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
+            this.creep.say('🧱⚡')
             TaskRunner.run(task, this.creep)
             return
         }
@@ -104,6 +105,7 @@ export class MasonCreep {
     }
 
     private repair() {
+        this.creep.say('🧱🧱')
         let structure = null
         if (this.repairTarget) {
             structure = Game.getObjectById<Wall>(this.repairTarget)
@@ -132,6 +134,7 @@ export class MasonCreep {
     }
 
     private build(includeNonWallSites = false) {
+        this.creep.say('🧱🏗️')
         const targets = includeNonWallSites
             ? getConstructionSites(this.creep.room)
             : getWallSites(this.creep.room)

@@ -5,7 +5,6 @@ import { RoomManager } from 'managers/room-manager'
 import { Task } from 'tasks/types'
 import WarDepartment from 'war-department'
 import { getAllTasks } from 'tasks/utils'
-import roleScout from 'roles/scout'
 import roleWrecker from 'roles/wrecker'
 
 function killAllCreeps(roomName: string) {
@@ -33,15 +32,6 @@ function sendWrecker(endRoom: string, startRoom: string) {
     }
     const err = roleWrecker.create(spawns[0], endRoom)
     Logger.info('sendWrecker:create', err)
-}
-
-function sendScout(destination: string, startRoom: string) {
-    const spawns = Game.rooms[startRoom].find(FIND_MY_SPAWNS)
-    if (spawns.length === 0) {
-        throw new Error('no spawn in starting room')
-    }
-    const err = roleScout.create(spawns[0], destination, true)
-    Logger.info('sendScout:create', err)
 }
 
 function declareWar(endRoom: string, warRoom: string) {
@@ -101,7 +91,6 @@ export default function assignGlobals(): void {
     global.unpauseConstruction = unpauseConstruction
     global.resetSnapshot = resetSnapshot
     global.printTasks = printTasks
-    global.sendScout = sendScout
     global.findUsername = findUsername
 }
 
@@ -120,7 +109,6 @@ declare global {
             unpauseConstruction: (room: string) => void
             resetSnapshot: (roomName: string) => void
             printTasks: (type?: Task<any>) => void
-            sendScout: (destination: string, startRoom: string) => void
             findUsername: () => string
         }
     }

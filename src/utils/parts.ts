@@ -10,11 +10,16 @@ import { constant, times } from 'lodash'
  * @param maxCopies - The maximum number of times the plan can be repeated in the body plan.
  * @returns An array of body part constants representing the final body plan for the creep.
  */
+
+interface FromBodyPlanOpts {
+    fixed?: BodyPartConstant[]
+    maxCopies?: number
+    padding?: number
+}
 export function fromBodyPlan(
     capacity: number,
     plan: BodyPartConstant[],
-    fixed: BodyPartConstant[] = [],
-    maxCopies = 50,
+    { fixed = [], maxCopies = 50 }: FromBodyPlanOpts = {},
 ): BodyPartConstant[] {
     const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
     const unitCost = plan.reduce((total, p) => total + BODYPART_COST[p], 0)
@@ -45,10 +50,9 @@ export function fromBodyPlan(
 export function fromBodyPlanSafe(
     capacity: number,
     plan: BodyPartConstant[],
-    fixed: BodyPartConstant[] = [],
-    maxCopies = 50,
+    { fixed = [], maxCopies = 50 }: FromBodyPlanOpts = {},
 ): BodyPartConstant[] | null {
-    const parts = fromBodyPlan(capacity, plan, fixed, maxCopies)
+    const parts = fromBodyPlan(capacity, plan, { fixed, maxCopies })
     if (planCost(parts) > capacity || parts.length === 0) {
         return null
     }

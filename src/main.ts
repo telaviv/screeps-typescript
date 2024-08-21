@@ -135,7 +135,7 @@ const ensureSafeMode = wrap((room: Room) => {
     }
     for (const event of room.getEventLog()) {
         if (event.event === EVENT_OBJECT_DESTROYED) {
-            if (event.data.type !== 'creep') {
+            if (event.data.type !== 'creep' && event.data.type !== 'container') {
                 const err = room.controller.activateSafeMode()
                 Logger.error(
                     `ensure safe mode for ${room.name}: ${event.data.type} destroyed.`,

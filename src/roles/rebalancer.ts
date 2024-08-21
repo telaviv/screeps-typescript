@@ -60,6 +60,11 @@ export class RebalancerCreep {
         }
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
+            if (task.type === 'pickup' || task.type === 'withdraw') {
+                this.creep.say('⚖️⚡')
+            } else {
+                this.creep.say('⚖️⚖️')
+            }
             TaskRunner.run(task, this.creep)
             return
         } else if (
@@ -81,6 +86,7 @@ export class RebalancerCreep {
         if ((this.creep.ticksToLive ?? Infinity) < 50) {
             this.creep.suicide()
         }
+        this.creep.say('⚖️⚡')
         let success = PickupTask.makeRequest(this.creep)
         if (success) {
             return
@@ -103,6 +109,7 @@ export class RebalancerCreep {
 
     @profile
     rebalance(): void {
+        this.creep.say('⚖️⚖️')
         const virtualStorage = getVirtualStorage(this.creep.memory.home)
         if (virtualStorage) {
             const structure = TransferTask.makeRequest(this.creep, { structure: virtualStorage })

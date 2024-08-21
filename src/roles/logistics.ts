@@ -180,6 +180,7 @@ class RoleLogistics {
 
     @profile
     private assignWorkerPreference() {
+        this.creep.memory.currentTarget = undefined
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
         if (this.creep.room.name !== memory.home) {
@@ -345,7 +346,10 @@ class RoleLogistics {
 
     @mprofile('logistics:haulEnergy')
     haulEnergy(): void {
-        if ((this.creep.ticksToLive ?? Infinity) < 50) {
+        if (
+            (this.creep.ticksToLive ?? Infinity) < 50 &&
+            this.creep.memory.preference === PREFERENCE_WORKER
+        ) {
             this.creep.suicide()
         }
         if (TransferTask.makeRequest(this.creep)) {

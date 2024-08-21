@@ -1,11 +1,10 @@
 import * as Logger from 'utils/logger'
+import { getHarvesters, moveToStationaryPoint } from 'utils/creep'
 import { MiningTask } from './types'
 import { ResourceCreep } from '../types'
 import SourcesManager from 'managers/sources-manager'
 import autoIncrement from 'utils/autoincrement'
-import { getHarvesters } from 'utils/creep'
 import { isMiningTask } from './utils'
-import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
@@ -41,10 +40,9 @@ export function run(task: MiningTask, creep: ResourceCreep): boolean {
     }
     const err = creep.harvest(source)
     if (err === ERR_NOT_IN_RANGE) {
-        const moveToError = moveTo(
+        const moveToError = moveToStationaryPoint(
+            new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName),
             creep,
-            { pos: new RoomPosition(task.pos.x, task.pos.y, task.pos.roomName), range: 0 },
-            { visualizePathStyle: { stroke: '#ffaa00' } },
         )
         return moveToError === OK
     } else if (err !== OK) {

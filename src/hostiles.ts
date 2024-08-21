@@ -13,7 +13,7 @@ declare global {
     }
 }
 
-const HOSTILE_WINDOW = 500
+const HOSTILE_WINDOW = 1000
 
 export class HostileRecorder {
     private roomName: string
@@ -46,20 +46,26 @@ export class HostileRecorder {
             Logger.warning(`HostileRecorder.record: no vision for ${this.roomName}`)
             return
         }
-        if (this.hostiles[HOSTILE_WINDOW].time + HOSTILE_WINDOW > Game.time) {
+        if (
+            !this.hostiles[HOSTILE_WINDOW] ||
+            this.hostiles[HOSTILE_WINDOW].time + HOSTILE_WINDOW > Game.time
+        ) {
             this.hostiles = { [HOSTILE_WINDOW]: { time: Game.time, parts: [] } }
         }
         const hostiles = getEnemyCreeps(this.room)
         const parts = hostiles.map((creep) => creep.body.map((part) => part.type))
-        const current = this.partCount(parts)
-        const past = this.partCount(this.hostiles[HOSTILE_WINDOW].parts)
+        const current = this.dangerFromParts(parts)
+        const past = this.dangerFromParts(this.hostiles[HOSTILE_WINDOW].parts)
         if (current >= past) {
             this.hostiles[HOSTILE_WINDOW] = { time: Game.time, parts }
         }
     }
 
-    private partCount(this: void, parts: BodyPartConstant[][]): number {
-        return parts.reduce((acc, p) => acc + p.length, 0)
+    private dangerFromParts(parts: BodyPartConstant[][]): number {
+        return parts.reduce(
+            (acc, p) => acc + p.filter((part) => part === ATTACK || part === RANGED_ATTACK).length,
+            0,
+        )
     }
 
     public dangerLevel(): number {

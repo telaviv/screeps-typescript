@@ -5,6 +5,9 @@ import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
+import { getVirtualStorage } from './rebalancer'
+import { isWithdrawTask } from 'tasks/withdraw/utils'
+import { moveTo } from 'utils/travel'
 import { profile } from 'utils/profiling'
 
 const ROLE = 'energy-hauler'
@@ -16,6 +19,7 @@ export interface EnergyHauler extends ResourceCreep {
 interface EnergyHaulerMemory extends ResourceCreepMemory {
     role: 'energy-hauler'
     home: string
+    lastWithdraw?: { id: string; time: number }
 }
 
 export function isEnergyHauler(creep: Creep): creep is EnergyHauler {
@@ -39,8 +43,7 @@ export class EnergyHaulerCreep {
             return
         }
         if (this.creep.memory.tasks.length > 0) {
-            const task = this.creep.memory.tasks[0]
-            TaskRunner.run(task, this.creep)
+            this.runTask()
             return
         } else if (
             this.creep.store.getUsedCapacity() < Math.min(this.creep.store.getCapacity(), 200)
@@ -50,9 +53,25 @@ export class EnergyHaulerCreep {
             this.deliverEnergy()
         }
         if (this.creep.memory.tasks.length > 0) {
-            const task = this.creep.memory.tasks[0]
-            TaskRunner.run(task, this.creep)
+            this.runTask()
             return
+        }
+    }
+
+    runTask(): void {
+        if (this.creep.memory.tasks.length > 0) {
+            const task = this.creep.memory.tasks[0]
+            if (task.type === 'pickup' || task.type === 'withdraw') {
+                this.creep.say('🚚⚡')
+                if (task.type === 'withdraw' && isWithdrawTask(task)) {
+                    this.creep.memory.lastWithdraw = { id: task.withdrawId, time: Game.time }
+                } else {
+                    this.creep.memory.lastWithdraw = undefined
+                }
+            } else {
+                this.creep.say('🚚🚚')
+            }
+            TaskRunner.run(task, this.creep)
         }
     }
 
@@ -73,7 +92,23 @@ export class EnergyHaulerCreep {
 
     @profile
     deliverEnergy(): void {
-        TransferTask.makeRequest(this.creep)
+        let success = TransferTask.makeRequest(this.creep)
+        if (success) {
+            return
+        }
+        const virtualStorage = getVirtualStorage(this.creep.memory.home)
+        if (virtualStorage) {
+            if (
+                this.creep.memory.lastWithdraw &&
+                this.creep.memory.lastWithdraw.id === virtualStorage.id
+            ) {
+                return
+            }
+            success = TransferTask.makeRequest(this.creep, { structure: virtualStorage })
+            if (!success) {
+                moveTo(this.creep, { pos: virtualStorage.pos, range: 1 })
+            }
+        }
     }
 }
 

@@ -107,3 +107,30 @@ export const moveWithinRoom = wrap((creep: Creep, target: MoveTarget): MoveToRet
     }
     return moveTo(creep, target, { roomCallback: nRoomCallback, routeCallback: nRouteCallback })
 }, 'creep:moveWithinRoom')
+
+export const followCreep = wrap((creep: Creep, target: Creep): MoveToReturnCode => {
+    if (creep.fatigue > 0) {
+        return ERR_TIRED
+    }
+    if (!creep.pos.isNearTo(target)) {
+        return moveTo(creep, { pos: target.pos, range: 1 })
+    }
+    const diffX = target.pos.x - creep.pos.x
+    const diffY = target.pos.y - creep.pos.y
+    if (diffX === -1 && diffY === -1) {
+        return creep.move(TOP_LEFT)
+    } else if (diffX === 0 && diffY === -1) {
+        return creep.move(TOP)
+    } else if (diffX === 1 && diffY === -1) {
+        return creep.move(TOP_RIGHT)
+    } else if (diffX === -1 && diffY === 0) {
+        return creep.move(LEFT)
+    } else if (diffX === 1 && diffY === 0) {
+        return creep.move(RIGHT)
+    } else if (diffX === -1 && diffY === 1) {
+        return creep.move(BOTTOM_LEFT)
+    } else if (diffX === 0 && diffY === 1) {
+        return creep.move(BOTTOM)
+    }
+    return creep.move(BOTTOM_RIGHT)
+}, 'travel:followCreep')

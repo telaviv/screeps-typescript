@@ -36,7 +36,7 @@ const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 750
-const MIN_AVAILABLE_ENERGY = 0.11 // % of 2 containers
+const MIN_AVAILABLE_ENERGY = 0.12 // % of 2 containers
 const MAX_DROPPED_RESOURCES = 1000
 
 const isEnergyRestricted = wrap((room: Room): boolean => {
@@ -83,6 +83,7 @@ export default function runStrategy(spawn: StructureSpawn): void {
 
     if (defenseDepartment.needsHealer()) {
         defenseDepartment.createHealer(spawn)
+        return
     }
 
     if (!sourcesManager.hasAllContainerHarvesters()) {

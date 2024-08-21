@@ -1,6 +1,6 @@
 import { World } from 'utils/world'
-import { getConstructionFeaturesV3FromMemory } from 'construction-features'
 import { findMyRooms } from 'utils/room'
+import { getConstructionFeaturesV3FromMemory } from 'construction-features'
 
 interface Mine {
     name: string

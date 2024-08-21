@@ -75,7 +75,7 @@ export default class WarDepartment {
         }
         const hostileRecorder = new HostileRecorder(this.targetRoom.name)
         const dangerLevel = hostileRecorder.dangerLevel()
-        if ((dangerLevel > 0 && dangerLevel < 10) || this.hasInvaderCore()) {
+        if ((dangerLevel > 0 && dangerLevel < 10) || this.hasHostiles()) {
             return true
         }
         return false
