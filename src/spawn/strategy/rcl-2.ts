@@ -1,3 +1,5 @@
+import { polynomial } from 'regression'
+
 import * as Logger from 'utils/logger'
 import { PREFERENCE_WORKER, TASK_BUILDING, TASK_UPGRADING } from 'roles/logistics-constants'
 import WarDepartment, { WarStatus } from 'war-department'
@@ -36,13 +38,30 @@ const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 750
-const MIN_AVAILABLE_ENERGY = 0.12 // % of 2 containers
 const MAX_DROPPED_RESOURCES = 1000
 
+const quadraticResult = polynomial(
+    [
+        [300, 0.11],
+        [800, 0.25],
+        [1800, 0.5],
+    ],
+    { precision: 12, order: 2 },
+)
+Logger.warning(
+    'rcl-2:minAvailableEnergy:quadratic',
+    quadraticResult.string,
+    `[r2: ${quadraticResult.r2}]`,
+)
+function minAvailableEnergy(room: Room): number {
+    return quadraticResult.predict(room.energyCapacityAvailable)[1]
+}
+
 const isEnergyRestricted = wrap((room: Room): boolean => {
+    const minEnergy = minAvailableEnergy(room)
     return (
-        getSlidingEnergy(room.memory, 99) < MIN_AVAILABLE_ENERGY ||
-        getSlidingEnergy(room.memory, 999) < MIN_AVAILABLE_ENERGY
+        getSlidingEnergy(room.memory, 99) < minEnergy ||
+        getSlidingEnergy(room.memory, 999) < minEnergy
     )
 }, 'rcl-2:isEnergyRestricted')
 
