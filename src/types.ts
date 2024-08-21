@@ -46,11 +46,24 @@ export type ConstructionFeatures = {
     [K in BuildableStructureConstant]?: Position[]
 }
 
-export interface StationaryPoints {
+export type StationaryPoints = StationaryPointsBase | StationaryPointsMine
+
+export function isStationaryBase(x: StationaryPoints): x is StationaryPointsBase {
+    return x.type === 'base'
+}
+
+export interface StationaryPointsBase {
+    type: 'base'
     version: string
     sources: { [id: string]: Position }
     controllerLink: Position
     storageLink: Position
+}
+
+export interface StationaryPointsMine {
+    type: 'mine'
+    version: string
+    sources: { [id: string]: Position }
 }
 
 export interface Links {

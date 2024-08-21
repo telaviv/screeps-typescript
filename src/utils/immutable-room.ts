@@ -11,7 +11,7 @@ import {
     NonObstacle,
     Obstacle,
     Position,
-    StationaryPoints,
+    StationaryPointsBase,
     isNonObstacle,
     isObstacle,
 } from 'types'
@@ -149,12 +149,12 @@ type RoomGrid = List<List<ImmutableRoomItem>>
 export class ImmutableRoom implements ValueObject {
     private readonly grid: RoomGrid
     public readonly name: string
-    public readonly stationaryPoints: Partial<StationaryPoints> = {}
+    public readonly stationaryPoints: Partial<StationaryPointsBase> = {}
 
     public constructor(
         name: string,
         grid?: RoomGrid,
-        stationaryPoints: Partial<StationaryPoints> = { sources: {} },
+        stationaryPoints: Partial<StationaryPointsBase> = { sources: {} },
     ) {
         if (grid) {
             this.grid = grid

@@ -1,6 +1,13 @@
 import semverGte from 'semver/functions/gte'
 
-import { ConstructionFeatures, ConstructionFeaturesV3, Links, StationaryPoints } from 'types'
+import {
+    ConstructionFeatures,
+    ConstructionFeaturesV3,
+    isStationaryBase,
+    Links,
+    StationaryPoints,
+    StationaryPointsBase,
+} from 'types'
 
 declare global {
     interface RoomMemory {
@@ -8,15 +15,11 @@ declare global {
     }
 }
 
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.4'
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.5'
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.7'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.7'
 
 export function getConstructionFeaturesV3(room: Room): ConstructionFeaturesV3 | null {
-    const version = room.memory.constructionFeaturesV3?.version ?? '0.0.0'
-    if (semverGte(version, MIN_CONSTRUCTION_FEATURES_V3_VERSION)) {
-        return room.memory.constructionFeaturesV3 ?? null
-    }
-    return null
+    return getConstructionFeaturesV3FromMemory(room.memory)
 }
 
 export function getConstructionFeatures(room: Room): ConstructionFeatures | null {
@@ -29,16 +32,13 @@ export function getConstructionFeatures(room: Room): ConstructionFeatures | null
 
 export function getConstructionFeaturesV3FromMemory(
     roomMemory: RoomMemory | undefined,
-    valid = true,
 ): ConstructionFeaturesV3 | null {
     if (!roomMemory) {
         return null
     }
-    if (roomMemory.constructionFeaturesV3?.version === CONSTRUCTION_FEATURES_V3_VERSION) {
-        if (valid && roomMemory.constructionFeaturesV3.wipe) {
-            return null
-        }
-        return roomMemory.constructionFeaturesV3
+    const version = roomMemory.constructionFeaturesV3?.version ?? '0.0.0'
+    if (semverGte(version, MIN_CONSTRUCTION_FEATURES_V3_VERSION)) {
+        return roomMemory.constructionFeaturesV3 ?? null
     }
     return null
 }
@@ -88,6 +88,14 @@ export function getStationaryPoints(room: Room): StationaryPoints | null {
     const constructionFeaturesV3 = getValidConstructionFeaturesV3(room)
     if (constructionFeaturesV3 && constructionFeaturesV3.points) {
         return constructionFeaturesV3.points
+    }
+    return null
+}
+
+export function getStationaryPointsBase(room: Room): StationaryPointsBase | null {
+    const points = getStationaryPoints(room)
+    if (!points || isStationaryBase(points)) {
+        return points
     }
     return null
 }

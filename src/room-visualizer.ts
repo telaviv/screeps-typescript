@@ -8,12 +8,20 @@ import {
     getWallTransform,
 } from 'room-analysis/distance-transform'
 import { ConstructionFeatures } from 'types'
+import { findMyRooms } from 'utils/room'
 import { getConstructionFeatures } from 'construction-features'
 
 const MAX_BUNKER_DIMENSION = 13 // for now we have a 13 x 12 bunker
 type VisualType = 'construction' | 'transform'
+type MapVisualType = 'mining'
 
 declare global {
+    interface Memory {
+        visuals: {
+            visualType?: MapVisualType
+        }
+    }
+
     interface RoomMemory {
         visuals:
             | {
@@ -27,6 +35,7 @@ declare global {
     namespace NodeJS {
         interface Global {
             visuals: {
+                map: { mining: () => void }
                 construction: (roomName: string, roads?: boolean) => void
                 wallTransform: (roomName: string) => void
                 tranformFromId: (roomName: string, id: Id<Source | StructureController>) => void
@@ -35,14 +44,6 @@ declare global {
             }
         }
     }
-}
-
-global.visuals = {
-    construction: setConstructionVisuals,
-    wallTransform: setWallTransformVisuals,
-    tranformFromId: setTransformFromId,
-    sumTransform: setSumTransformVisuals,
-    cancel: cancelVisuals,
 }
 
 type DrawFunction = (visual: RoomVisual, pos: RoomPosition) => void
@@ -141,6 +142,27 @@ function hasConstructionSiteAt(structureType: BuildableStructureConstant, pos: R
     return filter(sites, { structureType }).length > 0
 }
 
+class MapVisualizer {
+    static drawMiningMap(): void {
+        const rooms = findMyRooms()
+        for (const room of rooms) {
+            if (room.memory.mines && room.memory.mines.length > 0) {
+                const minerPos = new RoomPosition(25, 25, room.name)
+                Game.map.visual.circle(minerPos, { radius: 3, fill: '#ffffff', opacity: 1 })
+                for (const mine of room.memory.mines) {
+                    const minePos = new RoomPosition(25, 25, mine.name)
+                    Game.map.visual.line(minerPos, minePos, {
+                        color: '#ffffff',
+                        width: 1,
+                        lineStyle: 'dotted',
+                        opacity: 1,
+                    })
+                }
+            }
+        }
+    }
+}
+
 export default class RoomVisualizer {
     readonly room: Room
 
@@ -186,7 +208,14 @@ export default class RoomVisualizer {
     }
 }
 
-export function visualizeRoom(room: Room): void {
+export function visualize(): void {
+    visualizeMap()
+    for (const room of Object.values(Game.rooms)) {
+        visualizeRoom(room)
+    }
+}
+
+function visualizeRoom(room: Room): void {
     const visuals = room.memory.visuals
     if (!visuals) {
         return
@@ -202,6 +231,16 @@ export function visualizeRoom(room: Room): void {
     } else if (visuals.visualType === 'transform') {
         roomVisual.renderTransform(visuals.transform as number[][])
     }
+}
+
+function visualizeMap(): void {
+    if (Memory.visuals?.visualType === 'mining') {
+        MapVisualizer.drawMiningMap()
+    }
+}
+
+function setMiningMapVisuals(): void {
+    Memory.visuals = { visualType: 'mining' }
 }
 
 function setConstructionVisuals(roomName: string, roads = false): void {
@@ -231,4 +270,14 @@ function cancelVisuals(): void {
     for (const room of Object.values(Memory.rooms)) {
         delete room.visuals
     }
+    delete Memory.visuals.visualType
+}
+
+global.visuals = {
+    construction: setConstructionVisuals,
+    wallTransform: setWallTransformVisuals,
+    tranformFromId: setTransformFromId,
+    sumTransform: setSumTransformVisuals,
+    cancel: cancelVisuals,
+    map: { mining: setMiningMapVisuals },
 }

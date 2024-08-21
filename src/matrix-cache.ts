@@ -5,6 +5,7 @@ import { mprofile, profile, wrap } from 'utils/profiling'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { getObstacles } from 'utils/room'
 import { getStationaryPointsFromMemory } from 'construction-features'
+import { isStationaryBase } from 'types'
 import { subscribe } from 'pub-sub/pub-sub'
 
 export type MatrixTag =
@@ -217,7 +218,7 @@ export class MatrixCacheManager {
             return
         }
         const matrix = this.calculateDefaultMatrix()
-        console.log('Setting default matrix cache', this.roomName)
+        Logger.warning('Setting default matrix cache', this.roomName)
         this.matrixCache[MATRIX_DEFAULT] = {
             matrix: JSON.stringify(matrix.serialize()),
             time: Game.time,
@@ -287,11 +288,12 @@ export class MatrixCacheManager {
             return matrix
         }
         matrix = matrix.clone()
-        const { sources, controllerLink, storageLink } = points
-        matrix.set(controllerLink.x, controllerLink.y, 255)
-        matrix.set(storageLink.x, storageLink.y, 255)
-        for (const source of Object.values(sources)) {
+        for (const source of Object.values(points.sources)) {
             matrix.set(source.x, source.y, 255)
+        }
+        if (isStationaryBase(points)) {
+            matrix.set(points.controllerLink.x, points.controllerLink.y, 255)
+            matrix.set(points.storageLink.x, points.storageLink.y, 255)
         }
         return matrix
     }

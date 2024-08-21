@@ -1,6 +1,10 @@
 import * as Logger from 'utils/logger'
-import { getCalculatedLinks, getStationaryPoints } from 'construction-features'
-import { Position } from 'types'
+import {
+    getCalculatedLinks,
+    getStationaryPoints,
+    getStationaryPointsBase,
+} from 'construction-features'
+import { isStationaryBase, Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
 import { hasNoEnergy } from 'utils/energy-harvesting'
@@ -150,6 +154,9 @@ const roleStaticLinkHauler = {
         if (!storage || !link) {
             return null
         }
+        if (!isStationaryBase(points)) {
+            throw new Error('static-link-hauler:getMemory:invalid-points ' + room.name)
+        }
         const pos = points.storageLink
         return {
             role: ROLE,
@@ -162,7 +169,7 @@ const roleStaticLinkHauler = {
     },
 
     getPosition(room: Room): Position | null {
-        const points = getStationaryPoints(room)
+        const points = getStationaryPointsBase(room)
         if (points === null) {
             return null
         }

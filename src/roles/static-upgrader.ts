@@ -1,6 +1,10 @@
 import * as Logger from 'utils/logger'
-import { getCalculatedLinks, getStationaryPoints } from 'construction-features'
-import { Position } from 'types'
+import {
+    getCalculatedLinks,
+    getStationaryPoints,
+    getStationaryPointsBase,
+} from 'construction-features'
+import { isStationaryBase, Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
 import { getTotalWithdrawableResources } from 'tasks/withdraw'
@@ -168,6 +172,9 @@ const roleStaticUpgrader = {
         if (!storage || !link) {
             return null
         }
+        if (!isStationaryBase(points)) {
+            throw new Error('static-upgrader: not a stationary base ' + room.name)
+        }
         const pos = points.controllerLink
         return {
             role: ROLE,
@@ -180,7 +187,7 @@ const roleStaticUpgrader = {
     },
 
     getPosition(room: Room): Position | null {
-        const points = getStationaryPoints(room)
+        const points = getStationaryPointsBase(room)
         if (points === null) {
             return null
         }

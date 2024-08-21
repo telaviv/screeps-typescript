@@ -36,7 +36,9 @@ if (Object.keys(DistanceTTL).length < MAX_SCOUT_DISTANCE) {
     throw new Error('DistanceTTL is not fully defined')
 }
 
-export const EXPIRATION_TTL = (60 * 60 * 48) / TIME_PER_TICK
+export const EXPIRATION_TTL = !Game.cpu.generatePixel
+    ? (60 * 60 * 48) / 0.2
+    : (60 * 60 * 48) / TIME_PER_TICK
 
 export interface ScoutMemory {
     version: string
@@ -92,20 +94,17 @@ global.scout = {
 class ScoutManager {
     private world: World
     private ownedRoomProgress: OwnedRoomProgress
-    private scoutRoomData: Record<string, ScoutMemory>
     private featureRoomData: Record<string, ConstructionFeaturesV3>
     private gameTime: number
 
     constructor(
         world: World,
         ownedRoomProgress: Map<string, number>,
-        scoutRoomData: Record<string, ScoutMemory>,
         featureRoomData: Record<string, ConstructionFeaturesV3>,
         gameTime: number = Game.time,
     ) {
         this.world = world
         this.ownedRoomProgress = ownedRoomProgress
-        this.scoutRoomData = scoutRoomData
         this.featureRoomData = featureRoomData
         this.gameTime = gameTime
     }
@@ -124,12 +123,12 @@ class ScoutManager {
             if (memory.scout) {
                 scoutRoomData[name] = memory.scout
             }
-            const features = getConstructionFeaturesV3FromMemory(memory, false)
+            const features = getConstructionFeaturesV3FromMemory(memory)
             if (features) {
                 featureRoomData[name] = features
             }
         }
-        return new ScoutManager(world, ownedRoomProgress, scoutRoomData, featureRoomData)
+        return new ScoutManager(world, ownedRoomProgress, featureRoomData)
     }
 
     get ownedRooms(): string[] {
@@ -180,14 +179,9 @@ class ScoutManager {
             if (getRoomType(roomName) !== RoomType.ROOM) {
                 continue
             }
-            const ttl = DistanceTTL[distance] ?? 0
             if (
                 getRoomType(roomName) === RoomType.ROOM &&
-                (!this.scoutRoomData[roomName] ||
-                    semverGte(this.scoutRoomData[roomName].version, '1.1.0') ||
-                    !this.scoutRoomData[roomName].updatedAt ||
-                    this.scoutRoomData[roomName].updatedAt + ttl < this.gameTime ||
-                    !this.featureRoomData[roomName])
+                (!this.featureRoomData[roomName] || !this.hasValidScoutData(roomName))
             ) {
                 return roomName
             }
@@ -202,15 +196,21 @@ class ScoutManager {
         })
     }
 
+    private hasValidScoutData(roomName: string): boolean {
+        const memory = Memory.rooms[roomName]
+        return Boolean(
+            memory &&
+                memory.scout &&
+                memory.scout.updatedAt &&
+                memory.scout.updatedAt + EXPIRATION_TTL >= this.gameTime &&
+                semverGte(memory.scout.version, SCOUT_VERSION),
+        )
+    }
+
     @profile
     clearExpiredScoutData(): void {
-        for (const [name, memory] of Object.entries(Memory.rooms)) {
-            if (
-                !memory.scout ||
-                !memory.scout.updatedAt ||
-                memory.scout.updatedAt + EXPIRATION_TTL < this.gameTime ||
-                memory.scout.version !== SCOUT_VERSION
-            ) {
+        for (const name of Object.keys(Memory.rooms)) {
+            if (!this.hasValidScoutData(name)) {
                 delete Memory.rooms[name]
             }
         }

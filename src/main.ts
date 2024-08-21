@@ -33,7 +33,7 @@ import { getBuildManager } from 'managers/build-manager'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
-import { visualizeRoom } from 'room-visualizer'
+import { visualize } from 'room-visualizer'
 
 if (!global.USERNAME) {
     global.USERNAME = findUsername()
@@ -208,12 +208,6 @@ const runAllRooms = wrap(() => {
     })
 }, 'main:runAllRooms')
 
-const runVisuals = wrap(() => {
-    for (const room of Object.values(Game.rooms)) {
-        visualizeRoom(room)
-    }
-}, 'main:runVisuals')
-
 const runAllCreeps = () => {
     for (const name of Object.keys(Game.creeps)) {
         runCreep(name)
@@ -235,7 +229,7 @@ function unwrappedLoop(): void {
     }
 
     if (Game.cpu.bucket >= VISUALS_CPU_MIN) {
-        runVisuals()
+        visualize()
     }
 }
 

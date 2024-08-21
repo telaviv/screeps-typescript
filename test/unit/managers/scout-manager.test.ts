@@ -6,13 +6,13 @@ import { expect } from 'chai'
 
 import { DistanceTTL, ScoutManager } from '../../../src/managers/scout-manager'
 
-describe('ScoutManager', () => {
-    describe.skip('findNextRoomToScout', () => {
+describe.skip('ScoutManager', () => {
+    describe('findNextRoomToScout', () => {
         it('should return null if getClosestRooms returns an empty array', () => {
             const world = { getClosestRooms: stub() }
             world.getClosestRooms.returns([])
             // Mock the scout room data
-            const scoutManager = new ScoutManager(world as any, new Map(), {}, {}, 100)
+            const scoutManager = new ScoutManager(world as any, new Map(), {}, 100)
             const nextRoomToScout = scoutManager.findNextRoomToScout()
             expect(nextRoomToScout).to.be.null
         })
@@ -27,7 +27,7 @@ describe('ScoutManager', () => {
                 { roomName: 'W3N8', distance: 2 },
             ])
 
-            const scoutManager = new ScoutManager(world as any, ownedRoomProgress, {}, {}, 100)
+            const scoutManager = new ScoutManager(world as any, ownedRoomProgress, {}, 100)
             const nextRoomToScout = scoutManager.findNextRoomToScout()
             expect(nextRoomToScout).to.equal('W5N8')
         })
@@ -51,7 +51,6 @@ describe('ScoutManager', () => {
             const scoutManager = new ScoutManager(
                 world as any,
                 ownedRoomProgress,
-                scoutRoomData as any,
                 featureRoomData as any,
                 2,
             )
@@ -79,7 +78,6 @@ describe('ScoutManager', () => {
             const scoutManager = new ScoutManager(
                 world as any,
                 ownedRoomProgress,
-                scoutRoomData as any,
                 featureRoomData as any,
                 2,
             )
@@ -107,7 +105,6 @@ describe('ScoutManager', () => {
             const scoutManager = new ScoutManager(
                 world as any,
                 ownedRoomProgress,
-                scoutRoomData as any,
                 featureRoomData as any,
                 DistanceTTL[2] + 1,
             )

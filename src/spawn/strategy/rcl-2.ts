@@ -43,7 +43,7 @@ const MAX_DROPPED_RESOURCES = 1000
 const quadraticResult = polynomial(
     [
         [300, 0.11],
-        [800, 0.25],
+        [800, 0.3],
         [1800, 0.5],
     ],
     { precision: 12, order: 2 },

@@ -13,18 +13,26 @@ declare global {
 
     namespace NodeJS {
         interface Global {
-            mines: { assign: () => void }
+            mines: { assign: () => void; clear: () => void }
         }
     }
 }
 
 function assignMines() {
+    clearMines()
     const mineManager = new MineManager(findMyRooms())
     mineManager.assignMines()
 }
 
+function clearMines() {
+    for (const mem of Object.values(Memory.rooms)) {
+        delete mem.mines
+    }
+}
+
 global.mines = {
     assign: assignMines,
+    clear: clearMines,
 }
 
 export class MineManager {
@@ -86,7 +94,6 @@ export class MineManager {
             if (!Game.rooms[room] || !Game.rooms[room].controller?.my) {
                 continue
             }
-            console.log('pushing', mine, room)
             miners.push(room)
         }
         miners.sort(
@@ -94,8 +101,11 @@ export class MineManager {
                 (Game.rooms[b]?.controller?.progressTotal ?? 0) -
                 (Game.rooms[a]?.controller?.progressTotal ?? 0),
         )
-        Memory.rooms[mine].mines = []
-        const mines = Memory.rooms[mine].mines as Mine[]
-        mines.push({ name: miners[0] })
+        const miner = miners[0]
+        if (!Memory.rooms[miner].mines) {
+            Memory.rooms[miner].mines = []
+        }
+        const mines = Memory.rooms[miner].mines as Mine[]
+        mines.push({ name: mine })
     }
 }

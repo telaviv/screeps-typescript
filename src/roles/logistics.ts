@@ -167,7 +167,10 @@ class RoleLogistics {
         const memory = this.creep.memory
         const currentTask = memory.currentTask
 
-        if (currentTask === TASK_COLLECTING && isFullOfEnergy(this.creep)) {
+        if (
+            currentTask === TASK_COLLECTING &&
+            (isFullOfEnergy(this.creep) || (this.creep.ticksToLive ?? 0) < 50)
+        ) {
             if (memory.preference === PREFERENCE_WORKER) {
                 this.assignWorkerPreference()
             } else {
@@ -348,6 +351,7 @@ class RoleLogistics {
     haulEnergy(): void {
         if (
             (this.creep.ticksToLive ?? Infinity) < 50 &&
+            hasNoEnergy(this.creep) &&
             this.creep.memory.preference === PREFERENCE_WORKER
         ) {
             this.creep.suicide()
