@@ -139,11 +139,6 @@ export class MatrixCacheManager {
                 if (!roomMemory.matrixCache || !roomMemory.matrixCache[key as keyof MatrixCache]) {
                     continue
                 }
-                if (key === MATRIX_DEFAULT) {
-                    continue
-                }
-                delete roomMemory.matrixCache[key as keyof MatrixCache]
-                /*
                 const time = roomMemory.matrixCache[key as keyof MatrixCache].time
                 if (Game.time - time > EVICTION_TIME && cyrb53(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
@@ -153,12 +148,11 @@ export class MatrixCacheManager {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 } else if ([tagsToKey([]), tagsToKey(['no-edges'])].includes(key)) {
                     continue
-                } else if (keyToTags(key).includes('no-creeps')) {
+                } else if (keyToTags(key).includes('no-obstacles')) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 } else if (cyrb53(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 }
-                    */
             }
         }
     }
@@ -219,7 +213,9 @@ export class MatrixCacheManager {
         if (!this.room) {
             return matrix
         }
+        matrix = matrix.clone()
         matrix = this.addBuildings(matrix)
+        matrix = this.addRoads(matrix)
         matrix = this.addStationaryPoints(matrix)
         matrix = this.addCreeps(matrix)
         return matrix
@@ -273,10 +269,23 @@ export class MatrixCacheManager {
         if (!this.room) {
             return matrix
         }
-        matrix = matrix.clone()
         const obstacles = getObstacles(this.room)
         for (const obstacle of obstacles) {
             matrix.set(obstacle.pos.x, obstacle.pos.y, 255)
+        }
+        return matrix
+    }
+
+    @profile
+    private addRoads(matrix: CostMatrix): CostMatrix {
+        if (!this.room) {
+            return matrix
+        }
+        const roads = this.room.find(FIND_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_ROAD,
+        })
+        for (const road of roads) {
+            matrix.set(road.pos.x, road.pos.y, 0)
         }
         return matrix
     }
@@ -286,7 +295,6 @@ export class MatrixCacheManager {
         if (!this.room) {
             return matrix
         }
-        matrix = matrix.clone()
         const creeps = this.room.find(FIND_CREEPS)
         for (const creep of creeps) {
             matrix.set(creep.pos.x, creep.pos.y, 255)
@@ -300,7 +308,6 @@ export class MatrixCacheManager {
         if (!points) {
             return matrix
         }
-        matrix = matrix.clone()
         for (const source of Object.values(points.sources)) {
             matrix.set(source.x, source.y, 255)
         }

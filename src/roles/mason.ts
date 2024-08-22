@@ -128,7 +128,7 @@ export class MasonCreep {
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
             moveWithinRoom(this.creep, { pos: structure.pos, range: 3 })
-        } else if (err !== OK) {
+        } else if (err !== OK && err !== ERR_TIRED) {
             Logger.warning('logistics:repair-wall:failure', this.creep.name, err)
         }
     }

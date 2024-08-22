@@ -175,7 +175,7 @@ class ScoutManager {
     @profile
     findNextRoomToScout(): string | null {
         const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
-        for (const { roomName, distance } of closestRooms) {
+        for (const { roomName } of closestRooms) {
             if (getRoomType(roomName) !== RoomType.ROOM) {
                 continue
             }
