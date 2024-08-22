@@ -178,7 +178,7 @@ const roleStaticLinkHauler = {
 }
 
 export function calculateParts(capacity: number): BodyPartConstant[] | null {
-    return fromBodyPlanSafe(capacity, [MOVE], { fixed: [CARRY], maxCopies: 9 })
+    return fromBodyPlanSafe(capacity, [CARRY], { fixed: [MOVE], maxCopies: 9 })
 }
 
 export default roleStaticLinkHauler

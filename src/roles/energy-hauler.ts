@@ -5,9 +5,9 @@ import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
-import { getVirtualStorage } from './rebalancer'
+import { getVirtualStorage } from '../utils/virtual-storage'
 import { isWithdrawTask } from 'tasks/withdraw/utils'
-import { moveTo } from 'utils/travel'
+import { moveWithinRoom } from 'utils/travel'
 import { profile } from 'utils/profiling'
 
 const ROLE = 'energy-hauler'
@@ -55,6 +55,22 @@ export class EnergyHaulerCreep {
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
             return
+        } else if (this.creep.store.getUsedCapacity() > 0) {
+            this.deliverEnergy()
+        } else {
+            this.collectEnergy()
+        }
+
+        if (this.creep.memory.tasks.length > 0) {
+            this.runTask()
+        } else if (getVirtualStorage(this.creep.memory.home)) {
+            const virtualStorage = getVirtualStorage(this.creep.room.name) as
+                | StructureStorage
+                | StructureContainer
+            if (this.creep.pos.isNearTo(virtualStorage)) {
+                return
+            }
+            moveWithinRoom(this.creep, { pos: virtualStorage.pos, range: 1 })
         }
     }
 
@@ -92,7 +108,7 @@ export class EnergyHaulerCreep {
 
     @profile
     deliverEnergy(): void {
-        let success = TransferTask.makeRequest(this.creep)
+        const success = TransferTask.makeRequest(this.creep, { excludeVirtualStorage: true })
         if (success) {
             return
         }
@@ -104,10 +120,7 @@ export class EnergyHaulerCreep {
             ) {
                 return
             }
-            success = TransferTask.makeRequest(this.creep, { structure: virtualStorage })
-            if (!success) {
-                moveTo(this.creep, { pos: virtualStorage.pos, range: 1 })
-            }
+            TransferTask.makeRequest(this.creep, { structure: virtualStorage })
         }
     }
 }

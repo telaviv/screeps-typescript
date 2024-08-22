@@ -72,8 +72,8 @@ export class HarvesterCreep {
 
         if (this.isHarvestTick()) {
             this.harvestSource()
-            return
         }
+
         if (this.canTransferEnergy()) {
             this.transferEnergyToLink()
             return
@@ -161,8 +161,7 @@ export class HarvesterCreep {
         if (
             this.creep.memory.tasks.length > 0 ||
             this.creep.getActiveBodyparts(CARRY) === 0 ||
-            !this.isFullOfEnergy() ||
-            this.isHarvestTick()
+            !this.isFullOfEnergy()
         ) {
             return false
         }
@@ -194,20 +193,16 @@ export class HarvesterCreep {
 
     @profile
     private canRepairContainer(): boolean {
-        if (
-            this.creep.getActiveBodyparts(CARRY) === 0 ||
-            !this.container ||
-            !this.hasEnergy() ||
-            this.isHarvestTick() ||
-            !this.isAtHarvestPos()
-        ) {
+        if (this.creep.getActiveBodyparts(CARRY) === 0 || !this.hasEnergy()) {
             return false
         }
         const container = this.container
-        if (container === null) {
+        if (!container) {
             return false
         }
-        return container.hits < container.hitsMax
+        return (
+            (container.hitsMax - container.hits) / (100 * this.creep.getActiveBodyparts(WORK)) > 1
+        )
     }
 
     @profile
@@ -237,10 +232,7 @@ export class HarvesterCreep {
             Logger.error('harvester:repair:container:not-found', this.creep.name)
             return
         }
-        const err = this.creep.repair(container)
-        if (err !== OK) {
-            Logger.error('harvester:repair:failure', this.creep.name, "couldn't repair", err)
-        }
+        this.creep.repair(container)
     }
 
     private isFullOfEnergy(): boolean {

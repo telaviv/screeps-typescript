@@ -5,12 +5,14 @@ import { ResourceCreep } from 'tasks/types'
 import { TransferStructure } from 'tasks/transfer/structure'
 import { TransferTask } from './types'
 import { currentEnergyHeld } from 'utils/creep'
+import { getVirtualStorage } from 'utils/virtual-storage'
 import { isTransferTask } from './utils'
 import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 interface RequestOpts {
     structure?: AnyStoreStructure
+    excludeVirtualStorage?: boolean
 }
 export const makeRequest = wrap(
     (creep: ResourceCreep, opts?: RequestOpts): AnyStoreStructure | null => {
@@ -25,7 +27,7 @@ export const makeRequest = wrap(
         }
 
         if (opts && opts.structure) {
-            const fillable = filterFillableStructures([opts.structure])
+            const fillable = filterFillableStructures([opts.structure], opts)
             if (fillable.length === 0) {
                 return null
             }
@@ -154,9 +156,19 @@ function fillableSpawns(room: Room): AnyStoreStructure[] {
     return filterFillableStructures(spawns)
 }
 
-function filterFillableStructures(structures: AnyStoreStructure[]) {
+function filterFillableStructures(
+    structures: AnyStoreStructure[],
+    opts?: RequestOpts,
+): AnyStoreStructure[] {
+    if (structures.length === 0) {
+        return []
+    }
+    const virtualStorage = getVirtualStorage(structures[0].room.name)
     return structures.filter((structure) => {
         if (structure.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+            return false
+        }
+        if (opts?.excludeVirtualStorage && virtualStorage && structure.id === virtualStorage.id) {
             return false
         }
         const transfer = TransferStructure.get(structure.id)

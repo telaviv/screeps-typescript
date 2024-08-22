@@ -1,4 +1,4 @@
-import { polynomial, logarithmic, DataPoint } from 'regression'
+import { exponential, polynomial, logarithmic, DataPoint, Result } from 'regression'
 
 import * as Logger from 'utils/logger'
 import { PREFERENCE_WORKER, TASK_BUILDING, TASK_UPGRADING } from 'roles/logistics-constants'
@@ -6,7 +6,6 @@ import WarDepartment, { WarStatus } from 'war-department'
 import { getConstructionSites, getLinks, hasWeakWall } from 'utils/room'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleMason, { MasonCreep } from 'roles/mason'
-import roleRebalancer, { getVirtualStorage } from 'roles/rebalancer'
 import DefenseDepartment from 'defense-department'
 import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
@@ -15,10 +14,12 @@ import SourcesManager from 'managers/sources-manager'
 import { getSlidingEnergy } from 'room-window'
 import { getStationaryPoints } from 'construction-features'
 import { getTotalDroppedResources } from 'tasks/pickup'
+import { getVirtualStorage } from 'utils/virtual-storage'
 import { isTravelTask } from 'tasks/travel/utils'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
 import roleEnergyHauler from 'roles/energy-hauler'
+import roleRebalancer from 'roles/rebalancer'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
@@ -36,7 +37,7 @@ const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
-const MAX_USEFUL_ENERGY = 750
+const MAX_USEFUL_ENERGY = 1500
 const MAX_DROPPED_RESOURCES = 1000
 
 function getLatentWorkerInterval(room: Room): number {
@@ -47,23 +48,22 @@ function getLatentWorkerInterval(room: Room): number {
 }
 const ENERGY_DATA: DataPoint[] = [
     [300, 0.12],
-    [800, 0.3],
+    [800, 0.35],
     [1800, 0.5],
+    [2300, 1],
 ]
-const quadraticResult = polynomial(ENERGY_DATA, { precision: 12, order: 2 })
-const logarithmicResult = logarithmic(ENERGY_DATA, { precision: 12 })
-Logger.warning(
-    'rcl-2:minAvailableEnergy:quadratic',
-    quadraticResult.string,
-    `[r2: ${quadraticResult.r2}]`,
-)
-Logger.warning(
-    'rcl-2:minAvailableEnergy:logarithmic',
-    logarithmicResult.string,
-    `[r2: ${logarithmicResult.r2}]`,
-)
+const REGRESSION_PRECISION = 12
+const regressions: [string, Result][] = [
+    ['quadratic', polynomial(ENERGY_DATA, { precision: REGRESSION_PRECISION, order: 2 })],
+    ['logarithmic', logarithmic(ENERGY_DATA, { precision: REGRESSION_PRECISION })],
+    ['exponential', exponential(ENERGY_DATA, { precision: REGRESSION_PRECISION })],
+]
+regressions.sort((a, b) => b[1].r2 - a[1].r2)
+for (const [name, result] of regressions) {
+    Logger.warning(`rcl-2:minAvailableEnergy:${name}`, result.string, `[r2: ${result.r2}]`)
+}
 function minAvailableEnergy(room: Room): number {
-    return quadraticResult.predict(room.energyCapacityAvailable)[1]
+    return regressions[0][1].predict(room.energyCapacityAvailable)[1]
 }
 
 const isEnergyRestricted = wrap((room: Room): boolean => {
