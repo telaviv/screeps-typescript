@@ -10,15 +10,15 @@ import { subscribe } from 'pub-sub/pub-sub'
 
 export type MatrixTag =
     | 'no-edges'
-    | 'no-sources' // deprecated
     | 'no-obstacles'
-    | 'no-stationary-points'
-    | 'no-creeps'
+    | 'no-sources' // deprecated
+    | 'no-stationary-points' // deprecated
+    | 'no-creeps' // deprecated
 const TAG_ORDER: MatrixTag[] = ['no-edges', 'no-obstacles', 'no-stationary-points', 'no-creeps']
 const MATRIX_DEFAULT = 'default'
 const MATRIX_CACHE_ID = 'matrix-cache'
 
-const DEPRECATED_TAGS = ['no-sources']
+const DEPRECATED_TAGS = ['no-sources', 'no-stationary-points', 'no-creeps']
 const EVICTION_TIME = 2500
 
 interface MatrixCache {
@@ -116,13 +116,13 @@ export class MatrixCacheManager {
     @mprofile('MatrixCacheManager.getFullCostMatrix')
     public static getFullCostMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        return manager.getCostMatrix(TAG_ORDER)
+        return manager.getCostMatrix(['no-edges', 'no-obstacles'])
     }
 
     @mprofile('MatrixCacheManager.getRoomTravelMatrix')
     public static getRoomTravelMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        const cm = manager.getCostMatrix(['no-obstacles', 'no-stationary-points', 'no-creeps'])
+        const cm = manager.getCostMatrix(['no-obstacles'])
         return cm
     }
 
@@ -136,9 +136,14 @@ export class MatrixCacheManager {
     public static clearCaches(): void {
         for (const [roomName, roomMemory] of Object.entries(Memory.rooms)) {
             for (const key of Object.keys(roomMemory.matrixCache ?? {})) {
-                if (!roomMemory.matrixCache) {
+                if (!roomMemory.matrixCache || !roomMemory.matrixCache[key as keyof MatrixCache]) {
                     continue
                 }
+                if (key === MATRIX_DEFAULT) {
+                    continue
+                }
+                delete roomMemory.matrixCache[key as keyof MatrixCache]
+                /*
                 const time = roomMemory.matrixCache[key as keyof MatrixCache].time
                 if (Game.time - time > EVICTION_TIME && cyrb53(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
@@ -153,6 +158,7 @@ export class MatrixCacheManager {
                 } else if (cyrb53(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 }
+                    */
             }
         }
     }
@@ -199,10 +205,6 @@ export class MatrixCacheManager {
             prefixMatrix = this.addEdges(prefixMatrix)
         } else if (latest === 'no-obstacles') {
             prefixMatrix = this.addObstacles(prefixMatrix)
-        } else if (latest === 'no-stationary-points') {
-            prefixMatrix = this.addStationaryPoints(prefixMatrix)
-        } else if (latest === 'no-creeps') {
-            prefixMatrix = this.addCreeps(prefixMatrix)
         } else {
             throw new Error(`Unknown matrix tag: ${latest}`)
         }
@@ -210,6 +212,17 @@ export class MatrixCacheManager {
             matrix: JSON.stringify(prefixMatrix.serialize()),
             time: Game.time,
         }
+    }
+
+    @profile
+    public addObstacles(matrix: CostMatrix): CostMatrix {
+        if (!this.room) {
+            return matrix
+        }
+        matrix = this.addBuildings(matrix)
+        matrix = this.addStationaryPoints(matrix)
+        matrix = this.addCreeps(matrix)
+        return matrix
     }
 
     @profile
@@ -256,7 +269,7 @@ export class MatrixCacheManager {
     }
 
     @profile
-    private addObstacles(matrix: CostMatrix): CostMatrix {
+    private addBuildings(matrix: CostMatrix): CostMatrix {
         if (!this.room) {
             return matrix
         }
