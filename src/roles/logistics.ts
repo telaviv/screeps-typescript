@@ -29,7 +29,7 @@ import {
     hasOwnFragileWall,
 } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { moveTo, moveToRoom } from 'utils/travel'
+import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { mprofile, profile } from 'utils/profiling'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import { addEnergyTask } from 'tasks/usage-utils'
@@ -253,11 +253,7 @@ class RoleLogistics {
         const target = this.creep.pos.findClosestByRange(targets)
         if (target) {
             if (this.creep.build(target) === ERR_NOT_IN_RANGE) {
-                moveTo(
-                    this.creep,
-                    { pos: target.pos, range: 3 },
-                    { visualizePathStyle: { stroke: '#ffffff' } },
-                )
+                moveWithinRoom(this.creep, { pos: target.pos, range: 3 })
             }
         } else if (isFullOfEnergy(this.creep)) {
             this.assignWorkerPreference()
@@ -301,7 +297,7 @@ class RoleLogistics {
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
-            moveTo(
+            moveWithinRoom(
                 this.creep,
                 { pos: structure.pos, range: 3 },
                 { visualizePathStyle: { stroke: '#ffffff' } },
@@ -321,7 +317,7 @@ class RoleLogistics {
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
-            moveTo(
+            moveWithinRoom(
                 this.creep,
                 { pos: structure.pos, range: 3 },
                 { visualizePathStyle: { stroke: '#ffffff' } },
@@ -339,7 +335,7 @@ class RoleLogistics {
             return
         }
         if (this.creep.upgradeController(home.controller) === ERR_NOT_IN_RANGE) {
-            moveTo(
+            moveWithinRoom(
                 this.creep,
                 { pos: home.controller.pos, range: 3 },
                 { visualizePathStyle: { stroke: '#ffffff' } },

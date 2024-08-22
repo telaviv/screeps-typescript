@@ -29,7 +29,6 @@ declare global {
         lastLatentWorker?: number
     }
 }
-const LATENT_WORKER_INTERVAL = 100
 
 const UPGRADERS_COUNT = 1
 const BUILDERS_COUNT = 1
@@ -39,6 +38,16 @@ const ATTACKERS_COUNT = 2
 
 const MAX_USEFUL_ENERGY = 750
 const MAX_DROPPED_RESOURCES = 1000
+
+function getLatentWorkerInterval(room: Room): number {
+    if (room.energyCapacityAvailable === 300) {
+        return 0
+    }
+    if (room.energyCapacityAvailable < 550) {
+        return 50
+    }
+    return 100
+}
 
 const quadraticResult = polynomial(
     [
@@ -279,13 +288,13 @@ function createLatentWorkers(spawn: StructureSpawn): void {
             return
         }
         let cerr: ScreepsReturnCode | null = null
-        if (Game.time - (room.memory.lastLatentWorker ?? 0) >= LATENT_WORKER_INTERVAL) {
+        if (Game.time - (room.memory.lastLatentWorker ?? 0) >= getLatentWorkerInterval(room)) {
             cerr = RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
         } else {
             Logger.info(
                 'rcl-2:create-latent-workers:too-soon',
                 spawn.room.name,
-                (room.memory.lastLatentWorker ?? 0) + LATENT_WORKER_INTERVAL - Game.time,
+                (room.memory.lastLatentWorker ?? 0) + getLatentWorkerInterval(room) - Game.time,
             )
         }
         if (cerr === OK) {
