@@ -123,7 +123,6 @@ class RoleLogistics {
         } else if (currentTask === TASK_TRAVELING) {
             this.travel()
         } else if (currentTask === NO_TASK) {
-            this.wander()
             this.assignWorkerPreference()
         }
         if (tasks.length > 0) {
@@ -213,6 +212,7 @@ class RoleLogistics {
     say(): void {
         if (this.idleTime() > SLEEP_SAY_TIME) {
             this.creep.say('😴')
+            this.wander()
             return
         }
         const memory = this.creep.memory
@@ -228,6 +228,7 @@ class RoleLogistics {
             this.creep.say(`${preference} ⛏️`)
         } else if (currentTask === NO_TASK) {
             this.creep.say('🤔')
+            this.wander()
         } else {
             this.creep.say(`${preference} ${currentTask}`)
         }

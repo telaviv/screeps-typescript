@@ -91,22 +91,29 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
     return err
 }, 'travel:moveTo')
 
-export const moveWithinRoom = wrap((creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
-    const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name)
-    const nRoomCallback = (roomName: string): CostMatrix | boolean => {
-        if (roomName === target.pos.roomName) {
-            return matrix
+export const moveWithinRoom = wrap(
+    (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
+        const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name)
+        const nRoomCallback = (roomName: string): CostMatrix | boolean => {
+            if (roomName === target.pos.roomName) {
+                return matrix
+            }
+            return false
         }
-        return false
-    }
-    const nRouteCallback = (fromRoom: string, toRoom: string): number | undefined => {
-        if (toRoom === target.pos.roomName) {
-            return undefined
+        const nRouteCallback = (fromRoom: string, toRoom: string): number | undefined => {
+            if (toRoom === target.pos.roomName) {
+                return undefined
+            }
+            return Infinity
         }
-        return Infinity
-    }
-    return moveTo(creep, target, { roomCallback: nRoomCallback, routeCallback: nRouteCallback, ...opts })
-}, 'creep:moveWithinRoom')
+        return moveTo(creep, target, {
+            roomCallback: nRoomCallback,
+            routeCallback: nRouteCallback,
+            ...opts,
+        })
+    },
+    'creep:moveWithinRoom',
+)
 
 export const followCreep = wrap((creep: Creep, target: Creep): MoveToReturnCode => {
     if (creep.fatigue > 0) {

@@ -1,4 +1,4 @@
-import { polynomial } from 'regression'
+import { polynomial, logarithmic, DataPoint } from 'regression'
 
 import * as Logger from 'utils/logger'
 import { PREFERENCE_WORKER, TASK_BUILDING, TASK_UPGRADING } from 'roles/logistics-constants'
@@ -40,27 +40,27 @@ const MAX_USEFUL_ENERGY = 750
 const MAX_DROPPED_RESOURCES = 1000
 
 function getLatentWorkerInterval(room: Room): number {
-    if (room.energyCapacityAvailable === 300) {
-        return 0
-    }
     if (room.energyCapacityAvailable < 550) {
         return 50
     }
     return 100
 }
-
-const quadraticResult = polynomial(
-    [
-        [300, 0.11],
-        [800, 0.3],
-        [1800, 0.5],
-    ],
-    { precision: 12, order: 2 },
-)
+const ENERGY_DATA: DataPoint[] = [
+    [300, 0.12],
+    [800, 0.3],
+    [1800, 0.5],
+]
+const quadraticResult = polynomial(ENERGY_DATA, { precision: 12, order: 2 })
+const logarithmicResult = logarithmic(ENERGY_DATA, { precision: 12 })
 Logger.warning(
     'rcl-2:minAvailableEnergy:quadratic',
     quadraticResult.string,
     `[r2: ${quadraticResult.r2}]`,
+)
+Logger.warning(
+    'rcl-2:minAvailableEnergy:logarithmic',
+    logarithmicResult.string,
+    `[r2: ${logarithmicResult.r2}]`,
 )
 function minAvailableEnergy(room: Room): number {
     return quadraticResult.predict(room.energyCapacityAvailable)[1]

@@ -236,14 +236,19 @@ function unwrappedLoop(): void {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 
+// const pretickProfiled = wrap(preTick, 'main:preTick')
+// const reconcileTrafficProfiled = wrap(reconcileTraffic, 'main:reconcileTraffic')
+
 const loop = wrap(() => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore : global trickery in tests
+    // pretickProfiled()
     if (!global.Game || global.Game.cpu.tickLimit < 30) {
         unwrappedLoop()
     } else {
         ErrorMapper.wrap(unwrappedLoop)()
     }
+    // reconcileTrafficProfiled()
 }, 'main:loop')
 
 export { loop, unwrappedLoop }
