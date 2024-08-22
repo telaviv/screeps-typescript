@@ -51,18 +51,17 @@ export function calculateRoadPositions(
         }
         return Infinity
     }
-    const { storageLink, sources } = points
+    const opts: MoveOpts = { roomCallback, routeCallback, heuristicWeight: 1 }
+    const { storageLink, sources, controllerLink } = points
     if (Object.keys(sources).length !== 2) {
         Logger.error('calculateRoadPositions:sources length is not 2', roomName)
     }
-    if (
-        !addSourcePathsToMatrix(cm, sources, roomName, storageLink, {
-            roomCallback,
-            routeCallback,
-            heuristicWeight: 1,
-        })
-    ) {
+    if (!addSourcePathsToMatrix(cm, sources, roomName, storageLink, opts)) {
         Logger.error('calculateRoadPositions:addSourcesToMatrix failed', roomName)
+        return []
+    }
+    if (!addControllerLinkPathToMatrix(cm, controllerLink, roomName, storageLink, opts)) {
+        Logger.error('calculateRoadPositions:addControllerLinkPathToMatrix failed', roomName)
         return []
     }
     return roadsFromCostMatrix(cm, roomName)
@@ -79,6 +78,26 @@ function roadsFromCostMatrix(cm: CostMatrix, roomName: string): Position[] {
     }
     roadPositions.sort(roadSortOrder(roomName))
     return roadPositions
+}
+
+function addControllerLinkPathToMatrix(
+    cm: CostMatrix,
+    controllerLink: Position,
+    roomName: string,
+    storageLink: Position,
+    opts: MoveOpts,
+): boolean {
+    const path = generatePath(
+        new RoomPosition(storageLink.x, storageLink.y, roomName),
+        [{ pos: new RoomPosition(controllerLink.x, controllerLink.y, roomName), range: 0 }],
+        opts,
+    )
+    if (path === undefined) {
+        Logger.error('calculateRoadPositions:controller path is undefined', roomName)
+        return false
+    }
+    addRoadsToMatrix(cm, path)
+    return true
 }
 
 function addSourcePathsToMatrix(
@@ -118,10 +137,6 @@ function addSourcePathsToMatrix(
         Logger.error('calculateRoadPositions:furtherSource is undefined', roomName)
         return false
     }
-    Logger.error(
-        `debug:(closerSource, furtherSource) (${closerSource.x}, ${closerSource.y}), (${furtherSource.x}, ${furtherSource.y})`,
-        roomName,
-    )
     const farSourcePath = generatePath(
         new RoomPosition(storageLink.x, storageLink.y, roomName),
         [{ pos: new RoomPosition(furtherSource.x, furtherSource.y, roomName), range: 0 }],
