@@ -1,32 +1,19 @@
-import * as Profiling from '../utils/profiling'
-import { ConstructionFeatures, FlatRoomPosition, isObstacle, Position } from '../types'
-import { Graph, GraphEdge, GraphVertex } from '../data-structures/graph'
-import { flatten, uniqBy } from 'lodash'
-import { ImmutableRoom } from 'utils/immutable-room'
-import { MatrixCacheManager } from 'matrix-cache'
-import prim from '../data-structures/prim'
+import { generatePath, MoveOpts } from 'screeps-cartographer'
+
+import * as Logger from '../utils/logger'
+import {
+    ConstructableStructureConstant,
+    ConstructionFeatures,
+    isObstacle,
+    isStationaryBase,
+    Position,
+    StationaryPointsBase,
+} from '../types'
 
 export interface PositionEdge {
     a: string
     b: string
     weight: number
-}
-
-const posStringPairToString = (a: string, b: string): string => {
-    if (a < b) {
-        return `${a}:${b}`
-    }
-    return `${b}:${a}`
-}
-
-const positionToString = (pos: FlatRoomPosition): string => {
-    return `${pos.x}:${pos.y}:${pos.roomName}`
-}
-
-const posPairToString = (a: FlatRoomPosition, b: FlatRoomPosition): string => {
-    const aString = positionToString(a)
-    const bString = positionToString(b)
-    return posStringPairToString(aString, bString)
 }
 
 const roadSortOrder =
@@ -38,119 +25,150 @@ const roadSortOrder =
         return terrainValue(a) - terrainValue(b)
     }
 
-export function calculateBunkerRoadPositions(
+export function calculateRoadPositions(
     roomName: string,
-    iroom: ImmutableRoom,
     features: ConstructionFeatures,
+    points: StationaryPointsBase,
 ): Position[] {
-    const existingRoads = iroom.getNonObstacles('road').map((structure) => structure.pos)
-    const roadSpinePositions = calculateRoadSpinePositions(roomName, iroom, features)
-    const uniquePositions = uniqBy(
-        [...existingRoads, ...roadSpinePositions],
-        (pos) => `${pos.x}:${pos.y}`,
-    )
-    uniquePositions.sort(roadSortOrder(roomName))
-    return uniquePositions
-}
-
-export const calculateMinPathPositions = (
-    positions: FlatRoomPosition[],
-    roomCallback: (roomName: string) => CostMatrix | false,
-): RoomPosition[] => {
-    const pathMap: { [key: string]: RoomPosition[] } = {}
-    const edges: PositionEdge[] = []
-    for (let i = 0; i < positions.length; i++) {
-        for (let j = i + 1; j < positions.length; j++) {
-            const a = positions[i]
-            const b = positions[j]
-            const solution = PathFinder.search(
-                new RoomPosition(a.x, a.y, a.roomName),
-                { pos: new RoomPosition(b.x, b.y, b.roomName), range: 1 },
-                { swampCost: 1, roomCallback },
-            )
-            const weight = solution.cost
-            pathMap[posPairToString(a, b)] = solution.path
-            edges.push({
-                a: positionToString(a),
-                b: positionToString(b),
-                weight,
-            })
-        }
+    // first lets get the shortest path between the controller and each of the sources.
+    if (!points || !isStationaryBase(points)) {
+        Logger.error('calculateRoadPositions: missing points', roomName)
     }
-    const vertices = positions.map(positionToString)
-    const minPosEdges = profiledMinimumSpanningTree(edges, vertices)
-    return flatten(minPosEdges.map((edge) => pathMap[posStringPairToString(edge.a, edge.b)]))
-}
+    if (!features) {
+        Logger.error('calculateRoadPositions: missing features', roomName)
+    }
 
-function calculateRoadSpinePositions(
-    roomName: string,
-    iroom: ImmutableRoom,
-    features: ConstructionFeatures,
-): Position[] {
-    const stationaryPoints = iroom.stationaryPoints
+    const cm = roadGeneratingCostMatrix(roomName, features)
+    const roomCallback = (cbRoomName: string): CostMatrix | boolean => {
+        if (cbRoomName === roomName) {
+            return cm
+        }
+        return false
+    }
+    const routeCallback = (fromRoom: string, toRoom: string): number | undefined => {
+        if (toRoom === roomName) {
+            return undefined
+        }
+        return Infinity
+    }
+    const { storageLink, sources } = points
+    if (Object.keys(sources).length !== 2) {
+        Logger.error('calculateRoadPositions:sources length is not 2', roomName)
+    }
     if (
-        !stationaryPoints ||
-        !stationaryPoints.controllerLink ||
-        !stationaryPoints.storageLink ||
-        !iroom.stationaryPoints.sources
+        !addSourcePathsToMatrix(cm, sources, roomName, storageLink, {
+            roomCallback,
+            routeCallback,
+            heuristicWeight: 1,
+        })
     ) {
-        throw new Error('incomplete stationary points')
+        Logger.error('calculateRoadPositions:addSourcesToMatrix failed', roomName)
+        return []
     }
-    const points = [
-        iroom.stationaryPoints.controllerLink as Position,
-        iroom.stationaryPoints.storageLink as Position,
-        ...Object.values(iroom.stationaryPoints.sources),
-    ]
-    const roomCallback = (rn: string): CostMatrix | false => {
-        if (roomName !== rn) {
-            return false
-        }
-        const matrix = MatrixCacheManager.getDefaultCostMatrix(roomName).clone()
-        for (const [type, positions] of Object.entries(features)) {
-            if (!isObstacle(type)) {
-                continue
-            }
-            for (const pos of positions) {
-                matrix.set(pos.x, pos.y, 255)
-            }
-        }
-        return matrix
-    }
+    return roadsFromCostMatrix(cm, roomName)
+}
 
-    const roadPositions = calculateMinPathPositions(
-        points.map((p) => new RoomPosition(p.x, p.y, roomName)),
-        roomCallback,
-    )
+function roadsFromCostMatrix(cm: CostMatrix, roomName: string): Position[] {
+    const roadPositions: Position[] = []
+    for (let x = 0; x < 50; x++) {
+        for (let y = 0; y < 50; y++) {
+            if (cm.get(x, y) === 1) {
+                roadPositions.push({ x, y })
+            }
+        }
+    }
+    roadPositions.sort(roadSortOrder(roomName))
     return roadPositions
-        .filter((pos) => iroom.isGoodRoadPosition(pos.x, pos.y))
-        .map((pos) => ({ x: pos.x, y: pos.y }))
 }
 
-export const minimumSpanningTree = (edges: PositionEdge[], vertices: string[]): PositionEdge[] => {
-    const graph = createGraph(edges, vertices)
-    const mst = prim(graph)
-    const minPosEdge: PositionEdge[] = []
-    for (const minEdge of mst.getEdges()) {
-        const a = minEdge.startVertex.key
-        const b = minEdge.endVertex.key
-        minPosEdge.push({ a, b, weight: minEdge.weight })
+function addSourcePathsToMatrix(
+    cm: CostMatrix,
+    sources: { [id: string]: Position },
+    roomName: string,
+    storageLink: Position,
+    opts: MoveOpts,
+): boolean {
+    const closeSourcePath = generatePath(
+        new RoomPosition(storageLink.x, storageLink.y, roomName),
+        Object.values(sources).map(
+            (source) => ({ pos: new RoomPosition(source.x, source.y, roomName), range: 0 }),
+            opts,
+        ),
+    )
+    if (closeSourcePath === undefined) {
+        Logger.error('calculateRoadPositions:sources path is undefined', roomName)
+        return false
     }
-    return minPosEdge
+    addRoadsToMatrix(cm, closeSourcePath)
+    const closerSource = Object.values(sources).find(
+        (source) =>
+            source.x === closeSourcePath[closeSourcePath.length - 1].x &&
+            source.y === closeSourcePath[closeSourcePath.length - 1].y,
+    )
+    if (!closerSource) {
+        Logger.error('calculateRoadPositions:closerSource is undefined', roomName)
+        return false
+    }
+    const furtherSource = Object.values(sources).find(
+        (source) =>
+            source.x !== closeSourcePath[closeSourcePath.length - 1].x ||
+            source.y !== closeSourcePath[closeSourcePath.length - 1].y,
+    )
+    if (!furtherSource) {
+        Logger.error('calculateRoadPositions:furtherSource is undefined', roomName)
+        return false
+    }
+    Logger.error(
+        `debug:(closerSource, furtherSource) (${closerSource.x}, ${closerSource.y}), (${furtherSource.x}, ${furtherSource.y})`,
+        roomName,
+    )
+    const farSourcePath = generatePath(
+        new RoomPosition(storageLink.x, storageLink.y, roomName),
+        [{ pos: new RoomPosition(furtherSource.x, furtherSource.y, roomName), range: 0 }],
+        opts,
+    )
+    if (farSourcePath === undefined) {
+        Logger.error('calculateRoadPositions:farSourcePath is undefined', roomName)
+        return false
+    }
+    addRoadsToMatrix(cm, farSourcePath)
+    return true
 }
 
-const profiledMinimumSpanningTree = Profiling.wrap(minimumSpanningTree, 'minimumSpanningTree')
+function addRoadsToMatrix(cm: CostMatrix, path: RoomPosition[]): void {
+    for (const pos of path) {
+        cm.set(pos.x, pos.y, 1)
+    }
+}
 
-const createGraph = (edges: PositionEdge[], vertices: string[]): Graph => {
-    const graph = new Graph(false)
-    const graphVertices = vertices.map((vertex) => new GraphVertex(vertex))
-    edges.forEach((edge) => {
-        const aVertex = graphVertices.find((vertex) => vertex.key === edge.a)
-        const bVertex = graphVertices.find((vertex) => vertex.key === edge.b)
-        if (!aVertex || !bVertex) {
-            throw new Error('vertex not found')
+function roadGeneratingCostMatrix(roomName: string, features: ConstructionFeatures): CostMatrix {
+    const terrain = new Room.Terrain(roomName)
+    const cm = new PathFinder.CostMatrix()
+    for (let x = 0; x < 50; x++) {
+        for (let y = 0; y < 50; y++) {
+            if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+                cm.set(x, y, 255)
+            } else if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) {
+                cm.set(x, y, 3)
+            } else {
+                cm.set(x, y, 2)
+            }
         }
-        const graphEdge = new GraphEdge(aVertex, bVertex, edge.weight)
-        graph.addEdge(graphEdge)
-    })
-    return graph
+    }
+    for (const buildingType of Object.keys(features)) {
+        let value = 255
+        if (buildingType === STRUCTURE_ROAD) {
+            value = 1
+        }
+        if (
+            buildingType !== STRUCTURE_ROAD &&
+            (!isObstacle(buildingType) || !features[buildingType as ConstructableStructureConstant])
+        ) {
+            continue
+        }
+        for (const pos of features[buildingType as ConstructableStructureConstant] ?? []) {
+            cm.set(pos.x, pos.y, value)
+        }
+    }
+    return cm
 }

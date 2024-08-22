@@ -50,7 +50,7 @@ const ENERGY_DATA: DataPoint[] = [
     [300, 0.12],
     [800, 0.35],
     [1800, 0.5],
-    [2300, 1],
+    [2300, 1.1],
 ]
 const REGRESSION_PRECISION = 12
 const regressions: [string, Result][] = [

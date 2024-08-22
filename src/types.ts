@@ -77,6 +77,20 @@ export interface Links {
     }[]
 }
 
+export type ConstructableStructureConstant =
+    | 'spawn'
+    | 'constructedWall'
+    | 'extension'
+    | 'link'
+    | 'storage'
+    | 'tower'
+    | 'observer'
+    | 'powerSpawn'
+    | 'lab'
+    | 'terminal'
+    | 'nuker'
+    | 'factory'
+
 export type Obstacle = typeof OBSTACLE_OBJECT_TYPES[number]
 export type NonObstacle = 'road' | 'constructionSite' | 'rampart' | 'container'
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

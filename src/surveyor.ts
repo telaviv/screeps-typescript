@@ -35,7 +35,7 @@ import {
 } from 'utils/room'
 import BUNKER from 'stamps/bunker'
 import { SubscriptionEvent } from 'pub-sub/constants'
-import { calculateBunkerRoadPositions } from 'room-analysis/calculate-road-positions'
+import { calculateRoadPositions } from 'room-analysis/calculate-road-positions'
 import { destroyMovementStructures } from 'construction-movement'
 import { publish } from 'pub-sub/pub-sub'
 
@@ -204,10 +204,9 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
             .map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_RAMPART]: [] as Position[],
-        [STRUCTURE_ROAD]: [] as Position[],
+        [STRUCTURE_ROAD]: iroom.getNonObstacles('road').map((pos) => ({ x: pos.x, y: pos.y })),
     }
     features[STRUCTURE_RAMPART] = getRampartPositions(iroom)
-    features[STRUCTURE_ROAD] = calculateBunkerRoadPositions(roomName, iroom, features)
     const points = iroom.stationaryPoints
     if (!points || !points.controllerLink || !points.sources || !points.storageLink) {
         throw new Error('no stationary points')
@@ -224,6 +223,7 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
         throw new Error('no scouted source positions')
     }
     const links = calculateLinks(roomName, sourcePositions, iroom)
+    features[STRUCTURE_ROAD] = calculateRoadPositions(roomName, features, stationaryPoints)
     return {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
         type: 'base',
