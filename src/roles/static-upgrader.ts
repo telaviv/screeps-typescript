@@ -1,10 +1,11 @@
 import * as Logger from 'utils/logger'
 import {
+    isStationaryBase,
     getCalculatedLinks,
     getStationaryPoints,
     getStationaryPointsBase,
 } from 'construction-features'
-import { isStationaryBase, Position } from 'types'
+import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
 import { getTotalWithdrawableResources } from 'tasks/withdraw'

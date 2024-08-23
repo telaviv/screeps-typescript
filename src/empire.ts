@@ -7,7 +7,7 @@ import { findClaimCapableRooms, findMyRooms, findSpawnRooms, hasNoSpawns } from 
 import { HostileRecorder } from 'hostiles'
 import { ScoutManager } from 'managers/scout-manager'
 import { canBeClaimCandidate } from 'claim'
-import { getConstructionFeaturesFromMemory } from 'construction-features'
+import { getConstructionFeatures } from 'construction-features'
 import { profile } from 'utils/profiling'
 
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
@@ -160,7 +160,7 @@ export default class Empire {
         const candidates = closestRooms.filter(({ roomName }) => {
             if (!Memory.rooms[roomName]) return false
             if (Game.rooms[roomName]?.controller?.my) return false
-            const features = getConstructionFeaturesFromMemory(Memory.rooms[roomName])
+            const features = getConstructionFeatures(roomName)
             if (!features || !canBeClaimCandidate(Memory.rooms[roomName])) return false
             const neighbors = world.getClosestRooms([roomName], ENEMY_DISTANCE_BUFFER)
             // if any neighbor is owned by an enemy, don't claim

@@ -1,7 +1,7 @@
-import { getConstructionFeaturesFromMemory } from 'construction-features'
+import { getConstructionFeatures } from 'construction-features'
 
 export function getVirtualStorage(roomName: string): StructureStorage | StructureContainer | null {
-    const features = getConstructionFeaturesFromMemory(Memory.rooms[roomName])
+    const features = getConstructionFeatures(roomName)
     if (!features || !features[STRUCTURE_STORAGE] || features[STRUCTURE_STORAGE].length === 0) {
         return null
     }

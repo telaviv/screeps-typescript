@@ -1,14 +1,13 @@
 import { generatePath, MoveOpts } from 'screeps-cartographer'
 
 import * as Logger from '../utils/logger'
+import { ConstructableStructureConstant, FlatRoomPosition, isObstacle, Position } from '../types'
 import {
-    ConstructableStructureConstant,
     ConstructionFeatures,
-    isObstacle,
-    isStationaryBase,
-    Position,
     StationaryPointsBase,
-} from '../types'
+    isStationaryBase,
+} from '../construction-features'
+import { Mine } from 'managers/mine-manager'
 
 export interface PositionEdge {
     a: string
@@ -29,7 +28,8 @@ export function calculateRoadPositions(
     roomName: string,
     features: ConstructionFeatures,
     points: StationaryPointsBase,
-): Position[] {
+    mines: Mine[],
+): { roads: Position[]; exitInfo: ExitInformation } {
     // first lets get the shortest path between the controller and each of the sources.
     if (!points || !isStationaryBase(points)) {
         Logger.error('calculateRoadPositions: missing points', roomName)
@@ -38,7 +38,7 @@ export function calculateRoadPositions(
         Logger.error('calculateRoadPositions: missing features', roomName)
     }
 
-    const cm = roadGeneratingCostMatrix(roomName, features)
+    const cm = roadGeneratingCostMatrix(roomName, features, points)
     const roomCallback = (cbRoomName: string): CostMatrix | boolean => {
         if (cbRoomName === roomName) {
             return cm
@@ -58,13 +58,20 @@ export function calculateRoadPositions(
     }
     if (!addSourcePathsToMatrix(cm, sources, roomName, storageLink, opts)) {
         Logger.error('calculateRoadPositions:addSourcesToMatrix failed', roomName)
-        return []
+        return { roads: [], exitInfo: [] }
     }
     if (!addControllerLinkPathToMatrix(cm, controllerLink, roomName, storageLink, opts)) {
         Logger.error('calculateRoadPositions:addControllerLinkPathToMatrix failed', roomName)
-        return []
+        return { roads: [], exitInfo: [] }
     }
-    return roadsFromCostMatrix(cm, roomName)
+    const exitInfo = addMineRoadsToMatrix(cm, mines, roomName, storageLink, cm)
+    if (!exitInfo) {
+        Logger.error('calculateRoadPositions:addMineRoadsToMatrix failed', roomName)
+        return { roads: [], exitInfo: [] }
+    }
+    // we've set the storage to 1 to allow pathfinding. let's quit that
+    cm.set(storageLink.x, storageLink.y, 255)
+    return { roads: roadsFromCostMatrix(cm, roomName), exitInfo }
 }
 
 function roadsFromCostMatrix(cm: CostMatrix, roomName: string): Position[] {
@@ -79,6 +86,66 @@ function roadsFromCostMatrix(cm: CostMatrix, roomName: string): Position[] {
     roadPositions.sort(roadSortOrder(roomName))
     return roadPositions
 }
+type ExitInformation = {
+    name: string
+    exitPosition: FlatRoomPosition
+    entrancePosition: FlatRoomPosition
+}[]
+function addMineRoadsToMatrix(
+    cm: CostMatrix,
+    mines: Mine[],
+    roomName: string,
+    storageLink: Position,
+    startRoomCostMatrix: CostMatrix,
+): ExitInformation | null {
+    const exitInfo: ExitInformation = []
+    for (const mine of mines) {
+        const mineCostMatrix = roadGeneratingCostMatrix(mine.name, {})
+        const roomCallback = (cbRoomName: string): CostMatrix | boolean => {
+            if (cbRoomName === mine.name) {
+                return mineCostMatrix
+            } else if (cbRoomName === roomName) {
+                return startRoomCostMatrix
+            }
+            return false
+        }
+        const routeCallback = (fromRoom: string, toRoom: string): number | undefined => {
+            if (toRoom === mine.name || toRoom === roomName) {
+                return undefined
+            }
+            return Infinity
+        }
+        const scout = Memory.rooms[mine.name].scout
+        if (!scout || !scout.sourcePositions) {
+            Logger.error('calculateRoadPositions:mine scout is undefined', roomName, mine.name)
+            return null
+        }
+        const moveTarget = Object.values(scout.sourcePositions).map(({ x, y }) => ({
+            pos: new RoomPosition(x, y, mine.name),
+            range: 1,
+        }))
+        const path = generatePath(
+            new RoomPosition(storageLink.x, storageLink.y, roomName),
+            moveTarget,
+            { roomCallback, routeCallback, heuristicWeight: 1 },
+        )
+        if (path === undefined) {
+            Logger.error('calculateRoadPositions:mine path is undefined', roomName)
+            return null
+        }
+        const minerPath = path.filter((pos) => pos.roomName === roomName)
+        const mineePath = path.filter((pos) => pos.roomName === mine.name)
+        if (minerPath.length === 0 || mineePath.length === 0) {
+            Logger.error('calculateRoadPositions:mine entrance or exit is undefined', roomName)
+            return null
+        }
+        const exitPosition = minerPath[minerPath.length - 1]
+        const entrancePosition = mineePath[0]
+        addRoadsToMatrix(cm, minerPath.slice(0, -1)) // slice off the end since you can't build there
+        exitInfo.push({ name: mine.name, exitPosition, entrancePosition })
+    }
+    return exitInfo
+}
 
 function addControllerLinkPathToMatrix(
     cm: CostMatrix,
@@ -87,6 +154,7 @@ function addControllerLinkPathToMatrix(
     storageLink: Position,
     opts: MoveOpts,
 ): boolean {
+    cm.set(controllerLink.x, controllerLink.y, 1)
     const path = generatePath(
         new RoomPosition(storageLink.x, storageLink.y, roomName),
         [{ pos: new RoomPosition(controllerLink.x, controllerLink.y, roomName), range: 0 }],
@@ -97,6 +165,7 @@ function addControllerLinkPathToMatrix(
         return false
     }
     addRoadsToMatrix(cm, path)
+    cm.set(controllerLink.x, controllerLink.y, 255)
     return true
 }
 
@@ -107,6 +176,10 @@ function addSourcePathsToMatrix(
     storageLink: Position,
     opts: MoveOpts,
 ): boolean {
+    // for now let's pretend the sources are roads
+    for (const source of Object.values(sources)) {
+        cm.set(source.x, source.y, 1)
+    }
     const closeSourcePath = generatePath(
         new RoomPosition(storageLink.x, storageLink.y, roomName),
         Object.values(sources).map(
@@ -118,35 +191,53 @@ function addSourcePathsToMatrix(
         Logger.error('calculateRoadPositions:sources path is undefined', roomName)
         return false
     }
-    addRoadsToMatrix(cm, closeSourcePath)
     const closerSource = Object.values(sources).find(
         (source) =>
             source.x === closeSourcePath[closeSourcePath.length - 1].x &&
             source.y === closeSourcePath[closeSourcePath.length - 1].y,
     )
-    if (!closerSource) {
-        Logger.error('calculateRoadPositions:closerSource is undefined', roomName)
-        return false
-    }
     const furtherSource = Object.values(sources).find(
         (source) =>
             source.x !== closeSourcePath[closeSourcePath.length - 1].x ||
             source.y !== closeSourcePath[closeSourcePath.length - 1].y,
     )
+
     if (!furtherSource) {
         Logger.error('calculateRoadPositions:furtherSource is undefined', roomName)
         return false
     }
+    if (!closerSource) {
+        Logger.error('calculateRoadPositions:closerSource is undefined', roomName)
+        return false
+    }
+    // let's make sure we don't pass through the far source
+    cm.set(furtherSource.x, furtherSource.y, 255)
+    const safeCloseSourcePath = generatePath(
+        new RoomPosition(storageLink.x, storageLink.y, roomName),
+        Object.values(sources).map(
+            (source) => ({ pos: new RoomPosition(source.x, source.y, roomName), range: 0 }),
+            opts,
+        ),
+    )
+    if (safeCloseSourcePath === undefined) {
+        Logger.error('calculateRoadPositions:sources:safe-close path is undefined', roomName)
+        return false
+    }
+    addRoadsToMatrix(cm, safeCloseSourcePath)
+    cm.set(closerSource.x, closerSource.y, 255)
+    cm.set(furtherSource.x, furtherSource.y, 1)
     const farSourcePath = generatePath(
         new RoomPosition(storageLink.x, storageLink.y, roomName),
         [{ pos: new RoomPosition(furtherSource.x, furtherSource.y, roomName), range: 0 }],
         opts,
     )
+    // now add back the 2nd point as a wall
     if (farSourcePath === undefined) {
         Logger.error('calculateRoadPositions:farSourcePath is undefined', roomName)
         return false
     }
     addRoadsToMatrix(cm, farSourcePath)
+    cm.set(furtherSource.x, furtherSource.y, 255)
     return true
 }
 
@@ -156,7 +247,11 @@ function addRoadsToMatrix(cm: CostMatrix, path: RoomPosition[]): void {
     }
 }
 
-function roadGeneratingCostMatrix(roomName: string, features: ConstructionFeatures): CostMatrix {
+function roadGeneratingCostMatrix(
+    roomName: string,
+    features: ConstructionFeatures,
+    points?: StationaryPointsBase,
+): CostMatrix {
     const terrain = new Room.Terrain(roomName)
     const cm = new PathFinder.CostMatrix()
     for (let x = 0; x < 50; x++) {
@@ -175,15 +270,24 @@ function roadGeneratingCostMatrix(roomName: string, features: ConstructionFeatur
         if (buildingType === STRUCTURE_ROAD) {
             value = 1
         }
+
         if (
-            buildingType !== STRUCTURE_ROAD &&
-            (!isObstacle(buildingType) || !features[buildingType as ConstructableStructureConstant])
+            !features[buildingType as ConstructableStructureConstant] ||
+            !(isObstacle(buildingType) || buildingType === STRUCTURE_ROAD)
         ) {
             continue
         }
         for (const pos of features[buildingType as ConstructableStructureConstant] ?? []) {
             cm.set(pos.x, pos.y, value)
         }
+    }
+    if (points) {
+        for (const point of Object.values(points.sources)) {
+            cm.set(point.x, point.y, 255)
+        }
+        cm.set(points.controllerLink.x, points.controllerLink.y, 255)
+        // we need the storage open for pathfinding. we will reset it later
+        cm.set(points.storageLink.x, points.storageLink.y, 1)
     }
     return cm
 }

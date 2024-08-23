@@ -5,23 +5,21 @@ import semverGte from 'semver/functions/gte'
 import * as Logger from 'utils/logger'
 import * as Profiling from 'utils/profiling'
 import {
-    BaseRoomType,
+    CONSTRUCTION_FEATURES_V3_VERSION,
+    CONSTRUCTION_FEATURES_VERSION,
+    LINKS_VERSION,
+    STATIONARY_POINTS_VERSION,
     ConstructionFeatures,
     ConstructionFeaturesV3,
     ConstructionMovement,
-    isObstacle,
     Links,
-    Position,
     StationaryPointsBase,
-    StationaryPointsMine,
-} from 'types'
-import {
-    CONSTRUCTION_FEATURES_V3_VERSION,
     getCalculatedLinks,
     getConstructionFeatures,
     getConstructionFeaturesV3,
     getStationaryPoints,
-    getValidConstructionFeaturesV3,
+    constructionFeaturesV3NeedsUpdate,
+    MinerInformation,
 } from 'construction-features'
 import { ImmutableRoom, fromScoutData } from 'utils/immutable-room'
 import {
@@ -33,15 +31,13 @@ import {
     getRoomType,
     RoomType,
 } from 'utils/room'
+import { isObstacle, Position } from 'types'
 import BUNKER from 'stamps/bunker'
+import { Mine } from 'managers/mine-manager'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { calculateRoadPositions } from 'room-analysis/calculate-road-positions'
 import { destroyMovementStructures } from 'construction-movement'
 import { publish } from 'pub-sub/pub-sub'
-
-export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
-export const STATIONARY_POINTS_VERSION = '1.1.0'
-export const LINKS_VERSION = '1.0.0'
 
 const MIN_SURVEY_CPU = 1500
 
@@ -67,17 +63,6 @@ global.setConstructionFeaturesV3 = setConstructionFeaturesV3
 global.clearConstructionFeatures = clearConstructionFeatures
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
 
-function createConstructionFeaturesV3(
-    type: BaseRoomType,
-    features?: ConstructionFeatures,
-): ConstructionFeaturesV3 {
-    return {
-        version: CONSTRUCTION_FEATURES_V3_VERSION,
-        type,
-        features,
-    }
-}
-
 export function isSurveyComplete(room: Room): boolean {
     return Boolean(
         getConstructionFeatures(room) && getCalculatedLinks(room) && getStationaryPoints(room),
@@ -96,18 +81,6 @@ function clearAllConstructionFeatures() {
     each(Game.rooms, (room: Room) => {
         clearConstructionFeatures(room.name)
     })
-}
-
-function saveConstructionFeatures(name: string, memory: RoomMemory) {
-    if (Game.cpu.bucket <= MIN_SURVEY_CPU) {
-        return
-    }
-    if (
-        !memory.constructionFeaturesV3 ||
-        memory.constructionFeaturesV3.version !== CONSTRUCTION_FEATURES_V3_VERSION
-    ) {
-        setConstructionFeaturesV3(name)
-    }
 }
 
 function setConstructionFeaturesV3(roomName: string) {
@@ -156,38 +129,13 @@ export function isConstructionFeaturesUpToDate(room: Room): boolean {
     )
 }
 
-function calculateMineConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 {
-    const iroom = calculateMineImmutableRoom(roomName)
-    if (!iroom || !iroom.stationaryPoints.sources) {
-        Logger.error('calculateMineConstructionFeaturesV3:failed', roomName)
-        return createConstructionFeaturesV3('mine')
-    }
-    const features = {
-        [STRUCTURE_CONTAINER]: iroom
-            .getNonObstacles('container')
-            .map((pos) => ({ x: pos.x, y: pos.y })),
-    }
-    const stationaryPoints: StationaryPointsMine = {
-        type: 'mine',
-        version: STATIONARY_POINTS_VERSION,
-        sources: iroom.stationaryPoints.sources,
-    }
-    return {
-        version: CONSTRUCTION_FEATURES_V3_VERSION,
-        type: 'mine',
-        features,
-        points: stationaryPoints,
-        movement: null, // let's calculate movement at a later time
-    }
-}
-
 function calculateConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 {
     if (getRoomType(roomName) !== RoomType.ROOM) {
-        return createConstructionFeaturesV3('none')
+        return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'none' }
     }
     const iroom = calculateBunkerImmutableRoom(roomName)
     if (!iroom) {
-        return calculateMineConstructionFeaturesV3(roomName)
+        return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'mine' }
     }
     const features = {
         [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
@@ -222,14 +170,20 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     if (!sourcePositions) {
         throw new Error('no scouted source positions')
     }
-    const links = calculateLinks(roomName, sourcePositions, iroom)
-    features[STRUCTURE_ROAD] = calculateRoadPositions(roomName, features, stationaryPoints)
+    const mines: Mine[] = Memory.rooms[roomName].mines ?? []
+    const { roads, exitInfo } = calculateRoadPositions(roomName, features, stationaryPoints, mines)
+    features[STRUCTURE_ROAD] = roads
+    const miner: MinerInformation = {}
+    for (const { name, exitPosition } of exitInfo) {
+        miner[name] = { exitPosition }
+    }
     return {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
         type: 'base',
         features,
         points: stationaryPoints,
-        links,
+        links: calculateLinks(roomName, sourcePositions, iroom),
+        miner,
         movement: null, // let's calculate movement at a later time
     }
 }
@@ -317,30 +271,6 @@ function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
     return iroom
 }
 
-function calculateMineImmutableRoom(roomName: string): ImmutableRoom | null {
-    const roomMemory = Memory.rooms[roomName]
-    if (!roomMemory?.scout) {
-        throw new Error('no scout data ' + roomName)
-    }
-    const scout = roomMemory.scout
-    if (!scout || !scout.sourcePositions || !scout.controllerPosition || !scout.mineralPosition) {
-        return null
-    }
-    const sourcePositions = scout.sourcePositions
-    const controllerPosition = scout.controllerPosition
-    const mineralPosition = scout.mineralPosition
-    const scoutData = { sourcePositions, controllerPosition, mineralPosition }
-    let iroom: ImmutableRoom | null = fromScoutData(roomName, scoutData)
-    if (!iroom) {
-        return null
-    }
-    iroom = iroom.setSourceContainers()
-    if (!iroom) {
-        return null
-    }
-    return iroom
-}
-
 function getRampartPositions(iroom: ImmutableRoom): Position[] {
     type Position = [number, number]
     const isCenter = (pos: Position): boolean => {
@@ -354,9 +284,17 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
 }
 
 const assignRoomFeatures = Profiling.wrap(() => {
+    if (Game.cpu.bucket <= MIN_SURVEY_CPU) {
+        return
+    }
     for (const [name, memory] of Object.entries(Memory.rooms)) {
-        if (memory.scout && semverGte(memory.scout.version, '1.1.0')) {
-            saveConstructionFeatures(name, memory)
+        if (
+            memory.scout &&
+            semverGte(memory.scout.version, '1.1.0') &&
+            constructionFeaturesV3NeedsUpdate(name)
+        ) {
+            setConstructionFeaturesV3(name)
+            return
         }
     }
 }, 'assignRoomFeatures')
@@ -372,12 +310,12 @@ const clearRooms = Profiling.wrap(() => {
         }
     }
     for (const room of myRooms) {
-        const constructionFeatures = getValidConstructionFeaturesV3(room)
+        const constructionFeatures = getConstructionFeaturesV3(room)
         const features = getConstructionFeatures(room)
         if (!constructionFeatures || !features) {
             return
         }
-        if (constructionFeatures.movement) {
+        if (constructionFeatures.type !== 'none' && constructionFeatures.movement) {
             if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
                 return
             }
@@ -394,10 +332,7 @@ function clearInvalidConstructionSites(room: Room, features: ConstructionFeature
     const sites = getConstructionSites(room)
     for (const site of sites) {
         const buildings = features[site.structureType]
-        if (
-            site.structureType === 'spawn' &&
-            buildings?.some((pos) => pos.x === site.pos.x && pos.y === site.pos.y)
-        ) {
+        if (buildings?.some((pos) => pos.x === site.pos.x && pos.y === site.pos.y)) {
             continue
         }
         Logger.warning('clearInvalidConstructionSites:removed', site.structureType, site.pos)
@@ -409,7 +344,12 @@ function calculateRoomMovement() {
     for (const room of Object.values(Game.rooms)) {
         const constructionFeaturesV3 = getConstructionFeaturesV3(room)
         const features = getConstructionFeatures(room)
-        if (!constructionFeaturesV3 || constructionFeaturesV3.movement !== null || !features) {
+        if (
+            !constructionFeaturesV3 ||
+            constructionFeaturesV3.type === 'none' ||
+            constructionFeaturesV3.movement !== null ||
+            !features
+        ) {
             continue
         }
         constructionFeaturesV3.movement = calculateBuildingDiff(room, features)

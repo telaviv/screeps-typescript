@@ -1,8 +1,8 @@
 import { World } from 'utils/world'
 import { findMyRooms } from 'utils/room'
-import { getConstructionFeaturesV3FromMemory } from 'construction-features'
+import { getConstructionFeaturesV3 } from 'construction-features'
 
-interface Mine {
+export interface Mine {
     name: string
 }
 
@@ -71,7 +71,7 @@ export class MineManager {
             )
             .map((r) => r.roomName)
         return closest.filter((name) => {
-            const features = getConstructionFeaturesV3FromMemory(Memory.rooms[name])
+            const features = getConstructionFeaturesV3(name)
             if (!features || features.type !== 'mine') {
                 return false
             }

@@ -1,7 +1,7 @@
 import semverGte from 'semver/functions/gte'
 
 import * as Logger from 'utils/logger'
-import { ConstructionFeaturesV3, Position } from 'types'
+import { ConstructionFeaturesV3, getConstructionFeaturesV3 } from 'construction-features'
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
 import {
@@ -13,9 +13,9 @@ import {
     RoomType,
 } from 'utils/room'
 import { mprofile, profile } from 'utils/profiling'
+import { Position } from 'types'
 import { RoomManager } from './room-manager'
 import { createTravelTask } from 'tasks/travel'
-import { getConstructionFeaturesV3FromMemory } from 'construction-features'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
@@ -123,7 +123,7 @@ class ScoutManager {
             if (memory.scout) {
                 scoutRoomData[name] = memory.scout
             }
-            const features = getConstructionFeaturesV3FromMemory(memory)
+            const features = getConstructionFeaturesV3(name)
             if (features) {
                 featureRoomData[name] = features
             }

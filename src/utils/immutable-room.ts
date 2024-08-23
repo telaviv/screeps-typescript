@@ -3,25 +3,18 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
 
 import { List, Map, Record as IRecord, RecordOf, Seq, ValueObject } from 'immutable'
+import { includes, random, range, sortBy, times, reverse, uniqBy } from 'lodash'
 
 import * as Logger from 'utils/logger'
 import { EXTENSION_COUNTS, SPAWN_COUNTS, TOWER_COUNTS, getSources } from './room'
-import {
-    FlatRoomPosition,
-    NonObstacle,
-    Obstacle,
-    Position,
-    StationaryPointsBase,
-    isNonObstacle,
-    isObstacle,
-} from 'types'
+import { FlatRoomPosition, NonObstacle, Obstacle, Position, isNonObstacle, isObstacle } from 'types'
 import { Stamp, StampMetadata } from 'stamps/types'
 import {
     getPositionsFromTransform,
     getWallTransform,
     sumTransformsFromPositions,
 } from 'room-analysis/distance-transform'
-import { includes, random, range, reverse, sortBy, times, uniqBy } from 'lodash'
+import { StationaryPointsBase } from 'construction-features'
 import { getStampMetadata } from 'stamps/utils'
 import { wrap } from 'utils/profiling'
 

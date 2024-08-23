@@ -47,9 +47,10 @@ function getLatentWorkerInterval(room: Room): number {
     return 100
 }
 const ENERGY_DATA: DataPoint[] = [
+    [300, 0.25],
     [800, 0.35],
-    [1800, 0.5],
-    [2300, 1.1],
+    [1800, 0.75],
+    [2300, 2.5],
 ]
 const REGRESSION_PRECISION = 12
 const regressions: [string, Result][] = [

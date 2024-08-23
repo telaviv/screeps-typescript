@@ -3,8 +3,9 @@ import {
     getCalculatedLinks,
     getStationaryPoints,
     getStationaryPointsBase,
+    isStationaryBase,
 } from 'construction-features'
-import { isStationaryBase, Position } from 'types'
+import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
 import { hasNoEnergy } from 'utils/energy-harvesting'

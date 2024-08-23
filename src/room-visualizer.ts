@@ -2,14 +2,13 @@ import colormap from 'colormap'
 import filter from 'lodash/filter'
 
 import * as Logger from 'utils/logger'
+import { ConstructionFeatures, getConstructionFeatures } from 'construction-features'
 import {
     getSumTransform,
     getTransformFromId,
     getWallTransform,
 } from 'room-analysis/distance-transform'
-import { ConstructionFeatures } from 'types'
 import { findMyRooms } from 'utils/room'
-import { getConstructionFeatures } from 'construction-features'
 
 const MAX_BUNKER_DIMENSION = 13 // for now we have a 13 x 12 bunker
 type VisualType = 'construction' | 'transform'

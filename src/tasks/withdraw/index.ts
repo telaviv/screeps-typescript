@@ -6,7 +6,7 @@ import { getFreeCapacity, getUsedCapacity } from 'utils/store'
 import { ResourceCreep } from '../types'
 import { WithdrawObject } from './object'
 import { findClosestByRange } from 'utils/room-position'
-import { getConstructionFeaturesFromMemory } from 'construction-features'
+import { getConstructionFeatures } from 'construction-features'
 import { getHome } from 'roles/utils'
 import { isWithdrawTask } from './utils'
 import { moveTo } from 'utils/travel'
@@ -169,7 +169,7 @@ function isTemporary(withdrawable: WithdrawObject): boolean {
 }
 
 export function isVirtualStorage(structure: Withdrawable): boolean {
-    const features = getConstructionFeaturesFromMemory(Memory.rooms[(structure.room as Room).name])
+    const features = getConstructionFeatures(structure.room as Room)
     if (!features || !features[STRUCTURE_STORAGE] || features[STRUCTURE_STORAGE].length === 0) {
         return false
     }

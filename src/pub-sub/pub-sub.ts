@@ -31,7 +31,7 @@ export function publish(type: string, key: string, data?: unknown): void {
         return
     }
     for (const [id, callback] of Object.entries(global.pubsub[subscriptionKey])) {
-        Logger.error('publishing', type, key, id)
+        Logger.info('publishing', type, key, id)
         callback(data)
     }
 }

@@ -2,7 +2,7 @@ import includes from 'lodash/includes'
 import pokemon from 'pokemon'
 
 import * as Logger from 'utils/logger'
-import { ConstructionFeatures, Position } from 'types'
+import { ConstructionFeatures, getConstructionFeatures } from 'construction-features'
 import {
     LINK_COUNTS,
     MIN_RAMPART_LEVEL,
@@ -26,7 +26,7 @@ import {
     makeSpawnConstructionSite,
 } from 'utils/room'
 import { profile, wrap } from 'utils/profiling'
-import { getConstructionFeatures } from 'construction-features'
+import { Position } from 'types'
 
 const IMPORTANT_EXTENSION_MAX = 7 // this should let us get a claim going
 

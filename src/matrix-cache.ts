@@ -1,11 +1,10 @@
 /* eslint-disable no-bitwise */
 
 import * as Logger from 'utils/logger'
+import { getStationaryPoints, isStationaryBase } from 'construction-features'
 import { mprofile, profile, wrap } from 'utils/profiling'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { getObstacles } from 'utils/room'
-import { getStationaryPointsFromMemory } from 'construction-features'
-import { isStationaryBase } from 'types'
 import { subscribe } from 'pub-sub/pub-sub'
 
 export type MatrixTag =
@@ -103,7 +102,7 @@ export class MatrixCacheManager {
                 roomName,
                 MATRIX_CACHE_ID,
                 () => {
-                    Logger.error(
+                    Logger.info(
                         'caught event',
                         SubscriptionEvent.CONSTRUCTION_FEATURES_UPDATES,
                         roomName,
@@ -304,7 +303,7 @@ export class MatrixCacheManager {
 
     @profile
     private addStationaryPoints(matrix: CostMatrix): CostMatrix {
-        const points = getStationaryPointsFromMemory(Memory.rooms[this.roomName])
+        const points = getStationaryPoints(this.roomName)
         if (!points) {
             return matrix
         }
