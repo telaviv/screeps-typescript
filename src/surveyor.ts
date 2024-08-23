@@ -198,6 +198,15 @@ function calculateBuildingDiff(room: Room, features: ConstructionFeatures): Cons
         if (match) {
             continue
         }
+        // if there's a container temporarily replacing a storage, don't worry about it
+        if (builtStructure.structureType === STRUCTURE_CONTAINER) {
+            const storage = features[STRUCTURE_STORAGE]?.find(
+                ({ x, y }) => x === builtStructure.pos.x && y === builtStructure.pos.y,
+            )
+            if (storage) {
+                continue
+            }
+        }
         if (!diff[builtStructure.structureType]) {
             diff[builtStructure.structureType] = {
                 moveTo: [],

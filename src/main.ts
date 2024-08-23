@@ -30,6 +30,7 @@ import { ScoutManager } from 'managers/scout-manager'
 import { clearImmutableRoomCache } from 'utils/immutable-room'
 import { ensureSlidingWindow } from 'room-window'
 import { getBuildManager } from 'managers/build-manager'
+import { hasHostileCreeps } from 'utils/room'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
@@ -135,7 +136,10 @@ const ensureSafeMode = wrap((room: Room) => {
     }
     for (const event of room.getEventLog()) {
         if (event.event === EVENT_OBJECT_DESTROYED) {
-            if (event.data.type !== 'creep' && event.data.type !== 'container') {
+            if (event.data.type !== 'creep') {
+                if (!hasHostileCreeps(room)) {
+                    continue
+                }
                 const err = room.controller.activateSafeMode()
                 Logger.error(
                     `ensure safe mode for ${room.name}: ${event.data.type} destroyed.`,
