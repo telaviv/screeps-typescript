@@ -23,6 +23,10 @@ import {
 } from 'construction-features'
 import { ImmutableRoom, fromScoutData } from 'utils/immutable-room'
 import {
+    calculateMineConstructionFeaturesV3,
+    calculateRoadPositions,
+} from 'room-analysis/calculate-road-positions'
+import {
     findMyRooms,
     findSpawnlessRooms,
     findSpawnRooms,
@@ -35,7 +39,6 @@ import { isObstacle, Position } from 'types'
 import BUNKER from 'stamps/bunker'
 import { Mine } from 'managers/mine-manager'
 import { SubscriptionEvent } from 'pub-sub/constants'
-import { calculateRoadPositions } from 'room-analysis/calculate-road-positions'
 import { destroyMovementStructures } from 'construction-movement'
 import { publish } from 'pub-sub/pub-sub'
 
@@ -174,8 +177,9 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     const { roads, exitInfo } = calculateRoadPositions(roomName, features, stationaryPoints, mines)
     features[STRUCTURE_ROAD] = roads
     const miner: MinerInformation = {}
-    for (const { name, exitPosition } of exitInfo) {
+    for (const { name, exitPosition, entrancePosition } of exitInfo) {
         miner[name] = { exitPosition }
+        setMineConstructionFeaturesV3(name, entrancePosition)
     }
     return {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
@@ -186,6 +190,27 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
         miner,
         movement: null, // let's calculate movement at a later time
     }
+}
+
+function setMineConstructionFeaturesV3(mineName: string, entrancePosition: Position): void {
+    const flatPos = { x: entrancePosition.x, y: entrancePosition.y, roomName: mineName }
+    const ret = calculateMineConstructionFeaturesV3(mineName, flatPos)
+    if (!ret) {
+        Logger.error('setMineConstructionFeaturesV3:failed', mineName)
+        return
+    }
+    const { features, points } = ret
+    const constructionFeaturesV3: ConstructionFeaturesV3 = {
+        version: CONSTRUCTION_FEATURES_V3_VERSION,
+        type: 'mine',
+        features,
+        points: { version: STATIONARY_POINTS_VERSION, type: 'mine', sources: points },
+        minee: {
+            entrancePosition: flatPos,
+        },
+        movement: null,
+    }
+    Memory.rooms[mineName].constructionFeaturesV3 = constructionFeaturesV3
 }
 
 function calculateBuildingDiff(room: Room, features: ConstructionFeatures): ConstructionMovement {

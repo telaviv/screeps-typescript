@@ -158,7 +158,7 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
     const roomName = typeof room === 'string' ? room : room.name
     const featuresV3 = getConstructionFeaturesV3FromMemory(memory)
     if (!featuresV3) {
-        Logger.error('debug:constructionFeaturesV3NeedsUpdate: no featuresV3', roomName)
+        Logger.warning('constructionFeaturesV3NeedsUpdate: no featuresV3', roomName)
         return true
     }
     if (featuresV3.type !== 'base') {
@@ -166,7 +166,7 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
     }
     const points = getStationaryPointsFromMemory(memory)
     if (!points) {
-        Logger.error('debug:constructionFeaturesV3NeedsUpdate: no stationaryPoints', roomName)
+        Logger.warning('constructionFeaturesV3NeedsUpdate: no stationaryPoints', roomName)
         return true
     }
     const mines: Mine[] | undefined = memory.mines
@@ -175,12 +175,39 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
     const featureMines = new Set(Object.keys(miningInfo ?? {}))
     const ret = !isEqual(memoryMines, featureMines)
     if (ret) {
-        Logger.error(
-            'debug:constructionFeaturesV3NeedsUpdate: mines differ',
+        Logger.warning(
+            'constructionFeaturesV3NeedsUpdate: mines differ',
             roomName,
             mines,
             miningInfo,
         )
+        return true
+    }
+    for (const mine of mines ?? []) {
+        const constructionFeatures = getConstructionFeaturesV3(mine.name)
+        if (!constructionFeatures) {
+            Logger.error('debug:constructionFeaturesV3NeedsUpdate: no mine features', mine.name)
+            return true
+        }
+        if (constructionFeatures.type !== 'mine') {
+            Logger.error(
+                'debug:constructionFeaturesV3NeedsUpdate: mine features not mine',
+                mine.name,
+            )
+            return true
+        }
+        if (
+            !constructionFeatures.points ||
+            !constructionFeatures.minee ||
+            !constructionFeatures.features
+        ) {
+            Logger.error(
+                'debug:constructionFeaturesV3NeedsUpdate: mine features missing data',
+                mine.name,
+                Object.keys(constructionFeatures),
+            )
+            return true
+        }
     }
     return ret
 }

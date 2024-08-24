@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { generatePath, MoveOpts } from 'screeps-cartographer'
 
 import * as Logger from '../utils/logger'
@@ -72,6 +74,117 @@ export function calculateRoadPositions(
     // we've set the storage to 1 to allow pathfinding. let's quit that
     cm.set(storageLink.x, storageLink.y, 255)
     return { roads: roadsFromCostMatrix(cm, roomName), exitInfo }
+}
+
+export function calculateMineConstructionFeaturesV3(
+    roomName: string,
+    startPosition: FlatRoomPosition,
+): { features: ConstructionFeatures; points: { [id: Id<Source>]: Position } } | null {
+    const cm = roadGeneratingCostMatrix(roomName, {})
+    const roomCallback = (cbRoomName: string): CostMatrix | boolean => {
+        if (cbRoomName === roomName) {
+            return cm
+        }
+        return false
+    }
+    const routeCallback = (fromRoom: string, toRoom: string): number | undefined => {
+        if (toRoom === roomName) {
+            return undefined
+        }
+        return Infinity
+    }
+    const scout = Memory.rooms[roomName].scout
+    if (!scout || !scout.sourcePositions) {
+        Logger.error('calculateRoadPositions:mine scout is undefined', roomName)
+        return null
+    }
+    const moveTarget = Object.values(scout.sourcePositions).map(({ x, y }) => ({
+        pos: new RoomPosition(x, y, roomName),
+        range: 1,
+    }))
+    const opts: MoveOpts = { roomCallback, routeCallback, heuristicWeight: 1 }
+    const closeSourcePath = generatePath(
+        new RoomPosition(startPosition.x, startPosition.y, roomName),
+        moveTarget,
+        opts,
+    )
+    if (closeSourcePath === undefined || closeSourcePath.length === 0) {
+        Logger.error('calculateRoadPositions:mine path is undefined', roomName)
+        return null
+    }
+    const closeSourceContainer = closeSourcePath[closeSourcePath.length - 1]
+    const closeSourceEntry = Object.entries(scout.sourcePositions).find(
+        ([_, pos]) => closeSourceContainer.isNearTo(pos.x, pos.y) === true,
+    )
+    if (!closeSourceEntry) {
+        Logger.error('calculateRoadPositions:mine close source is undefined', roomName)
+        return null
+    }
+    const closeSourceId = closeSourceEntry[0]
+    addRoadsToMatrix(cm, closeSourcePath)
+    cm.set(closeSourceContainer.x, closeSourceContainer.y, 255)
+
+    let furtherSourceContainer
+    let furtherSourceId
+    if (Object.keys(scout.sourcePositions).length === 2) {
+        const furtherSourceEntry = Object.entries(scout.sourcePositions).find(
+            ([_, pos]) => closeSourceContainer.isNearTo(pos.x, pos.y) === false,
+        )
+        if (!furtherSourceEntry) {
+            Logger.error('calculateRoadPositions:mine further source is undefined', roomName)
+            return null
+        }
+        furtherSourceId = furtherSourceEntry[0]
+        const furtherSource = furtherSourceEntry[1]
+        const furtherSourcePath = generatePath(
+            new RoomPosition(startPosition.x, startPosition.y, roomName),
+            [{ pos: new RoomPosition(furtherSource.x, furtherSource.y, roomName), range: 1 }],
+            opts,
+        )
+        if (furtherSourcePath === undefined || furtherSourcePath.length === 0) {
+            Logger.error('calculateRoadPositions:mine further path is undefined', roomName)
+            return null
+        }
+        furtherSourceContainer = furtherSourcePath[furtherSourcePath.length - 1]
+        addRoadsToMatrix(cm, furtherSourcePath)
+        cm.set(furtherSourceContainer.x, furtherSourceContainer.y, 255)
+    }
+    if (scout.controllerPosition === undefined) {
+        Logger.error('calculateRoadPositions:mine controller position is undefined', roomName)
+        return null
+    }
+    const controllerPath = generatePath(
+        new RoomPosition(startPosition.x, startPosition.y, roomName),
+        [
+            {
+                pos: new RoomPosition(
+                    scout.controllerPosition.x,
+                    scout.controllerPosition.y,
+                    roomName,
+                ),
+                range: 1,
+            },
+        ],
+        { roomCallback, routeCallback, heuristicWeight: 1 },
+    )
+    if (controllerPath === undefined || controllerPath.length === 0) {
+        Logger.error('calculateRoadPositions:mine controller path is undefined', roomName)
+        return null
+    }
+    addRoadsToMatrix(cm, controllerPath)
+    cm.set(scout.controllerPosition.x, scout.controllerPosition.y, 255)
+    cm.set(startPosition.x, startPosition.y, 255)
+    const sources = { [closeSourceId]: closeSourceContainer }
+    if (furtherSourceContainer && furtherSourceId) {
+        sources[furtherSourceId] = furtherSourceContainer
+    }
+    return {
+        features: {
+            [STRUCTURE_ROAD]: roadsFromCostMatrix(cm, roomName),
+            [STRUCTURE_CONTAINER]: Object.values(sources).map(({ x, y }) => ({ x, y })),
+        },
+        points: sources,
+    }
 }
 
 function roadsFromCostMatrix(cm: CostMatrix, roomName: string): Position[] {
