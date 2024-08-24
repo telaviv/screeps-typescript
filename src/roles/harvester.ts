@@ -21,11 +21,13 @@ const MAX_WORK_PARTS = 5
 const ROLE = 'harvester'
 
 const BODY_PLANS = [
-    byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 8 }),
-    byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 4 }),
-    byPartCount({ [MOVE]: 8, [WORK]: 8, [CARRY]: 2 }),
-    byPartCount({ [MOVE]: 7, [WORK]: 7, [CARRY]: 2 }),
-    byPartCount({ [MOVE]: 6, [WORK]: 6, [CARRY]: 2 }),
+    byPartCount({ [MOVE]: 12, [WORK]: 12, [CARRY]: 1 }),
+    byPartCount({ [MOVE]: 11, [WORK]: 11, [CARRY]: 1 }),
+    byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 1 }),
+    byPartCount({ [MOVE]: 9, [WORK]: 9, [CARRY]: 1 }),
+    byPartCount({ [MOVE]: 8, [WORK]: 8, [CARRY]: 1 }),
+    byPartCount({ [MOVE]: 7, [WORK]: 7, [CARRY]: 1 }),
+    byPartCount({ [MOVE]: 6, [WORK]: 6, [CARRY]: 1 }),
     byPartCount({ [MOVE]: 6, [WORK]: 6 }),
     byPartCount({ [MOVE]: 5, [WORK]: 5 }),
 ]
@@ -65,6 +67,10 @@ export class HarvesterCreep {
             this.creep.memory.tasks = []
         }
 
+        if (this.canRepairContainer()) {
+            this.repairContainer()
+        }
+
         if (!this.isAtHarvestPos()) {
             this.moveToHarvestPos()
             return
@@ -77,8 +83,6 @@ export class HarvesterCreep {
         if (this.canTransferEnergy()) {
             this.transferEnergyToLink()
             return
-        } else if (this.canRepairContainer()) {
-            this.repairContainer()
         }
         if (this.creep.getActiveBodyparts(CARRY) === 0 || this.isFullOfEnergy()) {
             return
@@ -201,7 +205,7 @@ export class HarvesterCreep {
             return false
         }
         return (
-            (container.hitsMax - container.hits) / (100 * this.creep.getActiveBodyparts(WORK)) > 1
+            (container.hitsMax - container.hits) / (100 * this.creep.getActiveBodyparts(WORK)) >= 1
         )
     }
 

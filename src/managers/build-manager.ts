@@ -2,6 +2,7 @@ import includes from 'lodash/includes'
 import pokemon from 'pokemon'
 
 import * as Logger from 'utils/logger'
+import * as TimeCache from 'utils/time-cache'
 import { ConstructionFeatures, getConstructionFeatures } from 'construction-features'
 import {
     LINK_COUNTS,
@@ -190,7 +191,8 @@ export default class BuildManager {
             this.canBuildTower() ||
             this.canBuildContainer() ||
             this.canBuildStorage() ||
-            this.canBuildLinks()
+            this.canBuildLinks() ||
+            this.canBuildRoad()
         )
     }
 
@@ -200,10 +202,6 @@ export default class BuildManager {
             return false
         }
         const site = sites[0]
-        if (site.structureType === STRUCTURE_ROAD) {
-            const terrain = this.room.getTerrain().get(site.pos.x, site.pos.y)
-            return terrain === TERRAIN_MASK_SWAMP || terrain === TERRAIN_MASK_WALL
-        }
         return !includes([STRUCTURE_WALL, STRUCTURE_RAMPART], site.structureType)
     }, 'BuildManager:hasImportantConstructionSite')
 
@@ -323,27 +321,34 @@ export default class BuildManager {
     }, 'BuildManager:canBuildRoad')
 
     private getNextSwampRoad(): Position | undefined {
-        if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
-            Logger.warning('getNextRoad:no-road-features', this.room.name)
-            return undefined
-        }
-        return this.constructionFeatures[STRUCTURE_ROAD]?.find((pos) => {
-            const hasBuilding = hasBuildingAt(
-                new RoomPosition(pos.x, pos.y, this.room.name),
-                STRUCTURE_ROAD,
-            )
-            const hasSwamp = this.room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_SWAMP
-            return !hasBuilding && hasSwamp
+        return TimeCache.get(`build-manager:getNextSwampRoad:${this.room.name}`, () => {
+            if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
+                Logger.warning('getNextRoad:no-road-features', this.room.name)
+                return undefined
+            }
+            return this.constructionFeatures[STRUCTURE_ROAD]?.find((pos) => {
+                const hasBuilding = hasBuildingAt(
+                    new RoomPosition(pos.x, pos.y, this.room.name),
+                    STRUCTURE_ROAD,
+                )
+                const hasSwamp = this.room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_SWAMP
+                return !hasBuilding && hasSwamp
+            })
         })
     }
 
     private getNextRoad(): Position | undefined {
-        if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
-            Logger.warning('getNextRoad:no-road-features', this.room.name)
-            return undefined
-        }
-        return this.constructionFeatures[STRUCTURE_ROAD].find((pos) => {
-            return !hasBuildingAt(new RoomPosition(pos.x, pos.y, this.room.name), STRUCTURE_ROAD)
+        return TimeCache.get(`build-manager:getNextRoad:${this.room.name}`, () => {
+            if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
+                Logger.warning('getNextRoad:no-road-features', this.room.name)
+                return undefined
+            }
+            return this.constructionFeatures[STRUCTURE_ROAD].find((pos) => {
+                return !hasBuildingAt(
+                    new RoomPosition(pos.x, pos.y, this.room.name),
+                    STRUCTURE_ROAD,
+                )
+            })
         })
     }
 

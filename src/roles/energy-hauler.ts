@@ -45,9 +45,7 @@ export class EnergyHaulerCreep {
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
             return
-        } else if (
-            this.creep.store.getUsedCapacity() < Math.min(this.creep.store.getCapacity(), 200)
-        ) {
+        } else if (this.creep.store.getUsedCapacity() < 50) {
             this.collectEnergy()
         } else {
             this.deliverEnergy()

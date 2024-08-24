@@ -228,7 +228,7 @@ function calculateBuildingDiff(room: Room, features: ConstructionFeatures): Cons
             const storage = features[STRUCTURE_STORAGE]?.find(
                 ({ x, y }) => x === builtStructure.pos.x && y === builtStructure.pos.y,
             )
-            if (storage) {
+            if (storage && (room.controller?.level ?? 0) < 4) {
                 continue
             }
         }

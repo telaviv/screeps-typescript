@@ -1,4 +1,5 @@
 import { getConstructionFeatures } from 'construction-features'
+import { getContainers } from './room'
 
 export function getVirtualStorage(roomName: string): StructureStorage | StructureContainer | null {
     const features = getConstructionFeatures(roomName)
@@ -16,4 +17,13 @@ export function getVirtualStorage(roomName: string): StructureStorage | Structur
         }
     }
     return null
+}
+
+export function getNonVirtualContainers(room: Room): StructureContainer[] {
+    const virtualStorage = getVirtualStorage(room.name)
+    if (!virtualStorage || virtualStorage.structureType === STRUCTURE_STORAGE) {
+        return []
+    }
+    const containers = getContainers(room)
+    return containers.filter((container) => container.id !== virtualStorage.id)
 }

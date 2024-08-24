@@ -1009,12 +1009,15 @@ export class ImmutableRoom implements ValueObject {
                 link: links[0].flatPos,
             })
         }
-        const centroid = this.findCentroid()
+        const controller = this.getObstacles('controller')[0]
+        if (!controller) {
+            throw new Error(`No controller found: ${this.name}`)
+        }
         const sortedSourceContainerLinks = reverse(
             sortBy(
                 sourceContainerLinks,
                 ({ container }) =>
-                    Math.abs(container.x - centroid.x) + Math.abs(container.y - centroid.y),
+                    Math.abs(controller.x - container.x) + Math.abs(controller.y - container.y),
             ),
         )
 
@@ -1047,9 +1050,9 @@ export class ImmutableRoom implements ValueObject {
         const linkTypes = this.linkTypes()
         return [
             linkTypes.sourceContainers[0].link,
-            linkTypes.controller,
             linkTypes.storage,
             ...linkTypes.sourceContainers.slice(1).map(({ link }) => link),
+            linkTypes.controller,
         ].reduce((acc: FlatRoomPosition[], val: FlatRoomPosition) => {
             if (acc.some((ri) => ri.x === val.x && ri.y === val.y)) {
                 return acc

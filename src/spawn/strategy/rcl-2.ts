@@ -49,8 +49,9 @@ function getLatentWorkerInterval(room: Room): number {
 const ENERGY_DATA: DataPoint[] = [
     [300, 0.25],
     [800, 0.35],
-    [1800, 0.75],
-    [2300, 2.5],
+    [1300, 0.5],
+    [1800, 0.9],
+    [2300, 2.75],
 ]
 const REGRESSION_PRECISION = 12
 const regressions: [string, Result][] = [
@@ -209,14 +210,12 @@ function linkStrategy(spawn: StructureSpawn): void {
     const constructionSites = getConstructionSites(room)
     const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
+    const links = getLinks(room)
     const masons = getCreeps('mason', room)
     const staticLinkHaulers = getCreeps('static-link-hauler', room)
     const staticUpgraders = getCreeps('static-upgrader', room)
     const upgraders = getLogisticsCreeps({ preference: TASK_UPGRADING, room })
     const builders = getLogisticsCreeps({ preference: TASK_BUILDING, room })
-    const workers = getLogisticsCreeps({ room }).filter(
-        (creep) => creep.getActiveBodyparts(WORK) > 0,
-    )
     const upgraderCount = upgraders.length + staticUpgraders.length
     const rebalancers = getCreeps('rebalancer', room)
     const haulers = getCreeps('energy-hauler', room)
@@ -226,17 +225,18 @@ function linkStrategy(spawn: StructureSpawn): void {
         if (haulers.length < 1) {
             roleEnergyHauler.create(spawn)
             return
-        } else if (workers.length === 0) {
-            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
-            return
-        } else if (upgraderCount === 0 && !LinkManager.hasControllerLink(room)) {
+        }
+        if (upgraderCount === 0 && !LinkManager.hasControllerLink(room)) {
             RoleLogistics.createCreep(spawn, TASK_UPGRADING)
             return
         } else if (builders.length < BUILDERS_COUNT && constructionSites.length > 0) {
             RoleLogistics.createCreep(spawn, TASK_BUILDING)
             return
-        } else if (rebalancers.length < 1 && virtualStorage) {
+        } else if (rebalancers.length < 1 && virtualStorage && links.length < 3) {
             roleRebalancer.create(spawn)
+            return
+        } else if (haulers.length < 2 && !isEnergyRestricted(room) && rebalancers.length === 0) {
+            roleEnergyHauler.create(spawn)
             return
         }
     }

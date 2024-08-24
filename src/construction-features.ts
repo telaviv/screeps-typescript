@@ -102,8 +102,8 @@ declare global {
     }
 }
 
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.7'
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.7'
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
 
 export function getConstructionFeaturesV3(room: Room | string): ConstructionFeaturesV3 | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory

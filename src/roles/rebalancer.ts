@@ -3,10 +3,11 @@ import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
 import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { getNonVirtualContainers, getVirtualStorage } from '../utils/virtual-storage'
 import { profile, wrap } from 'utils/profiling'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
-import { getVirtualStorage } from '../utils/virtual-storage'
+import { moveWithinRoom } from 'utils/travel'
 
 const ROLE = 'rebalancer'
 
@@ -49,9 +50,7 @@ export class RebalancerCreep {
             }
             TaskRunner.run(task, this.creep)
             return
-        } else if (
-            this.creep.store.getUsedCapacity() < Math.min(this.creep.store.getCapacity(), 200)
-        ) {
+        } else if (this.creep.store.getUsedCapacity() < 50) {
             this.collectEnergy()
         } else {
             this.rebalance()
@@ -60,6 +59,8 @@ export class RebalancerCreep {
             const task = this.creep.memory.tasks[0]
             TaskRunner.run(task, this.creep)
             return
+        } else {
+            this.moveToIdlePosition()
         }
     }
 
@@ -101,6 +102,23 @@ export class RebalancerCreep {
         }
         TransferTask.makeRequest(this.creep)
     }
+
+    @profile
+    moveToIdlePosition(): void {
+        const containers = getNonVirtualContainers(this.creep.room)
+        if (containers.length === 0) {
+            return
+        }
+        containers.sort(
+            (a, b) =>
+                b.store.getUsedCapacity(RESOURCE_ENERGY) - a.store.getUsedCapacity(RESOURCE_ENERGY),
+        )
+        const container = containers[0]
+        if (this.creep.pos.inRangeTo(container, 2)) {
+            return
+        }
+        moveWithinRoom(this.creep, { pos: containers[0].pos, range: 2 })
+    }
 }
 
 const roleRebalancer = {
@@ -111,14 +129,18 @@ const roleRebalancer = {
 
     create(spawn: StructureSpawn): number {
         const name = `${ROLE}:${spawn.room.name}:${Game.time}`
-        return spawn.spawnCreep(fromBodyPlan(spawn.room.energyAvailable, [CARRY, MOVE]), name, {
-            memory: {
-                role: ROLE,
-                home: spawn.room.name,
-                tasks: [],
-                idleTimestamp: null,
-            } as RebalancerMemory,
-        })
+        return spawn.spawnCreep(
+            fromBodyPlan(spawn.room.energyAvailable, [CARRY, MOVE], { maxCopies: 12 }),
+            name,
+            {
+                memory: {
+                    role: ROLE,
+                    home: spawn.room.name,
+                    tasks: [],
+                    idleTimestamp: null,
+                } as RebalancerMemory,
+            },
+        )
     },
 }
 
