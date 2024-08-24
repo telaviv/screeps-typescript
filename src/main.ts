@@ -35,6 +35,7 @@ import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
 import { visualize } from 'room-visualizer'
+import { World } from 'utils/world'
 
 if (!global.USERNAME) {
     global.USERNAME = findUsername()
@@ -223,6 +224,7 @@ function unwrappedLoop(): void {
     runAllRooms()
     runAllCreeps()
     recordGameStats()
+    World.clearClosestRoomCache()
     MatrixCacheManager.clearCaches()
     TimeCache.clearAll()
     trackProfiler()

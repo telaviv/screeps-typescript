@@ -8,6 +8,7 @@ import { profile, wrap } from 'utils/profiling'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
 import { moveWithinRoom } from 'utils/travel'
+import { getLinks } from 'utils/room'
 
 const ROLE = 'rebalancer'
 
@@ -41,6 +42,10 @@ export class RebalancerCreep {
         if (this.creep.spawning) {
             return
         }
+        if (getLinks(this.creep.room).length === 3) {
+            this.creep.suicide()
+        }
+
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
             if (task.type === 'pickup' || task.type === 'withdraw') {

@@ -1,5 +1,6 @@
 import { RoomType, getRoomType } from './room'
 import { profile } from './profiling'
+import { sortBy } from 'lodash'
 
 export interface RoomDistanceInfo {
     roomName: string
@@ -15,6 +16,9 @@ declare global {
         }
     }
 }
+
+const CLOSEST_ROOM_CACHE_TTL = 10000
+const CLOSEST_ROOM_CACHE: Map<string, { time: number; info: RoomDistanceInfo[] }> = new Map()
 
 function isRoomUnsafe(roomName: string): boolean {
     const exitType = getRoomType(roomName)
@@ -72,6 +76,10 @@ export class World {
 
     @profile
     getClosestRooms(roomNames: string[], maxDistance: number): RoomDistanceInfo[] {
+        const cacheKey = World.getClosestRoomCacheKey(roomNames, maxDistance)
+        if (CLOSEST_ROOM_CACHE.has(cacheKey)) {
+            return CLOSEST_ROOM_CACHE.get(cacheKey)!.info
+        }
         const distanceQueue: RoomDistanceInfo[] = roomNames.map((roomName) => ({
             roomName,
             distance: 0,
@@ -95,7 +103,21 @@ export class World {
                 }
             }
         }
+        CLOSEST_ROOM_CACHE.set(cacheKey, { time: Game.time, info: results })
         return results
+    }
+
+    private static getClosestRoomCacheKey(roomNames: string[], maxDistance: number): string {
+        const sorted = sortBy(roomNames)
+        return `${sorted.join()}:${maxDistance}`
+    }
+
+    public static clearClosestRoomCache(): void {
+        for (const [key, { time }] of CLOSEST_ROOM_CACHE) {
+            if (Game.time - time > CLOSEST_ROOM_CACHE_TTL) {
+                CLOSEST_ROOM_CACHE.delete(key)
+            }
+        }
     }
 
     getClosestRoom(start: string, end: string[], maxDistance: number): RoomDistanceInfo | null {

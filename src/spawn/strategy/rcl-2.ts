@@ -37,7 +37,7 @@ const MASON_COUNT = 1
 const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
-const MAX_USEFUL_ENERGY = 1500
+const MAX_USEFUL_ENERGY = 1800
 const MAX_DROPPED_RESOURCES = 1000
 
 function getLatentWorkerInterval(room: Room): number {
@@ -50,7 +50,7 @@ const ENERGY_DATA: DataPoint[] = [
     [300, 0.25],
     [800, 0.35],
     [1300, 0.5],
-    [1800, 1.50],
+    [1800, 2.0],
     [2300, 2.75],
 ]
 const REGRESSION_PRECISION = 12

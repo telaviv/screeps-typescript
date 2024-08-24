@@ -27,7 +27,7 @@ export function fromBodyPlan(
     let partsLeft = 50 - fixed.length
     let parts: BodyPartConstant[] = [...fixed]
     let copies = 0
-    while (capacityLeft >= unitCost && partsLeft >= plan.length && copies <= maxCopies) {
+    while (capacityLeft >= unitCost && partsLeft >= plan.length && copies < maxCopies) {
         parts = parts.concat(plan)
         copies++
         capacityLeft -= unitCost
