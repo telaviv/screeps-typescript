@@ -21,7 +21,6 @@ const MAX_WORK_PARTS = 5
 const ROLE = 'harvester'
 
 const BODY_PLANS = [
-    byPartCount({ [MOVE]: 12, [WORK]: 12, [CARRY]: 1 }),
     byPartCount({ [MOVE]: 11, [WORK]: 11, [CARRY]: 1 }),
     byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 1 }),
     byPartCount({ [MOVE]: 9, [WORK]: 9, [CARRY]: 1 }),
@@ -67,13 +66,13 @@ export class HarvesterCreep {
             this.creep.memory.tasks = []
         }
 
-        if (this.canRepairContainer()) {
-            this.repairContainer()
-        }
-
         if (!this.isAtHarvestPos()) {
             this.moveToHarvestPos()
             return
+        }
+
+        if (this.canRepairContainer()) {
+            this.repairContainer()
         }
 
         if (this.isHarvestTick()) {

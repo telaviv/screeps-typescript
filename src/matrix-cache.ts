@@ -20,6 +20,11 @@ const MATRIX_CACHE_ID = 'matrix-cache'
 const DEPRECATED_TAGS = ['no-sources', 'no-stationary-points', 'no-creeps']
 const EVICTION_TIME = 2500
 
+const ROAD_COST = 1
+const PLAIN_COST = 2
+const SWAMP_COST = 5
+const WALL_COST = 255
+
 interface MatrixCache {
     [key: string]: { matrix: string; time: number }
 }
@@ -240,9 +245,11 @@ export class MatrixCacheManager {
         for (let x = 0; x < 50; x++) {
             for (let y = 0; y < 50; y++) {
                 if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
-                    matrix.set(x, y, 255)
+                    matrix.set(x, y, WALL_COST)
                 } else if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) {
-                    matrix.set(x, y, 5)
+                    matrix.set(x, y, SWAMP_COST)
+                } else {
+                    matrix.set(x, y, PLAIN_COST)
                 }
             }
         }
@@ -284,7 +291,7 @@ export class MatrixCacheManager {
             filter: (s) => s.structureType === STRUCTURE_ROAD,
         })
         for (const road of roads) {
-            matrix.set(road.pos.x, road.pos.y, 0)
+            matrix.set(road.pos.x, road.pos.y, ROAD_COST)
         }
         return matrix
     }
