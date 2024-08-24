@@ -161,7 +161,7 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
         Logger.error('debug:constructionFeaturesV3NeedsUpdate: no featuresV3', roomName)
         return true
     }
-    if (featuresV3.type === 'none') {
+    if (featuresV3.type !== 'base') {
         return false
     }
     const points = getStationaryPointsFromMemory(memory)
@@ -169,24 +169,20 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
         Logger.error('debug:constructionFeaturesV3NeedsUpdate: no stationaryPoints', roomName)
         return true
     }
-    const type = points.type
-    if (type === 'base') {
-        const mines: Mine[] | undefined = memory.mines
-        const { miner: miningInfo } = featuresV3 as ConstructionFeaturesV3Base
-        const memoryMines = new Set(mines ? mines.map((m) => m.name) : [])
-        const featureMines = new Set(Object.keys(miningInfo ?? {}))
-        const ret = !isEqual(memoryMines, featureMines)
-        if (ret) {
-            Logger.error(
-                'debug:constructionFeaturesV3NeedsUpdate: mines differ',
-                roomName,
-                mines,
-                miningInfo,
-            )
-        }
-        return ret
+    const mines: Mine[] | undefined = memory.mines
+    const { miner: miningInfo } = featuresV3
+    const memoryMines = new Set(mines ? mines.map((m) => m.name) : [])
+    const featureMines = new Set(Object.keys(miningInfo ?? {}))
+    const ret = !isEqual(memoryMines, featureMines)
+    if (ret) {
+        Logger.error(
+            'debug:constructionFeaturesV3NeedsUpdate: mines differ',
+            roomName,
+            mines,
+            miningInfo,
+        )
     }
-    return false
+    return ret
 }
 
 export function getCalculatedLinks(room: Room): Links | null {
