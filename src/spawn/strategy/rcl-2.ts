@@ -421,7 +421,7 @@ function updateRescueStatus(room: Room) {
         return
     }
     const sourceCount = Object.keys(stationaryPoints.sources).length
-    const rescueCount = getLogisticsCreeps({ room }).filter(
+    const rescueCount = getCreeps(room.name).filter(
         (creep) => creep.getActiveBodyparts(CARRY) > 0 && creep.getActiveBodyparts(WORK) > 0,
     ).length
     const harvesters = getCreeps('harvester', room)
@@ -431,7 +431,7 @@ function updateRescueStatus(room: Room) {
         harvesters.length >= sourceCount
     ) {
         room.memory.collapsed = false
-    } else if (!room.memory.collapsed && rescueCount < sourceCount) {
+    } else if (!room.memory.collapsed && rescueCount < 1) {
         room.memory.collapsed = true
     }
 }

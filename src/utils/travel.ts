@@ -25,7 +25,7 @@ function roomCallback(roomName: string): CostMatrix | boolean {
     if (!Memory.rooms[roomName]) {
         return true
     }
-    return MatrixCacheManager.getRoomTravelMatrix(roomName)
+    return MatrixCacheManager.getTravelMatrix(roomName)
 }
 
 function routeCallback(fromRoom: string, toRoom: string): number | undefined {
@@ -93,7 +93,7 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
 
 export const moveWithinRoom = wrap(
     (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
-        const matrix = MatrixCacheManager.getFullCostMatrix(creep.room.name)
+        const matrix = MatrixCacheManager.getRoomMatrix(creep.room.name)
         const nRoomCallback = (roomName: string): CostMatrix | boolean => {
             if (roomName === target.pos.roomName) {
                 return matrix

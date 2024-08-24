@@ -7,8 +7,8 @@ import { getNonVirtualContainers, getVirtualStorage } from '../utils/virtual-sto
 import { profile, wrap } from 'utils/profiling'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
-import { moveWithinRoom } from 'utils/travel'
 import { getLinks } from 'utils/room'
+import { moveWithinRoom } from 'utils/travel'
 
 const ROLE = 'rebalancer'
 

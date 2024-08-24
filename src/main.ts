@@ -27,6 +27,7 @@ import { MatrixCacheManager } from 'matrix-cache'
 import { MineManager } from 'managers/mine-manager'
 import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
+import { World } from 'utils/world'
 import { clearImmutableRoomCache } from 'utils/immutable-room'
 import { ensureSlidingWindow } from 'room-window'
 import { getBuildManager } from 'managers/build-manager'
@@ -35,7 +36,6 @@ import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
 import { visualize } from 'room-visualizer'
-import { World } from 'utils/world'
 
 if (!global.USERNAME) {
     global.USERNAME = findUsername()

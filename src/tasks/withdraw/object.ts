@@ -8,6 +8,23 @@ import { getConstructionFeatures } from 'construction-features'
 import { getUsedCapacity } from 'utils/store'
 import { isWithdrawTask } from './utils'
 
+declare global {
+    namespace NodeJS {
+        interface Global {
+            withdraw: { tasks: (id: Id<Withdrawable>) => void }
+        }
+    }
+}
+
+global.withdraw = {
+    tasks: (id: Id<Withdrawable>) => {
+        const tasks = WithdrawObject.get(id).tasks
+        for (const task of tasks) {
+            console.log(JSON.stringify(task))
+        }
+    },
+}
+
 const TASK_CACHE: Map<Id<Withdrawable>, WithdrawTask[]> = new Map()
 const OBJECT_CACHE: Map<Id<Withdrawable>, WithdrawObject> = new Map()
 

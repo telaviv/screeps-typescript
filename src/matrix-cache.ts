@@ -7,22 +7,24 @@ import { SubscriptionEvent } from 'pub-sub/constants'
 import { getObstacles } from 'utils/room'
 import { subscribe } from 'pub-sub/pub-sub'
 
-export type MatrixTag =
-    | 'no-edges'
-    | 'no-obstacles'
-    | 'no-sources' // deprecated
-    | 'no-stationary-points' // deprecated
-    | 'no-creeps' // deprecated
-const TAG_ORDER: MatrixTag[] = ['no-edges', 'no-obstacles', 'no-stationary-points', 'no-creeps']
-const MATRIX_DEFAULT = 'default'
+export type MatrixTag = 'default-terrain' | 'road-preferred-terrain' | 'no-edges' | 'no-obstacles'
+const TAG_ORDER: MatrixTag[] = [
+    'default-terrain',
+    'road-preferred-terrain',
+    'no-edges',
+    'no-obstacles',
+]
 const MATRIX_CACHE_ID = 'matrix-cache'
-
-const DEPRECATED_TAGS = ['no-sources', 'no-stationary-points', 'no-creeps']
+const DEPRECATED_TAGS: MatrixTag[] = []
 const EVICTION_TIME = 2500
 
+interface TerrainCosts {
+    swamp: number
+    plain: number
+}
+const DEFAULT_TERRAIN_COSTS: TerrainCosts = { swamp: 5, plain: 2 }
+const ROAD_PREFERRED_TERRAIN_COSTS: TerrainCosts = { swamp: 5, plain: 4 }
 const ROAD_COST = 1
-const PLAIN_COST = 2
-const SWAMP_COST = 5
 const WALL_COST = 255
 
 interface MatrixCache {
@@ -53,7 +55,7 @@ declare global {
 
 const tagsToKey = wrap((tags: MatrixTag[]): string => {
     if (tags.length === 0) {
-        return MATRIX_DEFAULT
+        throw new Error('Cannot convert empty tags to key')
     }
     const tagSet = new Set(tags)
     const sortedTags = TAG_ORDER.filter((tag) => tagSet.has(tag))
@@ -61,9 +63,6 @@ const tagsToKey = wrap((tags: MatrixTag[]): string => {
 }, 'matrix-cache:tagsToKey')
 
 function keyToTags(key: string): MatrixTag[] {
-    if (key === MATRIX_DEFAULT) {
-        return []
-    }
     return key.split(':') as MatrixTag[]
 }
 
@@ -118,15 +117,15 @@ export class MatrixCacheManager {
     }
 
     @mprofile('MatrixCacheManager.getFullCostMatrix')
-    public static getFullCostMatrix(roomName: string): CostMatrix {
+    public static getRoomMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        return manager.getCostMatrix(['no-edges', 'no-obstacles'])
+        return manager.getCostMatrix(['default-terrain', 'no-edges', 'no-obstacles'])
     }
 
     @mprofile('MatrixCacheManager.getRoomTravelMatrix')
-    public static getRoomTravelMatrix(roomName: string): CostMatrix {
+    public static getTravelMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        const cm = manager.getCostMatrix(['no-obstacles'])
+        const cm = manager.getCostMatrix(['default-terrain', 'no-obstacles'])
         return cm
     }
 
@@ -137,20 +136,27 @@ export class MatrixCacheManager {
     }
 
     @mprofile('MatrixCacheManager.clearCaches')
-    public static clearCaches(): void {
+    public static clearCaches(clearAll = false): void {
         for (const [roomName, roomMemory] of Object.entries(Memory.rooms)) {
             for (const key of Object.keys(roomMemory.matrixCache ?? {})) {
                 if (!roomMemory.matrixCache || !roomMemory.matrixCache[key as keyof MatrixCache]) {
                     continue
                 }
+                if (clearAll) {
+                    delete roomMemory.matrixCache[key as keyof MatrixCache]
+                    continue
+                }
                 const time = roomMemory.matrixCache[key as keyof MatrixCache].time
                 if (Game.time - time > EVICTION_TIME && cyrb53(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
-                } else if (
-                    DEPRECATED_TAGS.some((tag) => keyToTags(key).includes(tag as MatrixTag))
-                ) {
+                } else if (DEPRECATED_TAGS.some((tag) => keyToTags(key).includes(tag))) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
-                } else if ([tagsToKey([]), tagsToKey(['no-edges'])].includes(key)) {
+                } else if (
+                    [
+                        tagsToKey(['default-terrain']),
+                        tagsToKey(['default-terrain', 'no-edges']),
+                    ].includes(key)
+                ) {
                     continue
                 } else if (keyToTags(key).includes('no-obstacles')) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
@@ -182,6 +188,9 @@ export class MatrixCacheManager {
 
     @profile
     public getSerializedMatrix(tags: MatrixTag[]): number[] {
+        if (tags.length === 0) {
+            throw new Error('Cannot get matrix with empty tags')
+        }
         this.ensureCache(tags)
         const key = tagsToKey(tags)
         return JSON.parse(this.matrixCache[key].matrix) as number[]
@@ -190,16 +199,20 @@ export class MatrixCacheManager {
     @profile
     private ensureCache(tags: MatrixTag[]): void {
         if (tags.length === 0) {
-            this.setDefaultMatrixCache()
-            return
+            throw new Error('Cannot get matrix with empty tags')
         }
         const key = tagsToKey(tags)
         if (this.matrixCache[key]) {
             return
         }
         const [prefix, latest] = splitTags(tags)
-        let prefixMatrix = this.getCostMatrix(prefix)
-        if (latest === 'no-edges') {
+        let prefixMatrix =
+            prefix.length === 0 ? new PathFinder.CostMatrix() : this.getCostMatrix(prefix)
+        if (latest === 'default-terrain') {
+            prefixMatrix = this.calculateTerrain(DEFAULT_TERRAIN_COSTS, prefixMatrix)
+        } else if (latest === 'road-preferred-terrain') {
+            prefixMatrix = this.calculateTerrain(ROAD_PREFERRED_TERRAIN_COSTS, prefixMatrix)
+        } else if (latest === 'no-edges') {
             prefixMatrix = this.addEdges(prefixMatrix)
         } else if (latest === 'no-obstacles') {
             prefixMatrix = this.addObstacles(prefixMatrix)
@@ -226,30 +239,16 @@ export class MatrixCacheManager {
     }
 
     @profile
-    public setDefaultMatrixCache(): void {
-        if (this.matrixCache[MATRIX_DEFAULT]) {
-            return
-        }
-        const matrix = this.calculateDefaultMatrix()
-        Logger.warning('Setting default matrix cache', this.roomName)
-        this.matrixCache[MATRIX_DEFAULT] = {
-            matrix: JSON.stringify(matrix.serialize()),
-            time: Game.time,
-        }
-    }
-
-    @profile
-    private calculateDefaultMatrix(): CostMatrix {
+    private calculateTerrain(costs: TerrainCosts, matrix: CostMatrix): CostMatrix {
         const terrain = new Room.Terrain(this.roomName)
-        const matrix = new PathFinder.CostMatrix()
         for (let x = 0; x < 50; x++) {
             for (let y = 0; y < 50; y++) {
                 if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
                     matrix.set(x, y, WALL_COST)
                 } else if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) {
-                    matrix.set(x, y, SWAMP_COST)
+                    matrix.set(x, y, costs.swamp)
                 } else {
-                    matrix.set(x, y, PLAIN_COST)
+                    matrix.set(x, y, costs.plain)
                 }
             }
         }
@@ -324,3 +323,9 @@ export class MatrixCacheManager {
         return matrix
     }
 }
+/**
+function clearAllCaches(): void {
+    MatrixCacheManager.clearCaches(true)
+}
+clearAllCaches()
+*/

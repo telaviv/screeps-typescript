@@ -78,7 +78,8 @@ export class World {
     getClosestRooms(roomNames: string[], maxDistance: number): RoomDistanceInfo[] {
         const cacheKey = World.getClosestRoomCacheKey(roomNames, maxDistance)
         if (CLOSEST_ROOM_CACHE.has(cacheKey)) {
-            return CLOSEST_ROOM_CACHE.get(cacheKey)!.info
+            return (CLOSEST_ROOM_CACHE.get(cacheKey) as { time: number; info: RoomDistanceInfo[] })
+                .info
         }
         const distanceQueue: RoomDistanceInfo[] = roomNames.map((roomName) => ({
             roomName,
