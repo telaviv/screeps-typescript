@@ -17,6 +17,7 @@ import {
 import { StationaryPointsBase } from 'construction-features'
 import { getStampMetadata } from 'stamps/utils'
 import { wrap } from 'utils/profiling'
+import { getRangeTo } from 'screeps-cartographer'
 
 interface NonObstacles {
     road: boolean
@@ -786,6 +787,20 @@ export class ImmutableRoom implements ValueObject {
         return iroom
     }
 
+    public setMineralValues(): ImmutableRoom {
+        const minerals = this.getObstacles('mineral')
+        if (minerals.length === 0) {
+            return this
+        }
+        const mineral = minerals[0]
+        const neighbors = this.getClosestNeighbors(mineral.x, mineral.y)
+        const available = neighbors.filter((ri) => !ri.isObstacle())
+        const pos = this.sortByCentroidDistance(available)[0]
+        const iroom = this.setNonObstacle(pos.x, pos.y, 'container', true)
+        iroom.stationaryPoints.mineral = { x: pos.x, y: pos.y }
+        return iroom
+    }
+
     public setBunker(stamp: Stamp): ImmutableRoom | null {
         const controller = this.getObstacles('controller')[0]
         const links = this.getObstacles('link')
@@ -970,10 +985,29 @@ export class ImmutableRoom implements ValueObject {
     }
 
     public sortedContainerPositions(): Position[] {
-        return this.sortByCentroidDistance(this.getNonObstacles('container')).map((ri) => ({
-            x: ri.x,
-            y: ri.y,
-        }))
+        const center = this.getObstacles('storage')[0] ?? this.getObstacles('controller')[0]
+        const points = this.stationaryPoints
+        const containers = this.getNonObstacles('container')
+        if (!center || !points.sources || !Object.values(points.sources)) {
+            return containers
+        }
+        containers.sort((a, b) => {
+            const aIsSource = Object.values(points.sources as { [id: string]: Position }).some(
+                (aPos) => aPos.x === a.x && aPos.y === a.y,
+            )
+            const bIsSource = Object.values(points.sources as { [id: string]: Position }).some(
+                (bPos) => bPos.x === a.x && bPos.y === a.y,
+            )
+            if (aIsSource && !bIsSource) {
+                return -1
+            } else if (bIsSource && !aIsSource) {
+                return 1
+            } else if (aIsSource && bIsSource) {
+                return a.distanceTo(center) - b.distanceTo(center)
+            }
+            return 0
+        })
+        return containers
     }
 
     public sortedTowerPositions(): Position[] {

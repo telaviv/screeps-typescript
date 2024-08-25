@@ -74,7 +74,7 @@ export class EnergyHaulerCreep {
         }
 
         if (this.creep.memory.tasks.length > 0) {
-            this.runTask()
+            this.runTask(false)
             return
         }
 
@@ -102,18 +102,18 @@ export class EnergyHaulerCreep {
         )
     }
 
-    runTask(): void {
+    runTask(say = true): void {
         if (this.creep.memory.tasks.length > 0) {
             const task = this.creep.memory.tasks[0]
             if (task.type === 'pickup' || task.type === 'withdraw') {
-                this.creep.say('🚚⚡')
+                if (say) this.creep.say('🚚⚡')
                 if (task.type === 'withdraw' && isWithdrawTask(task)) {
                     this.creep.memory.lastWithdraw = { id: task.withdrawId, time: Game.time }
                 } else {
                     this.creep.memory.lastWithdraw = undefined
                 }
             } else if (task.type === 'transfer') {
-                this.creep.say('🚚🚚')
+                if (say) this.creep.say('🚚🚚')
             }
             TaskRunner.run(task, this.creep)
         }

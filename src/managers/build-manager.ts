@@ -3,7 +3,7 @@ import pokemon from 'pokemon'
 
 import * as Logger from 'utils/logger'
 import * as TimeCache from 'utils/time-cache'
-import { ConstructionFeatures, getConstructionFeatures } from 'construction-features'
+import { ConstructionFeatures, getConstructionFeatures, getStationaryPoints, getStationaryPointsBase } from 'construction-features'
 import {
     LINK_COUNTS,
     MIN_RAMPART_LEVEL,
@@ -119,20 +119,8 @@ export default class BuildManager {
             return false
         }
 
-        if (this.canBuildContainer()) {
-            const containers = getContainers(this.room)
-            const containerPositions = this.constructionFeatures[STRUCTURE_CONTAINER] as Position[]
-            if (containerPositions.length > containers.length) {
-                return this.buildNextStructure(STRUCTURE_CONTAINER)
-            }
-            // here we build a temporary container where storage is supposed to be
-            const storage = (this.constructionFeatures[STRUCTURE_STORAGE] as Position[])[0]
-            return (
-                makeConstructionSite(
-                    new RoomPosition(storage.x, storage.y, this.room.name),
-                    STRUCTURE_CONTAINER,
-                ) === OK
-            )
+        if (this.canBuildImportantContainer()) {
+            return this.buildNextContainer()
         }
 
         if (this.canBuildImportantExtension()) {
@@ -179,6 +167,10 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_LAB)
         }
 
+        if (this.canBuildContainer()) {
+            return this.buildNextContainer()
+        }
+
         if (this.canBuildExtractor()) {
             return this.buildNextStructure(STRUCTURE_EXTRACTOR)
         }
@@ -212,6 +204,22 @@ export default class BuildManager {
         const site = sites[0]
         return !includes([STRUCTURE_WALL, STRUCTURE_RAMPART], site.structureType)
     }, 'BuildManager:hasImportantConstructionSite')
+
+    private canBuildImportantContainer = wrap((): boolean => {
+        const containers = getContainers(this.room)
+        if (this.constructionFeatures[STRUCTURE_CONTAINER] === undefined) {
+            return false
+        }
+        let possibleContainers = this.constructionFeatures[STRUCTURE_CONTAINER].length
+        if ((this.room.controller?.level ?? 0) < 4) {
+            possibleContainers += 1
+        }
+        const stationaryPointsBase = getStationaryPointsBase(this.room)
+        if (stationaryPointsBase && stationaryPointsBase.mineral) {
+            possibleContainers -= 1
+        }
+        return (containers.length < possibleContainers)
+    }, 'BuildManager:canBuildImportantContainer')
 
     private canBuildContainer = wrap(() => {
         const containers = getContainers(this.room)
@@ -274,6 +282,27 @@ export default class BuildManager {
         }
         return makeSpawnConstructionSite(toBuild, pokemon()) === OK
     }
+
+    private buildNextContainer(): boolean {
+        let containers = getContainers(this.room)
+        const points = getStationaryPointsBase(this.room)
+        if (points && points.mineral) {
+            containers = containers.filter(c => c.pos.x !== points.mineral.x || c.pos.y !== points.mineral.y)
+        }
+        const containerPositions = this.constructionFeatures[STRUCTURE_CONTAINER] as Position[]
+        if (containerPositions.length > containers.length) {
+            return this.buildNextStructure(STRUCTURE_CONTAINER)
+        }
+        // here we build a temporary container where storage is supposed to be
+        const storage = (this.constructionFeatures[STRUCTURE_STORAGE] as Position[])[0]
+        return (
+            makeConstructionSite(
+                new RoomPosition(storage.x, storage.y, this.room.name),
+                STRUCTURE_CONTAINER,
+            ) === OK
+        )
+    }
+
 
     private canBuildLinks = wrap(() => {
         const links = getLinks(this.room)

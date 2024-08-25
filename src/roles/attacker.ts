@@ -44,15 +44,17 @@ const roleAttacker = {
         if (creep.spawning) {
             return
         }
+        creep.notifyWhenAttacked(false)
 
-        const targetRoom = Game.rooms[creep.memory.roomName]
-        if (!targetRoom || !targetRoom.controller) {
-            Logger.warning('attacker:no-controller', creep.name)
+
+        if (!roleAttacker.isInRoom(creep)) {
+            moveToRoom(creep, creep.memory.roomName)
             return
         }
 
-        if (!roleAttacker.isInRoom(creep)) {
-            moveToRoom(creep, targetRoom.name)
+        const targetRoom = Game.rooms[creep.memory.roomName]
+        if (!targetRoom) {
+            Logger.warning('attacker:no-vision-to-room', creep.name)
             return
         }
 

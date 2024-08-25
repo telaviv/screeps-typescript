@@ -5,8 +5,8 @@ import * as Logger from 'utils/logger'
 import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
-export const CONSTRUCTION_FEATURES_VERSION = '1.0.1'
-export const STATIONARY_POINTS_VERSION = '1.1.0'
+export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
+export const STATIONARY_POINTS_VERSION = '1.2.1'
 export const LINKS_VERSION = '1.0.0'
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -75,6 +75,7 @@ export interface StationaryPointsBase {
     type: 'base'
     version: string
     sources: { [id: string]: Position }
+    mineral: Position
     controllerLink: Position
     storageLink: Position
 }
@@ -103,7 +104,7 @@ declare global {
 }
 
 export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.9'
 
 export function getConstructionFeaturesV3(room: Room | string): ConstructionFeaturesV3 | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
@@ -129,12 +130,13 @@ export function getConstructionFeatures(room: Room | string): ConstructionFeatur
 
 function getConstructionFeaturesV3FromMemory(
     roomMemory: RoomMemory | undefined,
+    minVersion = MIN_CONSTRUCTION_FEATURES_V3_VERSION,
 ): ConstructionFeaturesV3 | null {
     if (!roomMemory) {
         return null
     }
     const version = roomMemory.constructionFeaturesV3?.version ?? '0.0.0'
-    if (semverGte(version, MIN_CONSTRUCTION_FEATURES_V3_VERSION)) {
+    if (semverGte(version, minVersion)) {
         return roomMemory.constructionFeaturesV3 ?? null
     }
     return null
@@ -156,7 +158,7 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
         return false
     }
     const roomName = typeof room === 'string' ? room : room.name
-    const featuresV3 = getConstructionFeaturesV3FromMemory(memory)
+    const featuresV3 = getConstructionFeaturesV3FromMemory(memory, CONSTRUCTION_FEATURES_V3_VERSION)
     if (!featuresV3) {
         Logger.warning('constructionFeaturesV3NeedsUpdate: no featuresV3', roomName)
         return true

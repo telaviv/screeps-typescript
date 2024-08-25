@@ -177,6 +177,11 @@ class RoleLogistics {
                 this.creep.room.energyAvailable < this.creep.room.energyCapacityAvailable
             ) {
                 memory.currentTask = TASK_HAULING
+            } else if (
+                this.creep.room.controller &&
+                this.creep.room.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
+            ) {
+                memory.currentTask = TASK_UPGRADING
             } else if (memory.preference === PREFERENCE_WORKER) {
                 this.assignWorkerPreference()
             } else {

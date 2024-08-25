@@ -150,22 +150,27 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
         [STRUCTURE_OBSERVER]: iroom.getObstacles('observer').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_FACTORY]: iroom.getObstacles('factory').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_LINK]: iroom.sortedLinkPositions(),
-        [STRUCTURE_CONTAINER]: iroom
-            .getNonObstacles('container')
-            .map((pos) => ({ x: pos.x, y: pos.y })),
+        [STRUCTURE_CONTAINER]: iroom.sortedContainerPositions(),
         [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
         [STRUCTURE_RAMPART]: [] as Position[],
         [STRUCTURE_ROAD]: iroom.getNonObstacles('road').map((pos) => ({ x: pos.x, y: pos.y })),
     }
     features[STRUCTURE_RAMPART] = getRampartPositions(iroom)
     const points = iroom.stationaryPoints
-    if (!points || !points.controllerLink || !points.sources || !points.storageLink) {
-        throw new Error('no stationary points')
+    if (
+        !points ||
+        !points.controllerLink ||
+        !points.sources ||
+        !points.storageLink ||
+        !points.mineral
+    ) {
+        throw new Error(`no stationary points: ${roomName}`)
     }
     const stationaryPoints: StationaryPointsBase = {
         type: 'base',
         version: STATIONARY_POINTS_VERSION,
         sources: points.sources,
+        mineral: points.mineral,
         controllerLink: points.controllerLink,
         storageLink: points.storageLink,
     }
@@ -298,6 +303,7 @@ function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
     }
     iroom = iroom.setSourceValues()
     iroom = iroom.setControllerValues()
+    iroom = iroom.setMineralValues()
     iroom = iroom.setBunker(BUNKER)
     if (!iroom) {
         return null
