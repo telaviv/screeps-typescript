@@ -168,8 +168,10 @@ export default {
         mason.run()
     }, `mason:run`),
 
-    create(spawn: StructureSpawn): number {
-        const capacity = spawn.room.energyCapacityAvailable
+    create(spawn: StructureSpawn, capacity?: number): number {
+        if (!capacity) {
+            capacity = spawn.room.energyAvailable
+        }
         const parts = fromBodyPlan(capacity, [CARRY, WORK, MOVE, MOVE])
         return spawn.spawnCreep(parts, `${ROLE}:${spawn.room.name}:${autoIncrement()}`, {
             memory: {

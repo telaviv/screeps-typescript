@@ -132,20 +132,19 @@ const roleRebalancer = {
         rebalancer.run()
     }, 'roleRebalancer:run'),
 
-    create(spawn: StructureSpawn): number {
+    create(spawn: StructureSpawn, capacity?: number): number {
+        if (!capacity) {
+            capacity = spawn.room.energyAvailable
+        }
         const name = `${ROLE}:${spawn.room.name}:${Game.time}`
-        return spawn.spawnCreep(
-            fromBodyPlan(spawn.room.energyAvailable, [CARRY, MOVE], { maxCopies: 12 }),
-            name,
-            {
-                memory: {
-                    role: ROLE,
-                    home: spawn.room.name,
-                    tasks: [],
-                    idleTimestamp: null,
-                } as RebalancerMemory,
-            },
-        )
+        return spawn.spawnCreep(fromBodyPlan(capacity, [CARRY, MOVE], { maxCopies: 12 }), name, {
+            memory: {
+                role: ROLE,
+                home: spawn.room.name,
+                tasks: [],
+                idleTimestamp: null,
+            } as RebalancerMemory,
+        })
     },
 }
 

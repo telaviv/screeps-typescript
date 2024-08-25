@@ -1,3 +1,5 @@
+import { sortBy } from 'lodash'
+
 import * as PickupTask from 'tasks/pickup'
 import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
@@ -5,6 +7,8 @@ import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
+import { getRenewInformation } from 'utils/creep'
+import { getSpawns } from 'utils/room'
 import { getVirtualStorage } from '../utils/virtual-storage'
 import { isWithdrawTask } from 'tasks/withdraw/utils'
 import { moveWithinRoom } from 'utils/travel'
@@ -20,6 +24,8 @@ interface EnergyHaulerMemory extends ResourceCreepMemory {
     role: 'energy-hauler'
     home: string
     lastWithdraw?: { id: string; time: number }
+    creationCapacity: number
+    autoRenew: boolean
 }
 
 export function isEnergyHauler(creep: Creep): creep is EnergyHauler {
@@ -35,6 +41,14 @@ export class EnergyHaulerCreep {
 
     get memory(): EnergyHaulerMemory {
         return this.creep.memory
+    }
+
+    get autoRenew(): boolean {
+        return this.memory.autoRenew ?? false
+    }
+
+    get energy(): number {
+        return this.creep.store.getUsedCapacity(RESOURCE_ENERGY)
     }
 
     @profile
@@ -61,15 +75,31 @@ export class EnergyHaulerCreep {
 
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
-        } else if (getVirtualStorage(this.creep.memory.home)) {
-            const virtualStorage = getVirtualStorage(this.creep.room.name) as
-                | StructureStorage
-                | StructureContainer
-            if (this.creep.pos.isNearTo(virtualStorage)) {
-                return
-            }
-            moveWithinRoom(this.creep, { pos: virtualStorage.pos, range: 1 })
+            return
         }
+
+        const spawns = getSpawns(this.creep.room)
+        if (spawns.length === 0 || this.autoRenew === false) {
+            return
+        }
+        const sortedSpawns = sortBy(spawns, (spawn) => spawn.pos.getRangeTo(this.creep))
+        const closestSpawn = sortedSpawns[0]
+        if (!this.creep.pos.isNearTo(closestSpawn)) {
+            moveWithinRoom(this.creep, { pos: closestSpawn.pos, range: 1 })
+        } else if (this.canAutoRenew()) {
+            this.autoRenewCreep(closestSpawn)
+        }
+    }
+
+    canAutoRenew(): boolean {
+        const { cost, ticks } = getRenewInformation(this.creep)
+        const spawns = getSpawns(this.creep.room)
+        return (
+            spawns.length > 0 &&
+            spawns[0].spawning === null &&
+            cost <= this.energy &&
+            CREEP_LIFE_TIME - (this.creep.ticksToLive ?? 0) > ticks
+        )
     }
 
     runTask(): void {
@@ -82,7 +112,7 @@ export class EnergyHaulerCreep {
                 } else {
                     this.creep.memory.lastWithdraw = undefined
                 }
-            } else {
+            } else if (task.type === 'transfer') {
                 this.creep.say('🚚🚚')
             }
             TaskRunner.run(task, this.creep)
@@ -121,6 +151,12 @@ export class EnergyHaulerCreep {
             TransferTask.makeRequest(this.creep, { structure: virtualStorage })
         }
     }
+
+    @profile
+    autoRenewCreep(spawn: StructureSpawn): void {
+        spawn.renewCreep(this.creep)
+        this.creep.say('🚚⏳')
+    }
 }
 
 const roleEnergyHauler = {
@@ -129,14 +165,27 @@ const roleEnergyHauler = {
         energyHauler.run()
     },
 
-    create(spawn: StructureSpawn): number {
+    shouldCancelAutoRenew(creep: EnergyHauler, capacity: number): boolean {
+        return creep.memory.autoRenew && creep.memory.creationCapacity < capacity
+    },
+
+    cancelAutoRenew(creep: EnergyHauler): void {
+        creep.memory.autoRenew = false
+    },
+
+    create(spawn: StructureSpawn, capacity?: number): number {
+        if (!capacity) {
+            capacity = spawn.room.energyCapacityAvailable
+        }
         const name = `${ROLE}:${spawn.room.name}:${Game.time}`
-        return spawn.spawnCreep(fromBodyPlan(spawn.room.energyAvailable, [CARRY, MOVE]), name, {
+        return spawn.spawnCreep(fromBodyPlan(capacity, [CARRY, MOVE]), name, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
                 tasks: [],
                 idleTimestamp: null,
+                creationCapacity: capacity,
+                autoRenew: true,
             } as EnergyHaulerMemory,
         })
     },

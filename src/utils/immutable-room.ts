@@ -1009,15 +1009,18 @@ export class ImmutableRoom implements ValueObject {
                 link: links[0].flatPos,
             })
         }
-        const controller = this.getObstacles('controller')[0]
-        if (!controller) {
+        let center = this.getObstacles('storage')[0]
+        if (!center) {
+            center = this.getObstacles('controller')[0]
+        }
+        if (!center) {
             throw new Error(`No controller found: ${this.name}`)
         }
         const sortedSourceContainerLinks = reverse(
             sortBy(
                 sourceContainerLinks,
                 ({ container }) =>
-                    Math.abs(controller.x - container.x) + Math.abs(controller.y - container.y),
+                    Math.abs(center.x - container.x) + Math.abs(center.y - container.y),
             ),
         )
 

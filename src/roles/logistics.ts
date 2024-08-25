@@ -73,6 +73,7 @@ const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
 interface CreateOpts {
     home?: string
     rescue?: boolean
+    capacity?: number
 }
 
 class RoleLogistics {
@@ -95,7 +96,7 @@ class RoleLogistics {
 
         this.say()
         this.updateMemory()
-        if (this.idleTime() > SUICIDE_TIME) {
+        if (this.idleTime() > SUICIDE_TIME && this.creep.memory.preference === PREFERENCE_WORKER) {
             this.creep.suicide()
             return
         }
@@ -405,9 +406,12 @@ class RoleLogistics {
         preference: LogisticsPreference = TASK_HAULING,
         opts: CreateOpts = { rescue: false },
     ): ScreepsReturnCode {
-        const capacity = opts.rescue
+        let capacity = opts.rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyAvailable
+        if (opts.capacity) {
+            capacity = opts.capacity
+        }
         return spawnCreep(
             spawn,
             calculateParts(capacity),
@@ -433,7 +437,8 @@ class RoleLogistics {
     }
 
     @profile
-    public static shouldCreateCreep(spawn: StructureSpawn): boolean {
+    public static shouldCreateCreep(spawn: StructureSpawn, capacity?: number): boolean {
+        capacity = capacity ?? spawn.room.energyAvailable
         const logistics = filter(Object.keys(Memory.creeps), (creepName: string) => {
             const creep = Game.creeps[creepName] as LogisticsCreep
             return creep && creep.memory.role === 'logistics' && creep.room.name === spawn.room.name
@@ -442,10 +447,8 @@ class RoleLogistics {
         const maxIdleTime = logistics.reduce((max: number, role: RoleLogistics) => {
             return Math.max(max, role.idleTime())
         }, 0)
-        const canCreateCreep = RoleLogistics.canCreateCreep(spawn.room.energyAvailable)
-        const retVal =
-            RoleLogistics.canCreateCreep(spawn.room.energyAvailable) &&
-            maxIdleTime <= RESPAWN_IDLE_LIMIT
+        const canCreateCreep = RoleLogistics.canCreateCreep(capacity)
+        const retVal = RoleLogistics.canCreateCreep(capacity) && maxIdleTime <= RESPAWN_IDLE_LIMIT
         Logger.debug(
             'logistics:shouldCreateCreep',
             JSON.stringify(

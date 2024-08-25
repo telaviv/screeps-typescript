@@ -9,6 +9,21 @@ import { isTravelTask } from 'tasks/travel/utils'
 import { randomElement } from './utilities'
 import { wrap } from './profiling'
 
+declare global {
+    namespace NodeJS {
+        interface Global {
+            creep: {
+                getCreeps: (role: string, roomName?: string) => void
+            }
+        }
+    }
+}
+
+interface RenewInformation {
+    cost: number
+    ticks: number
+}
+
 export function freeEnergyCapacity(creep: Creep): number {
     return creep.store.getFreeCapacity(RESOURCE_ENERGY)
 }
@@ -174,4 +189,21 @@ export function getLogisticsCreeps(options: {
         return creep.memory.home === options.room.name
     }
     return Object.values(Game.creeps).filter(isLogisticsCreep).filter(check)
+}
+
+export function getRenewInformation(creep: Creep): RenewInformation {
+    const creepCost = calculateBodyCost(creep.body.map((part) => part.type))
+    const bodySize = creep.body.length
+    const ticks = Math.floor(600 / bodySize)
+    const cost = Math.ceil(creepCost / 2.5 / bodySize)
+    return { cost, ticks }
+}
+
+global.creep = {
+    getCreeps: (role: string, roomName?: string): void => {
+        const creeps = getCreeps(role, roomName ? Game.rooms[roomName] : undefined)
+        for (const creep of creeps) {
+            console.log('creep', creep.room.name, creep.name)
+        }
+    },
 }

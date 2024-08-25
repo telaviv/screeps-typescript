@@ -5,11 +5,12 @@ import {
     getStationaryPointsBase,
     isStationaryBase,
 } from 'construction-features'
+import { getRenewInformation, moveToStationaryPoint } from 'utils/creep'
 import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
+import { getSpawns } from 'utils/room'
 import { hasNoEnergy } from 'utils/energy-harvesting'
-import { moveToStationaryPoint } from 'utils/creep'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'static-link-hauler'
@@ -23,6 +24,11 @@ interface StaticLinkHaulerMemory extends CreepMemory {
     pos: Position
     sourceId: Id<StructureLink>
     sinkId: Id<StructureStorage>
+    lastWithdraw?: {
+        time: number
+        amount: number
+        terminalDeposit?: { time: number; amount: number }
+    }
 }
 
 class StaticLinkHaulerCreep {
@@ -41,6 +47,10 @@ class StaticLinkHaulerCreep {
         )
     }
 
+    get energy(): number {
+        return this.creep.store.getUsedCapacity(RESOURCE_ENERGY)
+    }
+
     run(): void {
         if (this.creep.spawning) {
             return
@@ -52,6 +62,8 @@ class StaticLinkHaulerCreep {
 
         if (hasNoEnergy(this.creep)) {
             return this.getEnergy()
+        } else if (this.canAutoRenew()) {
+            return this.autoRenew()
         }
         return this.transferEnergy()
     }
@@ -84,12 +96,18 @@ class StaticLinkHaulerCreep {
             this.creep.suicide()
             return
         }
-        if (source.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
+        const amountAvailable = Math.min(
+            source.store.getUsedCapacity(RESOURCE_ENERGY),
+            this.creep.store.getFreeCapacity(RESOURCE_ENERGY),
+        )
+        if (amountAvailable === 0) {
             return
         }
-        const err = this.creep.withdraw(source, RESOURCE_ENERGY)
+        const err = this.creep.withdraw(source, RESOURCE_ENERGY, amountAvailable)
         if (err !== OK) {
             Logger.warning('static-link-hauler:get-energy:failed', this.creep.name, err)
+        } else {
+            this.creep.memory.lastWithdraw = { time: Game.time, amount: amountAvailable }
         }
     }
 
@@ -106,6 +124,29 @@ class StaticLinkHaulerCreep {
         const err = this.creep.transfer(sink, RESOURCE_ENERGY)
         if (err !== OK) {
             Logger.warning('static-link-hauler:transfer-energy:failed', this.creep.name, err)
+        }
+    }
+
+    canAutoRenew(): boolean {
+        const { cost, ticks } = getRenewInformation(this.creep)
+        const spawns = getSpawns(this.creep.room)
+        return (
+            this.creep.body.length === 10 &&
+            spawns.length > 0 &&
+            spawns[0].spawning === null &&
+            cost <= this.energy &&
+            CREEP_LIFE_TIME - (this.creep.ticksToLive ?? 0) > ticks
+        )
+    }
+
+    autoRenew(): void {
+        const spawns = getSpawns(this.creep.room)
+        if (spawns.length === 0) {
+            return
+        }
+        const err = spawns[0].renewCreep(this.creep)
+        if (err !== OK) {
+            Logger.warning('static-link-hauler:auto-renew', this.creep.name, err)
         }
     }
 }
@@ -128,15 +169,12 @@ const roleStaticLinkHauler = {
         const memory = this.getMemory(spawn.room)
         const pos = this.getPosition(spawn.room)
         if (parts === null || parts.length === 0 || memory === null || pos === null) {
-            Logger.error('claimer:create:failed', spawn.room.name, parts, capacity, pos)
-            throw new Error(`failed to create claimer room ${roomName}`)
+            Logger.error('static-link-hauler:create:failed', spawn.room.name, parts, capacity, pos)
+            throw new Error(`failed to create static-link-hauler room ${roomName}`)
         }
-        const err = spawn.spawnCreep(parts, `${ROLE}:${autoIncrement()}`, {
+        const err = spawn.spawnCreep(parts, `${ROLE}:${roomName}:${autoIncrement()}`, {
             memory,
         })
-        if (err === ERR_NOT_ENOUGH_ENERGY) {
-            throw new Error('not enough energy to make claimer')
-        }
         return err
     },
 

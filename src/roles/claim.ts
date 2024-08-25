@@ -84,7 +84,7 @@ const roleClaimer = {
         const energyAvailable = spawn.room.energyAvailable
         let parts = calculateParts(energyAvailable)
         if (parts === null || parts.length === 0) {
-            Logger.warning('claimer:create:failed', spawn.room.name, parts, energyAvailable)
+            return ERR_NOT_ENOUGH_ENERGY
         }
         if (opts?.minimal) {
             parts = [CLAIM, MOVE]
@@ -98,7 +98,7 @@ const roleClaimer = {
             memory.attack = true
         }
 
-        const err = spawn.spawnCreep(parts as BodyPartConstant[], `${ROLE}:${autoIncrement()}`, {
+        const err = spawn.spawnCreep(parts, `${ROLE}:${autoIncrement()}`, {
             memory,
         })
         if (err === ERR_NOT_ENOUGH_ENERGY) {

@@ -5,6 +5,11 @@ import { isSurveyComplete } from 'surveyor'
 import { profile } from 'utils/profiling'
 import roleHarvester from 'roles/harvester'
 
+interface CreateOpts {
+    rescue?: boolean
+    capacity?: number
+}
+
 export default class SourcesManager {
     private room: Room
     private sourceManagers: SourceManager[]
@@ -118,14 +123,14 @@ export default class SourcesManager {
         return null
     }
 
-    public createHarvester(spawn: StructureSpawn, rescue = false): number {
+    public createHarvester(spawn: StructureSpawn, opts: CreateOpts = { rescue: false }): number {
         const target = this.getNextHarvesterMiningTarget()
         if (!target) {
             throw new Error('no available positions for harvester')
         }
         const { pos, source } = target
         const sourceManager = SourceManager.getById(source)
-        return roleHarvester.create(spawn, sourceManager.id, pos, rescue)
+        return roleHarvester.create(spawn, sourceManager.id, pos, opts)
     }
 
     private verifyPositionAvailable(pos: RoomPosition, source: Id<Source>): boolean {

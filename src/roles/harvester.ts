@@ -266,7 +266,10 @@ export class HarvesterCreep {
         return null
     }
 }
-
+interface CreateOpts {
+    rescue?: boolean
+    capacity?: number
+}
 const roleHarvester = {
     run(creep: Harvester): void {
         const harvester = new HarvesterCreep(creep)
@@ -277,7 +280,7 @@ const roleHarvester = {
         spawn: StructureSpawn,
         sourceId: Id<Source>,
         pos: RoomPosition | null = null,
-        rescue = false,
+        rescue: CreateOpts = { rescue: false },
     ): number {
         const source = Game.getObjectById(sourceId)
         if (!source) {

@@ -323,6 +323,7 @@ export class MatrixCacheManager {
         return matrix
     }
 }
+
 /**
 function clearAllCaches(): void {
     MatrixCacheManager.clearCaches(true)
