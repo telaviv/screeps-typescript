@@ -278,6 +278,10 @@ export class MatrixCacheManager {
         for (const obstacle of obstacles) {
             matrix.set(obstacle.pos.x, obstacle.pos.y, 255)
         }
+        const constructionSites = this.room.find(FIND_CONSTRUCTION_SITES)
+        for (const site of constructionSites) {
+            matrix.set(site.pos.x, site.pos.y, 255)
+        }
         return matrix
     }
 

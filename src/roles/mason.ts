@@ -1,5 +1,6 @@
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
+import * as TransferTask from 'tasks/transfer'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import {
     getConstructionSites,
@@ -83,6 +84,8 @@ export class MasonCreep {
         if (this.hasNoEnergy()) {
             this.repairTarget = null
             getEnergy(this.creep)
+        } else if (this.creep.room.memory.collapsed === true) {
+            this.transferEnergy()
         } else if (this.hasSpawnSite()) {
             this.build(true)
         } else if (hasFragileWall(this.room) || this.repairTarget) {
@@ -151,6 +154,11 @@ export class MasonCreep {
         } else {
             Logger.warning('mason:build', 'nothing to build', this.creep.room.name)
         }
+    }
+
+    private transferEnergy() {
+        this.creep.say('🧱🚚')
+        TransferTask.makeRequest(this.creep)
     }
 
     private goHome() {

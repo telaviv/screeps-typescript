@@ -21,14 +21,14 @@ const MAX_WORK_PARTS = 5
 const ROLE = 'harvester'
 
 const BODY_PLANS = [
-    byPartCount({ [MOVE]: 11, [WORK]: 11, [CARRY]: 1 }),
-    byPartCount({ [MOVE]: 10, [WORK]: 10, [CARRY]: 1 }),
-    byPartCount({ [MOVE]: 9, [WORK]: 9, [CARRY]: 1 }),
-    byPartCount({ [MOVE]: 8, [WORK]: 8, [CARRY]: 1 }),
-    byPartCount({ [MOVE]: 7, [WORK]: 7, [CARRY]: 1 }),
-    byPartCount({ [MOVE]: 6, [WORK]: 6, [CARRY]: 1 }),
-    byPartCount({ [MOVE]: 6, [WORK]: 6 }),
-    byPartCount({ [MOVE]: 5, [WORK]: 5 }),
+    { [MOVE]: 11, [WORK]: 11, [CARRY]: 1 },
+    { [MOVE]: 10, [WORK]: 10, [CARRY]: 1 },
+    { [MOVE]: 9, [WORK]: 9, [CARRY]: 1 },
+    { [MOVE]: 8, [WORK]: 8, [CARRY]: 1 },
+    { [MOVE]: 7, [WORK]: 7, [CARRY]: 1 },
+    { [MOVE]: 6, [WORK]: 6, [CARRY]: 1 },
+    { [MOVE]: 6, [WORK]: 6 },
+    { [MOVE]: 5, [WORK]: 5 },
 ]
 
 export interface Harvester extends ResourceCreep {
@@ -269,6 +269,7 @@ export class HarvesterCreep {
 interface CreateOpts {
     rescue?: boolean
     capacity?: number
+    roadsBuilt?: boolean
 }
 const roleHarvester = {
     run(creep: Harvester): void {
@@ -280,7 +281,7 @@ const roleHarvester = {
         spawn: StructureSpawn,
         sourceId: Id<Source>,
         pos: RoomPosition | null = null,
-        rescue: CreateOpts = { rescue: false },
+        rescue: CreateOpts = { rescue: false, roadsBuilt: false },
     ): number {
         const source = Game.getObjectById(sourceId)
         if (!source) {
@@ -296,7 +297,7 @@ const roleHarvester = {
         const capacity = rescue
             ? Math.max(300, spawn.room.energyAvailable)
             : spawn.room.energyCapacityAvailable
-        const parts = calculateParts(capacity)
+        const parts = calculateParts(capacity, rescue.roadsBuilt ?? false)
         const err = spawnCreep(spawn, parts, ROLE, spawn.room.name, {
             memory: {
                 role: ROLE,
@@ -316,10 +317,14 @@ const roleHarvester = {
     },
 }
 
-export function calculateParts(capacity: number): BodyPartConstant[] {
-    for (const plan of BODY_PLANS) {
-        if (planCost(plan) <= capacity) {
-            return plan
+export function calculateParts(capacity: number, roadsBuilt: boolean): BodyPartConstant[] {
+    for (let plan of BODY_PLANS) {
+        if (roadsBuilt) {
+            plan = { ...plan, [MOVE]: Math.ceil(plan[MOVE] / 2) }
+        }
+        const parts = byPartCount(plan)
+        if (planCost(parts) <= capacity) {
+            return parts
         }
     }
     return fromBodyPlan(capacity, [WORK, MOVE])

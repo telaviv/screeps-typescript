@@ -28,6 +28,7 @@ import {
     hasNoSpawns,
     hasOwnFragileWall,
 } from 'utils/room'
+import { getCreeps, wander } from 'utils/creep'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { mprofile, profile } from 'utils/profiling'
@@ -37,7 +38,6 @@ import { findTaskByType } from 'tasks/utils'
 import { getBuildManager } from 'managers/build-manager'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
-import { wander } from 'utils/creep'
 
 export const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -166,12 +166,18 @@ class RoleLogistics {
     private updateMemory() {
         const memory = this.creep.memory
         const currentTask = memory.currentTask
+        const energyHaulers = getCreeps('energyHauler', this.creep.room)
 
         if (
             currentTask === TASK_COLLECTING &&
             (isFullOfEnergy(this.creep) || (this.creep.ticksToLive ?? 0) < 50)
         ) {
-            if (memory.preference === PREFERENCE_WORKER) {
+            if (
+                energyHaulers.length === 0 &&
+                this.creep.room.energyAvailable < this.creep.room.energyCapacityAvailable
+            ) {
+                memory.currentTask = TASK_HAULING
+            } else if (memory.preference === PREFERENCE_WORKER) {
                 this.assignWorkerPreference()
             } else {
                 memory.currentTask = memory.preference

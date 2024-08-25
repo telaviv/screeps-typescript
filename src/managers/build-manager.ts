@@ -59,6 +59,14 @@ export default class BuildManager {
         return new BuildManager(room, constructionFeatures)
     }
 
+    static allRoadsBuilt(room: Room): boolean {
+        const buildManager = BuildManager.get(room)
+        if (!buildManager) {
+            return false
+        }
+        return buildManager.getNextRoad() === undefined
+    }
+
     removeEnemyConstructionSites(): void {
         const sites = this.room.find(FIND_HOSTILE_CONSTRUCTION_SITES)
         for (const site of sites) {
@@ -155,12 +163,12 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_LINK)
         }
 
-        if (this.canBuildTerminal()) {
-            return this.buildNextStructure(STRUCTURE_TERMINAL)
-        }
-
         if (this.canBuildRoad()) {
             return this.buildNextStructure(STRUCTURE_ROAD)
+        }
+
+        if (this.canBuildTerminal()) {
+            return this.buildNextStructure(STRUCTURE_TERMINAL)
         }
 
         if (this.canBuildExtension()) {

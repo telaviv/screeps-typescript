@@ -79,11 +79,15 @@ export class WithdrawObject {
     @mprofile('WithdrawObject:getTargetsInRoom')
     public static getTargetsInRoom(
         room: Room,
-        opts?: { excludeVirtualStorage?: boolean },
+        opts?: { excludeVirtualStorage?: boolean; excludeContainers?: boolean },
     ): WithdrawObject[] {
         const structures = room.find<StructureContainer | StructureStorage>(FIND_STRUCTURES, {
             filter: (r) => {
-                if (!includes([STRUCTURE_CONTAINER, STRUCTURE_STORAGE], r.structureType)) {
+                const types: (STRUCTURE_CONTAINER | STRUCTURE_STORAGE)[] = [STRUCTURE_STORAGE]
+                if (!opts?.excludeContainers) {
+                    types.push(STRUCTURE_CONTAINER)
+                }
+                if (!includes(types, r.structureType)) {
                     return false
                 }
                 if (opts?.excludeVirtualStorage) {

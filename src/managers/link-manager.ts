@@ -76,6 +76,14 @@ export default class LinkManager {
         ) as StructureLink[]
     }
 
+    public static canLinkHarvest(room: Room): boolean {
+        const linkManager = LinkManager.createFromRoom(room)
+        if (linkManager === null) {
+            return false
+        }
+        return linkManager.sources.length === 2 && linkManager.storageLink !== null
+    }
+
     public run(): void {
         const sinkTracker = this.sinks.map((link) => ({
             amount: link.store.getFreeCapacity(RESOURCE_ENERGY),

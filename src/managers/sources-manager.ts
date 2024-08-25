@@ -8,6 +8,7 @@ import roleHarvester from 'roles/harvester'
 interface CreateOpts {
     rescue?: boolean
     capacity?: number
+    roadsBuilt?: boolean
 }
 
 export default class SourcesManager {
@@ -123,7 +124,10 @@ export default class SourcesManager {
         return null
     }
 
-    public createHarvester(spawn: StructureSpawn, opts: CreateOpts = { rescue: false }): number {
+    public createHarvester(
+        spawn: StructureSpawn,
+        opts: CreateOpts = { rescue: false, roadsBuilt: false },
+    ): number {
         const target = this.getNextHarvesterMiningTarget()
         if (!target) {
             throw new Error('no available positions for harvester')

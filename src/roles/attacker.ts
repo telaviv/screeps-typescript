@@ -80,6 +80,9 @@ const roleAttacker = {
     },
 
     attack: (creep: Attacker, target: Creep | Structure): ScreepsReturnCode => {
+        if (!creep.getActiveBodyparts(ATTACK)) {
+            return ERR_NO_BODYPART
+        }
         if (isCreep(target)) {
             followCreep(creep, target)
         } else {
