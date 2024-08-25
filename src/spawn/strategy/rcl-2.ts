@@ -93,6 +93,9 @@ export default wrap((spawn: StructureSpawn): void => {
     const isFullOfEnergy =
         Math.min(0.95 * room.energyCapacityAvailable, MAX_USEFUL_ENERGY) * 0.95 <=
         room.energyAvailable
+    const capacity = isEnergyRestricted(room)
+        ? Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
+        : room.energyCapacityAvailable
     const roomQuery = new RoomQuery(room)
 
     if (roomManager.getScoutRoomTasks().length > 0) {
@@ -105,7 +108,7 @@ export default wrap((spawn: StructureSpawn): void => {
     }
 
     if (defenseDepartment.needsDefenders()) {
-        defenseDepartment.createDefender(spawn, room.energyAvailable)
+        defenseDepartment.createDefender(spawn, capacity)
         return
     }
 
@@ -135,6 +138,9 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     }
 
     const room = spawn.room
+    const capacity = isEnergyRestricted(room)
+        ? Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
+        : room.energyCapacityAvailable
     const constructionSites = getConstructionSites(room).filter(
         (site) => site.structureType !== STRUCTURE_RAMPART,
     )
@@ -144,34 +150,34 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     const roomQuery = new RoomQuery(room)
 
     if (!sourcesManager.hasAllContainerHarvesters()) {
-        sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt() })
+        sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt(), capacity })
         return
     }
 
     if (RoleLogistics.shouldCreateCreep(spawn)) {
         if (roomQuery.getCreepCount('energy-hauler') < 1) {
-            roleEnergyHauler.create(spawn)
+            roleEnergyHauler.create(spawn, capacity)
             return
         } else if (roomQuery.getWorkerLogisticsCreepCount() < 2) {
-            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER)
+            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, { capacity })
             return
         } else if (
             roomQuery.getLogisticsCreepCount({ preference: TASK_UPGRADING }) < UPGRADERS_COUNT
         ) {
-            RoleLogistics.createCreep(spawn, TASK_UPGRADING)
+            RoleLogistics.createCreep(spawn, TASK_UPGRADING, { capacity })
             return
         } else if (
             roomQuery.getLogisticsCreepCount({ preference: TASK_BUILDING }) < BUILDERS_COUNT &&
             constructionSites.length > 0
         ) {
-            RoleLogistics.createCreep(spawn, TASK_BUILDING)
+            RoleLogistics.createCreep(spawn, TASK_BUILDING, { capacity })
             return
         } else if (
             roomQuery.getCreepCount('rebalancer') < 2 &&
             roomQuery.getDroppedResourceCount() > MAX_DROPPED_RESOURCES &&
             virtualStorage
         ) {
-            roleRebalancer.create(spawn)
+            roleRebalancer.create(spawn, capacity)
             return
         }
     }
@@ -187,15 +193,15 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     }
 
     if (!sourcesManager.hasEnoughHarvesters()) {
-        sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt() })
+        sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt(), capacity })
         return
     }
 
     if (roomQuery.getCreepCount('mason') < MASON_COUNT && MasonCreep.shouldCreate(room)) {
-        roleMason.create(spawn)
+        roleMason.create(spawn, capacity)
         return
     }
-    createLatentWorkers(spawn)
+    createLatentWorkers(spawn, capacity)
 }, 'rcl-2:swarm-strategy')
 
 const linkStrategy = wrap((spawn: StructureSpawn): void => {
@@ -212,17 +218,16 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     const capacity = isEnergyRestricted(room)
         ? Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
         : room.energyCapacityAvailable
-    const roadsBuilt = false // BuildManager.allRoadsBuilt(room)
     const roomQuery = new RoomQuery(room)
 
     if (!sourcesManager.hasAllContainerHarvesters()) {
-        sourcesManager.createHarvester(spawn, { capacity, roadsBuilt })
+        sourcesManager.createHarvester(spawn, { capacity, roadsBuilt: roomQuery.allRoadsBuilt() })
         return
     }
 
     if (RoleLogistics.shouldCreateCreep(spawn)) {
         if (
-            roomQuery.getCreepCount('energy-hauler') < 1 &&
+            roomQuery.getCreepCount('energy-hauler') > 0 &&
             roleEnergyHauler.shouldCancelAutoRenew(haulers[0] as EnergyHauler, capacity)
         ) {
             roleEnergyHauler.cancelAutoRenew(haulers[0] as EnergyHauler)
@@ -288,7 +293,7 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     }
 
     if (!sourcesManager.hasEnoughHarvesters()) {
-        sourcesManager.createHarvester(spawn, { capacity, roadsBuilt })
+        sourcesManager.createHarvester(spawn, { capacity, roadsBuilt: roomQuery.allRoadsBuilt() })
         return
     }
 
@@ -332,7 +337,7 @@ const createLatentWorkers = wrap((spawn: StructureSpawn, capacity?: number): voi
 function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): number | null {
     const room = spawn.room
     const status = warDepartment.status
-    const capacity = Math.min(MAX_USEFUL_ENERGY, room.energyAvailable)
+    const capacity = Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
     const scouts = getCreeps('scout', room).filter(
         (creep) =>
             creep.memory.tasks.length > 0 &&

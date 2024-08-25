@@ -152,9 +152,6 @@ const roleStaticUpgrader = {
         const err = spawn.spawnCreep(parts, `${ROLE}:${spawn.room.name}:${autoIncrement()}`, {
             memory,
         })
-        if (err === ERR_NOT_ENOUGH_ENERGY) {
-            throw new Error('not enough energy to make static-upgrader')
-        }
         return err
     },
 
