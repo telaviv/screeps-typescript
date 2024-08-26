@@ -46,7 +46,6 @@ const roleAttacker = {
         }
         creep.notifyWhenAttacked(false)
 
-
         if (!roleAttacker.isInRoom(creep)) {
             moveToRoom(creep, creep.memory.roomName)
             return

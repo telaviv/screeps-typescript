@@ -1,4 +1,5 @@
 import * as Logger from 'utils/logger'
+import * as TimeCache from 'utils/time-cache'
 import { LogisticsCreep, LogisticsPreference, isLogisticsCreep } from 'roles/logistics-constants'
 import { Scout, isScout } from 'roles/scout'
 import { moveTo, moveToRoom } from './travel'
@@ -125,20 +126,22 @@ export function recycle(creep: Creep): void {
 }
 
 export function getCreeps(role: string, room?: Room): Creep[] {
-    return Object.values(Game.creeps).filter((creep: Creep) => {
-        if (!creep.memory.role) {
-            return false
-        }
-        if (room) {
-            if (
-                creep.room.name !== room.name &&
-                creep.memory.home &&
-                creep.memory.home !== room.name
-            ) {
+    return TimeCache.get(`creep:getCreeps:${role}:${room ? room.name : 'all'}`, () => {
+        return Object.values(Game.creeps).filter((creep: Creep) => {
+            if (!creep.memory.role) {
                 return false
             }
-        }
-        return creep.memory.role === role
+            if (room) {
+                if (
+                    creep.room.name !== room.name &&
+                    creep.memory.home &&
+                    creep.memory.home !== room.name
+                ) {
+                    return false
+                }
+            }
+            return creep.memory.role === role
+        })
     })
 }
 

@@ -1,5 +1,5 @@
+import { findMyRooms, getMyConstructionSites } from 'utils/room'
 import { World } from 'utils/world'
-import { findMyRooms } from 'utils/room'
 import { getConstructionFeaturesV3 } from 'construction-features'
 
 export interface Mine {
@@ -20,8 +20,8 @@ declare global {
 
 function assignMines() {
     clearMines()
-    const mineManager = new MineManager(findMyRooms())
-    mineManager.assignMines()
+    const mineDecider = new MineDecider(findMyRooms())
+    mineDecider.assignMines()
 }
 
 function clearMines() {
@@ -36,13 +36,52 @@ global.mines = {
 }
 
 export class MineManager {
+    private roomName: string
+    private minee: Room
+
+    get room(): Room {
+        return Game.rooms[this.roomName]
+    }
+
+    constructor(roomName: string, minee: Room) {
+        this.roomName = roomName
+        this.minee = minee
+    }
+
+    hasVision(): boolean {
+        return !!this.room
+    }
+
+    controllerReserved(): boolean {
+        return !!this.room.controller?.reservation
+    }
+
+    controllerReservationTicksLeft(): number {
+        return this.room.controller?.reservation?.ticksToEnd ?? 0
+    }
+
+    sourceCount(): number {
+        return this.room.find(FIND_SOURCES).length
+    }
+
+    constructionFinished(): boolean {
+        const room = this.room
+        if (!room || !this.controllerReserved()) {
+            return false
+        }
+        const sites = getMyConstructionSites(room)
+        return sites.length === 0
+    }
+}
+
+export class MineDecider {
     private myRooms: Room[]
     constructor(myRooms: Room[]) {
         this.myRooms = myRooms
     }
 
-    static create(): MineManager {
-        return new MineManager(findMyRooms())
+    static create(): MineDecider {
+        return new MineDecider(findMyRooms())
     }
 
     assignMines(): void {

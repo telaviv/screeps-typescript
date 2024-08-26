@@ -286,6 +286,10 @@ export function getConstructionSites(
     return room.find(FIND_CONSTRUCTION_SITES, opts)
 }
 
+export function getMyConstructionSites(room: Room): ConstructionSite[] {
+    return room.find(FIND_MY_CONSTRUCTION_SITES)
+}
+
 export function getHostileConstructionSites(room: Room): ConstructionSite[] {
     return room.find(FIND_HOSTILE_CONSTRUCTION_SITES)
 }

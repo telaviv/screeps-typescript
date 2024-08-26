@@ -304,6 +304,9 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:link-strategy')
 
+// const createMineWorkers = wrap((spawn: StructureSpawn, capacity?: number): void => {},
+// 'rcl-2:create-mine-workers')
+
 const createLatentWorkers = wrap((spawn: StructureSpawn, capacity?: number): void => {
     if (!capacity) {
         capacity = spawn.room.energyAvailable

@@ -3,7 +3,11 @@ import pokemon from 'pokemon'
 
 import * as Logger from 'utils/logger'
 import * as TimeCache from 'utils/time-cache'
-import { ConstructionFeatures, getConstructionFeatures, getStationaryPoints, getStationaryPointsBase } from 'construction-features'
+import {
+    ConstructionFeatures,
+    getConstructionFeatures,
+    getStationaryPointsBase,
+} from 'construction-features'
 import {
     LINK_COUNTS,
     MIN_RAMPART_LEVEL,
@@ -218,7 +222,7 @@ export default class BuildManager {
         if (stationaryPointsBase && stationaryPointsBase.mineral) {
             possibleContainers -= 1
         }
-        return (containers.length < possibleContainers)
+        return containers.length < possibleContainers
     }, 'BuildManager:canBuildImportantContainer')
 
     private canBuildContainer = wrap(() => {
@@ -229,7 +233,7 @@ export default class BuildManager {
         const extraContainers = (this.room.controller?.level ?? 0) < 4 ? 1 : 0
         return (
             containers.length <
-            this.constructionFeatures[STRUCTURE_CONTAINER].length + extraContainers
+            this.constructionFeatures[STRUCTURE_CONTAINER].length + extraContainers - 1
         )
     }, 'BuildManager:canBuildContainer')
 
@@ -287,9 +291,13 @@ export default class BuildManager {
         let containers = getContainers(this.room)
         const points = getStationaryPointsBase(this.room)
         if (points && points.mineral) {
-            containers = containers.filter(c => c.pos.x !== points.mineral.x || c.pos.y !== points.mineral.y)
+            containers = containers.filter(
+                (c) => c.pos.x !== points.mineral.x || c.pos.y !== points.mineral.y,
+            )
         }
-        const containerPositions = this.constructionFeatures[STRUCTURE_CONTAINER] as Position[]
+        const containerPositions = (
+            this.constructionFeatures[STRUCTURE_CONTAINER] as Position[]
+        ).slice(0, -1)
         if (containerPositions.length > containers.length) {
             return this.buildNextStructure(STRUCTURE_CONTAINER)
         }
@@ -302,7 +310,6 @@ export default class BuildManager {
             ) === OK
         )
     }
-
 
     private canBuildLinks = wrap(() => {
         const links = getLinks(this.room)

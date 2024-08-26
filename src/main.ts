@@ -24,7 +24,7 @@ import { HostileRecorder } from 'hostiles'
 import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { MatrixCacheManager } from 'matrix-cache'
-import { MineManager } from 'managers/mine-manager'
+import { MineDecider } from 'managers/mine-manager'
 import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
 import { World } from 'utils/world'
@@ -42,7 +42,7 @@ if (!global.USERNAME) {
 }
 
 if (Game.time === 0) {
-    MineManager.create().assignMines()
+    MineDecider.create().assignMines()
 }
 
 // cpu mins
@@ -188,9 +188,9 @@ const initialize = wrap(() => {
     }
 
     clearCreepMemory()
+    ScoutManager.create().run()
     clearImmutableRoomCache()
     addSubscriptions()
-    ScoutManager.create().run()
     const empire = new Empire()
     empire.run()
     survey()

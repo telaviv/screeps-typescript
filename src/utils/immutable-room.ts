@@ -17,7 +17,6 @@ import {
 import { StationaryPointsBase } from 'construction-features'
 import { getStampMetadata } from 'stamps/utils'
 import { wrap } from 'utils/profiling'
-import { getRangeTo } from 'screeps-cartographer'
 
 interface NonObstacles {
     road: boolean
