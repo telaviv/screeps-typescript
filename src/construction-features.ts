@@ -25,6 +25,7 @@ export interface MinerInformation {
 }
 
 export interface MineeInformation {
+    miner: string
     entrancePosition: FlatRoomPosition
 }
 
@@ -210,6 +211,15 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
                 'debug:constructionFeaturesV3NeedsUpdate: mine features missing data',
                 mine.name,
                 Object.keys(constructionFeatures),
+            )
+            return true
+        }
+        if (constructionFeatures.minee.miner !== roomName) {
+            Logger.error(
+                'debug:constructionFeaturesV3NeedsUpdate: mine miner mismatch',
+                mine.name,
+                constructionFeatures.minee.miner,
+                roomName,
             )
             return true
         }

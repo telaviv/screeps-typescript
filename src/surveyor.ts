@@ -184,7 +184,7 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     const miner: MinerInformation = {}
     for (const { name, exitPosition, entrancePosition } of exitInfo) {
         miner[name] = { exitPosition }
-        setMineConstructionFeaturesV3(name, entrancePosition)
+        setMineConstructionFeaturesV3(name, roomName, entrancePosition)
     }
     return {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
@@ -197,7 +197,7 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     }
 }
 
-function setMineConstructionFeaturesV3(mineName: string, entrancePosition: Position): void {
+function setMineConstructionFeaturesV3(mineName: string, miner: string, entrancePosition: Position): void {
     const flatPos = { x: entrancePosition.x, y: entrancePosition.y, roomName: mineName }
     const ret = calculateMineConstructionFeaturesV3(mineName, flatPos)
     if (!ret) {
@@ -211,6 +211,7 @@ function setMineConstructionFeaturesV3(mineName: string, entrancePosition: Posit
         features,
         points: { version: STATIONARY_POINTS_VERSION, type: 'mine', sources: points },
         minee: {
+            miner,
             entrancePosition: flatPos,
         },
         movement: null,
