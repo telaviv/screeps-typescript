@@ -5,6 +5,7 @@ import { getStationaryPoints, isStationaryBase } from 'construction-features'
 import { mprofile, profile, wrap } from 'utils/profiling'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { getObstacles } from 'utils/room'
+import hash from 'utils/hash'
 import { subscribe } from 'pub-sub/pub-sub'
 
 export type MatrixTag = 'default-terrain' | 'road-preferred-terrain' | 'no-edges' | 'no-obstacles'
@@ -29,22 +30,6 @@ const WALL_COST = 255
 
 interface MatrixCache {
     [key: string]: { matrix: string; time: number }
-}
-
-const cyrb53 = (str: string, seed = 0) => {
-    let h1 = 0xdeadbeef ^ seed
-    let h2 = 0x41c6ce57 ^ seed
-    for (let i = 0, ch; i < str.length; i++) {
-        ch = str.charCodeAt(i)
-        h1 = Math.imul(h1 ^ ch, 2654435761)
-        h2 = Math.imul(h2 ^ ch, 1597334677)
-    }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507)
-    h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909)
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507)
-    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909)
-
-    return 4294967296 * (2097151 & h2) + (h1 >>> 0)
 }
 
 declare global {
@@ -147,7 +132,7 @@ export class MatrixCacheManager {
                     continue
                 }
                 const time = roomMemory.matrixCache[key as keyof MatrixCache].time
-                if (Game.time - time > EVICTION_TIME && cyrb53(`${roomName}:${key}`) % 100 === 0) {
+                if (Game.time - time > EVICTION_TIME && hash(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 } else if (DEPRECATED_TAGS.some((tag) => keyToTags(key).includes(tag))) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
@@ -160,7 +145,7 @@ export class MatrixCacheManager {
                     continue
                 } else if (keyToTags(key).includes('no-obstacles')) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
-                } else if (cyrb53(`${roomName}:${key}`) % 100 === 0) {
+                } else if (hash(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 }
             }

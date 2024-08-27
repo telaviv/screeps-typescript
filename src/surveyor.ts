@@ -66,11 +66,11 @@ global.setConstructionFeaturesV3 = setConstructionFeaturesV3
 global.clearConstructionFeatures = clearConstructionFeatures
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
 
-export function isSurveyComplete(room: Room): boolean {
+export const isSurveyComplete = Profiling.wrap((room: Room): boolean => {
     return Boolean(
         getConstructionFeatures(room) && getCalculatedLinks(room) && getStationaryPoints(room),
     )
-}
+}, 'isSurveyComplete')
 
 function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeaturesV3 = undefined

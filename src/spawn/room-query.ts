@@ -4,6 +4,7 @@ import BuildManager from 'managers/build-manager'
 import { LogisticsPreference } from 'roles/logistics-constants'
 import { getLinks } from 'utils/room'
 import { getTotalDroppedResources } from 'tasks/pickup'
+import { profile } from 'utils/profiling'
 
 export default class RoomQuery {
     private room: Room
@@ -16,6 +17,7 @@ export default class RoomQuery {
         return `${this.room.name}:${key}`
     }
 
+    @profile
     public allRoadsBuilt(): boolean {
         return TimeCache.get(this.key('allRoadsBuilt'), () => BuildManager.allRoadsBuilt(this.room))
     }
@@ -24,6 +26,7 @@ export default class RoomQuery {
         return TimeCache.get(this.key('linkCount'), () => getLinks(this.room).length)
     }
 
+    @profile
     public getCreepCount(role: string): number {
         return TimeCache.get(
             this.key(`creepCount:${role}`),
@@ -31,6 +34,7 @@ export default class RoomQuery {
         )
     }
 
+    @profile
     public getLogisticsCreepCount(opts: { preference?: LogisticsPreference }): number {
         const preference = opts.preference ?? 'any'
         return TimeCache.get(
@@ -39,6 +43,7 @@ export default class RoomQuery {
         )
     }
 
+    @profile
     public getWorkerLogisticsCreepCount(): number {
         return TimeCache.get(
             this.key('creepCount:worker-logistics'),
@@ -49,6 +54,7 @@ export default class RoomQuery {
         )
     }
 
+    @profile
     public getDroppedResourceCount(): number {
         return TimeCache.get(this.key('droppedResourceCount'), () =>
             getTotalDroppedResources(this.room),

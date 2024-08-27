@@ -15,6 +15,7 @@ import { getConstructionSites } from 'utils/room'
 import { getSlidingEnergy } from 'room-window'
 import { getStationaryPoints } from 'construction-features'
 import { getVirtualStorage } from 'utils/virtual-storage'
+import hash from 'utils/hash'
 import { isTravelTask } from 'tasks/travel/utils'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
@@ -41,6 +42,7 @@ const MAX_USEFUL_ENERGY =
     BODYPART_COST[CARRY] * 12 + BODYPART_COST[WORK] * 12 + BODYPART_COST[MOVE] * 24
 const MAX_DROPPED_RESOURCES = 1000
 const LATENT_WORKER_INTERVAL_MULTIPLIER = 200
+const SPAWN_CHECK_MOD = 4
 
 function getLatentWorkerInterval(room: Room): number {
     return Math.floor(minAvailableEnergy(room) * LATENT_WORKER_INTERVAL_MULTIPLIER)
@@ -84,6 +86,11 @@ export default wrap((spawn: StructureSpawn): void => {
         createRescueCreeps(spawn)
         return
     }
+
+    if ((hash(spawn.id) + Game.time) % SPAWN_CHECK_MOD !== 0) {
+        return
+    }
+
     const room = spawn.room
     const roomManager = new RoomManager(room)
     const warDepartment = new WarDepartment(spawn.room)

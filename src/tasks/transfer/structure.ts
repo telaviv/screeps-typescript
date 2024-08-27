@@ -8,6 +8,9 @@ import { getAllTasks } from 'tasks/utils'
 import { isTransferTask } from 'tasks/transfer/utils'
 
 const CACHE_KEY = 'transfer-structure:remainingCapacity'
+
+type Transferable = AnyStoreStructure
+
 export class TransferStructure {
     public readonly structure: AnyStoreStructure
     public readonly tasks: TransferTask[]
@@ -33,9 +36,19 @@ export class TransferStructure {
         return new TransferStructure(structure, tasks)
     }
 
-    @mprofile('TransferStructure:get')
     public static get(id: Id<AnyStoreStructure>): TransferStructure {
         return TransferStructure.create(id)
+    }
+
+    @mprofile('TransferStructure:getAllStructures')
+    public static getAllStructures(): Record<Id<Transferable>, TransferStructure> {
+        const transferStructures: Record<string, TransferStructure> = {}
+        for (const task of getAllTasks()) {
+            if (isTransferTask(task)) {
+                transferStructures[task.structureId] = TransferStructure.get(task.structureId)
+            }
+        }
+        return transferStructures
     }
 
     @profile

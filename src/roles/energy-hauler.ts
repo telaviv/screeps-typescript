@@ -5,10 +5,10 @@ import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
 import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { getSpawns, getTowers } from 'utils/room'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
 import { getRenewInformation } from 'utils/creep'
-import { getSpawns } from 'utils/room'
 import { getVirtualStorage } from '../utils/virtual-storage'
 import { isWithdrawTask } from 'tasks/withdraw/utils'
 import { moveWithinRoom } from 'utils/travel'
@@ -55,9 +55,10 @@ export class EnergyHaulerCreep {
 
     @profile
     run(): void {
-        if (this.creep.spawning) {
+        if (this.creep.spawning || this.nothingToDo()) {
             return
         }
+
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
             return
@@ -91,6 +92,20 @@ export class EnergyHaulerCreep {
         } else if (this.canAutoRenew()) {
             this.autoRenewCreep(closestSpawn)
         }
+    }
+
+    nothingToDo(): boolean {
+        const towers = getTowers(this.creep.room)
+        const towersFilled = towers.every(
+            (tower) =>
+                tower.store.getFreeCapacity(RESOURCE_ENERGY) <
+                tower.store.getCapacity(RESOURCE_ENERGY) * 0.75,
+        )
+        return (
+            towersFilled &&
+            this.creep.room.energyAvailable === this.creep.room.energyCapacityAvailable &&
+            (this.creep.ticksToLive ?? 0) > 1250
+        )
     }
 
     canAutoRenew(): boolean {

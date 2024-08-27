@@ -167,6 +167,7 @@ function filterFillableStructures(
         return []
     }
     const virtualStorage = getVirtualStorage(structures[0].room.name)
+    const transferStructures = TransferStructure.getAllStructures()
     return structures.filter((structure) => {
         if (structure.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
             return false
@@ -174,7 +175,7 @@ function filterFillableStructures(
         if (opts?.excludeVirtualStorage && virtualStorage && structure.id === virtualStorage.id) {
             return false
         }
-        const transfer = TransferStructure.get(structure.id)
+        const transfer = transferStructures[structure.id]
         return transfer.remainingCapacity(RESOURCE_ENERGY) > 0
     })
 }
