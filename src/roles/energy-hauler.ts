@@ -105,7 +105,7 @@ export class EnergyHaulerCreep {
         return (
             towersFilled &&
             this.creep.room.energyAvailable === this.creep.room.energyCapacityAvailable &&
-            (this.creep.ticksToLive ?? 0) > 1250
+            (this.creep.ticksToLive ?? 0) > 1400
         )
     }
 

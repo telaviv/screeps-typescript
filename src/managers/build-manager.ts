@@ -121,7 +121,12 @@ export default class BuildManager {
             return false
         }
 
-        if (getConstructionSites(this.room).length > 0) {
+        if (
+            !this.room.controller ||
+            this.room.controller.owner ||
+            (this.room.controller.reservation &&
+                this.room.controller.reservation.username !== global.USERNAME)
+        ) {
             return false
         }
 

@@ -223,6 +223,7 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:swarm-strategy')
 
+const BUILD_PART_COUNT = 12
 const linkStrategy = wrap((spawn: StructureSpawn): void => {
     if (spawn.room.energyAvailable < MIN_USEFUL_LINK_ENERGY) {
         return
@@ -320,7 +321,6 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:link-strategy')
 
-const BUILD_PART_COUNT = 12
 const createMineWorkers = wrap(
     (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
         const defenders = mineManager.getDefenders()
@@ -331,7 +331,7 @@ const createMineWorkers = wrap(
             return
         } else if (!mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
             roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
-        } else if (mineManager.hasEnoughConstructionParts(BUILD_PART_COUNT)) {
+        } else if (!mineManager.hasEnoughConstructionParts(BUILD_PART_COUNT)) {
             RoleLogistics.createCreep(spawn, TASK_BUILDING, { home: mineManager.name, capacity })
         }
     },

@@ -53,6 +53,10 @@ export class MineManager {
         return this.roomName
     }
 
+    get controller(): StructureController | undefined {
+        return this.room?.controller
+    }
+
     constructor(roomName: string, minee: Room) {
         this.roomName = roomName
         this.minee = minee
@@ -71,14 +75,15 @@ export class MineManager {
             !this.hasVision() ||
             !this.controllerReserved() ||
             (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
-                !this.hasEnoughReservers())
+                !this.hasEnoughReservers()) ||
+            (this.needsProtection() && !this.hasDefenders()) ||
+            !this.hasEnoughConstructionParts(this.sourceCount())
         )
     }
 
     hasEnoughReservers(): boolean {
         const claimCount = this.getClaimPartCount()
         const claimPartsNeeded = this.getClaimPartsNeeded()
-        console.log('hasEnoughReservers', this.roomName, claimCount, claimPartsNeeded)
         return claimCount >= claimPartsNeeded
     }
 
@@ -92,9 +97,9 @@ export class MineManager {
 
     getClaimPartsNeeded(): number {
         const ticksToEnd = this.controllerReservationTicksLeft()
-        if (ticksToEnd < 3000) {
+        if (ticksToEnd < 3200) {
             return 3
-        } else if (ticksToEnd < 4500) {
+        } else if (ticksToEnd < 4000) {
             return 2
         }
         return 0
@@ -110,7 +115,11 @@ export class MineManager {
         const minerClaimers = getCreeps('claimer', this.room).filter(
             (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
         )
-        return [...mineeClaimers, ...minerClaimers]
+        return minerClaimers
+    }
+
+    hasDefenders(): boolean {
+        return this.getDefenders().length > 0
     }
 
     getDefenders(): Creep[] {
@@ -123,7 +132,7 @@ export class MineManager {
         const minerClaimers = getCreeps('attacker', this.room).filter(
             (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
         )
-        return [...mineeClaimers, ...minerClaimers]
+        return minerClaimers
     }
 
     public needsProtection(): boolean {
@@ -143,6 +152,10 @@ export class MineManager {
     }
 
     public hasEnoughConstructionParts(count: number): boolean {
+        if (!this.room) {
+            return true
+        }
+
         if (this.constructionFinished()) {
             return true
         }
@@ -155,17 +168,16 @@ export class MineManager {
     }
 
     hasClaimSpotAvailable(): boolean {
-        if (!this.room.controller) {
+        if (!this.room?.controller) {
             return false
         }
         const totalSpots = getNonObstacleNeighbors(this.room?.controller.pos).length
         const claimerCount = this.getClaimers().length
-        console.log('hasClaimSpotAvailable', this.roomName, claimerCount, totalSpots)
         return totalSpots > claimerCount
     }
 
     controllerReservationTicksLeft(): number {
-        return this.room.controller?.reservation?.ticksToEnd ?? 0
+        return this.room?.controller?.reservation?.ticksToEnd ?? 0
     }
 
     sourceCount(): number {
