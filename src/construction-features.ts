@@ -5,6 +5,9 @@ import * as Logger from 'utils/logger'
 import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.10'
+
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
 export const STATIONARY_POINTS_VERSION = '1.2.1'
 export const LINKS_VERSION = '1.0.0'
@@ -102,9 +105,6 @@ declare global {
         constructionFeaturesV3?: ConstructionFeaturesV3
     }
 }
-
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.9'
 
 export function getConstructionFeaturesV3(room: Room | string): ConstructionFeaturesV3 | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
