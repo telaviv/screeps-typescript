@@ -22,6 +22,8 @@ const ROLE = 'mason'
 type Wall = StructureWall | StructureRampart
 type WallId = Id<Wall>
 
+const WORK_MODULO = 3
+
 export interface Mason extends ResourceCreep {
     memory: MasonMemory
 }
@@ -109,6 +111,7 @@ export class MasonCreep {
 
     private repair() {
         this.creep.say('🧱🧱')
+
         let structure = null
         if (this.repairTarget) {
             structure = Game.getObjectById<Wall>(this.repairTarget)
@@ -126,7 +129,16 @@ export class MasonCreep {
             return
         }
 
+        if (!this.creep.pos.inRangeTo(structure, 3)) {
+            moveWithinRoom(this.creep, { pos: structure.pos, range: 3 })
+            return
+        }
+
         this.repairTarget = structure.id
+        if (Game.time % (Math.floor(this.creep.getActiveBodyparts(WORK) / WORK_MODULO) + 1) !== 0) {
+            Logger.debug('mason:repair:skip', this.creep.name, structure.id)
+            return
+        }
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {

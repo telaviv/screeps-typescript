@@ -186,6 +186,9 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
         return true
     }
     for (const mine of mines ?? []) {
+        if (!Memory.rooms[mine.name]) {
+            return false
+        }
         const constructionFeatures = getConstructionFeaturesV3(mine.name)
         if (!constructionFeatures) {
             Logger.error('debug:constructionFeaturesV3NeedsUpdate: no mine features', mine.name)

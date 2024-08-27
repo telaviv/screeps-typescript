@@ -15,6 +15,7 @@ import { moveWithinRoom } from 'utils/travel'
 import { profile } from 'utils/profiling'
 
 const ROLE = 'energy-hauler'
+const MAX_CARRY_CAPACITY = 1100
 
 export interface EnergyHauler extends ResourceCreep {
     memory: EnergyHaulerMemory
@@ -25,6 +26,7 @@ interface EnergyHaulerMemory extends ResourceCreepMemory {
     home: string
     lastWithdraw?: { id: string; time: number }
     creationCapacity: number
+    roadsBuilt: boolean
     autoRenew: boolean
 }
 
@@ -165,26 +167,36 @@ const roleEnergyHauler = {
         energyHauler.run()
     },
 
-    shouldCancelAutoRenew(creep: EnergyHauler, capacity: number): boolean {
-        return creep.memory.autoRenew && creep.memory.creationCapacity < capacity
+    shouldCancelAutoRenew(creep: EnergyHauler, capacity: number, roadsBuilt: boolean): boolean {
+        return (
+            (creep.memory.autoRenew && creep.memory.creationCapacity < capacity) ||
+            !!roadsBuilt !== !!creep.memory.roadsBuilt
+        )
     },
 
     cancelAutoRenew(creep: EnergyHauler): void {
         creep.memory.autoRenew = false
     },
 
-    create(spawn: StructureSpawn, capacity?: number): number {
+    create(spawn: StructureSpawn, capacity?: number, roadsBuilt = false): number {
         if (!capacity) {
             capacity = spawn.room.energyCapacityAvailable
         }
         const name = `${ROLE}:${spawn.room.name}:${Game.time}`
-        return spawn.spawnCreep(fromBodyPlan(capacity, [CARRY, MOVE]), name, {
+        let maxCopies = MAX_CARRY_CAPACITY / CARRY_CAPACITY
+        let bodyPlan = [CARRY, MOVE]
+        if (roadsBuilt) {
+            maxCopies = MAX_CARRY_CAPACITY / (CARRY_CAPACITY * 2)
+            bodyPlan = [CARRY, CARRY, MOVE]
+        }
+        return spawn.spawnCreep(fromBodyPlan(capacity, bodyPlan, { maxCopies }), name, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
                 tasks: [],
                 idleTimestamp: null,
                 creationCapacity: capacity,
+                roadsBuilt,
                 autoRenew: true,
             } as EnergyHaulerMemory,
         })

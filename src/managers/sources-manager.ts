@@ -126,7 +126,7 @@ export default class SourcesManager {
 
     public createHarvester(
         spawn: StructureSpawn,
-        opts: CreateOpts = { rescue: false, roadsBuilt: false },
+        opts: CreateOpts = { rescue: false, roadsBuilt: false, capacity: 0 },
     ): number {
         const target = this.getNextHarvesterMiningTarget()
         if (!target) {

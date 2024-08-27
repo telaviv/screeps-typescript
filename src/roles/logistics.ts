@@ -28,16 +28,17 @@ import {
     hasNoSpawns,
     hasOwnFragileWall,
 } from 'utils/room'
-import { getCreeps, wander } from 'utils/creep'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { mprofile, profile } from 'utils/profiling'
 import EnergySinkManager from 'managers/energy-sink-manager'
+import RoomQuery from 'spawn/room-query'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { findTaskByType } from 'tasks/utils'
 import { getBuildManager } from 'managers/build-manager'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
+import { wander } from 'utils/creep'
 
 export const ROLE = 'logistics'
 const SUICIDE_TIME = 40
@@ -74,6 +75,7 @@ interface CreateOpts {
     home?: string
     rescue?: boolean
     capacity?: number
+    noSuicide?: boolean
 }
 
 class RoleLogistics {
@@ -96,7 +98,11 @@ class RoleLogistics {
 
         this.say()
         this.updateMemory()
-        if (this.idleTime() > SUICIDE_TIME && this.creep.memory.preference === PREFERENCE_WORKER) {
+        if (
+            !this.creep.memory.noSuicide &&
+            this.idleTime() > SUICIDE_TIME &&
+            this.creep.memory.preference === PREFERENCE_WORKER
+        ) {
             this.creep.suicide()
             return
         }
@@ -149,6 +155,9 @@ class RoleLogistics {
     @profile
     private getEnergy(): void {
         if (!addEnergyTask(this.creep, { includeMining: true })) {
+            if (this.creep.name === 'logistics:worker:W46N11:9787140') {
+                Logger.error('logistics:getEnergy:failure', this.creep.name)
+            }
             this.setToNoTask('no tasks could be made')
         }
     }
@@ -166,14 +175,14 @@ class RoleLogistics {
     private updateMemory() {
         const memory = this.creep.memory
         const currentTask = memory.currentTask
-        const energyHaulers = getCreeps('energyHauler', this.creep.room)
+        const rq = new RoomQuery(this.creep.room)
 
         if (
             currentTask === TASK_COLLECTING &&
             (isFullOfEnergy(this.creep) || (this.creep.ticksToLive ?? 0) < 50)
         ) {
             if (
-                energyHaulers.length === 0 &&
+                !rq.getCreepCount('energy-hauler') &&
                 this.creep.room.energyAvailable < this.creep.room.energyCapacityAvailable
             ) {
                 memory.currentTask = TASK_HAULING
@@ -197,6 +206,7 @@ class RoleLogistics {
         this.creep.memory.currentTarget = undefined
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
+        const rq = new RoomQuery(this.creep.room)
         if (this.creep.room.name !== memory.home) {
             memory.currentTask = TASK_TRAVELING
         } else if (
@@ -207,9 +217,9 @@ class RoleLogistics {
             return
         } else if (hasNoSpawns(this.creep.room)) {
             memory.currentTask = TASK_BUILDING
-        } else if (TransferTask.makeRequest(this.creep)) {
+        } else if (!rq.getCreepCount('energy-hauler') && TransferTask.makeRequest(this.creep)) {
             memory.currentTask = TASK_HAULING
-        } else if (buildManager && buildManager.canBuildImportant()) {
+        } else if (buildManager && buildManager.canBuild()) {
             memory.currentTask = TASK_BUILDING
         } else if (hasOwnFragileWall(this.creep.room)) {
             memory.currentTask = TASK_WALL_REPAIRS
@@ -359,6 +369,7 @@ class RoleLogistics {
     @mprofile('logistics:haulEnergy')
     haulEnergy(): void {
         if (
+            !this.creep.memory.noSuicide &&
             (this.creep.ticksToLive ?? Infinity) < 50 &&
             hasNoEnergy(this.creep) &&
             this.creep.memory.preference === PREFERENCE_WORKER
@@ -435,6 +446,7 @@ class RoleLogistics {
                     preference,
                     currentTask: TASK_COLLECTING,
                     currentTarget: undefined,
+                    noSuicide: opts.noSuicide ?? false,
                     idleTimestamp: null,
                     tasks: [],
                 } as LogisticsMemory,

@@ -281,7 +281,7 @@ const roleHarvester = {
         spawn: StructureSpawn,
         sourceId: Id<Source>,
         pos: RoomPosition | null = null,
-        rescue: CreateOpts = { rescue: false, roadsBuilt: false },
+        opts: CreateOpts = { rescue: false, roadsBuilt: false },
     ): number {
         const source = Game.getObjectById(sourceId)
         if (!source) {
@@ -294,10 +294,13 @@ const roleHarvester = {
             return ERR_NOT_FOUND
         }
         const stationaryPosition = pos === null ? stationaryPoints.sources[sourceId] : pos
-        const capacity = rescue
-            ? Math.max(300, spawn.room.energyAvailable)
-            : spawn.room.energyCapacityAvailable
-        const parts = calculateParts(capacity, rescue.roadsBuilt ?? false)
+        let capacity = spawn.room.energyCapacityAvailable
+        if (opts.capacity) {
+            capacity = opts.capacity
+        } else if (opts.rescue) {
+            capacity = Math.max(300, spawn.room.energyAvailable)
+        }
+        const parts = calculateParts(capacity, opts.roadsBuilt ?? false)
         const err = spawnCreep(spawn, parts, ROLE, spawn.room.name, {
             memory: {
                 role: ROLE,

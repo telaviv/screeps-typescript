@@ -7,7 +7,6 @@ import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleMason, { MasonCreep } from 'roles/mason'
 import DefenseDepartment from 'defense-department'
-import LinkManager from 'managers/link-manager'
 import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import RoomQuery from 'spawn/room-query'
@@ -38,18 +37,17 @@ const RESCUE_WORKER_COUNT = 3
 const ATTACKERS_COUNT = 2
 
 const MIN_USEFUL_LINK_ENERGY = BODYPART_COST[CARRY] * 9 + BODYPART_COST[MOVE]
-const MAX_USEFUL_ENERGY = BODYPART_COST[CARRY] * 25 + BODYPART_COST[MOVE] * 25
+const MAX_USEFUL_ENERGY =
+    BODYPART_COST[CARRY] * 12 + BODYPART_COST[WORK] * 12 + BODYPART_COST[MOVE] * 24
 const MAX_DROPPED_RESOURCES = 1000
+const LATENT_WORKER_INTERVAL_MULTIPLIER = 200
 
 function getLatentWorkerInterval(room: Room): number {
-    if (room.energyCapacityAvailable < 550) {
-        return 50
-    }
-    return 100
+    return Math.floor(minAvailableEnergy(room) * LATENT_WORKER_INTERVAL_MULTIPLIER)
 }
 const ENERGY_DATA: DataPoint[] = [
     [300, 0.3],
-    [800, 0.35],
+    [800, 0.325],
     [1300, 0.5],
     [1800, 2.25],
     [2300, 2.75],
@@ -144,6 +142,7 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     const constructionSites = getConstructionSites(room).filter(
         (site) => site.structureType !== STRUCTURE_RAMPART,
     )
+    const haulers = getCreeps('energy-hauler', room)
     const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
     const virtualStorage = getVirtualStorage(room.name)
@@ -153,12 +152,21 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
         sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt(), capacity })
         return
     }
+    if (roomQuery.getCreepCount('energy-hauler') > 0) {
+        for (const hauler of haulers as EnergyHauler[]) {
+            if (
+                roleEnergyHauler.shouldCancelAutoRenew(hauler, capacity, roomQuery.allRoadsBuilt())
+            ) {
+                roleEnergyHauler.cancelAutoRenew(hauler)
+            }
+        }
+    }
 
-    if (RoleLogistics.shouldCreateCreep(spawn)) {
+    if (RoleLogistics.shouldCreateCreep(spawn, capacity)) {
         if (roomQuery.getCreepCount('energy-hauler') < 1) {
-            roleEnergyHauler.create(spawn, capacity)
+            roleEnergyHauler.create(spawn, capacity, roomQuery.allRoadsBuilt())
             return
-        } else if (roomQuery.getWorkerLogisticsCreepCount() < 2) {
+        } else if (roomQuery.getLogisticsCreepCount({ preference: PREFERENCE_WORKER }) < 1) {
             RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, { capacity })
             return
         } else if (
@@ -171,6 +179,9 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
             constructionSites.length > 0
         ) {
             RoleLogistics.createCreep(spawn, TASK_BUILDING, { capacity })
+            return
+        } else if (roomQuery.getCreepCount('rebalancer') < 1 && virtualStorage) {
+            roleRebalancer.create(spawn, capacity)
             return
         } else if (
             roomQuery.getCreepCount('rebalancer') < 2 &&
@@ -210,7 +221,6 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     }
 
     const room = spawn.room
-    const constructionSites = getConstructionSites(room)
     const roomManager = new RoomManager(room)
     const sourcesManager = new SourcesManager(room)
     const haulers = getCreeps('energy-hauler', room)
@@ -225,45 +235,36 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
         return
     }
 
-    if (RoleLogistics.shouldCreateCreep(spawn)) {
-        if (
-            roomQuery.getCreepCount('energy-hauler') > 0 &&
-            roleEnergyHauler.shouldCancelAutoRenew(haulers[0] as EnergyHauler, capacity)
-        ) {
-            roleEnergyHauler.cancelAutoRenew(haulers[0] as EnergyHauler)
-        } else if (roomQuery.getCreepCount('energy-hauler') < 1) {
-            roleEnergyHauler.create(spawn, capacity)
-            return
-        } else if (
-            roomQuery.getCreepCount('static-upgrader') +
-                roomQuery.getLogisticsCreepCount({ preference: TASK_UPGRADING }) ===
-                0 &&
-            !LinkManager.hasControllerLink(room) &&
-            constructionSites.length === 0
-        ) {
-            RoleLogistics.createCreep(spawn, TASK_UPGRADING, { capacity })
-            return
-        } else if (
-            roomQuery.getLogisticsCreepCount({ preference: TASK_BUILDING }) < BUILDERS_COUNT &&
-            constructionSites.length > 0
-        ) {
-            RoleLogistics.createCreep(spawn, TASK_BUILDING, { capacity })
-            return
-        } else if (
-            roomQuery.getCreepCount('rebalancer') < 1 &&
-            virtualStorage &&
-            roomQuery.linkCount() < 3
-        ) {
-            roleRebalancer.create(spawn, capacity)
-            return
-        } else if (
-            roomQuery.getCreepCount('energy-hauler') < 2 &&
-            roomQuery.getCreepCount('rebalancer') === 0 &&
-            !isEnergyRestricted(room)
-        ) {
-            roleEnergyHauler.create(spawn, capacity)
-            return
+    if (roomQuery.getCreepCount('energy-hauler') > 0) {
+        for (const hauler of haulers as EnergyHauler[]) {
+            if (
+                roleEnergyHauler.shouldCancelAutoRenew(hauler, capacity, roomQuery.allRoadsBuilt())
+            ) {
+                roleEnergyHauler.cancelAutoRenew(hauler)
+            }
         }
+    }
+
+    if (roomQuery.getCreepCount('logistics') < 1) {
+        RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, { capacity, noSuicide: true })
+        return
+    } else if (roomQuery.getCreepCount('energy-hauler') < 1) {
+        roleEnergyHauler.create(spawn, capacity, roomQuery.allRoadsBuilt())
+        return
+    } else if (
+        roomQuery.getCreepCount('rebalancer') < 1 &&
+        virtualStorage &&
+        roomQuery.linkCount() < 3
+    ) {
+        roleRebalancer.create(spawn, capacity)
+        return
+    } else if (
+        roomQuery.getCreepCount('energy-hauler') < 2 &&
+        roomQuery.getCreepCount('rebalancer') === 0 &&
+        !isEnergyRestricted(room)
+    ) {
+        roleEnergyHauler.create(spawn, capacity, roomQuery.allRoadsBuilt())
+        return
     }
 
     if (roomManager.canClaimRoom()) {
@@ -454,15 +455,16 @@ function updateRescueStatus(room: Room) {
         return
     }
     const sourceCount = Object.keys(stationaryPoints.sources).length
-    const logisticsCreeps = getLogisticsCreeps({ room })
-    const harvesters = getCreeps('harvester', room)
-    const energyHauler = getCreeps('energy-hauler', room)
+    const roomQuery = new RoomQuery(room)
+
     const selfSufficient =
-        (energyHauler.length > 0 && harvesters.length > 0) || logisticsCreeps.length > 0
+        (roomQuery.getCreepCount('energy-hauler') > 0 &&
+            roomQuery.getCreepCount('harvester') > 0) ||
+        roomQuery.getCreepCount('logistics') > 0
     if (
         room.memory.collapsed &&
-        logisticsCreeps.length >= RESCUE_WORKER_COUNT &&
-        harvesters.length >= sourceCount
+        roomQuery.getCreepCount('logistics') >= RESCUE_WORKER_COUNT &&
+        roomQuery.getCreepCount('harvester') >= sourceCount
     ) {
         room.memory.collapsed = false
     } else if (!selfSufficient) {

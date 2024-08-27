@@ -35,6 +35,25 @@ function routeCallback(fromRoom: string, toRoom: string): number | undefined {
     return undefined
 }
 
+const moveToRoomRouteCallback =
+    (room: string) =>
+    (fromRoom: string, toRoom: string): number | undefined => {
+        if (toRoom === room || fromRoom === room) {
+            return undefined
+        }
+        console.log('moveToRoomRouteCallback', fromRoom, toRoom)
+        return routeCallback(fromRoom, toRoom)
+    }
+
+const moveToRoomRoomCallback =
+    (room: string) =>
+    (roomName: string): CostMatrix | boolean => {
+        if (roomName === room) {
+            return MatrixCacheManager.getTravelMatrix(roomName)
+        }
+        return false
+    }
+
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
@@ -44,7 +63,12 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
     return moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
-        { roomCallback, routeCallback, swampCost: 3, ...opts },
+        {
+            roomCallback: moveToRoomRoomCallback(roomName),
+            routeCallback: moveToRoomRouteCallback(roomName),
+            swampCost: 3,
+            ...opts,
+        },
     )
 }, 'travel:moveToRoom')
 

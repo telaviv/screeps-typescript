@@ -62,8 +62,7 @@ function safeDescribeExits(roomName: string): ExitsInformation {
 }
 
 export function safeRoomCallback(roomName: string): boolean {
-    const safe = !isRoomUnsafe(roomName)
-    return safe
+    return !isRoomUnsafe(roomName)
 }
 
 export class World {

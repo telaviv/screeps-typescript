@@ -39,6 +39,7 @@ export interface LogisticsMemory extends ResourceCreepMemory {
     preference: LogisticsPreference
     currentTask: LogisticsTask
     currentTarget: Id<Structure> | undefined
+    noSuicide?: boolean
     home: string
 }
 

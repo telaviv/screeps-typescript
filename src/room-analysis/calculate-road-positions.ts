@@ -10,6 +10,7 @@ import {
     isStationaryBase,
 } from '../construction-features'
 import { Mine } from 'managers/mine-manager'
+import { printMatrix } from 'matrix-cache'
 
 export interface PositionEdge {
     a: string
@@ -228,6 +229,13 @@ function addMineRoadsToMatrix(
             }
             return Infinity
         }
+        if (!Memory.rooms[mine.name]) {
+            Logger.error(
+                'calculateRoadPositions:mine Memory.rooms is undefined',
+                roomName,
+                mine.name,
+            )
+        }
         const scout = Memory.rooms[mine.name].scout
         if (!scout || !scout.sourcePositions) {
             Logger.error('calculateRoadPositions:mine scout is undefined', roomName, mine.name)
@@ -302,6 +310,7 @@ function addSourcePathsToMatrix(
     )
     if (closeSourcePath === undefined) {
         Logger.error('calculateRoadPositions:sources path is undefined', roomName)
+        printMatrix(cm)
         return false
     }
     const closerSource = Object.values(sources).find(

@@ -64,6 +64,8 @@ export class RebalancerCreep {
             const task = this.creep.memory.tasks[0]
             TaskRunner.run(task, this.creep)
             return
+        } else if (this.creep.store.getUsedCapacity() >= 50) {
+            this.collectEnergy()
         } else {
             this.moveToIdlePosition()
         }

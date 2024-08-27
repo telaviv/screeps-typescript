@@ -186,6 +186,14 @@ export default class BuildManager {
         return false
     }
 
+    hasConstructionSites(): boolean {
+        return getConstructionSites(this.room).length > 0
+    }
+
+    canBuild(): boolean {
+        return this.hasConstructionSites()
+    }
+
     @profile
     canBuildImportant(): boolean {
         return (

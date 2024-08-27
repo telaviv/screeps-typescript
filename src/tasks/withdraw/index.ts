@@ -3,12 +3,10 @@ import maxBy from 'lodash/maxBy'
 import * as Logger from 'utils/logger'
 import { WithdrawTask, Withdrawable } from './types'
 import { getFreeCapacity, getUsedCapacity } from 'utils/store'
-import LinkManager from 'managers/link-manager'
 import { ResourceCreep } from '../types'
 import { WithdrawObject } from './object'
 import { findClosestByRange } from 'utils/room-position'
 import { getConstructionFeatures } from 'construction-features'
-import { getCreeps } from 'utils/creep'
 import { getHome } from 'roles/utils'
 import { isWithdrawTask } from './utils'
 import { moveTo } from 'utils/travel'
@@ -55,9 +53,11 @@ export const makeRequest = wrap((creep: ResourceCreep, opts?: RequestOpts): bool
         Logger.error('withdraw::makeRequest:failure:no-home', creep.name)
         return false
     }
-    const excludeContainers =
+    const excludeContainers = false
+    /*
         opts?.excludeContainers ||
         (LinkManager.canLinkHarvest(home) && getCreeps('static-link-harvester').length > 0)
+    */
     opts = { ...opts, excludeContainers }
     let withdrawTargets = getEligibleTargets(home, capacity, opts)
     if (creep.memory.home !== creep.room.name) {

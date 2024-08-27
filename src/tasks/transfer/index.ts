@@ -139,6 +139,9 @@ function getStructure(task: TransferTask): AnyStoreStructure {
 }
 
 const fillableExtensions = wrap((room: Room): AnyStoreStructure[] => {
+    if (room.energyAvailable === room.energyCapacityAvailable) {
+        return []
+    }
     const extensions = getExtensions(room)
     return filterFillableStructures(extensions)
 }, 'transfer:fillableExtensions')
