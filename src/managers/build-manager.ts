@@ -117,7 +117,7 @@ export default class BuildManager {
 
     @profile
     ensureMineConstructionSites(): boolean {
-        if (this.room.memory.construction.paused) {
+        if (this.room.memory.construction.paused || this.canBuild()) {
             return false
         }
 

@@ -1,12 +1,14 @@
-import { findMyRooms, getHostileCreeps, getMyConstructionSites } from 'utils/room'
+import { findMyRooms, getHostileCreeps, getInjuredCreeps, getMyConstructionSites } from 'utils/room'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import { ClaimerMemory } from 'roles/claim'
+import { HealerMemory } from 'roles/healer'
 import { HostileRecorder } from 'hostiles'
 import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 
 const MIN_RESERVATION_TICKS = 2500
+const MIN_BUILD_PARTS = 12
 
 export interface Mine {
     name: string
@@ -77,7 +79,7 @@ export class MineManager {
             (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
                 !this.hasEnoughReservers()) ||
             (this.needsProtection() && !this.hasDefenders()) ||
-            !this.hasEnoughConstructionParts(this.sourceCount())
+            !this.hasEnoughConstructionParts()
         )
     }
 
@@ -85,6 +87,17 @@ export class MineManager {
         const claimCount = this.getClaimPartCount()
         const claimPartsNeeded = this.getClaimPartsNeeded()
         return claimCount >= claimPartsNeeded
+    }
+
+    needsHealer(): boolean {
+        if (!this.room) {
+            return false
+        }
+        const injured = getInjuredCreeps(this.room)
+        const healers = getCreeps('healer').filter(
+            (creep: Creep) => (creep.memory as HealerMemory).roomName === this.roomName,
+        )
+        return healers.length === 0 && injured.length > 0
     }
 
     getClaimPartCount(): number {
@@ -151,7 +164,7 @@ export class MineManager {
         return this.room && (this.hasInvaderCore() || getHostileCreeps(this.room).length > 0)
     }
 
-    public hasEnoughConstructionParts(count: number): boolean {
+    public hasEnoughConstructionParts(): boolean {
         if (!this.room) {
             return true
         }
@@ -159,12 +172,16 @@ export class MineManager {
         if (this.constructionFinished()) {
             return true
         }
-        const builders = getLogisticsCreeps({ room: this.room })
+        const builders = this.getWorkers()
         const constructionParts = builders.reduce(
             (acc: number, creep: Creep) => acc + creep.getActiveBodyparts(WORK),
             0,
         )
-        return constructionParts >= count
+        return constructionParts >= MIN_BUILD_PARTS
+    }
+
+    public getWorkers(): Creep[] {
+        return getLogisticsCreeps({ room: this.room })
     }
 
     hasClaimSpotAvailable(): boolean {

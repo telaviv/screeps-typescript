@@ -20,6 +20,7 @@ import hash from 'utils/hash'
 import { isTravelTask } from 'tasks/travel/utils'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
+import roleHealer from 'roles/healer'
 import roleRebalancer from 'roles/rebalancer'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
@@ -223,7 +224,6 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:swarm-strategy')
 
-const BUILD_PART_COUNT = 12
 const linkStrategy = wrap((spawn: StructureSpawn): void => {
     if (spawn.room.energyAvailable < MIN_USEFUL_LINK_ENERGY) {
         return
@@ -323,16 +323,46 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
 
 const createMineWorkers = wrap(
     (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
-        const defenders = mineManager.getDefenders()
-        if (!mineManager.hasVision()) {
+        if (!mineManager.room) {
             roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
-        } else if (mineManager.needsProtection() && defenders.length < ATTACKERS_COUNT) {
+            return
+        }
+
+        const defenders = mineManager.getDefenders()
+        if (mineManager.needsProtection() && defenders.length < ATTACKERS_COUNT) {
             roleAttacker.create(spawn, mineManager.name, capacity)
             return
-        } else if (!mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
+        }
+
+        if (!mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
             roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
-        } else if (!mineManager.hasEnoughConstructionParts(BUILD_PART_COUNT)) {
-            RoleLogistics.createCreep(spawn, TASK_BUILDING, { home: mineManager.name, capacity })
+            return
+        }
+
+        if (mineManager.needsHealer()) {
+            roleHealer.create(spawn, mineManager.name)
+        }
+
+        if (!mineManager.hasEnoughConstructionParts() && mineManager.getWorkers().length === 0) {
+            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                home: mineManager.name,
+                capacity,
+            })
+            return
+        }
+
+        const sourcesManager = new SourcesManager(mineManager.room)
+        if (!sourcesManager.hasAllContainerHarvesters()) {
+            sourcesManager.createHarvester(spawn, { capacity })
+            return
+        }
+
+        if (!mineManager.hasEnoughConstructionParts()) {
+            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                home: mineManager.name,
+                capacity,
+            })
+            return
         }
     },
     'rcl-2:create-mine-workers',
