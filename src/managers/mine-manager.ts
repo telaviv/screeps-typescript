@@ -1,8 +1,9 @@
-import { findMyRooms, getMyConstructionSites } from 'utils/room'
+import { findMyRooms, getHostileCreeps, getMyConstructionSites } from 'utils/room'
+import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import { ClaimerMemory } from 'roles/claim'
+import { HostileRecorder } from 'hostiles'
 import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
-import { getCreeps } from 'utils/creep'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 
 const MIN_RESERVATION_TICKS = 2500
@@ -125,6 +126,33 @@ export class MineManager {
         return [...mineeClaimers, ...minerClaimers]
     }
 
+    public needsProtection(): boolean {
+        if (!this.room) {
+            return false
+        }
+        const hostileRecorder = new HostileRecorder(this.room.name)
+        const dangerLevel = hostileRecorder.dangerLevel()
+        if ((dangerLevel > 0 && dangerLevel < 10) || this.hasHostiles()) {
+            return true
+        }
+        return false
+    }
+
+    private hasHostiles(): boolean {
+        return this.room && (this.hasInvaderCore() || getHostileCreeps(this.room).length > 0)
+    }
+
+    public hasEnoughConstructionParts(count: number): boolean {
+        if (this.constructionFinished()) {
+            return true
+        }
+        const builders = getLogisticsCreeps({ room: this.room })
+        const constructionParts = builders.reduce(
+            (acc: number, creep: Creep) => acc + creep.getActiveBodyparts(WORK),
+            0,
+        )
+        return constructionParts >= count
+    }
 
     hasClaimSpotAvailable(): boolean {
         if (!this.room.controller) {

@@ -320,16 +320,19 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:link-strategy')
 
+const BUILD_PART_COUNT = 12
 const createMineWorkers = wrap(
     (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
         const defenders = mineManager.getDefenders()
         if (!mineManager.hasVision()) {
             roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
-        } else if (mineManager.hasInvaderCore() && defenders.length < ATTACKERS_COUNT) {
+        } else if (mineManager.needsProtection() && defenders.length < ATTACKERS_COUNT) {
             roleAttacker.create(spawn, mineManager.name, capacity)
             return
         } else if (!mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
             roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
+        } else if (mineManager.hasEnoughConstructionParts(BUILD_PART_COUNT)) {
+            RoleLogistics.createCreep(spawn, TASK_BUILDING, { home: mineManager.name, capacity })
         }
     },
     'rcl-2:create-mine-workers',

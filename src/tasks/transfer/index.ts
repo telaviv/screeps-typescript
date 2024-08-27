@@ -175,7 +175,7 @@ function filterFillableStructures(
         if (opts?.excludeVirtualStorage && virtualStorage && structure.id === virtualStorage.id) {
             return false
         }
-        const transfer = transferStructures[structure.id]
+        const transfer = transferStructures[structure.id] ?? new TransferStructure(structure, [])
         return transfer.remainingCapacity(RESOURCE_ENERGY) > 0
     })
 }
