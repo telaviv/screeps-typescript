@@ -66,6 +66,7 @@ export class EnergyHaulerCreep {
         } else {
             this.deliverEnergy()
         }
+
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
             return

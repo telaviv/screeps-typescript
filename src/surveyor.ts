@@ -197,7 +197,11 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     }
 }
 
-function setMineConstructionFeaturesV3(mineName: string, miner: string, entrancePosition: Position): void {
+function setMineConstructionFeaturesV3(
+    mineName: string,
+    miner: string,
+    entrancePosition: Position,
+): void {
     const flatPos = { x: entrancePosition.x, y: entrancePosition.y, roomName: mineName }
     const ret = calculateMineConstructionFeaturesV3(mineName, flatPos)
     if (!ret) {

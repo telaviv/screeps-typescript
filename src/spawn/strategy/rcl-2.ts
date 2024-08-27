@@ -7,6 +7,7 @@ import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleMason, { MasonCreep } from 'roles/mason'
 import DefenseDepartment from 'defense-department'
+import { MineManager } from 'managers/mine-manager'
 import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import RoomQuery from 'spawn/room-query'
@@ -302,11 +303,30 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
         roleMason.create(spawn, capacity)
         return
     }
+
+    for (const mm of roomQuery.getMineManagers()) {
+        if (mm.needsAttention()) {
+            createMineWorkers(spawn, capacity, mm)
+        }
+    }
+
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:link-strategy')
 
-// const createMineWorkers = wrap((spawn: StructureSpawn, capacity?: number): void => {},
-// 'rcl-2:create-mine-workers')
+const createMineWorkers = wrap(
+    (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
+        const defenders = mineManager.getDefenders()
+        if (!mineManager.hasVision()) {
+            roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
+        } else if (mineManager.hasInvaderCore() && defenders.length < ATTACKERS_COUNT) {
+            roleAttacker.create(spawn, mineManager.name, capacity)
+            return
+        } else if (!mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
+            roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
+        }
+    },
+    'rcl-2:create-mine-workers',
+)
 
 const createLatentWorkers = wrap((spawn: StructureSpawn, capacity?: number): void => {
     if (!capacity) {

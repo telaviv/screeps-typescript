@@ -432,9 +432,6 @@ export function makeConstructionSite(
     type: BuildableStructureConstant,
 ): ScreepsReturnCode {
     const room = Game.rooms[pos.roomName]
-    if (!room.controller || !room.controller.my) {
-        return ERR_NOT_OWNER
-    }
     const ret = room.createConstructionSite(pos, type)
     if (ret !== OK) {
         logConstructionFailure(pos, type, ret)

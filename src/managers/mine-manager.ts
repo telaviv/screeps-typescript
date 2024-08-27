@@ -1,6 +1,11 @@
 import { findMyRooms, getMyConstructionSites } from 'utils/room'
+import { ClaimerMemory } from 'roles/claim'
 import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
+import { getCreeps } from 'utils/creep'
+import { getNonObstacleNeighbors } from 'utils/room-position'
+
+const MIN_RESERVATION_TICKS = 2500
 
 export interface Mine {
     name: string
@@ -43,6 +48,10 @@ export class MineManager {
         return Game.rooms[this.roomName]
     }
 
+    get name(): string {
+        return this.roomName
+    }
+
     constructor(roomName: string, minee: Room) {
         this.roomName = roomName
         this.minee = minee
@@ -54,6 +63,77 @@ export class MineManager {
 
     controllerReserved(): boolean {
         return !!this.room.controller?.reservation
+    }
+
+    needsAttention(): boolean {
+        return (
+            !this.hasVision() ||
+            !this.controllerReserved() ||
+            (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
+                !this.hasEnoughReservers())
+        )
+    }
+
+    hasEnoughReservers(): boolean {
+        const claimCount = this.getClaimPartCount()
+        const claimPartsNeeded = this.getClaimPartsNeeded()
+        console.log('hasEnoughReservers', this.roomName, claimCount, claimPartsNeeded)
+        return claimCount >= claimPartsNeeded
+    }
+
+    getClaimPartCount(): number {
+        const claimers = this.getClaimers()
+        return claimers.reduce(
+            (acc: number, creep: Creep) => acc + creep.getActiveBodyparts(CLAIM),
+            0,
+        )
+    }
+
+    getClaimPartsNeeded(): number {
+        const ticksToEnd = this.controllerReservationTicksLeft()
+        if (ticksToEnd < 3000) {
+            return 3
+        } else if (ticksToEnd < 4500) {
+            return 2
+        }
+        return 0
+    }
+
+    getClaimers(): Creep[] {
+        const mineeClaimers = getCreeps('claimer', this.minee).filter(
+            (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
+        )
+        if (!this.room) {
+            return mineeClaimers
+        }
+        const minerClaimers = getCreeps('claimer', this.room).filter(
+            (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
+        )
+        return [...mineeClaimers, ...minerClaimers]
+    }
+
+    getDefenders(): Creep[] {
+        const mineeClaimers = getCreeps('attacker', this.minee).filter(
+            (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
+        )
+        if (!this.room) {
+            return mineeClaimers
+        }
+        const minerClaimers = getCreeps('attacker', this.room).filter(
+            (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
+        )
+        return [...mineeClaimers, ...minerClaimers]
+    }
+
+
+    hasClaimSpotAvailable(): boolean {
+        if (!this.room.controller) {
+            return false
+        }
+        const totalSpots = getNonObstacleNeighbors(this.room?.controller.pos).length
+        const claimerCount = this.getClaimers().length
+        console.log('hasClaimSpotAvailable', this.roomName, claimerCount, totalSpots)
+        return totalSpots > claimerCount
     }
 
     controllerReservationTicksLeft(): number {
@@ -71,6 +151,13 @@ export class MineManager {
         }
         const sites = getMyConstructionSites(room)
         return sites.length === 0
+    }
+
+    public hasInvaderCore(): boolean {
+        const invaderCores = this.room?.find(FIND_STRUCTURES, {
+            filter: { structureType: STRUCTURE_INVADER_CORE },
+        })
+        return invaderCores ? invaderCores.length > 0 : false
     }
 }
 

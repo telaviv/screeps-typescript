@@ -129,7 +129,23 @@ const runMyRoom = wrap((room: Room) => {
             runSpawn(structure as StructureSpawn)
         }
     }
+    for (const mine of room.memory.mines ?? []) {
+        runMine(mine.name)
+    }
 }, 'main:runMyRoom')
+
+const runMine = wrap((mineName: string) => {
+    const room = Game.rooms[mineName]
+    if (!room) {
+        return
+    }
+    const buildManager = getBuildManager(room)
+    if (!buildManager) {
+        return
+    }
+    buildManager.removeEnemyConstructionSites()
+    buildManager.ensureMineConstructionSites()
+}, 'main:runMine')
 
 const ensureSafeMode = wrap((room: Room) => {
     if (!room.controller || !room.controller.safeModeAvailable) {
