@@ -2,7 +2,7 @@
 
 // https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript
 
-export function stringToInt(str: string, seed = 0): number {
+export default function hash(str: string, seed = 0): number {
     let h1 = 0xdeadbeef ^ seed
     let h2 = 0x41c6ce57 ^ seed
     for (let i = 0, ch; i < str.length; i++) {
