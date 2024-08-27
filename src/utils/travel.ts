@@ -18,8 +18,8 @@ function hasRoomPosition(target: MoveToTarget): target is _HasRoomPosition {
     return (target as _HasRoomPosition).pos !== undefined
 }
 
-function roomCallback(roomName: string): CostMatrix | boolean {
-    if (!safeRoomCallback(roomName)) {
+function roomCallback(roomName: string, forceSafe?: true): CostMatrix | boolean {
+    if (!forceSafe && !safeRoomCallback(roomName)) {
         return false
     }
     if (!Memory.rooms[roomName]) {
@@ -41,7 +41,6 @@ const moveToRoomRouteCallback =
         if (toRoom === room || fromRoom === room) {
             return undefined
         }
-        console.log('moveToRoomRouteCallback', fromRoom, toRoom)
         return routeCallback(fromRoom, toRoom)
     }
 
@@ -49,9 +48,9 @@ const moveToRoomRoomCallback =
     (room: string) =>
     (roomName: string): CostMatrix | boolean => {
         if (roomName === room) {
-            return MatrixCacheManager.getTravelMatrix(roomName)
+            return roomCallback(roomName, true)
         }
-        return false
+        return roomCallback(roomName)
     }
 
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<

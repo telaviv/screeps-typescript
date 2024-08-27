@@ -5,8 +5,11 @@ import * as Logger from 'utils/logger'
 import * as TimeCache from 'utils/time-cache'
 import {
     ConstructionFeatures,
-    getConstructionFeatures,
-    getStationaryPointsBase,
+    ConstructionFeaturesV3Base,
+    ConstructionFeaturesV3Mine,
+    getConstructionFeaturesV3,
+    getStationaryPoints,
+    StationaryPoints,
 } from 'construction-features'
 import {
     LINK_COUNTS,
@@ -15,7 +18,6 @@ import {
     getConstructionSites,
     getContainers,
     getExtensions,
-    getExtractor,
     getFactory,
     getLabs,
     getLinks,
@@ -44,20 +46,35 @@ declare global {
 export default class BuildManager {
     static cache = new Map<string, BuildManager>()
     private room: Room
-    private constructionFeatures: ConstructionFeatures
+    private constructionFeaturesV3: ConstructionFeaturesV3Base | ConstructionFeaturesV3Mine
 
-    constructor(room: Room, constructionFeatures: ConstructionFeatures) {
+    constructor(
+        room: Room,
+        constructionFeaturesV3: ConstructionFeaturesV3Base | ConstructionFeaturesV3Mine,
+    ) {
         this.room = room
-        this.constructionFeatures = constructionFeatures
+        this.constructionFeaturesV3 = constructionFeaturesV3
 
         if (!this.room.memory.construction) {
             this.room.memory.construction = { paused: false }
         }
     }
 
+    get constructionFeatures(): ConstructionFeatures {
+        return this.constructionFeaturesV3.features as ConstructionFeatures
+    }
+
+    get points(): StationaryPoints {
+        return this.constructionFeaturesV3.points as StationaryPoints
+    }
+
+    get controllerLevel(): number {
+        return this.room.controller?.level ?? 0
+    }
+
     static get(room: Room): BuildManager | null {
-        const constructionFeatures = getConstructionFeatures(room)
-        if (!constructionFeatures) {
+        const constructionFeatures = getConstructionFeaturesV3(room)
+        if (!constructionFeatures || constructionFeatures.type === 'none') {
             return null
         }
         return new BuildManager(room, constructionFeatures)
@@ -123,8 +140,12 @@ export default class BuildManager {
             return false
         }
 
-        if (this.canBuildImportantContainer()) {
-            return this.buildNextContainer()
+        if (this.canBuildSourceContainer()) {
+            return this.buildNextSourceContainer()
+        }
+
+        if (this.canBuildVirtualStorageContainer()) {
+            return this.buildVirtualStorageContainer()
         }
 
         if (this.canBuildImportantExtension()) {
@@ -171,12 +192,12 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_LAB)
         }
 
-        if (this.canBuildContainer()) {
-            return this.buildNextContainer()
-        }
-
         if (this.canBuildExtractor()) {
             return this.buildNextStructure(STRUCTURE_EXTRACTOR)
+        }
+
+        if (this.canBuildMineralContainer()) {
+            return this.buildMineralContainer()
         }
 
         if (this.canBuildFactory()) {
@@ -201,7 +222,8 @@ export default class BuildManager {
             this.canBuildExtension() ||
             this.canBuildSwampRoad() ||
             this.canBuildTower() ||
-            this.canBuildContainer() ||
+            this.canBuildSourceContainer() ||
+            this.canBuildVirtualStorageContainer() ||
             this.canBuildStorage() ||
             this.canBuildLinks() ||
             this.canBuildRoad()
@@ -216,34 +238,6 @@ export default class BuildManager {
         const site = sites[0]
         return !includes([STRUCTURE_WALL, STRUCTURE_RAMPART], site.structureType)
     }, 'BuildManager:hasImportantConstructionSite')
-
-    private canBuildImportantContainer = wrap((): boolean => {
-        const containers = getContainers(this.room)
-        if (this.constructionFeatures[STRUCTURE_CONTAINER] === undefined) {
-            return false
-        }
-        let possibleContainers = this.constructionFeatures[STRUCTURE_CONTAINER].length
-        if ((this.room.controller?.level ?? 0) < 4) {
-            possibleContainers += 1
-        }
-        const stationaryPointsBase = getStationaryPointsBase(this.room)
-        if (stationaryPointsBase && stationaryPointsBase.mineral) {
-            possibleContainers -= 1
-        }
-        return containers.length < possibleContainers
-    }, 'BuildManager:canBuildImportantContainer')
-
-    private canBuildContainer = wrap(() => {
-        const containers = getContainers(this.room)
-        if (this.constructionFeatures[STRUCTURE_CONTAINER] === undefined) {
-            return false
-        }
-        const extraContainers = (this.room.controller?.level ?? 0) < 4 ? 1 : 0
-        return (
-            containers.length <
-            this.constructionFeatures[STRUCTURE_CONTAINER].length + extraContainers - 1
-        )
-    }, 'BuildManager:canBuildContainer')
 
     private nextBuildPosition(type: BuildableStructureConstant): RoomPosition | null {
         if (this.room.controller === undefined) {
@@ -295,25 +289,96 @@ export default class BuildManager {
         return makeSpawnConstructionSite(toBuild, pokemon()) === OK
     }
 
-    private buildNextContainer(): boolean {
-        let containers = getContainers(this.room)
-        const points = getStationaryPointsBase(this.room)
-        if (points && points.mineral) {
-            containers = containers.filter(
-                (c) => c.pos.x !== points.mineral.x || c.pos.y !== points.mineral.y,
+    private canBuildSourceContainer(): boolean {
+        const points = getStationaryPoints(this.room)
+        if (!points) {
+            Logger.warning('canBuildSpawnContainer:no-stationary-points', this.room.name)
+            return false
+        }
+        const sourcePositions = Object.values(points.sources)
+        const existingContainers = getContainers(this.room)
+        const toBuild = sourcePositions.find((pos) => {
+            return !existingContainers.some(
+                (container) => container.pos.x === pos.x && container.pos.y === pos.y,
             )
+        })
+        return Boolean(toBuild)
+    }
+
+    private buildNextSourceContainer(): boolean {
+        const sourcePositions = Object.values(this.points.sources)
+        const existingContainers = getContainers(this.room)
+        const toBuild = sourcePositions.find((pos) => {
+            return !existingContainers.some(
+                (container) => container.pos.x === pos.x && container.pos.y === pos.y,
+            )
+        })
+        if (toBuild === undefined) {
+            Logger.warning('buildNextSpawnContainer:no-container-positions', this.room.name)
+            return false
         }
-        const containerPositions = (
-            this.constructionFeatures[STRUCTURE_CONTAINER] as Position[]
-        ).slice(0, -1)
-        if (containerPositions.length > containers.length) {
-            return this.buildNextStructure(STRUCTURE_CONTAINER)
+        return (
+            makeConstructionSite(
+                new RoomPosition(toBuild.x, toBuild.y, this.room.name),
+                STRUCTURE_CONTAINER,
+            ) === OK
+        )
+    }
+
+    private canBuildVirtualStorageContainer(): boolean {
+        if ((this.room.controller?.level ?? 0) >= 4) {
+            return false
         }
-        // here we build a temporary container where storage is supposed to be
-        const storage = (this.constructionFeatures[STRUCTURE_STORAGE] as Position[])[0]
+        const existingContainers = getContainers(this.room)
+        if (!this.constructionFeatures[STRUCTURE_STORAGE]) {
+            return false
+        }
+        const storage = this.constructionFeatures[STRUCTURE_STORAGE][0]
+        return !existingContainers.some(
+            (container) => container.pos.x === storage.x && container.pos.y === storage.y,
+        )
+    }
+
+    private buildVirtualStorageContainer(): boolean {
+        if (!this.constructionFeatures[STRUCTURE_STORAGE]) {
+            Logger.warning('buildVirtualStorageContainer:no-storage-features', this.room.name)
+            return false
+        }
+        const storage = this.constructionFeatures[STRUCTURE_STORAGE][0]
         return (
             makeConstructionSite(
                 new RoomPosition(storage.x, storage.y, this.room.name),
+                STRUCTURE_CONTAINER,
+            ) === OK
+        )
+    }
+
+    private canBuildMineralContainer(): boolean {
+        return false
+        /**
+        if (this.controllerLevel < 6) {
+            return false
+        }
+        if (this.points.type === 'mine') {
+            return false
+        }
+        const mineral = this.points.mineral
+        const existingContainers = getContainers(this.room)
+        return !existingContainers.some(
+            (container) => container.pos.x === mineral.x && container.pos.y === mineral.y,
+        )
+        */
+    }
+
+    private buildMineralContainer(): boolean {
+        if (this.points.type === 'mine') {
+            Logger.warning('buildMineralContainer:mine', this.room.name)
+            return false
+        }
+        const mineral = this.points.mineral
+        return (
+            makeConstructionSite(
+                new RoomPosition(mineral.x, mineral.y, this.room.name),
                 STRUCTURE_CONTAINER,
             ) === OK
         )
@@ -447,8 +512,11 @@ export default class BuildManager {
     }, 'BuildManager:canBuildLab')
 
     private canBuildExtractor = wrap((): boolean => {
+        return false
+        /**
         const extractor = getExtractor(this.room)
-        return Boolean(extractor && (this.room.controller?.level ?? 0) >= 6)
+        return Boolean(!extractor && this.controllerLevel >= 6)
+        */
     }, 'BuildManager:canBuildExtractor')
 
     private canBuildFactory = wrap((): boolean => {
