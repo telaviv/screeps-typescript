@@ -22,6 +22,7 @@ import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
 import roleHealer from 'roles/healer'
 import roleRebalancer from 'roles/rebalancer'
+import roleRemoteHauler from 'roles/remote-hauler'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
@@ -315,6 +316,7 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     for (const mm of roomQuery.getMineManagers()) {
         if (mm.needsAttention()) {
             createMineWorkers(spawn, capacity, mm)
+            return
         }
     }
 
@@ -351,8 +353,8 @@ const createMineWorkers = wrap(
             return
         }
 
-        const sourcesManager = new SourcesManager(mineManager.room)
-        if (!sourcesManager.hasAllContainerHarvesters()) {
+        if (!mineManager.hasEnoughHarvesters()) {
+            const sourcesManager = new SourcesManager(mineManager.room)
             sourcesManager.createHarvester(spawn, { capacity })
             return
         }
@@ -363,6 +365,10 @@ const createMineWorkers = wrap(
                 capacity,
             })
             return
+        }
+
+        if (!mineManager.hasEnoughHaulers()) {
+            roleRemoteHauler.create(spawn, { remote: mineManager.name, capacity })
         }
     },
     'rcl-2:create-mine-workers',

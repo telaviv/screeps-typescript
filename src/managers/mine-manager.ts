@@ -3,12 +3,14 @@ import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import { ClaimerMemory } from 'roles/claim'
 import { HealerMemory } from 'roles/healer'
 import { HostileRecorder } from 'hostiles'
+import { RemoteHaulerMemory } from 'roles/remote-hauler'
+import SourcesManager from './sources-manager'
 import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 
 const MIN_RESERVATION_TICKS = 2500
-const MIN_BUILD_PARTS = 12
+const MIN_BUILD_PARTS = 15
 
 export interface Mine {
     name: string
@@ -46,6 +48,7 @@ global.mines = {
 export class MineManager {
     private roomName: string
     private minee: Room
+    private sourcesManager: SourcesManager | null
 
     get room(): Room {
         return Game.rooms[this.roomName]
@@ -62,6 +65,7 @@ export class MineManager {
     constructor(roomName: string, minee: Room) {
         this.roomName = roomName
         this.minee = minee
+        this.sourcesManager = Game.rooms[roomName] ? new SourcesManager(Game.rooms[roomName]) : null
     }
 
     hasVision(): boolean {
@@ -79,7 +83,9 @@ export class MineManager {
             (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
                 !this.hasEnoughReservers()) ||
             (this.needsProtection() && !this.hasDefenders()) ||
-            !this.hasEnoughConstructionParts()
+            !this.hasEnoughConstructionParts() ||
+            !this.hasEnoughHarvesters() ||
+            !this.hasEnoughHaulers()
         )
     }
 
@@ -87,6 +93,13 @@ export class MineManager {
         const claimCount = this.getClaimPartCount()
         const claimPartsNeeded = this.getClaimPartsNeeded()
         return claimCount >= claimPartsNeeded
+    }
+
+    hasEnoughHarvesters(): boolean {
+        if (!this.sourcesManager) {
+            return true
+        }
+        return this.sourcesManager.hasAllContainerHarvesters()
     }
 
     needsHealer(): boolean {
@@ -110,10 +123,8 @@ export class MineManager {
 
     getClaimPartsNeeded(): number {
         const ticksToEnd = this.controllerReservationTicksLeft()
-        if (ticksToEnd < 3200) {
+        if (ticksToEnd < 3500) {
             return 3
-        } else if (ticksToEnd < 4000) {
-            return 2
         }
         return 0
     }
@@ -182,6 +193,19 @@ export class MineManager {
 
     public getWorkers(): Creep[] {
         return getLogisticsCreeps({ room: this.room })
+    }
+
+    public getHaulers(): Creep[] {
+        return getCreeps('remote-hauler').filter(
+            (creep: Creep) => (creep.memory as RemoteHaulerMemory).remote === this.roomName,
+        )
+    }
+
+    public hasEnoughHaulers(): boolean {
+        if (!this.constructionFinished()) {
+            return true
+        }
+        return this.getHaulers().length > 0
     }
 
     hasClaimSpotAvailable(): boolean {

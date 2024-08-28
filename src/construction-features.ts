@@ -245,9 +245,17 @@ export function getStationaryPoints(room: Room | string): StationaryPoints | nul
     return null
 }
 
-export function getStationaryPointsBase(room: Room): StationaryPointsBase | null {
+export function getStationaryPointsBase(room: Room | string): StationaryPointsBase | null {
     const points = getStationaryPoints(room)
     if (!points || isStationaryBase(points)) {
+        return points
+    }
+    return null
+}
+
+export function getStationaryPointsMine(room: Room | string): StationaryPointsMine | null {
+    const points = getStationaryPoints(room)
+    if (!points || points.type === 'mine') {
         return points
     }
     return null
