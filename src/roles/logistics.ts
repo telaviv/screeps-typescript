@@ -76,6 +76,7 @@ interface CreateOpts {
     rescue?: boolean
     capacity?: number
     noSuicide?: boolean
+    noRepairLimit?: boolean
 }
 
 class RoleLogistics {
@@ -332,13 +333,20 @@ class RoleLogistics {
 
     @mprofile('logistics:repair')
     repair(): void {
-        const structure = EnergySinkManager.findRepairTarget(this.creep)
+        const repairThreshold = this.creep.memory.noRepairLimit ? 1 : undefined
+        const structure = EnergySinkManager.findRepairTarget(this.creep, repairThreshold)
         if (structure === null) {
+            if (this.creep.name === 'logistics:worker:W9N5:7511904') {
+                Logger.error('logistics:repair:failure', this.creep.name)
+            }
             this.assignWorkerPreference()
             return
         }
 
         const err = this.creep.repair(structure)
+        if (this.creep.name === 'logistics:worker:W9N5:7511904') {
+            Logger.error('logistics:repair', this.creep.name, err)
+        }
         if (err === ERR_NOT_IN_RANGE) {
             moveWithinRoom(
                 this.creep,
@@ -426,7 +434,7 @@ class RoleLogistics {
     public static createCreep(
         spawn: StructureSpawn,
         preference: LogisticsPreference = TASK_HAULING,
-        opts: CreateOpts = { rescue: false },
+        opts: CreateOpts = { rescue: false, noRepairLimit: false },
     ): ScreepsReturnCode {
         let capacity = opts.rescue
             ? Math.max(300, spawn.room.energyAvailable)
@@ -447,6 +455,7 @@ class RoleLogistics {
                     currentTask: TASK_COLLECTING,
                     currentTarget: undefined,
                     noSuicide: opts.noSuicide ?? false,
+                    noRepairLimit: opts.noRepairLimit ?? false,
                     idleTimestamp: null,
                     tasks: [],
                 } as LogisticsMemory,

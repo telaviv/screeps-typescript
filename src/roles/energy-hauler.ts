@@ -15,7 +15,7 @@ import { moveWithinRoom } from 'utils/travel'
 import { profile } from 'utils/profiling'
 
 const ROLE = 'energy-hauler'
-const MAX_CARRY_CAPACITY = 1100
+const MAX_CARRY_CAPACITY = 5000
 
 export interface EnergyHauler extends ResourceCreep {
     memory: EnergyHaulerMemory

@@ -1,9 +1,24 @@
-import { exponential, polynomial, logarithmic, DataPoint, Result } from 'regression'
-
 import * as Logger from 'utils/logger'
-import { PREFERENCE_WORKER, TASK_BUILDING, TASK_UPGRADING } from 'roles/logistics-constants'
+import {
+    PREFERENCE_WORKER,
+    TASK_BUILDING,
+    TASK_REPAIRING,
+    TASK_UPGRADING,
+} from 'roles/logistics-constants'
+import {
+    SPAWN_CHECK_MOD,
+    MAX_USEFUL_ENERGY,
+    MAX_DROPPED_RESOURCES,
+    MIN_USEFUL_LINK_ENERGY,
+    ATTACKERS_COUNT,
+    BUILDERS_COUNT,
+    MASON_COUNT,
+    RESCUE_WORKER_COUNT,
+    UPGRADERS_COUNT,
+} from './constants'
 import WarDepartment, { WarStatus } from 'war-department'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
+import { getLatentWorkerInterval, isEnergyRestricted } from './utils'
 import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleMason, { MasonCreep } from 'roles/mason'
 import DefenseDepartment from 'defense-department'
@@ -12,18 +27,16 @@ import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
+import { createWarCreeps } from './create-war-creeps'
 import { getConstructionSites } from 'utils/room'
-import { getSlidingEnergy } from 'room-window'
 import { getStationaryPoints } from 'construction-features'
 import { getVirtualStorage } from 'utils/virtual-storage'
 import hash from 'utils/hash'
-import { isTravelTask } from 'tasks/travel/utils'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
 import roleHealer from 'roles/healer'
 import roleRebalancer from 'roles/rebalancer'
 import roleRemoteHauler from 'roles/remote-hauler'
-import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
 import { wrap } from 'utils/profiling'
@@ -33,51 +46,6 @@ declare global {
         lastLatentWorker?: number
     }
 }
-
-const UPGRADERS_COUNT = 1
-const BUILDERS_COUNT = 1
-const MASON_COUNT = 1
-const RESCUE_WORKER_COUNT = 3
-const ATTACKERS_COUNT = 2
-
-const MIN_USEFUL_LINK_ENERGY = BODYPART_COST[CARRY] * 9 + BODYPART_COST[MOVE]
-const MAX_USEFUL_ENERGY =
-    BODYPART_COST[CARRY] * 12 + BODYPART_COST[WORK] * 12 + BODYPART_COST[MOVE] * 24
-const MAX_DROPPED_RESOURCES = 1000
-const LATENT_WORKER_INTERVAL_MULTIPLIER = 200
-const SPAWN_CHECK_MOD = 4
-
-function getLatentWorkerInterval(room: Room): number {
-    return Math.floor(minAvailableEnergy(room) * LATENT_WORKER_INTERVAL_MULTIPLIER)
-}
-const ENERGY_DATA: DataPoint[] = [
-    [300, 0.3],
-    [800, 0.325],
-    [1300, 0.5],
-    [1800, 2.25],
-    [2300, 2.75],
-]
-const REGRESSION_PRECISION = 12
-const regressions: [string, Result][] = [
-    ['quadratic', polynomial(ENERGY_DATA, { precision: REGRESSION_PRECISION, order: 2 })],
-    ['logarithmic', logarithmic(ENERGY_DATA, { precision: REGRESSION_PRECISION })],
-    ['exponential', exponential(ENERGY_DATA, { precision: REGRESSION_PRECISION })],
-]
-regressions.sort((a, b) => b[1].r2 - a[1].r2)
-for (const [name, result] of regressions) {
-    Logger.warning(`rcl-2:minAvailableEnergy:${name}`, result.string, `[r2: ${result.r2}]`)
-}
-function minAvailableEnergy(room: Room): number {
-    return regressions[0][1].predict(room.energyCapacityAvailable)[1]
-}
-
-const isEnergyRestricted = wrap((room: Room): boolean => {
-    const minEnergy = minAvailableEnergy(room)
-    return (
-        getSlidingEnergy(room.memory, 99) < minEnergy ||
-        getSlidingEnergy(room.memory, 999) < minEnergy
-    )
-}, 'rcl-2:isEnergyRestricted')
 
 export default wrap((spawn: StructureSpawn): void => {
     updateRescueStatus(spawn.room)
@@ -369,6 +337,17 @@ const createMineWorkers = wrap(
 
         if (!mineManager.hasEnoughHaulers()) {
             roleRemoteHauler.create(spawn, { remote: mineManager.name, capacity })
+            return
+        }
+
+        if (mineManager.needsRepairs()) {
+            console.log('creating repairer', mineManager.name)
+            RoleLogistics.createCreep(spawn, TASK_REPAIRING, {
+                home: mineManager.name,
+                capacity,
+                noRepairLimit: true,
+            })
+            return
         }
     },
     'rcl-2:create-mine-workers',
@@ -403,92 +382,6 @@ const createLatentWorkers = wrap((spawn: StructureSpawn, capacity?: number): voi
         }
     }
 }, 'rcl-2:create-latent-workers')
-
-function createWarCreeps(spawn: StructureSpawn, warDepartment: WarDepartment): number | null {
-    const room = spawn.room
-    const status = warDepartment.status
-    const capacity = Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
-    const scouts = getCreeps('scout', room).filter(
-        (creep) =>
-            creep.memory.tasks.length > 0 &&
-            isTravelTask(creep.memory.tasks[0]) &&
-            creep.memory.tasks[0].destination === warDepartment.target &&
-            creep.memory.tasks[0].permanent,
-    )
-    const roomQuery = new RoomQuery(room)
-
-    if (warDepartment.hasSafeMode() || warDepartment.hasOverwhelmingForce()) {
-        return null
-    }
-
-    if (warDepartment.targetRoom === undefined) {
-        if (scouts.length === 0) {
-            return roleScout.create(spawn, warDepartment.target, true)
-        }
-        return null
-    }
-
-    const remoteWorkers = getLogisticsCreeps({ room: warDepartment.targetRoom })
-
-    if (
-        (status === WarStatus.ATTACK || warDepartment.needsProtection) &&
-        roomQuery.getCreepCount('attacker') < ATTACKERS_COUNT
-    ) {
-        return roleAttacker.create(spawn, warDepartment.target, capacity)
-    }
-
-    if (status === WarStatus.ATTACK) {
-        if (warDepartment.hasHostileController()) {
-            if (roomQuery.getCreepCount('claimer') === 0) {
-                return roleClaimer.create(spawn, warDepartment.target, { attack: true })
-            } else if (
-                warDepartment.claimerSpotsAvailable() > roomQuery.getCreepCount('claimer') &&
-                isEnergyRestricted(room)
-            ) {
-                return roleClaimer.create(spawn, warDepartment.target, { attack: true })
-            }
-        }
-    }
-
-    const sourcesManager = SourcesManager.create(warDepartment.targetRoom)
-    if (!sourcesManager) {
-        return null
-    }
-
-    if (status === WarStatus.CLAIM) {
-        if (warDepartment.hasStrongInvaderCore() && warDepartment.claimerSpotsAvailable() <= 1) {
-            return null
-        } else if (roomQuery.getCreepCount('claimer') === 0) {
-            return roleClaimer.create(spawn, warDepartment.target, {
-                minimal: warDepartment.canMinimallyClaim(),
-            })
-        } else if (
-            warDepartment.claimerSpotsAvailable() > roomQuery.getCreepCount('claimer') &&
-            !warDepartment.canMinimallyClaim()
-        ) {
-            return roleClaimer.create(spawn, warDepartment.target)
-        }
-    } else if (status === WarStatus.SPAWN) {
-        if (remoteWorkers.length === 0) {
-            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
-                home: warDepartment.target,
-            })
-        } else if (isEnergyRestricted(room)) {
-            if (remoteWorkers.length < 2) {
-                return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
-                    home: warDepartment.target,
-                })
-            } else if (!sourcesManager.hasAllContainerHarvesters()) {
-                return sourcesManager.createHarvester(spawn, { rescue: true })
-            } else {
-                return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
-                    home: warDepartment.target,
-                })
-            }
-        }
-    }
-    return null
-}
 
 function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
@@ -526,7 +419,7 @@ function updateRescueStatus(room: Room) {
     const selfSufficient =
         (roomQuery.getCreepCount('energy-hauler') > 0 &&
             roomQuery.getCreepCount('harvester') > 0) ||
-        roomQuery.getCreepCount('logistics') > 0
+        (roomQuery.getCreepCount('logistics') > 0 && roomQuery.getCreepCount('energy-hauler') === 0)
     if (
         room.memory.collapsed &&
         roomQuery.getCreepCount('logistics') >= RESCUE_WORKER_COUNT &&

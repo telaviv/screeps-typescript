@@ -69,6 +69,9 @@ export class RemoteHaulerCreep {
         const target = this.memory.target
 
         if (isHome && this.allPickupsFree()) {
+            if (this.creep.ticksToLive && this.creep.ticksToLive < 75) {
+                this.creep.suicide()
+            }
             this.goToRemote()
             return
         } else if (isHome && (this.allPickupsComplete() || freeCapacity === 0)) {

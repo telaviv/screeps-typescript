@@ -9,7 +9,7 @@ import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 
-const MIN_RESERVATION_TICKS = 2500
+const MIN_RESERVATION_TICKS = 3500
 const MIN_BUILD_PARTS = 15
 
 export interface Mine {
@@ -123,7 +123,7 @@ export class MineManager {
 
     getClaimPartsNeeded(): number {
         const ticksToEnd = this.controllerReservationTicksLeft()
-        if (ticksToEnd < 3500) {
+        if (ticksToEnd < MIN_RESERVATION_TICKS) {
             return 3
         }
         return 0
@@ -169,6 +169,16 @@ export class MineManager {
             return true
         }
         return false
+    }
+
+    public needsRepairs(): boolean {
+        if (!this.room) {
+            return false
+        }
+        const structures = this.room
+            .find(FIND_STRUCTURES)
+            .find((structure) => structure.hits / structure.hitsMax < 0.5)
+        return !!structures
     }
 
     private hasHostiles(): boolean {
