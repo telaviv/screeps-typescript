@@ -24,8 +24,7 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     }
-    const err = moveToRoom(creep, task.destination)
-    Logger.error('task:travel::run:failure', creep.name, err, task)
+    moveToRoom(creep, task.destination)
     return false
 }
 

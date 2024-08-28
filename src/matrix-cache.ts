@@ -23,7 +23,7 @@ interface TerrainCosts {
     swamp: number
     plain: number
 }
-const DEFAULT_TERRAIN_COSTS: TerrainCosts = { swamp: 5, plain: 2 }
+const DEFAULT_TERRAIN_COSTS: TerrainCosts = { swamp: 10, plain: 2 }
 const ROAD_PREFERRED_TERRAIN_COSTS: TerrainCosts = { swamp: 5, plain: 4 }
 const ROAD_COST = 1
 const WALL_COST = 255

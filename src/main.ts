@@ -10,6 +10,7 @@ import roleHarvester, { Harvester } from 'roles/harvester'
 import roleHealer, { Healer } from 'roles/healer'
 import roleMason, { Mason } from 'roles/mason'
 import roleRebalancer, { Rebalancer } from 'roles/rebalancer'
+import roleRemoteHauler, { RemoteHauler } from 'roles/remote-hauler'
 import roleRemoteUpgrade, { RemoteWorker } from 'roles/remote-worker'
 import roleScout, { Scout } from 'roles/scout'
 import roleStaticLinkHauler, { StaticLinkHauler } from 'roles/static-link-hauler'
@@ -129,7 +130,26 @@ const runMyRoom = wrap((room: Room) => {
             runSpawn(structure as StructureSpawn)
         }
     }
+    if (Memory.miningEnabled) {
+        for (const mine of room.memory.mines ?? []) {
+            runMine(mine.name)
+        }
+    }
 }, 'main:runMyRoom')
+
+const runMine = wrap((mineName: string) => {
+    const room = Game.rooms[mineName]
+    if (!room) {
+        return
+    }
+    ensureSlidingWindow(room)
+    const buildManager = getBuildManager(room)
+    if (!buildManager) {
+        return
+    }
+    buildManager.removeEnemyConstructionSites()
+    buildManager.ensureMineConstructionSites()
+}, 'main:runMine')
 
 const ensureSafeMode = wrap((room: Room) => {
     if (!room.controller || !room.controller.safeModeAvailable) {
@@ -179,6 +199,8 @@ const runCreep = wrap((creepName: string) => {
         roleRebalancer.run(creep as Rebalancer)
     } else if (creep.memory.role === 'energy-hauler') {
         roleEnergyHauler.run(creep as EnergyHauler)
+    } else if (creep.memory.role === 'remote-hauler') {
+        roleRemoteHauler.run(creep as RemoteHauler)
     }
 }, 'main:runCreep')
 

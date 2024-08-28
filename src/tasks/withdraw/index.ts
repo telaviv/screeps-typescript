@@ -101,7 +101,7 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     } else if (err !== ERR_BUSY) {
-        Logger.warning('withdraw:run:failed', creep.name, err)
+        Logger.info('withdraw:run:failed', creep.name, err)
     }
     return false
 }
@@ -130,7 +130,7 @@ export function cleanup(task: WithdrawTask, creep: Creep): boolean {
     const creepCapacity = getFreeCapacity(creep, task.resourceType)
     const ret = withdrawCapacity === 0 || creepCapacity === 0
     if (ret && withdrawable instanceof Structure) {
-        Logger.warning(
+        Logger.info(
             'withdraw:cleanup:capacity-failure',
             withdrawCapacity,
             creepCapacity,

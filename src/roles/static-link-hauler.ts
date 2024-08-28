@@ -146,7 +146,7 @@ class StaticLinkHaulerCreep {
         }
         const err = spawns[0].renewCreep(this.creep)
         if (err !== OK) {
-            Logger.warning('static-link-hauler:auto-renew', this.creep.name, err)
+            Logger.info('static-link-hauler:auto-renew', this.creep.name, err)
         }
     }
 }

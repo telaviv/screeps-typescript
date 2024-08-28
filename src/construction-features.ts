@@ -5,6 +5,9 @@ import * as Logger from 'utils/logger'
 import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.10'
+
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
 export const STATIONARY_POINTS_VERSION = '1.2.1'
 export const LINKS_VERSION = '1.0.0'
@@ -22,6 +25,7 @@ export interface MinerInformation {
 }
 
 export interface MineeInformation {
+    miner: string
     entrancePosition: FlatRoomPosition
 }
 
@@ -102,9 +106,6 @@ declare global {
         constructionFeaturesV3?: ConstructionFeaturesV3
     }
 }
-
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.9'
 
 export function getConstructionFeaturesV3(room: Room | string): ConstructionFeaturesV3 | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
@@ -213,6 +214,15 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
             )
             return true
         }
+        if (constructionFeatures.minee.miner !== roomName) {
+            Logger.error(
+                'debug:constructionFeaturesV3NeedsUpdate: mine miner mismatch',
+                mine.name,
+                constructionFeatures.minee.miner,
+                roomName,
+            )
+            return true
+        }
     }
     return ret
 }
@@ -235,9 +245,17 @@ export function getStationaryPoints(room: Room | string): StationaryPoints | nul
     return null
 }
 
-export function getStationaryPointsBase(room: Room): StationaryPointsBase | null {
+export function getStationaryPointsBase(room: Room | string): StationaryPointsBase | null {
     const points = getStationaryPoints(room)
     if (!points || isStationaryBase(points)) {
+        return points
+    }
+    return null
+}
+
+export function getStationaryPointsMine(room: Room | string): StationaryPointsMine | null {
+    const points = getStationaryPoints(room)
+    if (!points || points.type === 'mine') {
         return points
     }
     return null

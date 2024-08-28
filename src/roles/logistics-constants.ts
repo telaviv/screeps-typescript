@@ -36,11 +36,12 @@ export interface LogisticsCreep extends Creep {
 export interface LogisticsMemory extends ResourceCreepMemory {
     role: string
     idleTimestamp: number | null
+    home: string
     preference: LogisticsPreference
     currentTask: LogisticsTask
     currentTarget: Id<Structure> | undefined
     noSuicide?: boolean
-    home: string
+    noRepairLimit?: boolean
 }
 
 export function isLogisticsCreep(creep: Creep): creep is LogisticsCreep {

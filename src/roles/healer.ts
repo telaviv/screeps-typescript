@@ -1,5 +1,5 @@
 import * as Logger from 'utils/logger'
-import { followCreep } from 'utils/travel'
+import { followCreep, moveToRoom } from 'utils/travel'
 import { getInjuredCreeps } from 'utils/room'
 import { wrap } from 'utils/profiling'
 
@@ -9,7 +9,7 @@ export interface Healer extends Creep {
     memory: HealerMemory
 }
 
-interface HealerMemory extends CreepMemory {
+export interface HealerMemory extends CreepMemory {
     role: 'healer'
     roomName: string
     home: string
@@ -20,10 +20,17 @@ const roleHealer = {
         if (creep.spawning) {
             return
         }
+
+        if (creep.memory.roomName !== creep.room.name) {
+            moveToRoom(creep, creep.memory.roomName)
+            return
+        }
+
         const targets = getInjuredCreeps(creep.room)
         if (targets.length === 0) {
             return
         }
+
         if (creep.getActiveBodyparts(HEAL) === 0) {
             return
         }

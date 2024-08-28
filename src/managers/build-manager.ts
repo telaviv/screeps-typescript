@@ -115,6 +115,31 @@ export default class BuildManager {
         return nonWall || wall
     }
 
+    @profile
+    ensureMineConstructionSites(): boolean {
+        if (this.room.memory.construction.paused || this.canBuild()) {
+            return false
+        }
+
+        if (
+            !this.room.controller ||
+            this.room.controller.owner ||
+            (this.room.controller.reservation &&
+                this.room.controller.reservation.username !== global.USERNAME)
+        ) {
+            return false
+        }
+
+        if (this.canBuildSourceContainer()) {
+            return this.buildNextSourceContainer()
+        }
+
+        if (this.canBuildRoad()) {
+            return this.buildNextStructure(STRUCTURE_ROAD)
+        }
+        return false
+    }
+
     private ensureSpawnSite(): boolean {
         const sites = getConstructionSites(this.room)
         if (sites.length > 0 && sites.some((site) => site.structureType !== STRUCTURE_RAMPART)) {
@@ -317,12 +342,11 @@ export default class BuildManager {
             Logger.warning('buildNextSpawnContainer:no-container-positions', this.room.name)
             return false
         }
-        return (
-            makeConstructionSite(
-                new RoomPosition(toBuild.x, toBuild.y, this.room.name),
-                STRUCTURE_CONTAINER,
-            ) === OK
+        const err = makeConstructionSite(
+            new RoomPosition(toBuild.x, toBuild.y, this.room.name),
+            STRUCTURE_CONTAINER,
         )
+        return err === OK
     }
 
     private canBuildVirtualStorageContainer(): boolean {

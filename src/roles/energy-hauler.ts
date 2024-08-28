@@ -15,7 +15,7 @@ import { moveWithinRoom } from 'utils/travel'
 import { profile } from 'utils/profiling'
 
 const ROLE = 'energy-hauler'
-const MAX_CARRY_CAPACITY = 1100
+const MAX_CARRY_CAPACITY = 5000
 
 export interface EnergyHauler extends ResourceCreep {
     memory: EnergyHaulerMemory
@@ -67,6 +67,7 @@ export class EnergyHaulerCreep {
         } else {
             this.deliverEnergy()
         }
+
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
             return
@@ -104,7 +105,7 @@ export class EnergyHaulerCreep {
         return (
             towersFilled &&
             this.creep.room.energyAvailable === this.creep.room.energyCapacityAvailable &&
-            (this.creep.ticksToLive ?? 0) > 1250
+            (this.creep.ticksToLive ?? 0) > 1400
         )
     }
 

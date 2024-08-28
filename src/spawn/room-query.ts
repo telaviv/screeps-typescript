@@ -1,4 +1,5 @@
 import * as TimeCache from '../utils/time-cache'
+import { Mine, MineManager } from 'managers/mine-manager'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import BuildManager from 'managers/build-manager'
 import { LogisticsPreference } from 'roles/logistics-constants'
@@ -59,5 +60,15 @@ export default class RoomQuery {
         return TimeCache.get(this.key('droppedResourceCount'), () =>
             getTotalDroppedResources(this.room),
         )
+    }
+
+    public getMineManagers(): MineManager[] {
+        return TimeCache.get(this.key('mineManagers'), () => {
+            const mines = this.room.memory.mines
+            if (!mines) {
+                return []
+            }
+            return mines.map((mine: Mine) => new MineManager(mine.name, this.room))
+        })
     }
 }

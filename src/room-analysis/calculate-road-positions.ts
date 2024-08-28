@@ -55,7 +55,7 @@ export function calculateRoadPositions(
         return Infinity
     }
     const opts: MoveOpts = { roomCallback, routeCallback, heuristicWeight: 1 }
-    const { storageLink, sources, controllerLink } = points
+    const { storageLink, sources, controllerLink, mineral } = points
     if (Object.keys(sources).length !== 2) {
         Logger.error('calculateRoadPositions:sources length is not 2', roomName)
     }
@@ -70,6 +70,10 @@ export function calculateRoadPositions(
     const exitInfo = addMineRoadsToMatrix(cm, mines, roomName, storageLink, cm)
     if (!exitInfo) {
         Logger.error('calculateRoadPositions:addMineRoadsToMatrix failed', roomName)
+        return { roads: [], exitInfo: [] }
+    }
+    if (!addMineralPathToMatrix(cm, mineral, roomName, storageLink, opts)) {
+        Logger.error('calculateRoadPositions:addMineralPathToMatrix failed', roomName)
         return { roads: [], exitInfo: [] }
     }
     // we've set the storage to 1 to allow pathfinding. let's quit that
@@ -266,6 +270,26 @@ function addMineRoadsToMatrix(
         exitInfo.push({ name: mine.name, exitPosition, entrancePosition })
     }
     return exitInfo
+}
+
+function addMineralPathToMatrix(
+    cm: CostMatrix,
+    mineral: Position,
+    roomName: string,
+    storageLink: Position,
+    opts: MoveOpts,
+): boolean {
+    const path = generatePath(
+        new RoomPosition(storageLink.x, storageLink.y, roomName),
+        [{ pos: new RoomPosition(mineral.x, mineral.y, roomName), range: 1 }],
+        opts,
+    )
+    if (path === undefined) {
+        Logger.error('calculateRoadPositions:mineral path is undefined', roomName)
+        return false
+    }
+    addRoadsToMatrix(cm, path)
+    return true
 }
 
 function addControllerLinkPathToMatrix(
