@@ -1,5 +1,6 @@
 import * as Logger from 'utils/logger'
 import { followCreep, moveToRoom } from 'utils/travel'
+import { fromBodyPlan } from 'utils/parts'
 import { getInjuredCreeps } from 'utils/room'
 import { wrap } from 'utils/profiling'
 
@@ -50,8 +51,14 @@ const roleHealer = {
         }
     }, 'runHealer'),
 
-    create(spawn: StructureSpawn, roomName: string): number {
-        return spawn.spawnCreep([HEAL, MOVE], `${ROLE}:${Game.time}`, {
+    create(spawn: StructureSpawn, roomName: string, large = false): number {
+        let body: BodyPartConstant[] = [HEAL, MOVE]
+        if (large) {
+            body = fromBodyPlan(spawn.room.energyCapacityAvailable, [HEAL, MOVE], {
+                maxCopies: 4,
+            })
+        }
+        return spawn.spawnCreep(body, `${ROLE}:${Game.time}`, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,

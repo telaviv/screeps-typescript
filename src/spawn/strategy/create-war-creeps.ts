@@ -9,6 +9,7 @@ import { isEnergyRestricted } from './utils'
 import { isTravelTask } from 'tasks/travel/utils'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
+import roleHealer from 'roles/healer'
 import roleScout from 'roles/scout'
 
 export function createWarCreeps(
@@ -45,6 +46,10 @@ export function createWarCreeps(
         roomQuery.getCreepCount('attacker') < ATTACKERS_COUNT
     ) {
         return roleAttacker.create(spawn, warDepartment.target, capacity)
+    }
+
+    if (warDepartment.needsHealing() && roomQuery.getCreepCount('healer') === 0) {
+        return roleHealer.create(spawn, warDepartment.target, true)
     }
 
     if (status === WarStatus.ATTACK) {

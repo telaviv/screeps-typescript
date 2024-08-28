@@ -25,6 +25,11 @@ const sortHostiles =
     (pos: RoomPosition) =>
     (hostiles: Creep[]): Creep[] => {
         hostiles.sort((a, b) => {
+            if (pos.isNearTo(a) && !pos.isNearTo(b)) {
+                return -1
+            } else if (!pos.isNearTo(a) && pos.isNearTo(b)) {
+                return 1
+            }
             if (a.getActiveBodyparts(ATTACK) > 0 && b.getActiveBodyparts(ATTACK) === 0) {
                 return -1
             } else if (a.getActiveBodyparts(ATTACK) === 0 && b.getActiveBodyparts(ATTACK) > 0) {
@@ -45,7 +50,7 @@ const roleAttacker = {
             return
         }
         creep.notifyWhenAttacked(false)
-
+        creep.heal(creep)
         if (!roleAttacker.isInRoom(creep)) {
             moveToRoom(creep, creep.memory.roomName)
             return
@@ -127,7 +132,18 @@ export function calculateParts(
     maxCopies: number | null = null,
 ): BodyPartConstant[] {
     maxCopies = maxCopies ? maxCopies : 50
-    return fromBodyPlan(capacity, [ATTACK, MOVE], { maxCopies })
+    const SORT_ORDER = [TOUGH, MOVE, ATTACK, HEAL]
+    const parts = fromBodyPlan(capacity, [ATTACK, MOVE], {
+        maxCopies,
+        fixed: [HEAL],
+        padding: [TOUGH],
+    })
+    parts.sort(
+        (a, b) =>
+            SORT_ORDER.indexOf(a as TOUGH | MOVE | ATTACK | HEAL) -
+            SORT_ORDER.indexOf(b as TOUGH | MOVE | ATTACK | HEAL),
+    )
+    return parts
 }
 
 export default roleAttacker

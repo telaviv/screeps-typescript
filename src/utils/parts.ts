@@ -14,12 +14,12 @@ import { constant, times } from 'lodash'
 interface FromBodyPlanOpts {
     fixed?: BodyPartConstant[]
     maxCopies?: number
-    padding?: number
+    padding?: BodyPartConstant[]
 }
 export function fromBodyPlan(
     capacity: number,
     plan: BodyPartConstant[],
-    { fixed = [], maxCopies = 50 }: FromBodyPlanOpts = {},
+    { fixed = [], maxCopies = 50, padding = [] }: FromBodyPlanOpts = {},
 ): BodyPartConstant[] {
     const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
     const unitCost = plan.reduce((total, p) => total + BODYPART_COST[p], 0)
@@ -32,6 +32,16 @@ export function fromBodyPlan(
         copies++
         capacityLeft -= unitCost
         partsLeft -= plan.length
+    }
+    if (padding.length > 0) {
+        const paddingCost = padding.reduce((total, p) => total + BODYPART_COST[p], 0)
+        const paddingCopies = Math.min(
+            Math.floor(capacityLeft / paddingCost),
+            partsLeft / padding.length,
+        )
+        for (let i = 0; i < paddingCopies; i++) {
+            parts = [...padding, ...parts]
+        }
     }
     if (planCost(parts) > capacity) {
         Logger.warning('fromBodyPlan:overcapacity', parts, capacity)

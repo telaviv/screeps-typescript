@@ -52,6 +52,9 @@ const roleClaimer = {
         if (targetRoom.controller.my) {
             Logger.info('claimer:room-is-mine', creep.name, targetRoom.name)
             clearConstructionSites(targetRoom)
+            for (const structure of targetRoom.find(FIND_STRUCTURES)) {
+                structure.destroy()
+            }
             creep.suicide()
             return
         }

@@ -81,6 +81,14 @@ export default class WarDepartment {
         return false
     }
 
+    public needsHealing(): boolean {
+        if (!this.targetRoom) {
+            return false
+        }
+        const creeps = this.targetRoom.find(FIND_MY_CREEPS)
+        return creeps.some((creep) => creep.hits < creep.hitsMax)
+    }
+
     public hasSafeMode(): boolean {
         return false
     }

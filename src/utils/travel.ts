@@ -10,7 +10,7 @@ import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 
-const MAX_ROOM_RANGE = 18
+const MAX_ROOM_RANGE = 17
 
 type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
 
