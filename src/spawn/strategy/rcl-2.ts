@@ -281,10 +281,12 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
         return
     }
 
-    for (const mm of roomQuery.getMineManagers()) {
-        if (mm.needsAttention()) {
-            createMineWorkers(spawn, capacity, mm)
-            return
+    if (roomQuery.allRoadsBuilt() && Memory.miningEnabled) {
+        for (const mm of roomQuery.getMineManagers()) {
+            if (mm.needsAttention()) {
+                createMineWorkers(spawn, capacity, mm)
+                return
+            }
         }
     }
 

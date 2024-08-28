@@ -130,8 +130,10 @@ const runMyRoom = wrap((room: Room) => {
             runSpawn(structure as StructureSpawn)
         }
     }
-    for (const mine of room.memory.mines ?? []) {
-        runMine(mine.name)
+    if (Memory.miningEnabled) {
+        for (const mine of room.memory.mines ?? []) {
+            runMine(mine.name)
+        }
     }
 }, 'main:runMyRoom')
 

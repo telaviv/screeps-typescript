@@ -17,13 +17,22 @@ export interface Mine {
 }
 
 declare global {
+    interface Memory {
+        miningEnabled: boolean
+    }
+
     interface RoomMemory {
         mines?: Mine[]
     }
 
     namespace NodeJS {
         interface Global {
-            mines: { assign: () => void; clear: () => void }
+            mines: {
+                assign: () => void
+                clear: () => void
+                enable: () => void
+                disable: () => void
+            }
         }
     }
 }
@@ -40,9 +49,19 @@ function clearMines() {
     }
 }
 
+function enableMining() {
+    Memory.miningEnabled = true
+}
+
+function disableMining() {
+    Memory.miningEnabled = false
+}
+
 global.mines = {
     assign: assignMines,
     clear: clearMines,
+    enable: enableMining,
+    disable: disableMining,
 }
 
 export class MineManager {
