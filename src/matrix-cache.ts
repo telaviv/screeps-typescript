@@ -36,6 +36,12 @@ declare global {
     interface RoomMemory {
         matrixCache?: MatrixCache
     }
+
+    namespace NodeJS {
+        interface Global {
+            matrix: { clear: () => void; keys: () => void }
+        }
+    }
 }
 
 const tagsToKey = wrap((tags: MatrixTag[]): string => {
@@ -313,9 +319,23 @@ export class MatrixCacheManager {
     }
 }
 
-/**
 function clearAllCaches(): void {
     MatrixCacheManager.clearCaches(true)
 }
-clearAllCaches()
-*/
+
+global.matrix = {
+    clear: clearAllCaches,
+    keys: (): void => {
+        const descriptions: string[] = []
+        for (const [roomName, roomMemory] of Object.entries(Memory.rooms)) {
+            for (const key of Object.keys(roomMemory.matrixCache ?? {})) {
+                descriptions.push(`${roomName}: ${key}`)
+            }
+        }
+        descriptions.sort()
+        console.log('matrix-cache key count: ', descriptions.length)
+        for (const description of descriptions) {
+            console.log(description)
+        }
+    },
+}

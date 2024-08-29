@@ -1,7 +1,7 @@
 import includes from 'lodash/includes'
 
 import * as Logger from 'utils/logger'
-import { moveTo, moveToRoom, moveWithinRoom } from 'utils/travel'
+import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import autoIncrement from 'utils/autoincrement'
 import { clearConstructionSites } from 'utils/room'
 import { fromBodyPlanSafe } from 'utils/parts'
@@ -33,14 +33,14 @@ const roleClaimer = {
             return
         }
 
-        const targetRoom = Game.rooms[creep.memory.roomName]
-        if (targetRoom && !targetRoom.controller) {
-            Logger.info('claimer:no-controller', creep.name)
+        if (creep.memory.roomName !== creep.room.name) {
+            moveToRoom(creep, creep.memory.roomName)
             return
         }
 
-        if (!targetRoom) {
-            moveToRoom(creep, creep.memory.roomName)
+        const targetRoom = Game.rooms[creep.memory.roomName]
+        if (targetRoom && !targetRoom.controller) {
+            Logger.info('claimer:no-controller', creep.name)
             return
         }
 
@@ -61,10 +61,6 @@ const roleClaimer = {
 
         if (targetRoom.controller?.safeMode) {
             return
-        }
-
-        if (creep.memory.roomName !== creep.room.name) {
-            moveToRoom(creep, creep.memory.roomName)
         }
 
         let err
@@ -96,7 +92,7 @@ const roleClaimer = {
         } else {
             err = creep.claimController(targetRoom.controller)
             if (err === ERR_NOT_IN_RANGE) {
-                err = moveTo(creep, { pos: targetRoom.controller.pos, range: 1 })
+                err = moveWithinRoom(creep, { pos: targetRoom.controller.pos, range: 1 })
             } else if (err !== OK) {
                 Logger.warning('claimer:claim:failed', creep.name, err)
             }

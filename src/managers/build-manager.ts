@@ -236,6 +236,12 @@ export default class BuildManager {
         return getConstructionSites(this.room).length > 0
     }
 
+    hasNonWallConstructionSites(): boolean {
+        return getConstructionSites(this.room).some(
+            (site) => site.structureType !== STRUCTURE_RAMPART,
+        )
+    }
+
     canBuild(): boolean {
         return this.hasConstructionSites()
     }

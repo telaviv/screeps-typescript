@@ -1,12 +1,12 @@
 import * as Logger from 'utils/logger'
 import * as TimeCache from 'utils/time-cache'
+import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { PickupTarget } from './target'
 import { PickupTask } from './types'
 import { ResourceCreep } from '../types'
 import { findClosestByRange } from 'utils/room-position'
 import { getFreeCapacity } from 'utils/store'
 import { isPickupTask } from './utils'
-import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const KEY = 'pickup-total-resources'
@@ -49,9 +49,13 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
 
 export function run(task: PickupTask, creep: ResourceCreep): boolean {
     const resource = getResource(task)
+    if (resource.room && creep.room.name !== resource.room.name) {
+        moveToRoom(creep, resource.room.name)
+        return false
+    }
     const err = creep.pickup(resource)
     if (err === ERR_NOT_IN_RANGE) {
-        moveTo(creep, { pos: resource.pos, range: 1 })
+        moveWithinRoom(creep, { pos: resource.pos, range: 1 })
     } else if (err === OK) {
         Logger.info('task:pickup:complete', creep.name, task.amount)
         completeRequest(creep)

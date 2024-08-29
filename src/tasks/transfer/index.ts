@@ -1,5 +1,6 @@
 import * as Logger from 'utils/logger'
 import { getExtensions, getSpawns, getTowers } from 'utils/room'
+import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { MINIMUM_EXTENSION_ENERGY } from 'roles/logistics-constants'
 import { ResourceCreep } from 'tasks/types'
 import { TransferStructure } from 'tasks/transfer/structure'
@@ -7,7 +8,6 @@ import { TransferTask } from './types'
 import { currentEnergyHeld } from 'utils/creep'
 import { getVirtualStorage } from 'utils/virtual-storage'
 import { isTransferTask } from './utils'
-import { moveTo } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 interface RequestOpts {
@@ -68,9 +68,13 @@ export const makeRequest = wrap(
 
 export function run(task: TransferTask, creep: ResourceCreep): boolean {
     const structure = getStructure(task)
+    if (structure.room && creep.room.name !== structure.room.name) {
+        moveToRoom(creep, structure.pos.roomName)
+        return false
+    }
     const err = creep.transfer(structure, RESOURCE_ENERGY)
     if (err === ERR_NOT_IN_RANGE) {
-        moveTo(creep, structure)
+        moveWithinRoom(creep, { pos: structure.pos, range: 1 })
     } else if (err === OK) {
         completeRequest(creep)
         return true

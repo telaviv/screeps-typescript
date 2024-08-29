@@ -12,7 +12,7 @@ import {
     hasWeakWall,
 } from 'utils/room'
 import { getEnergy, hasNoEnergy } from 'utils/energy-harvesting'
-import { moveTo, moveToRoom, moveWithinRoom } from 'utils/travel'
+import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlan } from 'utils/parts'
@@ -156,7 +156,7 @@ export class MasonCreep {
         if (targets.length) {
             const err = this.creep.build(targets[0])
             if (err === ERR_NOT_IN_RANGE) {
-                const nerr = moveTo(this.creep, targets[0])
+                const nerr = moveWithinRoom(this.creep, { pos: targets[0].pos, range: 3 })
                 if (nerr !== OK) {
                     Logger.warning('mason:build:moveTo:failure', nerr, this.creep.name)
                 }

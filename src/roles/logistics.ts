@@ -199,6 +199,8 @@ class RoleLogistics {
             }
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(this.creep)) {
             memory.currentTask = TASK_COLLECTING
+        } else {
+            this.assignWorkerPreference()
         }
     }
 
@@ -220,7 +222,7 @@ class RoleLogistics {
             memory.currentTask = TASK_BUILDING
         } else if (!rq.getCreepCount('energy-hauler') && TransferTask.makeRequest(this.creep)) {
             memory.currentTask = TASK_HAULING
-        } else if (buildManager && buildManager.canBuild()) {
+        } else if (buildManager && buildManager.hasNonWallConstructionSites()) {
             memory.currentTask = TASK_BUILDING
         } else if (hasOwnFragileWall(this.creep.room)) {
             memory.currentTask = TASK_WALL_REPAIRS

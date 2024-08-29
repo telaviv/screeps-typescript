@@ -1,21 +1,22 @@
+import * as Logger from 'utils/logger'
 import { ATTACKERS_COUNT, MAX_USEFUL_ENERGY } from './constants'
 import WarDepartment, { WarStatus } from 'war-department'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
+import roleAttacker, { AttackerMemory } from 'roles/attacker'
+import roleHealer, { HealerMemory } from 'roles/healer'
 import { PREFERENCE_WORKER } from 'roles/logistics-constants'
 import RoleLogistics from 'roles/logistics'
 import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
 import { isEnergyRestricted } from './utils'
 import { isTravelTask } from 'tasks/travel/utils'
-import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
-import roleHealer from 'roles/healer'
 import roleScout from 'roles/scout'
+import { wrap } from 'utils/profiling'
 
-export function createWarCreeps(
-    spawn: StructureSpawn,
-    warDepartment: WarDepartment,
-): number | null {
+export const createWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDepartment):
+    | number
+    | null => {
     const room = spawn.room
     const status = warDepartment.status
     const capacity = Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
@@ -32,28 +33,34 @@ export function createWarCreeps(
         return null
     }
 
-    if (warDepartment.targetRoom === undefined) {
+    if (warDepartment.targetRoom === undefined && warDepartment.status !== WarStatus.ATTACK) {
         if (scouts.length === 0) {
             return roleScout.create(spawn, warDepartment.target, true)
         }
         return null
     }
 
-    const remoteWorkers = getLogisticsCreeps({ room: warDepartment.targetRoom })
-
-    if (
-        (status === WarStatus.ATTACK || warDepartment.needsProtection) &&
-        roomQuery.getCreepCount('attacker') < ATTACKERS_COUNT
-    ) {
+    if (warDepartment.needsProtection && roomQuery.getCreepCount('attacker') < ATTACKERS_COUNT) {
         return roleAttacker.create(spawn, warDepartment.target, capacity)
     }
 
-    if (warDepartment.needsHealing() && roomQuery.getCreepCount('healer') === 0) {
-        return roleHealer.create(spawn, warDepartment.target, true)
-    }
-
+    const attackers = room
+        .find(FIND_MY_CREEPS)
+        .filter(
+            (c) => c.memory.role === 'attacker' && (c.memory as AttackerMemory).asPair === true,
+        ).length
+    const healers = room
+        .find(FIND_MY_CREEPS)
+        .filter(
+            (c) => c.memory.role === 'healer' && (c.memory as HealerMemory).asPair === true,
+        ).length
     if (status === WarStatus.ATTACK) {
-        if (warDepartment.hasHostileController()) {
+        Logger.error('war-stuff', room.name, attackers, healers)
+        if (attackers < ATTACKERS_COUNT * 2 && attackers <= healers) {
+            return roleAttacker.create(spawn, warDepartment.target, capacity, null, true)
+        } else if (healers < ATTACKERS_COUNT && healers < attackers) {
+            return roleHealer.create(spawn, warDepartment.target, true, true)
+        } else if (warDepartment.hasHostileController()) {
             if (roomQuery.getCreepCount('claimer') === 0) {
                 return roleClaimer.create(spawn, warDepartment.target, { attack: true })
             } else if (
@@ -65,6 +72,10 @@ export function createWarCreeps(
         }
     }
 
+    if (!warDepartment.targetRoom) {
+        return null
+    }
+    const remoteWorkers = getLogisticsCreeps({ room: warDepartment.targetRoom })
     const sourcesManager = SourcesManager.create(warDepartment.targetRoom)
     if (!sourcesManager) {
         return null
@@ -103,4 +114,4 @@ export function createWarCreeps(
         }
     }
     return null
-}
+}, 'createWarCreeps')

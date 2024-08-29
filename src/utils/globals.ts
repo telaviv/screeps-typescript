@@ -61,7 +61,7 @@ function printTasks(type?: Task<any>) {
     }
 }
 
-function isOwnedStructure(obj: any): obj is OwnedStructure {
+export function isOwnedStructure(obj: Structure): obj is OwnedStructure {
     return 'owner' in obj
 }
 

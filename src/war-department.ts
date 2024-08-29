@@ -8,6 +8,23 @@ declare global {
     interface RoomMemory {
         war: WarMemory | SpawnWarMemory
     }
+    namespace NodeJS {
+        interface Global {
+            war: { save: (target: string, savior: string) => void }
+        }
+    }
+}
+global.war = {
+    save: (target: string, savior: string) => {
+        const saviorRoom = Game.rooms[savior]
+        const targetRoom = Game.rooms[target]
+        if (!saviorRoom || !targetRoom) {
+            Logger.error(`war:save: room ${target}|${savior} not found`)
+            return
+        }
+        const war = new WarDepartment(saviorRoom)
+        war.saveRoom(target)
+    },
 }
 
 export interface WarMemory {

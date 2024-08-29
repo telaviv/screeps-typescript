@@ -1,8 +1,8 @@
 import * as Logger from 'utils/logger'
-import { followCreep, moveTo, moveToRoom } from 'utils/travel'
-import { getHostileConstructionSites, getInvaderCores } from 'utils/room'
+import { followCreep, moveToRoom, moveWithinRoom } from 'utils/travel'
 import { goHome, moveToStationaryPoint, recycle, wander } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
+import { getHostileConstructionSites } from 'utils/room'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'attack'
@@ -11,14 +11,20 @@ export interface Attacker extends Creep {
     memory: AttackerMemory
 }
 
-interface AttackerMemory extends CreepMemory {
+export interface AttackerMemory extends CreepMemory {
     role: 'attack'
     roomName: string
     home: string
+    asPair?: true | Id<Creep>
+    paired: boolean | undefined
 }
 
 function isCreep(target: Creep | Structure): target is Creep {
     return (target as Creep).hits !== undefined
+}
+
+export function isOwnedStructure(obj: Structure): obj is OwnedStructure {
+    return 'owner' in obj
 }
 
 const sortHostiles =
@@ -51,29 +57,105 @@ const roleAttacker = {
         }
         creep.notifyWhenAttacked(false)
         creep.heal(creep)
+
+        if (creep.memory.asPair === true) {
+            wander(creep)
+            return
+        } else if (creep.memory.paired === false) {
+            const partner = Game.getObjectById(creep.memory.asPair as Id<Creep>)
+            if (partner && creep.pos.isNearTo(partner)) {
+                creep.memory.paired = true
+            } else {
+                wander(creep)
+                return
+            }
+        }
+        const currentHostiles = sortHostiles(creep.pos)(creep.room.find(FIND_HOSTILE_CREEPS))
+        if (creep.room.controller?.my && currentHostiles.length > 0) {
+            roleAttacker.attack(creep, currentHostiles[0])
+            return
+        }
+
+        const hostileNeighbor = roleAttacker.getHostileNeighbor(creep)
+        if (hostileNeighbor) {
+            roleAttacker.attack(creep, hostileNeighbor)
+            return
+        }
+
         if (!roleAttacker.isInRoom(creep)) {
-            moveToRoom(creep, creep.memory.roomName)
+            moveToRoom(creep, creep.memory.roomName, { avoidObstacleStructures: false })
             return
         }
 
         const targetRoom = Game.rooms[creep.memory.roomName]
         if (!targetRoom) {
-            Logger.warning('attacker:no-vision-to-room', creep.name)
             return
         }
 
-        const structures = getInvaderCores(targetRoom)
         const hostiles = sortHostiles(creep.pos)(targetRoom.find(FIND_HOSTILE_CREEPS))
         const constructionSites = getHostileConstructionSites(targetRoom)
-        const targets = [...structures, ...hostiles]
-        if (targets.length > 0) {
-            roleAttacker.attack(creep, targets[0])
-        } else if (constructionSites.length > 0) {
+
+        const creepTargets: Creep[] = [...hostiles]
+        creepTargets.sort((a, b) => {
+            const distance = creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b)
+            if (distance !== 0) {
+                return distance
+            }
+            return a.hits - b.hits
+        })
+        if (creepTargets.length > 0) {
+            const creepTarget = creepTargets[0]
+            roleAttacker.attack(creep, creepTarget)
+            return
+        }
+
+        const structureTargets = targetRoom.find(FIND_HOSTILE_STRUCTURES)
+        if (structureTargets.length > 0) {
+            const structureTarget = structureTargets[0]
+            roleAttacker.attack(creep, structureTarget)
+            return
+        }
+
+        if (constructionSites.length > 0) {
             moveToStationaryPoint(constructionSites[0].pos, creep)
         } else {
             wander(creep)
         }
     }, 'runAttacker'),
+
+    getHostileNeighbor: (creep: Attacker): Creep | Structure | null => {
+        if (!creep.room.controller?.my || creep.room.name !== creep.memory.roomName) {
+            return null
+        }
+        const lookHostiles = creep.room.lookForAtArea(
+            LOOK_CREEPS,
+            Math.max(creep.pos.x - 1, 0),
+            Math.max(creep.pos.y - 1, 0),
+            Math.min(creep.pos.x + 1, 49),
+            Math.min(creep.pos.y + 1, 49),
+            true,
+        )
+        const hostiles = lookHostiles.map((c) => c.creep)
+        const sorted = sortHostiles(creep.pos)(hostiles)
+        if (sorted.length > 0) {
+            return sorted[0]
+        }
+        const lookEnemyStructures = creep.room.lookForAtArea(
+            LOOK_STRUCTURES,
+            Math.max(creep.pos.x - 1, 0),
+            Math.max(creep.pos.y - 1, 0),
+            Math.min(creep.pos.x + 1, 49),
+            Math.min(creep.pos.y + 1, 49),
+            true,
+        )
+        const structures = lookEnemyStructures.map((c) => c.structure)
+        const hostileBuildable = structures.filter((s) => isOwnedStructure(s) && !s.my)
+        hostileBuildable.sort((a, b) => a.hits - b.hits)
+        if (hostileBuildable.length > 0) {
+            return hostileBuildable[0]
+        }
+        return null
+    },
 
     isInRoom: (creep: Attacker): boolean => {
         return (
@@ -89,14 +171,18 @@ const roleAttacker = {
         if (!creep.getActiveBodyparts(ATTACK)) {
             return ERR_NO_BODYPART
         }
+        let err
         if (isCreep(target)) {
             followCreep(creep, target)
+            err = creep.attack(target)
         } else {
-            moveTo(creep, target)
+            err = creep.attack(target)
+            if (err === ERR_NOT_IN_RANGE) {
+                moveWithinRoom(creep, { pos: target.pos, range: 1 })
+            }
         }
-        const err = creep.attack(target)
         if (err !== OK && err !== ERR_NOT_IN_RANGE) {
-            Logger.error('attacker:attack:failed', creep.name, err)
+            Logger.warning('attacker:attack:failed', creep.name, target, err)
         }
         return err
     },
@@ -115,14 +201,20 @@ const roleAttacker = {
         roomName: string,
         capacity: number | null = null,
         maxAttackParts: number | null = null,
+        asPair = false,
     ): number {
         capacity = capacity ? capacity : spawn.room.energyCapacityAvailable
+        const memory = {
+            role: ROLE,
+            home: spawn.room.name,
+            roomName,
+        } as AttackerMemory
+        if (asPair) {
+            memory.asPair = true
+            memory.paired = false
+        }
         return spawn.spawnCreep(calculateParts(capacity, maxAttackParts), `${ROLE}:${Game.time}`, {
-            memory: {
-                role: ROLE,
-                home: spawn.room.name,
-                roomName,
-            } as AttackerMemory,
+            memory,
         })
     },
 }
@@ -132,11 +224,15 @@ export function calculateParts(
     maxCopies: number | null = null,
 ): BodyPartConstant[] {
     maxCopies = maxCopies ? maxCopies : 50
+    const fixed =
+        capacity >= BODYPART_COST[HEAL] + BODYPART_COST[ATTACK] + BODYPART_COST[MOVE] * 2
+            ? [HEAL, MOVE]
+            : []
     const SORT_ORDER = [TOUGH, MOVE, ATTACK, HEAL]
     const parts = fromBodyPlan(capacity, [ATTACK, MOVE], {
         maxCopies,
-        fixed: [HEAL],
-        padding: [TOUGH],
+        fixed,
+        padding: [TOUGH, MOVE],
     })
     parts.sort(
         (a, b) =>

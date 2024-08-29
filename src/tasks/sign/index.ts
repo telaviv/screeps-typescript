@@ -1,9 +1,9 @@
 import * as Logger from 'utils/logger'
+import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { ResourceCreep } from '../types'
 import { SignTask } from './types'
 import { isSignTask } from './utils'
 import { makeTask } from 'tasks/utils'
-import { moveTo } from 'utils/travel'
 
 declare global {
     interface RoomMemory {
@@ -37,9 +37,13 @@ export function run(task: SignTask, creep: ResourceCreep): boolean {
         return false
     }
     const controller = room.controller
+    if (room.name !== creep.room.name) {
+        moveToRoom(creep, room.name)
+        return false
+    }
     const err = creep.signController(controller, task.message)
     if (err === ERR_NOT_IN_RANGE) {
-        moveTo(creep, { pos: controller.pos, range: 1 })
+        moveWithinRoom(creep, { pos: controller.pos, range: 1 })
         return false
     } else if (err === OK) {
         room.memory.signed = true

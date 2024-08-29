@@ -10,7 +10,7 @@ import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 
-const MAX_ROOM_RANGE = 17
+const MAX_ROOM_RANGE = 23
 
 type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
 
@@ -56,19 +56,22 @@ const moveToRoomRoomCallback =
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
+    // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
-    return moveToCartographer(
+    const err = moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
         {
             roomCallback: moveToRoomRoomCallback(roomName),
             routeCallback: moveToRoomRouteCallback(roomName),
-            swampCost: 3,
+            avoidObstacleStructures: false,
             ...opts,
         },
     )
+    // Logger.error(`moveToRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, roomName, err)
+    return err
 }, 'travel:moveToRoom')
 
 export function generatePathToRoom(
@@ -82,6 +85,7 @@ export function generatePathToRoom(
         {
             roomCallback,
             routeCallback,
+            avoidObstacleStructures: false,
             ...opts,
         },
     )
@@ -90,10 +94,11 @@ export function generatePathToRoom(
 export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
+    // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
-    const err = moveToCartographer(creep, target, { roomCallback, routeCallback, ...opts })
+    let err = moveToCartographer(creep, target, { roomCallback, routeCallback, ...opts })
     if (err === ERR_NO_PATH) {
         if (Array.isArray(target)) {
             target = target[0]
@@ -102,13 +107,14 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
         if (creep.room.name === pos.roomName) {
             return moveToRoom(creep, pos.roomName, opts)
         } else {
-            return moveToCartographer(creep, target, {
+            err = moveToCartographer(creep, target, {
                 swampCost: 5,
                 maxOps: 2000,
                 roomCallback,
                 routeCallback,
                 ...opts,
             })
+            // Logger.error(`moveTo: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
         }
     }
     return err
@@ -116,6 +122,7 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
 
 export const moveWithinRoom = wrap(
     (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
+        // const startCPU = Game.cpu.getUsed()
         const matrix = MatrixCacheManager.getRoomMatrix(creep.room.name)
         const nRoomCallback = (roomName: string): CostMatrix | boolean => {
             if (roomName === target.pos.roomName) {
@@ -129,21 +136,34 @@ export const moveWithinRoom = wrap(
             }
             return Infinity
         }
-        return moveTo(creep, target, {
+        const err = moveTo(creep, target, {
             roomCallback: nRoomCallback,
             routeCallback: nRouteCallback,
+            avoidObstacleStructures: false,
             ...opts,
         })
+        // Logger.error(`moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
+        return err
     },
     'creep:moveWithinRoom',
 )
 
 export const followCreep = wrap((creep: Creep, target: Creep): MoveToReturnCode => {
+    // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
+    let err
     if (!creep.pos.isNearTo(target)) {
-        return moveTo(creep, { pos: target.pos, range: 1 })
+        if (creep.room.name !== target.room.name) {
+            err = moveToRoom(creep, target.room.name)
+            // Logger.error(`followCreep:moveToRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
+            return err
+        } else {
+            err = moveWithinRoom(creep, { pos: target.pos, range: 1 })
+            // Logger.error(`followCreep:moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
+            return err
+        }
     }
     const diffX = target.pos.x - creep.pos.x
     const diffY = target.pos.y - creep.pos.y

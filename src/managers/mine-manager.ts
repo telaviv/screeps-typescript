@@ -1,5 +1,6 @@
 import { findMyRooms, getHostileCreeps, getInjuredCreeps, getMyConstructionSites } from 'utils/room'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
+import { getNeighbors, getNonObstacleNeighbors } from 'utils/room-position'
 import { ClaimerMemory } from 'roles/claim'
 import { HealerMemory } from 'roles/healer'
 import { HostileRecorder } from 'hostiles'
@@ -7,7 +8,6 @@ import { RemoteHaulerMemory } from 'roles/remote-hauler'
 import SourcesManager from './sources-manager'
 import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
-import { getNonObstacleNeighbors } from 'utils/room-position'
 
 const MIN_RESERVATION_TICKS = 3500
 const MIN_BUILD_PARTS = 15
@@ -87,6 +87,26 @@ export class MineManager {
         this.sourcesManager = Game.rooms[roomName] ? new SourcesManager(Game.rooms[roomName]) : null
     }
 
+    hasCapacityToMine(): boolean {
+        const unitCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]
+        const mostClaims = Math.floor(this.minee.energyCapacityAvailable / unitCost)
+        const scout = Memory.rooms[this.roomName].scout
+        if (!scout || !scout.controllerPosition) {
+            return false
+        }
+        const controllerPos = new RoomPosition(
+            scout.controllerPosition.x,
+            scout.controllerPosition.y,
+            this.roomName,
+        )
+        const neighbors = getNeighbors(controllerPos)
+        const terrain = new Room.Terrain(this.roomName)
+        const totalSpots = neighbors.filter(
+            (pos) => terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL,
+        ).length
+        return mostClaims * totalSpots >= 3
+    }
+
     hasVision(): boolean {
         return !!this.room
     }
@@ -97,14 +117,15 @@ export class MineManager {
 
     needsAttention(): boolean {
         return (
-            !this.hasVision() ||
-            !this.controllerReserved() ||
-            (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
-                !this.hasEnoughReservers()) ||
-            (this.needsProtection() && !this.hasDefenders()) ||
-            !this.hasEnoughConstructionParts() ||
-            !this.hasEnoughHarvesters() ||
-            !this.hasEnoughHaulers()
+            this.hasCapacityToMine() &&
+            (!this.hasVision() ||
+                !this.controllerReserved() ||
+                (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
+                    !this.hasEnoughReservers()) ||
+                (this.needsProtection() && !this.hasDefenders()) ||
+                !this.hasEnoughConstructionParts() ||
+                !this.hasEnoughHarvesters() ||
+                !this.hasEnoughHaulers())
         )
     }
 

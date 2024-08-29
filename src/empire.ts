@@ -214,7 +214,7 @@ export default class Empire {
             }
             const savior = getBestNearbyRoom(room.name, MAX_SAVIOR_DISTANCE)
             if (!savior) {
-                Logger.warning(`empire:find-saviors:not-found: no savior found for ${room.name}`)
+                Logger.info(`empire:find-saviors:not-found: no savior found for ${room.name}`)
                 continue
             }
             const warDepartment = new WarDepartment(savior)
