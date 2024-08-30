@@ -1,7 +1,7 @@
 import * as Logger from 'utils/logger'
 import { followCreep, moveToRoom } from 'utils/travel'
-import { Attacker } from './attacker'
 import { getCreeps, wander } from 'utils/creep'
+import { Attacker } from './attacker'
 import { fromBodyPlan } from 'utils/parts'
 import { getInjuredCreeps } from 'utils/room'
 import { wrap } from 'utils/profiling'

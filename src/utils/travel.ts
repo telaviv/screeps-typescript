@@ -10,7 +10,7 @@ import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 
-const MAX_ROOM_RANGE = 23
+const MAX_ROOM_RANGE = 20
 
 type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
 
@@ -66,7 +66,6 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
         {
             roomCallback: moveToRoomRoomCallback(roomName),
             routeCallback: moveToRoomRouteCallback(roomName),
-            avoidObstacleStructures: false,
             ...opts,
         },
     )
@@ -85,7 +84,6 @@ export function generatePathToRoom(
         {
             roomCallback,
             routeCallback,
-            avoidObstacleStructures: false,
             ...opts,
         },
     )
@@ -139,7 +137,6 @@ export const moveWithinRoom = wrap(
         const err = moveTo(creep, target, {
             roomCallback: nRoomCallback,
             routeCallback: nRouteCallback,
-            avoidObstacleStructures: false,
             ...opts,
         })
         // Logger.error(`moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)

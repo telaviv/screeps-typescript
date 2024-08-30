@@ -5,6 +5,7 @@ import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import autoIncrement from 'utils/autoincrement'
 import { clearConstructionSites } from 'utils/room'
 import { fromBodyPlanSafe } from 'utils/parts'
+import { isOwnedStructure } from './attacker'
 import { wrap } from 'utils/profiling'
 
 const ROLE = 'claimer'
@@ -53,7 +54,9 @@ const roleClaimer = {
             Logger.info('claimer:room-is-mine', creep.name, targetRoom.name)
             clearConstructionSites(targetRoom)
             for (const structure of targetRoom.find(FIND_STRUCTURES)) {
-                structure.destroy()
+                if (!isOwnedStructure(structure) || !structure.my) {
+                    structure.destroy()
+                }
             }
             creep.suicide()
             return

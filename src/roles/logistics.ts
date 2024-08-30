@@ -155,10 +155,8 @@ class RoleLogistics {
 
     @profile
     private getEnergy(): void {
-        if (!addEnergyTask(this.creep, { includeMining: true })) {
-            if (this.creep.name === 'logistics:worker:W46N11:9787140') {
-                Logger.error('logistics:getEnergy:failure', this.creep.name)
-            }
+        const energyTask = addEnergyTask(this.creep, { includeMining: true })
+        if (!energyTask) {
             this.setToNoTask('no tasks could be made')
         }
     }
@@ -199,8 +197,6 @@ class RoleLogistics {
             }
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(this.creep)) {
             memory.currentTask = TASK_COLLECTING
-        } else {
-            this.assignWorkerPreference()
         }
     }
 
@@ -338,17 +334,11 @@ class RoleLogistics {
         const repairThreshold = this.creep.memory.noRepairLimit ? 1 : undefined
         const structure = EnergySinkManager.findRepairTarget(this.creep, repairThreshold)
         if (structure === null) {
-            if (this.creep.name === 'logistics:worker:W9N5:7511904') {
-                Logger.error('logistics:repair:failure', this.creep.name)
-            }
             this.assignWorkerPreference()
             return
         }
 
         const err = this.creep.repair(structure)
-        if (this.creep.name === 'logistics:worker:W9N5:7511904') {
-            Logger.error('logistics:repair', this.creep.name, err)
-        }
         if (err === ERR_NOT_IN_RANGE) {
             moveWithinRoom(
                 this.creep,

@@ -55,7 +55,8 @@ export function run(task: PickupTask, creep: ResourceCreep): boolean {
     }
     const err = creep.pickup(resource)
     if (err === ERR_NOT_IN_RANGE) {
-        moveWithinRoom(creep, { pos: resource.pos, range: 1 })
+        const moveErr = moveWithinRoom(creep, { pos: resource.pos, range: 1 })
+        Logger.info('task:pickup:run:move', creep.name, moveErr)
     } else if (err === OK) {
         Logger.info('task:pickup:complete', creep.name, task.amount)
         completeRequest(creep)

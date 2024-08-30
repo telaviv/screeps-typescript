@@ -1,19 +1,28 @@
+import * as Logger from 'utils/logger'
 import { findMyRooms, getHostileCreeps, getInjuredCreeps, getMyConstructionSites } from 'utils/room'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import { getNeighbors, getNonObstacleNeighbors } from 'utils/room-position'
+import roleRemoteHauler, { RemoteHaulerMemory } from 'roles/remote-hauler'
 import { ClaimerMemory } from 'roles/claim'
 import { HealerMemory } from 'roles/healer'
 import { HostileRecorder } from 'hostiles'
-import { RemoteHaulerMemory } from 'roles/remote-hauler'
 import SourcesManager from './sources-manager'
 import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
+import { getSlidingEnergy } from 'room-window'
 
 const MIN_RESERVATION_TICKS = 3500
 const MIN_BUILD_PARTS = 15
+const HAULER_COUNT_RECHECK = 500 // ticks
+const MIN_ENERGY_PERCENT = 0.2
+const MAX_ENERGY_PERCENT = 0.8
 
 export interface Mine {
     name: string
+    lastHaulerCreated?: number
+    haulerCapacity?: number
+    haulerCount?: number
+    updatedAt?: number
 }
 
 declare global {
@@ -32,6 +41,7 @@ declare global {
                 clear: () => void
                 enable: () => void
                 disable: () => void
+                purge: () => void // purge caches
             }
         }
     }
@@ -57,11 +67,21 @@ function disableMining() {
     Memory.miningEnabled = false
 }
 
+function purgeCaches() {
+    for (const room of findMyRooms()) {
+        for (const mine of room.memory.mines ?? []) {
+            const haulers = new MineHaulers(mine.name, room)
+            haulers.purge()
+        }
+    }
+}
+
 global.mines = {
     assign: assignMines,
     clear: clearMines,
     enable: enableMining,
     disable: disableMining,
+    purge: purgeCaches,
 }
 
 export class MineManager {
@@ -364,5 +384,104 @@ export class MineDecider {
         }
         const mines = Memory.rooms[miner].mines as Mine[]
         mines.push({ name: mine })
+    }
+}
+
+export class MineHaulers {
+    private mineName: string
+    private minee: Room
+
+    constructor(mineName: string, minee: Room) {
+        this.mineName = mineName
+        this.minee = minee
+        this.mine.haulerCount = this.mine.haulerCount ?? 1
+        this.mine.haulerCapacity = this.mine.haulerCapacity ?? 0
+        this.mine.updatedAt = this.mine.updatedAt ?? 0
+    }
+
+    get mine(): Mine {
+        const mine = this.minee.memory.mines?.find((m) => m.name === this.mineName)
+        if (!mine) {
+            throw new Error(
+                `MineHaulers: mine not found ${this.mineName} ${JSON.stringify(
+                    this.minee.memory.mines,
+                )}`,
+            )
+        }
+        return mine
+    }
+
+    private getEnergy(): number {
+        const scout = Memory.rooms[this.mine.name].scout
+        if (!scout) {
+            return 0
+        }
+        const sourceCount = scout.sourceCount
+        const energy99 = getSlidingEnergy(this.mine.name, 99, sourceCount)
+        const energy999 = getSlidingEnergy(this.mine.name, 999, sourceCount)
+        return (energy99 + energy999) / 2
+    }
+
+    public haulerCount(): number {
+        return this.mine.haulerCount ?? 1
+    }
+
+    public createHauler(spawn: StructureSpawn, capacity: number): void {
+        const err = roleRemoteHauler.create(spawn, { remote: this.mine.name, capacity })
+        if (err === OK) {
+            if (capacity !== this.mine.haulerCapacity) {
+                this.mine.haulerCount = 1
+            }
+            this.mine.lastHaulerCreated = Game.time
+            this.mine.haulerCapacity = capacity
+        }
+    }
+
+    public updateHaulerCount(): void {
+        if (this.mine.lastHaulerCreated === undefined) {
+            return
+        }
+        const isTimeToRecheck = Game.time - this.mine.lastHaulerCreated > HAULER_COUNT_RECHECK
+        const hasRechecked = Game.time + this.mine.lastHaulerCreated < (this.mine.updatedAt ?? 0)
+        console.log(
+            'updateHaulerCount',
+            isTimeToRecheck,
+            !hasRechecked,
+            this.mine.lastHaulerCreated,
+            this.mine.updatedAt,
+            Game.time,
+        )
+        if (isTimeToRecheck && !hasRechecked) {
+            const energy = this.getEnergy()
+            const oldCapacity = this.mine.haulerCapacity
+            if (energy > MAX_ENERGY_PERCENT) {
+                this.mine.haulerCapacity = (this.mine.haulerCapacity ?? 1) + 1
+                this.mine.updatedAt = Game.time
+                Logger.error(
+                    'mine-haulers:updateHaulerCount:over',
+                    this.mine.name,
+                    oldCapacity,
+                    this.mine.haulerCapacity,
+                )
+            } else if (energy < MIN_ENERGY_PERCENT) {
+                this.mine.haulerCapacity = Math.min((this.mine.haulerCapacity ?? 1) - 1, 1)
+                this.mine.updatedAt = Game.time
+                Logger.error(
+                    'mine-haulers:updateHaulerCount:under',
+                    this.mine.name,
+                    oldCapacity,
+                    this.mine.haulerCapacity,
+                )
+            }
+        }
+    }
+
+    public purge(): void {
+        for (const room of this.minee.memory.mines ?? []) {
+            delete room.lastHaulerCreated
+            delete room.haulerCapacity
+            delete room.haulerCount
+            delete room.updatedAt
+        }
     }
 }

@@ -39,7 +39,7 @@ declare global {
                 wallTransform: (roomName: string) => void
                 tranformFromId: (roomName: string, id: Id<Source | StructureController>) => void
                 sumTransform: (roomName: string) => void
-                cancel: (roomName: string) => void
+                clear: (roomName: string) => void
             }
         }
     }
@@ -277,6 +277,6 @@ global.visuals = {
     wallTransform: setWallTransformVisuals,
     tranformFromId: setTransformFromId,
     sumTransform: setSumTransformVisuals,
-    cancel: cancelVisuals,
+    clear: cancelVisuals,
     map: { mining: setMiningMapVisuals },
 }

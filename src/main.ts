@@ -1,6 +1,7 @@
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TimeCache from 'utils/time-cache'
+import { MineDecider, MineHaulers } from 'managers/mine-manager'
 import assignGlobals, { findUsername } from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
@@ -25,7 +26,6 @@ import { HostileRecorder } from 'hostiles'
 import LinkManager from 'managers/link-manager'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { MatrixCacheManager } from 'matrix-cache'
-import { MineDecider } from 'managers/mine-manager'
 import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
 import { World } from 'utils/world'
@@ -132,17 +132,19 @@ const runMyRoom = wrap((room: Room) => {
     }
     if (Memory.miningEnabled) {
         for (const mine of room.memory.mines ?? []) {
-            runMine(mine.name)
+            runMine(mine.name, room)
         }
     }
 }, 'main:runMyRoom')
 
-const runMine = wrap((mineName: string) => {
+const runMine = wrap((mineName: string, minee: Room) => {
     const room = Game.rooms[mineName]
     if (!room) {
         return
     }
     ensureSlidingWindow(room)
+    const mineHaulers = new MineHaulers(mineName, minee)
+    mineHaulers.updateHaulerCount()
     const buildManager = getBuildManager(room)
     if (!buildManager) {
         return

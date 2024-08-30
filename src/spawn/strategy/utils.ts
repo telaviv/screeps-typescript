@@ -34,7 +34,6 @@ export function minAvailableEnergy(room: Room): number {
 export const isEnergyRestricted = wrap((room: Room): boolean => {
     const minEnergy = minAvailableEnergy(room)
     return (
-        getSlidingEnergy(room.memory, 99) < minEnergy ||
-        getSlidingEnergy(room.memory, 999) < minEnergy
+        getSlidingEnergy(room.name, 99) < minEnergy || getSlidingEnergy(room.name, 999) < minEnergy
     )
 }, 'rcl-2:isEnergyRestricted')

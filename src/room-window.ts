@@ -9,8 +9,6 @@ declare global {
     }
 }
 
-const COMPARISON_ENERGY = CONTAINER_CAPACITY * 2
-
 function getRoomEnergy(room: Room): number {
     return getTotalDroppedResources(room) + getTotalWithdrawableResources(room)
 }
@@ -33,7 +31,14 @@ function updateSlidingWindow(room: Room, windows: Record<99 | 999, SlidingWindow
 }
 
 /** Returns a % of 2 containers with how much energy can be picked up */
-export const getSlidingEnergy = wrap((roomMemory: RoomMemory, size: 99 | 999): number => {
-    const manager = new SlidingWindowManager(roomMemory.window['available-energy'][size])
-    return manager.average() / COMPARISON_ENERGY
-}, 'room-window:getSlidingEnergy')
+export const getSlidingEnergy = wrap(
+    (roomName: string, size: 99 | 999, sourceCount = 2): number => {
+        const memory = Memory.rooms[roomName]
+        if (!memory) {
+            throw new Error(`room-window:getSlidingEnergy: ${roomName} memory not found`)
+        }
+        const manager = new SlidingWindowManager(memory.window['available-energy'][size])
+        return (manager.average() / CONTAINER_CAPACITY) * sourceCount
+    },
+    'room-window:getSlidingEnergy',
+)
