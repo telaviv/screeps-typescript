@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { stub, SinonStub } from 'sinon'
 import RoleLogistics, { calculateParts } from '../../../src/roles/logistics'
-import { LogisticsCreep } from '../../../src/roles/logistics-constants'
+import { LogisticsCreep, TASK_UPGRADING } from '../../../src/roles/logistics-constants'
 import { getBuildManager } from '../../../src/managers/build-manager'
 import { filter } from 'lodash'
 
@@ -39,9 +39,9 @@ describe('logistics', () => {
             room = {
                 name: 'test',
                 controller: {
-                    ticksToDowngrade: 10000
+                    ticksToDowngrade: 10000,
                 },
-                find: stub().returns([])
+                find: stub().returns([]),
             }
 
             creep = {
@@ -53,25 +53,25 @@ describe('logistics', () => {
                     preference: 'worker',
                     currentTask: 'upgrading',
                     tasks: [],
-                    idleTimestamp: null
+                    idleTimestamp: null,
                 },
                 store: {
                     getUsedCapacity: () => 50,
-                    getCapacity: () => 100
+                    getCapacity: () => 100,
                 },
                 upgradeController: stub().returns(OK),
-                say: stub()
+                say: stub(),
             } as unknown as LogisticsCreep & { upgradeController: SinonStub }
 
             buildManager = {
-                hasNonWallConstructionSites: stub()
+                hasNonWallConstructionSites: stub(),
             }
 
             global.Game = {
                 rooms: { test: room },
                 cpu: {
-                    getUsed: () => 0
-                }
+                    getUsed: () => 0,
+                },
             } as unknown as Game
         })
 
@@ -119,6 +119,22 @@ describe('logistics', () => {
                 // Verify
                 expect(buildManager.hasNonWallConstructionSites.called).to.be.false
                 expect(creep.upgradeController.called).to.be.false
+            })
+
+            it('should continue upgrading when preference is upgrading and controller level < 2', () => {
+                // Setup
+                room.controller.level = 1
+                buildManager.hasNonWallConstructionSites.returns(true)
+                creep.memory.preference = TASK_UPGRADING
+
+                // Execute
+                const logistics = new RoleLogistics(creep)
+                logistics.upgrade()
+
+                // Verify
+                expect(buildManager.hasNonWallConstructionSites.called).to.be.true
+                expect(creep.memory.currentTask).to.equal(TASK_UPGRADING)
+                expect(creep.upgradeController.called).to.be.true
             })
         })
 

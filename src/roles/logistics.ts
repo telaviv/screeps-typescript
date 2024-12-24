@@ -359,9 +359,12 @@ class RoleLogistics {
         }
 
         const buildManager = getBuildManager(this.creep.room)
-        if (buildManager &&
+        if (
+            buildManager &&
             buildManager.hasNonWallConstructionSites() &&
-            home.controller.ticksToDowngrade >= MAX_TICKS_TO_DOWNGRADE) {
+            home.controller.ticksToDowngrade >= MAX_TICKS_TO_DOWNGRADE &&
+            !(this.creep.memory.preference === TASK_UPGRADING && home.controller.level < 2)
+        ) {
             this.creep.memory.currentTask = TASK_BUILDING
             return
         }
