@@ -357,7 +357,17 @@ class RoleLogistics {
             this.creep.say('???')
             return
         }
-        if (this.creep.upgradeController(home.controller) === ERR_NOT_IN_RANGE) {
+
+        const buildManager = getBuildManager(this.creep.room)
+        if (buildManager &&
+            buildManager.hasNonWallConstructionSites() &&
+            home.controller.ticksToDowngrade >= MAX_TICKS_TO_DOWNGRADE) {
+            this.creep.memory.currentTask = TASK_BUILDING
+            return
+        }
+
+        const result = this.creep.upgradeController(home.controller)
+        if (result === ERR_NOT_IN_RANGE) {
             moveWithinRoom(
                 this.creep,
                 { pos: home.controller.pos, range: 3 },

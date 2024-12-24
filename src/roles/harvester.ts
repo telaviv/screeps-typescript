@@ -1,12 +1,13 @@
 /* eslint-disable import/no-named-as-default-member */
 
 import * as Logger from 'utils/logger'
-import { FlatRoomPosition, SourceMemory } from 'types'
+
 import PickupRunner, { addPickupTask } from 'tasks/pickup'
+import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import WithdrawRunner, { addWithdrawTask } from 'tasks/withdraw'
 import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { ResourceCreep } from 'tasks/types'
+import { FlatRoomPosition} from 'types'
 import { getContainerAt } from 'utils/room-position'
 import { getStationaryPoints } from 'construction-features'
 import { isPickupTask } from 'tasks/pickup/utils'
@@ -35,10 +36,10 @@ export interface Harvester extends ResourceCreep {
     memory: HarvesterMemory
 }
 
-interface HarvesterMemory extends SourceMemory {
+interface HarvesterMemory extends ResourceCreepMemory {
     role: 'harvester'
     pos: FlatRoomPosition
-    idleTimestamp: number
+    source: Id<Source>
 }
 
 export function isHarvester(creep: Creep): creep is Harvester {

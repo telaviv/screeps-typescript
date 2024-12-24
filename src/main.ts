@@ -47,7 +47,7 @@ if (Game.time === 0) {
 }
 
 if (!Memory.rooms) {
-    Memory.rooms = {};
+    Memory.rooms = {}
 }
 
 // cpu mins
