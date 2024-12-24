@@ -92,3 +92,5 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+.aider*
+.env

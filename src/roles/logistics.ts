@@ -294,6 +294,16 @@ class RoleLogistics {
 
     @profile
     repairWalls(): void {
+        const buildManager = getBuildManager(this.creep.room)
+        if (
+            buildManager &&
+            buildManager.hasNonWallConstructionSites() &&
+            this.creep.memory.preference === TASK_WALL_REPAIRS
+        ) {
+            this.creep.memory.currentTask = TASK_BUILDING
+            return
+        }
+
         let structure = null
         if (this.creep.memory.currentTarget) {
             structure = Game.getObjectById<Structure>(this.creep.memory.currentTarget)

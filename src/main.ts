@@ -42,7 +42,7 @@ if (!global.USERNAME) {
     global.USERNAME = findUsername()
 }
 
-if (Game.time === 0) {
+if (Game.time === 0 || Game.time % 233 === 0) {
     MineDecider.create().assignMines()
 }
 
