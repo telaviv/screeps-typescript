@@ -46,6 +46,10 @@ if (Game.time === 0) {
     MineDecider.create().assignMines()
 }
 
+if (!Memory.rooms) {
+    Memory.rooms = {};
+}
+
 // cpu mins
 const VISUALS_CPU_MIN = 1000
 
