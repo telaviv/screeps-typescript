@@ -38,6 +38,10 @@ export default class DefenseDepartment {
     }
 
     private attackPartsNeeded(): number {
+        if (this.hasOverwhelmingForce()) {
+            return 0
+        }
+
         const maxAttackParts = this.maxAttackPartsNeeded()
         const currentAttackParts = this.currentAttackParts()
         const towers = getTowers(this.room)
@@ -58,5 +62,20 @@ export default class DefenseDepartment {
 
     public createHealer(spawn: StructureSpawn): number {
         return roleHealer.create(spawn, this.room.name)
+    }
+
+    public hasOverwhelmingForce(): boolean {
+        if (!this.room.controller?.my && !this.room?.controller?.safeMode) {
+            return false
+        }
+        const hostiles = this.room?.find(FIND_HOSTILE_CREEPS)
+        if (!hostiles) {
+            return false
+        }
+        const hostilePower = hostiles.reduce(
+            (acc, c) => acc + c.getActiveBodyparts(ATTACK) + c.getActiveBodyparts(RANGED_ATTACK),
+            0,
+        )
+        return hostilePower > 10
     }
 }
