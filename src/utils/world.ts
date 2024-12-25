@@ -26,7 +26,7 @@ function isRoomUnsafe(roomName: string): boolean {
         return true
     }
 
-    if (Game.map.getRoomStatus(roomName).status !== 'normal') {
+    if (!['normal', 'respawn'].includes(Game.map.getRoomStatus(roomName).status)) {
         return true
     }
 

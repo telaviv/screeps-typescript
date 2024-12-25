@@ -165,7 +165,7 @@ class ScoutManager {
         }
         const scoutRoom = this.findBestRoomToCreateScout(roomToScout)
         if (!scoutRoom) {
-            Logger.error('scout-manager:run:no-scout-room:', roomToScout)
+            Logger.warning('scout-manager:run:no-scout-room:', roomToScout)
             return
         }
         Logger.warning('scout-manager:run:scout-room:', scoutRoom, roomToScout)
