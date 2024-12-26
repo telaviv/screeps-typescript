@@ -17,6 +17,7 @@ import {
     UPGRADERS_COUNT,
 } from './constants'
 import WarDepartment, { WarStatus } from 'war-department'
+import { createImportantWarCreeps, createLatentSpawnWorkers } from './create-war-creeps'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import { getLatentWorkerInterval, isEnergyRestricted } from './utils'
 import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
@@ -27,7 +28,6 @@ import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
-import { createImportantWarCreeps, createLatentSpawnWorkers } from './create-war-creeps'
 import { getConstructionSites } from 'utils/room'
 import { getStationaryPoints } from 'construction-features'
 import { getVirtualStorage } from 'utils/virtual-storage'
@@ -37,10 +37,10 @@ import roleClaimer from 'roles/claim'
 import roleHealer from 'roles/healer'
 import roleRebalancer from 'roles/rebalancer'
 import roleRemoteHauler from 'roles/remote-hauler'
+import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
 import { wrap } from 'utils/profiling'
-import roleScout from 'roles/scout'
 
 declare global {
     interface RoomMemory {
@@ -341,6 +341,12 @@ const createMineWorkers = wrap(
             return
         }
 
+        Logger.error(
+            'createMineWorkers:reservers',
+            mineManager.hasCapacityToReserve(),
+            !mineManager.hasEnoughReservers(),
+            mineManager.hasClaimSpotAvailable(),
+        )
         if (
             mineManager.hasCapacityToReserve() &&
             !mineManager.hasEnoughReservers() &&

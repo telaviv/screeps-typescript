@@ -10,6 +10,8 @@ import {
     isStationaryBase,
 } from '../construction-features'
 import { Mine } from 'managers/mine-manager'
+
+import { filterOutPositions } from 'utils/position'
 import { printMatrix } from 'matrix-cache'
 
 export interface PositionEdge {
@@ -78,7 +80,22 @@ export function calculateRoadPositions(
     }
     // we've set the storage to 1 to allow pathfinding. let's quit that
     cm.set(storageLink.x, storageLink.y, 255)
-    return { roads: roadsFromCostMatrix(cm, roomName), exitInfo }
+
+    // Get all road positions
+    const roadPositions = roadsFromCostMatrix(cm, roomName)
+
+    // Collect all obstacle positions from features
+    const obstaclePositions: Position[] = []
+    for (const [structureType, positions] of Object.entries(features)) {
+        if (isObstacle(structureType)) {
+            obstaclePositions.push(...(positions ?? []))
+        }
+    }
+
+    // Filter out roads that overlap with obstacles
+    const filteredRoads = filterOutPositions(roadPositions, obstaclePositions)
+
+    return { roads: filteredRoads, exitInfo }
 }
 
 export function calculateMineConstructionFeaturesV3(
@@ -183,10 +200,13 @@ export function calculateMineConstructionFeaturesV3(
     if (furtherSourceContainer && furtherSourceId) {
         sources[furtherSourceId] = furtherSourceContainer
     }
+    const containerPositions = Object.values(sources)
+    const unfilteredRoads = roadsFromCostMatrix(cm, roomName)
+    const roads = filterOutPositions(unfilteredRoads, containerPositions)
     return {
         features: {
-            [STRUCTURE_ROAD]: roadsFromCostMatrix(cm, roomName),
-            [STRUCTURE_CONTAINER]: Object.values(sources).map(({ x, y }) => ({ x, y })),
+            [STRUCTURE_ROAD]: roads,
+            [STRUCTURE_CONTAINER]: containerPositions.map(({ x, y }) => ({ x, y })),
         },
         points: sources,
     }

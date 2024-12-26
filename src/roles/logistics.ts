@@ -23,7 +23,6 @@ import {
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import {
     getConstructionSites,
-    getOwnWeakestWall,
     getNearestFragileWall,
     hasHostileCreeps,
     hasNoSpawns,
