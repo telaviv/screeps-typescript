@@ -3,6 +3,7 @@ import filter from 'lodash/filter'
 
 import * as Logger from 'utils/logger'
 import { ConstructionFeatures, getConstructionFeatures } from 'construction-features'
+import { getConstructionFeaturesV3 } from 'construction-features'
 import {
     getSumTransform,
     getTransformFromId,
@@ -12,7 +13,7 @@ import { findMyRooms } from 'utils/room'
 
 const MAX_BUNKER_DIMENSION = 13 // for now we have a 13 x 12 bunker
 type VisualType = 'construction' | 'transform'
-type MapVisualType = 'mining'
+type MapVisualType = 'mining' | 'types'
 
 declare global {
     interface Memory {
@@ -34,7 +35,10 @@ declare global {
     namespace NodeJS {
         interface Global {
             visuals: {
-                map: { mining: () => void }
+                map: {
+                    mining: () => void
+                    types: () => void
+                }
                 construction: (roomName: string, roads?: boolean) => void
                 wallTransform: (roomName: string) => void
                 tranformFromId: (roomName: string, id: Id<Source | StructureController>) => void
@@ -142,6 +146,24 @@ function hasConstructionSiteAt(structureType: BuildableStructureConstant, pos: R
 }
 
 class MapVisualizer {
+    static drawRoomTypes(): void {
+        for (const roomName in Memory.rooms) {
+            const scoutData = Memory.rooms[roomName].scout
+            if (!scoutData) {
+                continue
+            }
+
+            const roomType = getConstructionFeaturesV3(roomName)?.type
+            const pos = new RoomPosition(25, 25, roomName)
+
+            if (roomType === 'home') {
+                Game.map.visual.text('🏠', pos, { fontSize: 5 })
+            } else if (roomType === 'mine') {
+                Game.map.visual.text('⛏️', pos, { fontSize: 5 })
+            }
+        }
+    }
+
     static drawMiningMap(): void {
         const rooms = findMyRooms()
         for (const room of rooms) {
@@ -233,8 +255,11 @@ function visualizeRoom(room: Room): void {
 }
 
 function visualizeMap(): void {
-    if (Memory.visuals?.visualType === 'mining') {
+    const visualType = Memory.visuals?.visualType
+    if (visualType === 'mining') {
         MapVisualizer.drawMiningMap()
+    } else if (visualType === 'types') {
+        MapVisualizer.drawRoomTypes()
     }
 }
 
@@ -278,5 +303,8 @@ global.visuals = {
     tranformFromId: setTransformFromId,
     sumTransform: setSumTransformVisuals,
     clear: cancelVisuals,
-    map: { mining: setMiningMapVisuals },
+    map: {
+        mining: setMiningMapVisuals,
+        types: setRoomTypesMapVisuals,
+    },
 }
