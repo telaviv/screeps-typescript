@@ -13,6 +13,7 @@ import { getConstructionFeaturesV3 } from 'construction-features'
 const MIN_RESERVATION_TICKS = 3500
 const MIN_BUILD_PARTS = 15
 const MAX_BUILDER_COUNT = 4
+const HAULER_ROUND_TRIP_TIME = 100
 
 export interface Mine {
     name: string
@@ -275,11 +276,21 @@ export class MineManager {
         if (!this.constructionFinished()) {
             return true
         }
-        return this.getHaulers().length > this.sourceCount() * 2
+
+        const energyProducedPerRoundTrip = this.sourceCount() * (this.hasCapacityToReserve() ? 10 : 5) * HAULER_ROUND_TRIP_TIME
+        let haulerCapacity = 0
+        for (const hauler of this.getHaulers()) {
+            haulerCapacity += hauler.getActiveBodyparts(CARRY) * CARRY_CAPACITY
+        }
+
+        return haulerCapacity >= energyProducedPerRoundTrip
     }
 
     hasClaimSpotAvailable(): boolean {
         if (!this.room?.controller) {
+            return false
+        }
+        if (!this.hasCapacityToReserve()) {
             return false
         }
         const totalSpots = getNonObstacleNeighbors(this.room?.controller.pos).length
