@@ -30,7 +30,7 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
     const roomQuery = new RoomQuery(room)
 
     if (warDepartment.hasSafeMode() || warDepartment.hasOverwhelmingForce()) {
-        Logger.error(
+        Logger.info(
             'create-war-creeps:safe-mode-check:failed',
             warDepartment.hasSafeMode(),
             warDepartment.hasOverwhelmingForce(),
@@ -42,7 +42,7 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
         if (scouts.length === 0) {
             return roleScout.create(spawn, warDepartment.target, true)
         }
-        Logger.error('create-war-creeps:scout-check:failed', scouts.length)
+        Logger.info('create-war-creeps:scout-check:failed', scouts.length)
         return null
     }
 
@@ -61,7 +61,7 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
             (c) => c.memory.role === 'healer' && (c.memory as HealerMemory).asPair === true,
         ).length
     if (status === WarStatus.ATTACK) {
-        Logger.error('war-stuff', room.name, attackers, healers)
+        Logger.info('war-stuff', room.name, attackers, healers)
         if (attackers < ATTACKERS_COUNT * 2 && attackers <= healers) {
             return roleAttacker.create(spawn, warDepartment.target, capacity, null, true)
         } else if (healers < ATTACKERS_COUNT && healers < attackers) {
@@ -83,7 +83,7 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
     }
     const remoteWorkers = getLogisticsCreeps({ room: warDepartment.targetRoom })
     for (const creep of remoteWorkers) {
-        Logger.error(
+        Logger.info(
             'create-war-creeps:remote-workers',
             creep.name,
             creep.room.name,
@@ -110,24 +110,24 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
             return roleClaimer.create(spawn, warDepartment.target)
         }
     } else if (status === WarStatus.SPAWN) {
-        Logger.error('create-war-creeps', 'spawn', remoteWorkers.length, isEnergyRestricted(room))
+        Logger.info('create-war-creeps', 'spawn', remoteWorkers.length, isEnergyRestricted(room))
         if (remoteWorkers.length === 0) {
-            Logger.error('create-war-creeps:no-remote-workers')
+            Logger.info('create-war-creeps:no-remote-workers')
             return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: warDepartment.target,
             })
         }
 
         if (remoteWorkers.length < 2) {
-            Logger.error('create-war-creeps:remote-workers-less-than-2')
+            Logger.info('create-war-creeps:remote-workers-less-than-2')
             return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: warDepartment.target,
             })
         } else if (!sourcesManager.hasAllContainerHarvesters()) {
-            Logger.error('create-war-creeps:missing-container-harvesters')
+            Logger.info('create-war-creeps:missing-container-harvesters')
             return sourcesManager.createHarvester(spawn, { rescue: true })
         } else if (remoteWorkers.length < 4) {
-            Logger.error('create-war-creeps:preference-worker')
+            Logger.info('create-war-creeps:preference-worker')
             return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: warDepartment.target,
             })
