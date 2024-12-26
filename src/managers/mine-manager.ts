@@ -75,7 +75,7 @@ export class MineManager {
     private minee: Room
     private sourcesManager: SourcesManager | null
 
-    get room(): Room {
+    get room(): Room{
         return Game.rooms[this.roomName]
     }
 
@@ -94,10 +94,20 @@ export class MineManager {
     }
 
     hasCapacityToReserve(): boolean {
+        if (!this.room) {
+            Logger.error('mine-manager:hasCapacityToReserve:no-room', this.roomName)
+            return false
+        }
+
         const unitCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]
         const mostClaims = Math.floor(this.minee.energyCapacityAvailable / unitCost)
+        if (mostClaims === 0) {
+            Logger.error('mine-manager:hasCapacityToReserve:no-claims', this.minee.name, this.minee.energyCapacityAvailable, unitCost)
+            return false
+        }
         const scout = Memory.rooms[this.roomName].scout
         if (!scout || !scout.controllerPosition) {
+            Logger.error('mine-manager:hasCapacityToReserve:no-scout-or-controller-position', this.roomName)
             return false
         }
         const controllerPos = new RoomPosition(
@@ -110,6 +120,7 @@ export class MineManager {
         const totalSpots = neighbors.filter(
             (pos) => terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL,
         ).length
+        Logger.error('mine-manager:hasCapacityToReserve', this.roomName, mostClaims, totalSpots, mostClaims * totalSpots >= 3)
         return mostClaims * totalSpots >= 3
     }
 
