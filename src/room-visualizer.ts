@@ -267,6 +267,10 @@ function setMiningMapVisuals(): void {
     Memory.visuals = { visualType: 'mining' }
 }
 
+function setRoomTypesMapVisuals(): void {
+    Memory.visuals = { visualType: 'types' }
+}
+
 function setConstructionVisuals(roomName: string, roads = false): void {
     const room = Game.rooms[roomName]
     room.memory.visuals = { visualType: 'construction', showRoads: roads }
