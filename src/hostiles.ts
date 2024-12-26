@@ -74,7 +74,9 @@ export class HostileRecorder {
         }
         return this.hostiles[HOSTILE_WINDOW].parts.reduce(
             (acc, parts) =>
-                acc + parts.filter((part) => part === ATTACK || part === RANGED_ATTACK || part === HEAL).length,
+                acc +
+                parts.filter((part) => part === ATTACK || part === RANGED_ATTACK || part === HEAL)
+                    .length,
             0,
         )
     }

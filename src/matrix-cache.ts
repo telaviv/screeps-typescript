@@ -108,15 +108,17 @@ export class MatrixCacheManager {
     }
 
     @mprofile('MatrixCacheManager.getFullCostMatrix')
-    public static getRoomMatrix(roomName: string): CostMatrix {
+    public static getRoomMatrix(roomName: string, roadPreferred=false): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        return manager.getCostMatrix(['default-terrain', 'no-edges', 'no-obstacles'])
+        const keys: MatrixTag[] = roadPreferred ? ['road-preferred-terrain', 'no-edges', 'no-obstacles'] : ['default-terrain', 'no-edges', 'no-obstacles']
+        return manager.getCostMatrix(keys)
     }
 
     @mprofile('MatrixCacheManager.getRoomTravelMatrix')
-    public static getTravelMatrix(roomName: string): CostMatrix {
+    public static getTravelMatrix(roomName: string, roadPreferred=false): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
-        const cm = manager.getCostMatrix(['default-terrain', 'no-obstacles'])
+        const keys: MatrixTag[] = roadPreferred ? ['road-preferred-terrain', 'no-obstacles'] : ['default-terrain', 'no-obstacles']
+        const cm = manager.getCostMatrix(keys)
         return cm
     }
 

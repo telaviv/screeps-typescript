@@ -17,7 +17,7 @@ export const MIN_STORAGE_LEVEL = 4
 export const MIN_RAMPART_LEVEL = 2
 
 const STRONG_WALL_HITS = 100000000
-const FRAGILE_WALL_HITS = [1, 1, 1000, 10000, 30000, 100000, 100000, 100000, 1000000]
+const FRAGILE_WALL_HITS = [1, 1, 1000, 5000, 10000, 20000, 100000, 100000, 1000000]
 
 export function isAtExtensionCap(room: Room): boolean {
     if (!room.controller) {
@@ -258,7 +258,7 @@ export function getWeakestWall(room: Room): StructureWall | StructureRampart | n
     return minBy(walls, 'hits') as StructureWall | StructureRampart
 }
 
-function isFragileWall(structure: Structure): boolean {
+export function isFragileWall(structure: Structure): boolean {
     if (!structure.room.controller) {
         Logger.error('isFragileWall: no controller')
         return false

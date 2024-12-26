@@ -9,6 +9,7 @@ import { MatrixCacheManager } from 'matrix-cache'
 import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
+import { findMyRooms } from './room'
 
 const MAX_ROOM_RANGE = 20
 
@@ -121,7 +122,10 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
 export const moveWithinRoom = wrap(
     (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
         // const startCPU = Game.cpu.getUsed()
-        const matrix = MatrixCacheManager.getRoomMatrix(creep.room.name)
+        const moveCount = creep.getActiveBodyparts(MOVE)
+        const totalCount = creep.body.length
+        const roadPreferred = moveCount / totalCount >= 0.5
+        const matrix = MatrixCacheManager.getRoomMatrix(creep.room.name, roadPreferred)
         const nRoomCallback = (roomName: string): CostMatrix | boolean => {
             if (roomName === target.pos.roomName) {
                 return matrix

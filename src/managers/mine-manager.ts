@@ -16,6 +16,7 @@ const MIN_BUILD_PARTS = 15
 const HAULER_COUNT_RECHECK = 500 // ticks
 const MIN_ENERGY_PERCENT = 0.2
 const MAX_ENERGY_PERCENT = 0.8
+const MAX_BUILDER_COUNT = 4
 
 export interface Mine {
     name: string
@@ -107,7 +108,7 @@ export class MineManager {
         this.sourcesManager = Game.rooms[roomName] ? new SourcesManager(Game.rooms[roomName]) : null
     }
 
-    hasCapacityToMine(): boolean {
+    hasCapacityToReserve(): boolean {
         const unitCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]
         const mostClaims = Math.floor(this.minee.energyCapacityAvailable / unitCost)
         const scout = Memory.rooms[this.roomName].scout
@@ -137,15 +138,15 @@ export class MineManager {
 
     needsAttention(): boolean {
         return (
-            this.hasCapacityToMine() &&
-            (!this.hasVision() ||
-                !this.controllerReserved() ||
-                (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
-                    !this.hasEnoughReservers()) ||
-                (this.needsProtection() && !this.hasDefenders()) ||
-                !this.hasEnoughConstructionParts() ||
-                !this.hasEnoughHarvesters() ||
-                !this.hasEnoughHaulers())
+            !this.hasVision() ||
+            (this.hasCapacityToReserve() &&
+                (!this.controllerReserved() ||
+                    (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
+                        !this.hasEnoughReservers()))) ||
+            (this.needsProtection() && !this.hasDefenders()) ||
+            !this.hasEnoughConstructionParts() ||
+            !this.hasEnoughHarvesters() ||
+            !this.hasEnoughHaulers()
         )
     }
 
@@ -254,6 +255,9 @@ export class MineManager {
             return true
         }
         const builders = this.getWorkers()
+        if (builders.length >= MAX_BUILDER_COUNT) {
+            return true
+        }
         const constructionParts = builders.reduce(
             (acc: number, creep: Creep) => acc + creep.getActiveBodyparts(WORK),
             0,
@@ -275,7 +279,7 @@ export class MineManager {
         if (!this.constructionFinished()) {
             return true
         }
-        return this.getHaulers().length > 0
+        return this.getHaulers().length > this.sourceCount() * 2
     }
 
     hasClaimSpotAvailable(): boolean {
@@ -297,7 +301,7 @@ export class MineManager {
 
     constructionFinished(): boolean {
         const room = this.room
-        if (!room || !this.controllerReserved()) {
+        if (!room || (this.hasCapacityToReserve() && !this.controllerReserved())) {
             return false
         }
         const sites = getMyConstructionSites(room)
@@ -426,8 +430,8 @@ export class MineHaulers {
         return this.mine.haulerCount ?? 1
     }
 
-    public createHauler(spawn: StructureSpawn, capacity: number): void {
-        const err = roleRemoteHauler.create(spawn, { remote: this.mine.name, capacity })
+    public createHauler(spawn: StructureSpawn, capacity: number, roadsBuilt: boolean): void {
+        const err = roleRemoteHauler.create(spawn, { remote: this.mine.name, capacity, roadsBuilt })
         if (err === OK) {
             if (capacity !== this.mine.haulerCapacity) {
                 this.mine.haulerCount = 1

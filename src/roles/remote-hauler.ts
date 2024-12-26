@@ -272,6 +272,7 @@ export class RemoteHaulerCreep {
 interface CreateOpts {
     remote: string
     capacity: number
+    roadsBuilt: boolean
 }
 const roleRemoteHauler = {
     run: wrap((creep: RemoteHauler) => {
@@ -291,7 +292,8 @@ const roleRemoteHauler = {
         for (const id of sourceIds) {
             pickupTracker[id as Id<Source>] = false
         }
-        const err = spawn.spawnCreep(fromBodyPlan(opts.capacity, [CARRY, MOVE]), name, {
+        const blueprint = opts.roadsBuilt ? [CARRY, MOVE] : [CARRY, CARRY, MOVE]
+        const err = spawn.spawnCreep(fromBodyPlan(opts.capacity, blueprint), name, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,

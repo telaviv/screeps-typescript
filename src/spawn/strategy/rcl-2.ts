@@ -40,6 +40,7 @@ import roleRemoteHauler from 'roles/remote-hauler'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
 import { wrap } from 'utils/profiling'
+import roleScout from 'roles/scout'
 
 declare global {
     interface RoomMemory {
@@ -194,9 +195,10 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
         return
     }
 
-    if (roomQuery.allRoadsBuilt() && Memory.miningEnabled) {
+    if (Memory.miningEnabled) {
         for (const mm of roomQuery.getMineManagers()) {
             if (mm.needsAttention()) {
+                Logger.error('swarmStrategy:mineManager:needs-attention', mm.name)
                 createMineWorkers(spawn, capacity, mm)
                 return
             }
@@ -317,7 +319,11 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
 const createMineWorkers = wrap(
     (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
         if (!mineManager.room) {
-            roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
+            if (mineManager.hasCapacityToReserve()) {
+                roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
+                return
+            }
+            roleScout.create(spawn, mineManager.name, true)
             return
         }
 
@@ -327,7 +333,7 @@ const createMineWorkers = wrap(
             return
         }
 
-        if (!mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
+        if (mineManager.hasCapacityToReserve() && !mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
             roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
             return
         }
@@ -344,9 +350,12 @@ const createMineWorkers = wrap(
             return
         }
 
+        const mineQuery = new RoomQuery(mineManager.room)
+        const roomQuery = new RoomQuery(spawn.room)
+        const roadsBuilt = roomQuery.allRoadsBuilt() && mineQuery.allRoadsBuilt()
         if (!mineManager.hasEnoughHarvesters()) {
             const sourcesManager = new SourcesManager(mineManager.room)
-            sourcesManager.createHarvester(spawn, { capacity })
+            sourcesManager.createHarvester(spawn, { capacity, roadsBuilt })
             return
         }
 
@@ -358,8 +367,9 @@ const createMineWorkers = wrap(
             return
         }
 
+
         if (!mineManager.hasEnoughHaulers()) {
-            roleRemoteHauler.create(spawn, { remote: mineManager.name, capacity })
+            roleRemoteHauler.create(spawn, { remote: mineManager.name, capacity, roadsBuilt })
             return
         }
 

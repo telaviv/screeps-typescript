@@ -27,6 +27,7 @@ import {
     hasHostileCreeps,
     hasNoSpawns,
     hasOwnFragileWall,
+    isFragileWall,
 } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
@@ -206,6 +207,8 @@ class RoleLogistics {
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
         const rq = new RoomQuery(this.creep.room)
+        const hasSafeMode = this.creep.room.controller?.safeMode;
+
         if (this.creep.room.name !== memory.home) {
             memory.currentTask = TASK_TRAVELING
         } else if (
@@ -218,9 +221,11 @@ class RoleLogistics {
             memory.currentTask = TASK_BUILDING
         } else if (!rq.getCreepCount('energy-hauler') && TransferTask.makeRequest(this.creep)) {
             memory.currentTask = TASK_HAULING
+        } else if (!hasSafeMode && hasOwnFragileWall(this.creep.room)) {
+            memory.currentTask = TASK_WALL_REPAIRS
         } else if (buildManager && buildManager.hasNonWallConstructionSites()) {
             memory.currentTask = TASK_BUILDING
-        } else if (hasOwnFragileWall(this.creep.room)) {
+        } else if (hasSafeMode && hasOwnFragileWall(this.creep.room)) {
             memory.currentTask = TASK_WALL_REPAIRS
         } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
             memory.currentTask = TASK_REPAIRING
@@ -298,7 +303,7 @@ class RoleLogistics {
         if (
             buildManager &&
             buildManager.hasNonWallConstructionSites() &&
-            this.creep.memory.preference === TASK_WALL_REPAIRS
+            this.creep.memory.preference !== TASK_WALL_REPAIRS
         ) {
             this.creep.memory.currentTask = TASK_BUILDING
             return
@@ -320,7 +325,7 @@ class RoleLogistics {
             structure = getOwnWeakestWall(this.creep.room)
         }
 
-        if (structure === null || structure.hits === structure.hitsMax) {
+        if (structure === null || !isFragileWall(structure)) {
             this.assignWorkerPreference()
             return
         }
@@ -373,7 +378,7 @@ class RoleLogistics {
             buildManager &&
             buildManager.hasNonWallConstructionSites() &&
             home.controller.ticksToDowngrade >= MAX_TICKS_TO_DOWNGRADE &&
-            !(this.creep.memory.preference === TASK_UPGRADING && home.controller.level < 2)
+            this.creep.memory.preference !== TASK_UPGRADING
         ) {
             this.creep.memory.currentTask = TASK_BUILDING
             return

@@ -30,6 +30,10 @@ const BODY_PLANS = [
     { [MOVE]: 6, [WORK]: 6, [CARRY]: 1 },
     { [MOVE]: 6, [WORK]: 6 },
     { [MOVE]: 5, [WORK]: 5 },
+    { [MOVE]: 4, [WORK]: 4 },
+    { [MOVE]: 3, [WORK]: 3 },
+    { [MOVE]: 2, [WORK]: 2 },
+    { [MOVE]: 1, [WORK]: 1 },
 ]
 
 export interface Harvester extends ResourceCreep {

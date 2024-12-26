@@ -1,6 +1,7 @@
-import { RoomType, getRoomType } from './room'
+import { RoomType, findMyRooms, getRoomType } from './room'
 import { profile } from './profiling'
 import { sortBy } from 'lodash'
+import * as Logger from './logger'
 
 export interface RoomDistanceInfo {
     roomName: string
@@ -26,7 +27,8 @@ function isRoomUnsafe(roomName: string): boolean {
         return true
     }
 
-    if (!['normal', 'respawn'].includes(Game.map.getRoomStatus(roomName).status)) {
+    const status = currentStatusSearchSpace()
+    if (Game.map.getRoomStatus(roomName).status !== status) {
         return true
     }
 
@@ -50,6 +52,16 @@ function isRoomUnsafe(roomName: string): boolean {
     }
     return false
 }
+
+
+function currentStatusSearchSpace(): 'normal' | 'respawn' {
+    const rooms = findMyRooms()
+    if (Game.map.getRoomStatus(rooms[0].name).status === 'respawn') {
+        return 'respawn'
+    }
+    return 'normal'
+}
+
 
 function safeDescribeExits(roomName: string): ExitsInformation {
     const exits = Game.map.describeExits(roomName)
