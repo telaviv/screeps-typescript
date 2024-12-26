@@ -56,7 +56,7 @@ const roleAttacker = {
             return
         }
         creep.notifyWhenAttacked(false)
-        creep.heal(creep)
+        // creep.heal(creep)
 
         if (creep.memory.asPair === true) {
             wander(creep)
@@ -121,6 +121,7 @@ const roleAttacker = {
         } else {
             wander(creep)
         }
+        creep.heal(creep)
     }, 'runAttacker'),
 
     getHostileNeighbor: (creep: Attacker): Creep | Structure | null => {
@@ -182,6 +183,7 @@ const roleAttacker = {
             }
         }
         if (err !== OK && err !== ERR_NOT_IN_RANGE) {
+            creep.heal(creep)
             Logger.warning('attacker:attack:failed', creep.name, target, err)
         }
         return err

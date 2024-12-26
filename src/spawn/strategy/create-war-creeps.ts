@@ -14,7 +14,7 @@ import roleClaimer from 'roles/claim'
 import roleScout from 'roles/scout'
 import { wrap } from 'utils/profiling'
 
-export const createWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDepartment):
+export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDepartment):
     | number
     | null => {
     const room = spawn.room
@@ -30,6 +30,11 @@ export const createWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDe
     const roomQuery = new RoomQuery(room)
 
     if (warDepartment.hasSafeMode() || warDepartment.hasOverwhelmingForce()) {
+        Logger.error(
+            'create-war-creeps:safe-mode-check:failed',
+            warDepartment.hasSafeMode(),
+            warDepartment.hasOverwhelmingForce(),
+        )
         return null
     }
 
@@ -37,6 +42,7 @@ export const createWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDe
         if (scouts.length === 0) {
             return roleScout.create(spawn, warDepartment.target, true)
         }
+        Logger.error('create-war-creeps:scout-check:failed', scouts.length)
         return null
     }
 
@@ -76,6 +82,15 @@ export const createWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDe
         return null
     }
     const remoteWorkers = getLogisticsCreeps({ room: warDepartment.targetRoom })
+    for (const creep of remoteWorkers) {
+        Logger.error(
+            'create-war-creeps:remote-workers',
+            creep.name,
+            creep.room.name,
+            creep.pos.x,
+            creep.pos.y,
+        )
+    }
     const sourcesManager = SourcesManager.create(warDepartment.targetRoom)
     if (!sourcesManager) {
         return null
@@ -95,23 +110,40 @@ export const createWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDe
             return roleClaimer.create(spawn, warDepartment.target)
         }
     } else if (status === WarStatus.SPAWN) {
+        Logger.error('create-war-creeps', 'spawn', remoteWorkers.length, isEnergyRestricted(room))
         if (remoteWorkers.length === 0) {
-            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+            Logger.error('create-war-creeps:no-remote-workers')
+            return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: warDepartment.target,
             })
-        } else if (isEnergyRestricted(room)) {
-            if (remoteWorkers.length < 2) {
-                return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
-                    home: warDepartment.target,
-                })
-            } else if (!sourcesManager.hasAllContainerHarvesters()) {
-                return sourcesManager.createHarvester(spawn, { rescue: true })
-            } else {
-                return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
-                    home: warDepartment.target,
-                })
-            }
+        }
+
+        if (remoteWorkers.length < 2) {
+            Logger.error('create-war-creeps:remote-workers-less-than-2')
+            return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                home: warDepartment.target,
+            })
+        } else if (!sourcesManager.hasAllContainerHarvesters()) {
+            Logger.error('create-war-creeps:missing-container-harvesters')
+            return sourcesManager.createHarvester(spawn, { rescue: true })
+        } else if (remoteWorkers.length < 4) {
+            Logger.error('create-war-creeps:preference-worker')
+            return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                home: warDepartment.target,
+            })
         }
     }
     return null
 }, 'createWarCreeps')
+
+export const createLatentSpawnWorkers = (
+    spawn: StructureSpawn,
+    warDepartment: WarDepartment,
+): number | null => {
+    if (warDepartment.status !== WarStatus.SPAWN) {
+        return null
+    }
+    return RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+        home: warDepartment.target,
+    })
+}

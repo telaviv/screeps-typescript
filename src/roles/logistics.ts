@@ -24,6 +24,7 @@ import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import {
     getConstructionSites,
     getOwnWeakestWall,
+    getNearestFragileWall,
     hasHostileCreeps,
     hasNoSpawns,
     hasOwnFragileWall,
@@ -207,7 +208,7 @@ class RoleLogistics {
         const memory = this.creep.memory
         const buildManager = getBuildManager(this.creep.room)
         const rq = new RoomQuery(this.creep.room)
-        const hasSafeMode = this.creep.room.controller?.safeMode;
+        const hasSafeMode = this.creep.room.controller?.safeMode
 
         if (this.creep.room.name !== memory.home) {
             memory.currentTask = TASK_TRAVELING
@@ -321,13 +322,14 @@ class RoleLogistics {
             }
         }
 
-        if (structure === null) {
-            structure = getOwnWeakestWall(this.creep.room)
-        }
-
+        // If current structure is null or not fragile anymore, find nearest fragile wall
         if (structure === null || !isFragileWall(structure)) {
-            this.assignWorkerPreference()
-            return
+            structure = getNearestFragileWall(this.creep.room, this.creep.pos)
+            if (structure === null) {
+                // No fragile walls exist, reassign worker
+                this.assignWorkerPreference()
+                return
+            }
         }
 
         this.creep.memory.currentTarget = structure.id
@@ -428,7 +430,7 @@ class RoleLogistics {
             return
         }
         const err = moveToRoom(this.creep, this.creep.memory.home)
-        if (err !== OK) {
+        if (!(err === OK || err === ERR_TIRED)) {
             Logger.warning(
                 'logistics:travel:moveToRoom:failure',
                 this.creep.name,

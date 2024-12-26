@@ -27,7 +27,7 @@ import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
-import { createWarCreeps } from './create-war-creeps'
+import { createImportantWarCreeps, createLatentSpawnWorkers } from './create-war-creeps'
 import { getConstructionSites } from 'utils/room'
 import { getStationaryPoints } from 'construction-features'
 import { getVirtualStorage } from 'utils/virtual-storage'
@@ -174,7 +174,7 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
 
     const warDepartment = new WarDepartment(spawn.room)
     if (warDepartment.status !== WarStatus.NONE) {
-        const err = createWarCreeps(spawn, warDepartment)
+        const err = createImportantWarCreeps(spawn, warDepartment)
         if (err === OK) {
             return
         }
@@ -203,6 +203,10 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
                 return
             }
         }
+    }
+
+    if (createLatentSpawnWorkers(spawn, warDepartment) === OK) {
+        return
     }
 
     createLatentWorkers(spawn, capacity)
@@ -262,7 +266,7 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
 
     const warDepartment = new WarDepartment(spawn.room)
     if (warDepartment.status !== WarStatus.NONE) {
-        const err = createWarCreeps(spawn, warDepartment)
+        const err = createImportantWarCreeps(spawn, warDepartment)
         if (err === OK) {
             return
         }
@@ -313,6 +317,10 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
         }
     }
 
+    if (createLatentSpawnWorkers(spawn, warDepartment) === OK) {
+        return
+    }
+
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:link-strategy')
 
@@ -333,7 +341,11 @@ const createMineWorkers = wrap(
             return
         }
 
-        if (mineManager.hasCapacityToReserve() && !mineManager.hasEnoughReservers() && mineManager.hasClaimSpotAvailable()) {
+        if (
+            mineManager.hasCapacityToReserve() &&
+            !mineManager.hasEnoughReservers() &&
+            mineManager.hasClaimSpotAvailable()
+        ) {
             roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
             return
         }
@@ -366,7 +378,6 @@ const createMineWorkers = wrap(
             })
             return
         }
-
 
         if (!mineManager.hasEnoughHaulers()) {
             roleRemoteHauler.create(spawn, { remote: mineManager.name, capacity, roadsBuilt })

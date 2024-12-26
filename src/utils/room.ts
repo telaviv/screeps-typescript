@@ -17,7 +17,7 @@ export const MIN_STORAGE_LEVEL = 4
 export const MIN_RAMPART_LEVEL = 2
 
 const STRONG_WALL_HITS = 100000000
-const FRAGILE_WALL_HITS = [1, 1, 1000, 5000, 10000, 20000, 100000, 100000, 1000000]
+const FRAGILE_WALL_HITS = [1, 1, 1000, 10000, 15000, 20000, 100000, 100000, 1000000]
 
 export function isAtExtensionCap(room: Room): boolean {
     if (!room.controller) {
@@ -236,6 +236,19 @@ export function hasWeakWall(room: Room): boolean {
         filter: isWeakWall,
     })
     return walls.length > 0
+}
+
+export function getNearestFragileWall(
+    room: Room,
+    pos: RoomPosition,
+): StructureWall | StructureRampart | null {
+    const walls = room.find<StructureWall | StructureRampart>(FIND_MY_STRUCTURES, {
+        filter: isFragileWall,
+    })
+    if (walls.length === 0) {
+        return null
+    }
+    return pos.findClosestByRange(walls)
 }
 
 export function getOwnWeakestWall(room: Room): StructureWall | StructureRampart | null {

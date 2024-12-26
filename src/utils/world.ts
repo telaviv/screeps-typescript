@@ -53,7 +53,6 @@ function isRoomUnsafe(roomName: string): boolean {
     return false
 }
 
-
 function currentStatusSearchSpace(): 'normal' | 'respawn' {
     const rooms = findMyRooms()
     if (Game.map.getRoomStatus(rooms[0].name).status === 'respawn') {
@@ -61,7 +60,6 @@ function currentStatusSearchSpace(): 'normal' | 'respawn' {
     }
     return 'normal'
 }
-
 
 function safeDescribeExits(roomName: string): ExitsInformation {
     const exits = Game.map.describeExits(roomName)
