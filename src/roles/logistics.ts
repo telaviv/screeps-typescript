@@ -311,27 +311,27 @@ class RoleLogistics {
         let structure = null
         if (this.creep.memory.currentTarget) {
             structure = Game.getObjectById<Structure>(this.creep.memory.currentTarget)
-            if (structure === null) {
+            if (structure === null || !isFragileWall(structure, 0.05)) {
                 Logger.warning(
                     'repair:target:failure',
                     this.creep.name,
                     this.creep.memory.currentTarget,
                 )
+                this.creep.memory.currentTarget = undefined
             }
         }
 
         if (structure === null) {
             structure = this.creep.pos.findClosestByRange(
-                this.creep.room.find(FIND_STRUCTURES, { filter: isFragileWall }),
+                this.creep.room.find(FIND_STRUCTURES, { filter: (s) => isFragileWall(s, 0.05) }),
             )
             if (structure === null) {
                 // No fragile walls exist, reassign worker
                 this.assignWorkerPreference()
                 return
             }
+            this.creep.memory.currentTarget = structure.id
         }
-
-        this.creep.memory.currentTarget = structure.id
 
         const err = this.creep.repair(structure)
         if (err === ERR_NOT_IN_RANGE) {
