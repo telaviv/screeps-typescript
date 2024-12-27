@@ -271,14 +271,14 @@ export function getWeakestWall(room: Room): StructureWall | StructureRampart | n
     return minBy(walls, 'hits') as StructureWall | StructureRampart
 }
 
-export function isFragileWall(structure: Structure): boolean {
+export function isFragileWall(structure: Structure, percentage = 1): boolean {
     if (!structure.room.controller) {
         Logger.error('isFragileWall: no controller')
         return false
     }
     return (
         includes([STRUCTURE_RAMPART, STRUCTURE_WALL], structure.structureType) &&
-        structure.hits < FRAGILE_WALL_HITS[structure.room.controller.level]
+        structure.hits < FRAGILE_WALL_HITS[structure.room.controller.level] * percentage
     )
 }
 
