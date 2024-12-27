@@ -23,7 +23,6 @@ import {
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import {
     getConstructionSites,
-    getNearestFragileWall,
     hasHostileCreeps,
     hasNoSpawns,
     hasOwnFragileWall,
@@ -321,9 +320,10 @@ class RoleLogistics {
             }
         }
 
-        // If current structure is null or not fragile anymore, find nearest fragile wall
-        if (structure === null || !isFragileWall(structure)) {
-            structure = getNearestFragileWall(this.creep.room, this.creep.pos)
+        if (structure === null) {
+            structure = this.creep.pos.findClosestByRange(
+                this.creep.room.find(FIND_STRUCTURES, { filter: isFragileWall }),
+            )
             if (structure === null) {
                 // No fragile walls exist, reassign worker
                 this.assignWorkerPreference()
