@@ -1,5 +1,6 @@
 import { sortBy } from 'lodash'
 
+import * as Logger from './logger'
 import { RoomType, findMyRooms, getRoomType } from './room'
 import { profile } from './profiling'
 
@@ -25,11 +26,17 @@ const CLOSEST_ROOM_CACHE: Map<string, { time: number; info: RoomDistanceInfo[] }
 function isRoomUnsafe(roomName: string): boolean {
     const exitType = getRoomType(roomName)
     if ([RoomType.CENTER, RoomType.SOURCE_KEEPER].includes(exitType)) {
+        Logger.debug(`isRoomUnsafe(${roomName}): CENTER/SK room`)
         return true
     }
 
     const status = currentStatusSearchSpace()
-    if (Game.map.getRoomStatus(roomName).status !== status) {
+    const roomStatus = Game.map.getRoomStatus(roomName).status
+
+    // If we're in normal areas, only allow normal rooms
+    // If we're in respawn, allow both respawn and normal rooms
+    if (status === 'normal' && roomStatus !== 'normal') {
+        Logger.debug(`isRoomUnsafe(${roomName}): status mismatch (my: ${status}, room: ${roomStatus})`)
         return true
     }
 
@@ -40,6 +47,7 @@ function isRoomUnsafe(roomName: string): boolean {
     }
 
     if (scout.enemyThatsMining) {
+        Logger.debug(`isRoomUnsafe(${roomName}): enemy mining`)
         return true
     }
 
@@ -49,6 +57,7 @@ function isRoomUnsafe(roomName: string): boolean {
         if (scout.safeMode && scout.updatedAt + scout.safeMode > Game.time) {
             return false
         }
+        Logger.debug(`isRoomUnsafe(${roomName}): enemy owned`)
         return true
     }
     return false
@@ -65,10 +74,20 @@ function currentStatusSearchSpace(): 'normal' | 'respawn' {
 function safeDescribeExits(roomName: string): ExitsInformation {
     const exits = Game.map.describeExits(roomName)
     const exitCopy = {} as ExitsInformation
+    const filtered: string[] = []
+
     for (const [direction, exit] of Object.entries(exits)) {
-        if (isRoomUnsafe(exit)) continue
+        if (isRoomUnsafe(exit)) {
+            filtered.push(exit)
+            continue
+        }
         exitCopy[direction as keyof ExitsInformation] = exit
     }
+
+    if (filtered.length > 0) {
+        Logger.debug(`safeDescribeExits(${roomName}): filtered out ${filtered.join(', ')}`)
+    }
+
     return exitCopy
 }
 
