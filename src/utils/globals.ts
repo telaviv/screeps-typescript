@@ -1,9 +1,13 @@
 import * as Logger from 'utils/logger'
+import { canMine } from 'managers/mine-manager'
+import { getConstructionFeaturesV3 } from 'construction-features'
 import { resetSnapshot, saveSnapshot } from 'snapshot'
+import Empire from 'empire'
 import ErrorMapper from './ErrorMapper'
 import { RoomManager } from 'managers/room-manager'
 import { Task } from 'tasks/types'
 import WarDepartment from 'war-department'
+import { findMyRooms } from './room'
 import { getAllTasks } from 'tasks/utils'
 import roleWrecker from 'roles/wrecker'
 
@@ -61,6 +65,41 @@ function printTasks(type?: Task<any>) {
     }
 }
 
+function debugRoom(roomName: string) {
+    console.log(`=== Debug Room: ${roomName} ===`)
+    
+    // Construction features
+    const features = getConstructionFeaturesV3(roomName)
+    console.log(`Construction Features Type: ${features?.type ?? 'none'}`)
+    
+    // Claim candidates
+    const empire = new Empire()
+    const candidates = empire.findClaimCandidates()
+    console.log(`Is Claim Candidate: ${candidates.includes(roomName)}`)
+    console.log(`All Claim Candidates: ${candidates.join(', ')}`)
+    
+    // GCL status
+    const myRoomsCount = findMyRooms().length
+    console.log(`GCL Level: ${Game.gcl.level}, My Rooms: ${myRoomsCount}`)
+    console.log(`At GCL Cap: ${myRoomsCount >= Game.gcl.level}`)
+    
+    // Can mine check
+    console.log(`canMine: ${canMine(roomName)}`)
+    
+    // Scout data
+    const scout = Memory.rooms[roomName]?.scout
+    console.log(`Scout Data:`)
+    console.log(`  - Owner: ${scout?.controllerOwner ?? 'none'}`)
+    console.log(`  - Enemy Mining: ${scout?.enemyThatsMining ?? 'none'}`)
+    console.log(`  - Controller Pos: ${scout?.controllerPosition ? 'yes' : 'no'}`)
+    
+    // Mining assignment
+    const mines = Object.entries(Memory.rooms)
+        .filter(([_, mem]) => mem.mines?.some(m => m.name === roomName))
+        .map(([name, _]) => name)
+    console.log(`Assigned as mine to: ${mines.length > 0 ? mines.join(', ') : 'none'}`)
+}
+
 export function isOwnedStructure(obj: Structure): obj is OwnedStructure {
     return 'owner' in obj
 }
@@ -92,6 +131,7 @@ export default function assignGlobals(): void {
     global.resetSnapshot = resetSnapshot
     global.printTasks = printTasks
     global.findUsername = findUsername
+    global.debugRoom = debugRoom
 }
 
 declare global {
@@ -110,6 +150,7 @@ declare global {
             resetSnapshot: (roomName: string) => void
             printTasks: (type?: Task<any>) => void
             findUsername: () => string
+            debugRoom: (roomName: string) => void
         }
     }
 }

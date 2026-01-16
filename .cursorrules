@@ -26,3 +26,24 @@ All checks must pass before the code is ready to commit. If any check fails, fix
 - Group imports logically (external libraries, internal modules, types)
 - Keep imports alphabetically sorted within groups
 
+## Screeps Console Access
+
+### Global Functions Only
+The user can ONLY access functions in the Screeps console that are explicitly exposed on the `global` object.
+
+- DO NOT suggest calling functions directly (e.g., `getConstructionFeaturesV3()`)
+- ONLY suggest using global functions (e.g., `global.functionName()`)
+- When debugging is needed, create new global helper functions in `src/utils/globals.ts`
+- All console-accessible functions must be explicitly added to the global object
+
+### Example
+BAD:
+```javascript
+const features = getConstructionFeaturesV3('W1N54')
+```
+
+GOOD:
+```javascript
+global.debug.features('W1N54')  // If this function exists on global
+```
+
