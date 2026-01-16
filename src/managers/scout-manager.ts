@@ -132,7 +132,9 @@ global.scout = {
         console.log(`=== Debug info for ${roomName} ===`)
         console.log(`Room type: ${getRoomType(roomName)}`)
         console.log(`Room status: ${Game.map.getRoomStatus(roomName).status}`)
-        console.log(`Has construction features: ${!!Memory.rooms[roomName]?.constructionFeaturesV3}`)
+        console.log(
+            `Has construction features: ${!!Memory.rooms[roomName]?.constructionFeaturesV3}`,
+        )
         console.log(`Has scout data: ${!!Memory.rooms[roomName]?.scout}`)
         if (Memory.rooms[roomName]?.scout) {
             console.log(`Scout data:`, JSON.stringify(Memory.rooms[roomName].scout))
@@ -245,7 +247,11 @@ class ScoutManager {
     @profile
     findNextRoomToScout(): string | null {
         const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
-        Logger.debug('scout-manager:findNextRoomToScout:closestRooms', closestRooms.length, this.ownedRooms)
+        Logger.debug(
+            'scout-manager:findNextRoomToScout:closestRooms',
+            closestRooms.length,
+            this.ownedRooms,
+        )
 
         for (const { roomName, distance } of closestRooms) {
             const roomType = getRoomType(roomName)
@@ -262,10 +268,7 @@ class ScoutManager {
             if (roomType !== RoomType.ROOM) {
                 continue
             }
-            if (
-                roomType === RoomType.ROOM &&
-                (!hasFeatures || !hasValidScout)
-            ) {
+            if (roomType === RoomType.ROOM && (!hasFeatures || !hasValidScout)) {
                 Logger.debug('scout-manager:findNextRoomToScout:found', roomName)
                 return roomName
             }

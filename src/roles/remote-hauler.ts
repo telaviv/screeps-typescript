@@ -1,11 +1,20 @@
 import * as Logger from 'utils/logger'
+import * as Logistics from './logistics'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { fromBodyPlan } from 'utils/parts'
 import { getConstructionFeatures, getStationaryPointsMine } from 'construction-features'
+import { getVirtualStorage } from '../utils/virtual-storage'
+import { hasNoEnergy } from 'utils/energy-harvesting'
+import { hasNoSpawns } from 'utils/room'
+import {
+    LogisticsCreep,
+    LogisticsMemory,
+    PREFERENCE_WORKER,
+    TASK_COLLECTING,
+    TASK_HAULING,
+} from './logistics-constants'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
-import { LogisticsCreep } from './logistics-constants'
-import { fromBodyPlan } from 'utils/parts'
-import { getVirtualStorage } from '../utils/virtual-storage'
 
 const ROLE = 'remote-hauler'
 
@@ -63,6 +72,12 @@ export class RemoteHaulerCreep {
             return
         }
 
+        // If remote room is now owned, transform to logistics creep
+        if (this.shouldTransform()) {
+            this.transform()
+            return
+        }
+
         const freeCapacity = this.creep.store.getFreeCapacity()
         const isHome = this.creep.room.name === this.creep.memory.home
         const isRemote = this.creep.room.name === this.creep.memory.remote
@@ -85,6 +100,35 @@ export class RemoteHaulerCreep {
         } else {
             this.moveToTarget()
         }
+    }
+
+    private shouldTransform(): boolean {
+        const remoteRoom = Game.rooms[this.memory.remote]
+        return remoteRoom && !hasNoSpawns(remoteRoom) && remoteRoom.controller?.my === true
+    }
+
+    private transform(): void {
+        const hasWorkParts = this.creep.getActiveBodyparts(WORK) > 0
+        const currentTask = hasNoEnergy(this.creep) ? TASK_COLLECTING : TASK_HAULING
+        const preference = hasWorkParts ? PREFERENCE_WORKER : TASK_HAULING
+
+        Logger.info(
+            'remote-hauler:transform',
+            this.creep.name,
+            this.memory.remote,
+            hasWorkParts ? 'worker' : 'hauler',
+        )
+
+        const memory: LogisticsMemory = {
+            role: Logistics.ROLE,
+            home: this.memory.remote,
+            preference,
+            currentTask,
+            currentTarget: undefined,
+            idleTimestamp: null,
+            tasks: [],
+        }
+        this.creep.memory = memory as unknown as RemoteHaulerMemory
     }
 
     allPickupsFree(): boolean {

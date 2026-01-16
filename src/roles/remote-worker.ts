@@ -1,14 +1,19 @@
 import * as Logger from 'utils/logger'
 import * as Logistics from 'roles/logistics'
 import * as TaskRunner from 'tasks/runner'
-import { LogisticsMemory, TASK_COLLECTING, TASK_HAULING } from './logistics-constants'
+import {
+    LogisticsMemory,
+    PREFERENCE_WORKER,
+    TASK_COLLECTING,
+    TASK_HAULING,
+} from './logistics-constants'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
+import { addEnergyTask } from 'tasks/usage-utils'
+import { fromBodyPlan } from 'utils/parts'
 import { getConstructionSites, hasNoSpawns } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveTo } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
-import { addEnergyTask } from 'tasks/usage-utils'
-import { fromBodyPlan } from 'utils/parts'
 import { wander } from 'utils/creep'
 
 const ROLE = 'remote-worker'
@@ -107,11 +112,21 @@ class RemoteWorkerCreep {
     }
 
     private transform() {
+        const hasWorkParts = this.creep.getActiveBodyparts(WORK) > 0
         const currentTask = this.hasNoEnergy() ? TASK_COLLECTING : TASK_HAULING
+        const preference = hasWorkParts ? PREFERENCE_WORKER : TASK_HAULING
+
+        Logger.info(
+            'remote-worker:transform',
+            this.creep.name,
+            this.memory.destination,
+            hasWorkParts ? 'worker' : 'hauler',
+        )
+
         const memory = {
             role: Logistics.ROLE,
             home: this.memory.destination,
-            preference: TASK_HAULING,
+            preference,
             currentTask,
             currentTarget: undefined,
             idleTimestamp: null,

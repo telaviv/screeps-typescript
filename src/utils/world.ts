@@ -36,7 +36,9 @@ function isRoomUnsafe(roomName: string): boolean {
     // If we're in normal areas, only allow normal rooms
     // If we're in respawn, allow both respawn and normal rooms
     if (status === 'normal' && roomStatus !== 'normal') {
-        Logger.debug(`isRoomUnsafe(${roomName}): status mismatch (my: ${status}, room: ${roomStatus})`)
+        Logger.debug(
+            `isRoomUnsafe(${roomName}): status mismatch (my: ${status}, room: ${roomStatus})`,
+        )
         return true
     }
 

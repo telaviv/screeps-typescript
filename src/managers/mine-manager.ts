@@ -1,14 +1,17 @@
+/* eslint-disable sort-imports -- Empire import from parent causes linter conflicts with alphabetical sort */
 import * as Logger from 'utils/logger'
-import { findMyRooms, getHostileCreeps, getInjuredCreeps, getMyConstructionSites } from 'utils/room'
-import { getCreeps, getLogisticsCreeps } from 'utils/creep'
-import { getNeighbors, getNonObstacleNeighbors } from 'utils/room-position'
+import Empire from '../empire'
+import { getConstructionFeaturesV3 } from 'construction-features'
+import { HostileRecorder } from 'hostiles'
+import SourcesManager from './sources-manager'
 import { ClaimerMemory } from 'roles/claim'
 import { HealerMemory } from 'roles/healer'
-import { HostileRecorder } from 'hostiles'
 import { RemoteHaulerMemory } from 'roles/remote-hauler'
-import SourcesManager from './sources-manager'
+import { getCreeps, getLogisticsCreeps } from 'utils/creep'
+import { getNeighbors, getNonObstacleNeighbors } from 'utils/room-position'
+import { findMyRooms, getHostileCreeps, getInjuredCreeps, getMyConstructionSites } from 'utils/room'
 import { World } from 'utils/world'
-import { getConstructionFeaturesV3 } from 'construction-features'
+/* eslint-enable sort-imports */
 
 /** Minimum reservation ticks before spawning more reservers */
 const MIN_RESERVATION_TICKS = 3500
@@ -42,9 +45,64 @@ declare global {
                 clear: () => void
                 enable: () => void
                 disable: () => void
+                status: () => void
+                next: () => void
+                canMine: (roomName: string) => boolean
             }
         }
     }
+}
+
+/**
+ * Checks if a room can be mined.
+ * @param roomName - The room to check
+ * @returns True if the room can be used as a mine
+ */
+export function canMine(roomName: string): boolean {
+    const features = getConstructionFeaturesV3(roomName)
+
+    // Must have construction features calculated as 'mine' or 'base' type
+    if (!features || (features.type !== 'mine' && features.type !== 'base')) {
+        return false
+    }
+
+    const memory = Memory.rooms[roomName]
+    if (!memory) {
+        return false
+    }
+
+    const scout = memory.scout
+    if (!scout) {
+        return false
+    }
+
+    // Room must be unowned and not currently being mined by enemies
+    if (scout.controllerOwner || scout.enemyThatsMining) {
+        return false
+    }
+
+    // For 'base' type rooms, only allow mining if:
+    // 1. We're at GCL cap (can't claim more rooms), OR
+    // 2. Room is not a valid claim candidate
+    if (features.type === 'base') {
+        const myRoomsCount = findMyRooms().length
+
+        // At GCL cap - can't claim anyway, so mining is fine
+        if (myRoomsCount >= Game.gcl.level) {
+            return true
+        }
+
+        // Check if this room is a claim candidate
+        const empire = new Empire()
+        const candidates = empire.findClaimCandidates()
+
+        // If it's a claim candidate, don't mine it (save it for claiming)
+        if (candidates.includes(roomName)) {
+            return false
+        }
+    }
+
+    return true
 }
 
 /** Recalculates and assigns remote mines to their nearest owned room */
@@ -68,11 +126,83 @@ function disableMining() {
     Memory.miningEnabled = false
 }
 
+function showMiningStatus() {
+    console.log('=== Mining Status ===')
+    console.log(`Mining enabled: ${Memory.miningEnabled}`)
+    console.log('')
+
+    for (const room of findMyRooms()) {
+        const mines = room.memory.mines
+        if (!mines || mines.length === 0) {
+            console.log(`${room.name}: No mines assigned`)
+            continue
+        }
+
+        console.log(`${room.name}: ${mines.length} mine(s)`)
+        for (const mine of mines) {
+            const mm = new MineManager(mine.name, room)
+            const needsAttention = mm.needsAttention()
+            console.log(`  - ${mine.name}: ${needsAttention ? '⚠️ NEEDS ATTENTION' : '✅ OK'}`)
+
+            if (mm.hasVision()) {
+                console.log(
+                    `    Vision: ✅, Sources: ${mm.sourceCount()}, Reserved: ${mm.controllerReserved()}`,
+                )
+                if (mm.controllerReserved()) {
+                    console.log(`    Reservation: ${mm.controllerReservationTicksLeft()} ticks`)
+                }
+                console.log(
+                    `    Harvesters: ${mm.hasEnoughHarvesters() ? '✅' : '❌'}, Haulers: ${
+                        mm.hasEnoughHaulers() ? '✅' : '❌'
+                    }`,
+                )
+            } else {
+                console.log(`    Vision: ❌ (needs scout)`)
+            }
+        }
+        console.log('')
+    }
+}
+
+function showNextMine() {
+    if (!Memory.miningEnabled) {
+        console.log('Mining is disabled. Run global.mines.enable() first.')
+        return
+    }
+
+    for (const room of findMyRooms()) {
+        const mines = room.memory.mines
+        if (!mines || mines.length === 0) {
+            continue
+        }
+
+        for (const mine of mines) {
+            const mm = new MineManager(mine.name, room)
+            if (mm.needsAttention()) {
+                console.log(`Next mine: ${mine.name} (owned by ${room.name})`)
+                console.log(
+                    `Needs: ${!mm.hasVision() ? 'Vision ' : ''}${
+                        !mm.hasEnoughReservers() ? 'Reservers ' : ''
+                    }${!mm.hasEnoughHarvesters() ? 'Harvesters ' : ''}${
+                        !mm.hasEnoughHaulers() ? 'Haulers ' : ''
+                    }${mm.needsProtection() ? 'Defenders ' : ''}`,
+                )
+                return
+            }
+        }
+    }
+
+    console.log('No mines need attention currently')
+}
+
 global.mines = {
     assign: assignMines,
     clear: clearMines,
     enable: enableMining,
     disable: disableMining,
+    status: showMiningStatus,
+    next: showNextMine,
+    canMine,
 }
 
 /**
@@ -398,21 +528,7 @@ export class MineDecider {
                 1,
             )
             .map((r) => r.roomName)
-        return closest.filter((name) => {
-            const features = getConstructionFeaturesV3(name)
-            if (!features || features.type !== 'mine') {
-                return false
-            }
-            const memory = Memory.rooms[name]
-            if (!memory) {
-                return false
-            }
-            const scout = memory.scout
-            if (!scout) {
-                return false
-            }
-            return !scout.controllerOwner && !scout.enemyThatsMining
-        })
+        return closest.filter((name) => canMine(name))
     }
 
     private addMineToMiner(mine: string): void {

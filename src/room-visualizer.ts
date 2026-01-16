@@ -48,7 +48,7 @@ declare global {
                 }
                 construction: (roomName: string, roads?: boolean) => void
                 wallTransform: (roomName: string) => void
-                tranformFromId: (roomName: string, id: Id<Source | StructureController>) => void
+                transformFromId: (roomName: string, id: Id<Source | StructureController>) => void
                 sumTransform: (roomName: string) => void
                 clear: (roomName: string) => void
             }
@@ -376,7 +376,7 @@ function cancelVisuals(): void {
 global.visuals = {
     construction: setConstructionVisuals,
     wallTransform: setWallTransformVisuals,
-    tranformFromId: setTransformFromId,
+    transformFromId: setTransformFromId,
     sumTransform: setSumTransformVisuals,
     clear: cancelVisuals,
     map: {
