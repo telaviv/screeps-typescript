@@ -28,22 +28,35 @@ All checks must pass before the code is ready to commit. If any check fails, fix
 
 ## Screeps Console Access
 
-### Global Functions Only
-The user can ONLY access functions in the Screeps console that are explicitly exposed on the `global` object.
+### What's Accessible in Console
+The user can access:
+- **Screeps built-in globals**: `Memory`, `Game`, `_` (lodash), etc.
+- **Custom functions**: ONLY if explicitly exposed on the `global` object
 
-- DO NOT suggest calling functions directly (e.g., `getConstructionFeaturesV3()`)
-- ONLY suggest using global functions (e.g., `global.functionName()`)
+### Custom Functions
+- DO NOT suggest calling custom functions directly (e.g., `getConstructionFeaturesV3()`)
+- ONLY suggest using functions exposed on `global` (e.g., `global.functionName()`)
 - When debugging is needed, create new global helper functions in `src/utils/globals.ts`
-- All console-accessible functions must be explicitly added to the global object
+- All console-accessible custom functions must be explicitly added to the global object
 
-### Example
+### Examples
+
+**Accessing Screeps built-ins (GOOD):**
+```javascript
+Memory.rooms['W1N54']
+Game.gcl.level
+Object.keys(Game.rooms)
+```
+
+**Calling custom functions:**
+
 BAD:
 ```javascript
-const features = getConstructionFeaturesV3('W1N54')
+const features = getConstructionFeaturesV3('W1N54')  // Not accessible!
 ```
 
 GOOD:
 ```javascript
-global.debug.features('W1N54')  // If this function exists on global
+global.debugRoom('W1N54')  // Explicitly exposed on global
 ```
 
