@@ -23,6 +23,12 @@ This command runs:
 
 All checks must pass before the code is ready to commit. If any check fails, fix the issues before proceeding.
 
+### Git Commit Policy
+- **NEVER commit changes unless the user explicitly asks you to**
+- It is VERY IMPORTANT to only commit when explicitly requested
+- Otherwise the user will feel that you are being too proactive
+- Always wait for the user's permission before running `git commit` or `git push`
+
 ### Type Safety
 - Use type guards instead of unsafe type casts (e.g., `as unknown as`)
 - Prefer proper type definitions over `any`
