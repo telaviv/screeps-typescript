@@ -1,5 +1,12 @@
 # Cursor Rules for screeps-typescript
 
+## Development Environment
+
+### Node Version Management
+- This project uses **nvm** (Node Version Manager) to manage Node.js versions
+- Node.js is installed via nvm, not system package managers
+- If you need to run Node/npm/yarn commands, ensure nvm is properly configured
+
 ## Code Quality Standards
 
 ### Pre-commit Checks
