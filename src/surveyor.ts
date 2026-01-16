@@ -42,6 +42,9 @@ import { SubscriptionEvent } from 'pub-sub/constants'
 import { destroyMovementStructures } from 'construction-movement'
 import { publish } from 'pub-sub/pub-sub'
 
+import { PREFERENCE_WORKER } from 'roles/logistics-constants'
+import { getLogisticsCreeps } from 'utils/creep'
+
 /** Minimum CPU bucket required before running survey calculations */
 const MIN_SURVEY_CPU = 1500
 
@@ -407,6 +410,18 @@ const assignRoomFeatures = Profiling.wrap(() => {
 }, 'assignRoomFeatures')
 
 /**
+ * Checks if a room has sufficient workers to handle spawn relocation.
+ * Requires at least 3 workers with more than 1000 ticks to live.
+ * @param room - The room to check for workers
+ * @returns True if the room has sufficient workers, false otherwise
+ */
+function hasSufficientWorkersForSpawnRelocation(room: Room): boolean {
+    const workers = getLogisticsCreeps({ room, preference: PREFERENCE_WORKER })
+    const healthyWorkers = workers.filter((worker) => (worker.ticksToLive ?? 0) > 1000)
+    return healthyWorkers.length >= 3
+}
+
+/**
  * Clears invalid structures and construction sites from rooms.
  * Handles structure movement when features don't match built structures.
  */
@@ -428,6 +443,16 @@ const clearRooms = Profiling.wrap(() => {
         }
         if (constructionFeatures.type !== 'none' && constructionFeatures.movement) {
             if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
+                return
+            }
+            // Check if we have sufficient workers before destroying spawn
+            const movementHasSpawn = constructionFeatures.movement.spawn !== undefined
+            if (movementHasSpawn && !hasSufficientWorkersForSpawnRelocation(room)) {
+                Logger.warning(
+                    'clearRooms:insufficient-workers',
+                    room.name,
+                    'Waiting for 3 workers with >1000 TTL before relocating spawn',
+                )
                 return
             }
             constructionFeatures.movement = calculateBuildingDiff(room, features)

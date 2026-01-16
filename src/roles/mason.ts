@@ -106,9 +106,10 @@ export class MasonCreep {
             this.transferEnergy()
         } else if (this.hasSpawnSite()) {
             this.build(true)
-        } else if (hasFragileWall(this.room) || this.repairTarget) {
+        } else if (hasFragileWall(this.room)) {
             this.repair()
         } else if (hasWallSite(this.room)) {
+            this.repairTarget = null
             this.build()
         } else if (hasWeakWall(this.room)) {
             this.repair()

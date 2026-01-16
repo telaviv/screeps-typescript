@@ -219,21 +219,21 @@ export function hasStorage(room: Room): boolean {
 
 export function hasOwnFragileWall(room: Room): boolean {
     const walls = room.find(FIND_MY_STRUCTURES, {
-        filter: isFragileWall,
+        filter: (structure) => isFragileWall(structure),
     })
     return walls.length > 0
 }
 
 export function hasFragileWall(room: Room): boolean {
     const walls = room.find(FIND_STRUCTURES, {
-        filter: isFragileWall,
+        filter: (structure) => isFragileWall(structure),
     })
     return walls.length > 0
 }
 
 export function hasWeakWall(room: Room): boolean {
     const walls = room.find(FIND_STRUCTURES, {
-        filter: isWeakWall,
+        filter: (structure) => isWeakWall(structure),
     })
     return walls.length > 0
 }
@@ -243,7 +243,7 @@ export function getNearestFragileWall(
     pos: RoomPosition,
 ): StructureWall | StructureRampart | null {
     const walls = room.find<StructureWall | StructureRampart>(FIND_MY_STRUCTURES, {
-        filter: isFragileWall,
+        filter: (structure) => isFragileWall(structure),
     })
     if (walls.length === 0) {
         return null
@@ -253,7 +253,7 @@ export function getNearestFragileWall(
 
 export function getOwnWeakestWall(room: Room): StructureWall | StructureRampart | null {
     const walls = room.find<StructureWall | StructureRampart>(FIND_MY_STRUCTURES, {
-        filter: isWeakWall,
+        filter: (structure) => isWeakWall(structure),
     })
     if (walls.length === 0) {
         return null
@@ -263,7 +263,7 @@ export function getOwnWeakestWall(room: Room): StructureWall | StructureRampart 
 
 export function getWeakestWall(room: Room): StructureWall | StructureRampart | null {
     const walls = room.find<StructureWall | StructureRampart>(FIND_STRUCTURES, {
-        filter: isWeakWall,
+        filter: (structure) => isWeakWall(structure),
     })
     if (walls.length === 0) {
         return null
@@ -271,11 +271,25 @@ export function getWeakestWall(room: Room): StructureWall | StructureRampart | n
     return minBy(walls, 'hits') as StructureWall | StructureRampart
 }
 
+/**
+ * Checks if a position is at the edge of a room (x=0, x=49, y=0, or y=49).
+ * Edge walls in respawn areas are indestructible and should not be repaired.
+ */
+function isEdgePosition(pos: RoomPosition): boolean {
+    return pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49
+}
+
 export function isFragileWall(structure: Structure, percentage = 1): boolean {
     if (!structure.room.controller) {
         Logger.error('isFragileWall: no controller')
         return false
     }
+
+    // Skip edge walls - they're indestructible in respawn areas
+    if (isEdgePosition(structure.pos)) {
+        return false
+    }
+
     return (
         includes([STRUCTURE_RAMPART, STRUCTURE_WALL], structure.structureType) &&
         structure.hits < FRAGILE_WALL_HITS[structure.room.controller.level] * percentage
@@ -286,6 +300,11 @@ function isWeakWall(structure: Structure): boolean {
     const isWall = includes([STRUCTURE_RAMPART, STRUCTURE_WALL], structure.structureType)
 
     if (!isWall) {
+        return false
+    }
+
+    // Skip edge walls - they're indestructible in respawn areas
+    if (isEdgePosition(structure.pos)) {
         return false
     }
 
