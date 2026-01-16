@@ -19,7 +19,7 @@ import { profile, wrap } from 'utils/profiling'
 const ROLE = 'remote-hauler'
 
 export interface RemoteHauler extends ResourceCreep {
-    memory: RemoteHaulerMemory
+    memory: RemoteHaulerMemory | LogisticsMemory
     storageTransfered: boolean
 }
 
@@ -29,6 +29,12 @@ export interface RemoteHaulerMemory extends ResourceCreepMemory {
     remote: string
     target: Id<Source> | null
     pickupTracker: Record<Id<Source>, boolean>
+}
+
+function isRemoteHaulerMemory(
+    memory: ResourceCreepMemory | LogisticsMemory,
+): memory is RemoteHaulerMemory {
+    return memory.role === 'remote-hauler'
 }
 
 export function isRebalancer(creep: Creep): creep is RemoteHauler {
@@ -43,7 +49,7 @@ export class RemoteHaulerCreep {
     }
 
     get memory(): RemoteHaulerMemory {
-        return this.creep.memory
+        return this.creep.memory as RemoteHaulerMemory
     }
 
     get target(): Id<Source> | null {
@@ -55,7 +61,7 @@ export class RemoteHaulerCreep {
     }
 
     get remoteRoom(): Room {
-        return Game.rooms[this.creep.memory.remote]
+        return Game.rooms[this.memory.remote]
     }
 
     get targetPos(): RoomPosition | null {
@@ -72,6 +78,11 @@ export class RemoteHaulerCreep {
             return
         }
 
+        // If memory has already been transformed, don't run remote hauler logic
+        if (!isRemoteHaulerMemory(this.creep.memory)) {
+            return
+        }
+
         // If remote room is now owned, transform to logistics creep
         if (this.shouldTransform()) {
             this.transform()
@@ -79,8 +90,8 @@ export class RemoteHaulerCreep {
         }
 
         const freeCapacity = this.creep.store.getFreeCapacity()
-        const isHome = this.creep.room.name === this.creep.memory.home
-        const isRemote = this.creep.room.name === this.creep.memory.remote
+        const isHome = this.creep.room.name === this.memory.home
+        const isRemote = this.creep.room.name === this.memory.remote
         const target = this.memory.target
 
         if (isHome && this.allPickupsFree()) {
@@ -128,7 +139,7 @@ export class RemoteHaulerCreep {
             idleTimestamp: null,
             tasks: [],
         }
-        this.creep.memory = memory as unknown as RemoteHaulerMemory
+        this.creep.memory = memory
     }
 
     allPickupsFree(): boolean {
@@ -176,7 +187,7 @@ export class RemoteHaulerCreep {
             Logger.error(
                 'remote-hauler:getEnergyAtSource:no-vision-to-remote',
                 this.creep.name,
-                this.creep.memory.remote,
+                this.memory.remote,
             )
             return 0
         }
@@ -205,7 +216,7 @@ export class RemoteHaulerCreep {
             )
             return null
         }
-        return new RoomPosition(pos.x, pos.y, Game.rooms[this.creep.memory.remote].name)
+        return new RoomPosition(pos.x, pos.y, this.memory.remote)
     }
 
     pickup(): void {
@@ -228,7 +239,7 @@ export class RemoteHaulerCreep {
 
     dropOff(): void {
         let transferAmount = 0
-        const virtualStorage = getVirtualStorage(this.creep.memory.home)
+        const virtualStorage = getVirtualStorage(this.memory.home)
         if (virtualStorage) {
             transferAmount = Math.min(
                 this.creep.store.getUsedCapacity(RESOURCE_ENERGY),
@@ -305,11 +316,11 @@ export class RemoteHaulerCreep {
     }
 
     goToRemote(): void {
-        moveToRoom(this.creep, this.creep.memory.remote)
+        moveToRoom(this.creep, this.memory.remote)
     }
 
     goToHome(): void {
-        moveToRoom(this.creep, this.creep.memory.home)
+        moveToRoom(this.creep, this.memory.home)
     }
 }
 

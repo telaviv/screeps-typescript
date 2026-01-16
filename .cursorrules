@@ -1,0 +1,28 @@
+# Cursor Rules for screeps-typescript
+
+## Code Quality Standards
+
+### Pre-commit Checks
+Before any code changes are considered complete, always run:
+```bash
+yarn precommit
+```
+
+This command runs:
+- Prettier formatting
+- ESLint fixes
+- Unit tests
+- Build/compilation
+
+All checks must pass before the code is ready to commit. If any check fails, fix the issues before proceeding.
+
+### Type Safety
+- Use type guards instead of unsafe type casts (e.g., `as unknown as`)
+- Prefer proper type definitions over `any`
+- Add type annotations when TypeScript can't infer types
+
+### Import Organization
+- Follow the `sort-imports` ESLint rule
+- Group imports logically (external libraries, internal modules, types)
+- Keep imports alphabetically sorted within groups
+
