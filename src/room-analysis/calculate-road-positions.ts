@@ -29,6 +29,11 @@ const roadSortOrder =
         return terrainValue(a) - terrainValue(b)
     }
 
+/**
+ * Calculates optimal road network for an owned room.
+ * Connects storage to sources, controller, mineral, and remote mines.
+ * Uses pathfinding with terrain costs (swamp=3, plain=2, road=1).
+ */
 export function calculateRoadPositions(
     roomName: string,
     features: ConstructionFeatures,
@@ -98,6 +103,10 @@ export function calculateRoadPositions(
     return { roads: filteredRoads, exitInfo }
 }
 
+/**
+ * Calculates road and container positions for a remote mining room.
+ * Paths from entrance to sources and controller, placing containers at source positions.
+ */
 export function calculateMineConstructionFeaturesV3(
     roomName: string,
     startPosition: FlatRoomPosition,
@@ -413,6 +422,10 @@ function addRoadsToMatrix(cm: CostMatrix, path: RoomPosition[]): void {
     }
 }
 
+/**
+ * Creates a cost matrix for road pathfinding: walls=255, swamp=3, plain=2, road=1.
+ * Existing obstacles are blocked, existing roads get preference.
+ */
 function roadGeneratingCostMatrix(
     roomName: string,
     features: ConstructionFeatures,

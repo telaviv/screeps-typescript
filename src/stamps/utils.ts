@@ -1,5 +1,6 @@
 import { Stamp, StampExtants, StampMetadata } from './types'
 
+/** Calculates the bounding box of all buildings in a stamp */
 export function getStampExtants(stamp: Stamp): StampExtants {
     const extants: StampExtants = { left: 49, right: 0, top: 49, bottom: 0 }
     for (const building of Object.values(stamp.buildings)) {

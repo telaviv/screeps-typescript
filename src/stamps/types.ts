@@ -1,3 +1,7 @@
+/**
+ * A stamp is a predefined building layout template that gets placed in a room.
+ * Contains building positions relative to the stamp origin.
+ */
 export interface Stamp {
     rcl: number
     stationaryPoints: { storageLink: { x: number; y: number } }

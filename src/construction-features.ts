@@ -5,35 +5,46 @@ import * as Logger from 'utils/logger'
 import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
+/** Minimum version of construction features v3 considered valid */
 export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.8'
+/** Current version of construction features v3 data structure */
 export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.10'
 
+/** Current version of construction features data structure */
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
+/** Current version of stationary points data structure */
 export const STATIONARY_POINTS_VERSION = '1.2.1'
+/** Current version of links data structure */
 export const LINKS_VERSION = '1.0.0'
 
+/** Tracks structures that need to be moved from one position to another */
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export type ConstructionMovement = Record<
     BuildableStructureConstant,
     { moveTo: Position[]; moveFrom: Position[] }
 >
 
+/** Information about mining rooms controlled by a base room */
 export interface MinerInformation {
     [roomName: string]: {
         exitPosition: FlatRoomPosition
     }
 }
 
+/** Information about the base room that controls a mine */
 export interface MineeInformation {
     miner: string
     entrancePosition: FlatRoomPosition
 }
 
+/** Type of room for construction planning purposes */
 export type BaseRoomType = 'base' | 'mine' | 'none'
+/** Union type for all construction features v3 variants */
 export type ConstructionFeaturesV3 =
     | ConstructionFeaturesV3Base
     | ConstructionFeaturesV3Mine
     | ConstructionFeaturesV3None
+/** Construction features for a base (home) room with full bunker layout */
 export interface ConstructionFeaturesV3Base {
     version: string
     type: 'base'
@@ -44,6 +55,7 @@ export interface ConstructionFeaturesV3Base {
     movement?: ConstructionMovement | null
 }
 
+/** Construction features for a remote mining room */
 export interface ConstructionFeaturesV3Mine {
     version: string
     type: 'mine'
@@ -53,11 +65,13 @@ export interface ConstructionFeaturesV3Mine {
     movement?: ConstructionMovement | null
 }
 
+/** Construction features for rooms not used (e.g., highways, SK rooms) */
 export interface ConstructionFeaturesV3None {
     version: string
     type: 'none'
 }
 
+/** Tracks differences between planned and built structures */
 export type diffFeatures = {
     [K in BuildableStructureConstant]?: {
         clear: { pos: Position; structure: BuildableStructureConstant }[]
@@ -65,16 +79,23 @@ export type diffFeatures = {
     }
 }
 
+/** Map of structure types to their planned positions */
 export type ConstructionFeatures = {
     [K in BuildableStructureConstant]?: Position[]
 }
 
+/** Union type for stationary point configurations */
 export type StationaryPoints = StationaryPointsBase | StationaryPointsMine
 
+/**
+ * Type guard to check if stationary points are for a base room.
+ * @param x - Stationary points to check
+ */
 export function isStationaryBase(x: StationaryPoints): x is StationaryPointsBase {
     return x.type === 'base'
 }
 
+/** Stationary positions for a base room (harvesters, link hauler, etc.) */
 export interface StationaryPointsBase {
     type: 'base'
     version: string
@@ -84,12 +105,14 @@ export interface StationaryPointsBase {
     storageLink: Position
 }
 
+/** Stationary positions for a mining room (harvesters only) */
 export interface StationaryPointsMine {
     type: 'mine'
     version: string
     sources: { [id: string]: Position }
 }
 
+/** Configuration for link positions and energy transfer routes */
 export interface Links {
     version: string
     controller: Position
@@ -107,11 +130,19 @@ declare global {
     }
 }
 
+/**
+ * Gets construction features v3 for a room.
+ * @param room - The room or room name to get features for
+ */
 export function getConstructionFeaturesV3(room: Room | string): ConstructionFeaturesV3 | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
     return getConstructionFeaturesV3FromMemory(memory)
 }
 
+/**
+ * Gets construction features v3 only if the room is a base type.
+ * @param room - The room to get features for
+ */
 export function getConstructionFeaturesV3Base(room: Room): ConstructionFeaturesV3Base | null {
     const featuresV3 = getConstructionFeaturesV3(room)
     if (featuresV3 && featuresV3.type === 'base') {
@@ -120,6 +151,10 @@ export function getConstructionFeaturesV3Base(room: Room): ConstructionFeaturesV
     return null
 }
 
+/**
+ * Gets the structure position map from construction features.
+ * @param room - The room or room name to get features for
+ */
 export function getConstructionFeatures(room: Room | string): ConstructionFeatures | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
     const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(memory)
@@ -129,6 +164,11 @@ export function getConstructionFeatures(room: Room | string): ConstructionFeatur
     return null
 }
 
+/**
+ * Gets construction features from room memory if version is sufficient.
+ * @param roomMemory - The room's memory
+ * @param minVersion - Minimum acceptable version
+ */
 function getConstructionFeaturesV3FromMemory(
     roomMemory: RoomMemory | undefined,
     minVersion = MIN_CONSTRUCTION_FEATURES_V3_VERSION,
@@ -143,6 +183,10 @@ function getConstructionFeaturesV3FromMemory(
     return null
 }
 
+/**
+ * Gets stationary points from room memory.
+ * @param roomMemory - The room's memory
+ */
 function getStationaryPointsFromMemory(
     roomMemory: RoomMemory | undefined,
 ): StationaryPoints | null {
@@ -153,6 +197,10 @@ function getStationaryPointsFromMemory(
     return null
 }
 
+/**
+ * Checks if construction features need to be recalculated.
+ * @param room - The room or room name to check
+ */
 export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
     if (!memory) {
@@ -227,11 +275,19 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
     return ret
 }
 
+/**
+ * Gets the calculated link positions for a base room.
+ * @param room - The room to get links for
+ */
 export function getCalculatedLinks(room: Room): Links | null {
     const constructionFeaturesV3 = getConstructionFeaturesV3Base(room)
     return constructionFeaturesV3?.links ?? null
 }
 
+/**
+ * Gets stationary points for a room (harvester positions, etc.).
+ * @param room - The room or room name
+ */
 export function getStationaryPoints(room: Room | string): StationaryPoints | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
     const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(memory)
@@ -245,6 +301,10 @@ export function getStationaryPoints(room: Room | string): StationaryPoints | nul
     return null
 }
 
+/**
+ * Gets stationary points only if the room is a base type.
+ * @param room - The room or room name
+ */
 export function getStationaryPointsBase(room: Room | string): StationaryPointsBase | null {
     const points = getStationaryPoints(room)
     if (!points || isStationaryBase(points)) {
@@ -253,6 +313,10 @@ export function getStationaryPointsBase(room: Room | string): StationaryPointsBa
     return null
 }
 
+/**
+ * Gets stationary points only if the room is a mine type.
+ * @param room - The room or room name
+ */
 export function getStationaryPointsMine(room: Room | string): StationaryPointsMine | null {
     const points = getStationaryPoints(room)
     if (!points || points.type === 'mine') {

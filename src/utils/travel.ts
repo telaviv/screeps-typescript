@@ -9,7 +9,6 @@ import { MatrixCacheManager } from 'matrix-cache'
 import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
-import { findMyRooms } from './room'
 
 const MAX_ROOM_RANGE = 20
 
@@ -54,6 +53,7 @@ const moveToRoomRoomCallback =
         return roomCallback(roomName)
     }
 
+/** Moves creep to center of a room, avoiding unsafe rooms */
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
@@ -119,6 +119,7 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
     return err
 }, 'travel:moveTo')
 
+/** Moves within current room using per-room cost matrix (respects roads based on MOVE ratio) */
 export const moveWithinRoom = wrap(
     (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
         // const startCPU = Game.cpu.getUsed()
@@ -149,6 +150,7 @@ export const moveWithinRoom = wrap(
     'creep:moveWithinRoom',
 )
 
+/** Follows another creep, staying adjacent and moving in sync */
 export const followCreep = wrap((creep: Creep, target: Creep): MoveToReturnCode => {
     // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {

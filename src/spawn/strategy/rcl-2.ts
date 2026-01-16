@@ -97,6 +97,7 @@ export default wrap((spawn: StructureSpawn): void => {
     }
 }, 'rcl-2:run-strategy')
 
+/** Pre-link spawn strategy: uses mobile haulers and workers to distribute energy */
 const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     const minEnergy = Math.min(0.95 * spawn.room.energyCapacityAvailable, MAX_USEFUL_ENERGY)
     if (spawn.room.energyAvailable < minEnergy) {
@@ -212,6 +213,7 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:swarm-strategy')
 
+/** Post-link spawn strategy: uses link network with static haulers/upgraders */
 const linkStrategy = wrap((spawn: StructureSpawn): void => {
     if (spawn.room.energyAvailable < MIN_USEFUL_LINK_ENERGY) {
         return
@@ -324,6 +326,10 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     createLatentWorkers(spawn, capacity)
 }, 'rcl-2:link-strategy')
 
+/**
+ * Spawns creeps for a remote mine in priority order:
+ * scout/claimer → defenders → reservers → healers → workers → harvesters → haulers → repairers
+ */
 const createMineWorkers = wrap(
     (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
         if (!mineManager.room) {
@@ -403,6 +409,7 @@ const createMineWorkers = wrap(
     'rcl-2:create-mine-workers',
 )
 
+/** Spawns extra workers on a timer when room has excess energy and all priorities are met */
 const createLatentWorkers = wrap((spawn: StructureSpawn, capacity?: number): void => {
     if (!capacity) {
         capacity = spawn.room.energyAvailable
@@ -433,6 +440,7 @@ const createLatentWorkers = wrap((spawn: StructureSpawn, capacity?: number): voi
     }
 }, 'rcl-2:create-latent-workers')
 
+/** Emergency spawning when room is collapsed: prioritizes defenders, workers, then harvesters */
 function createRescueCreeps(spawn: StructureSpawn) {
     const room = spawn.room
     const stationaryPoints = getStationaryPoints(room)
@@ -457,6 +465,10 @@ function createRescueCreeps(spawn: StructureSpawn) {
     }
 }
 
+/**
+ * Updates room.memory.collapsed based on creep population.
+ * Room is "self-sufficient" if it has either hauler+harvester or standalone logistics creeps.
+ */
 function updateRescueStatus(room: Room) {
     const stationaryPoints = getStationaryPoints(room)
     if (!stationaryPoints) {

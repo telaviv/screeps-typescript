@@ -5,6 +5,7 @@ import { getCalculatedLinks } from 'construction-features'
 declare global {
     namespace NodeJS {
         interface Global {
+            /** Creates a link manager for a room (console utility) */
             createLinkManager(room: Room): LinkManager | null
         }
     }
@@ -14,6 +15,12 @@ global.createLinkManager = (room: Room): LinkManager | null => {
     return LinkManager.createFromRoom(room)
 }
 
+/**
+ * Finds a link structure at a specific position.
+ * @param room - The room to search in
+ * @param pos - The position to check
+ * @returns The link at the position, or null if none exists
+ */
 const getLinkFromPosition = (room: Room, pos: Position): StructureLink | null => {
     const rp = new RoomPosition(pos.x, pos.y, room.name)
     return (
@@ -25,13 +32,27 @@ const getLinkFromPosition = (room: Room, pos: Position): StructureLink | null =>
     )
 }
 
+/**
+ * Manages link energy transfer networks within a room.
+ * Transfers energy from source links to storage and controller links.
+ */
 export default class LinkManager {
+    /** Cache of link managers by room name */
     public static cache = new Map<string, LinkManager>()
 
+    /** Link near storage for receiving energy */
     public readonly storageLink: StructureLink | null
+    /** Link near controller for upgrading */
     public readonly controllerLink: StructureLink | null
+    /** Links near energy sources */
     public readonly sourceLinks: StructureLink[]
 
+    /**
+     * Creates a new LinkManager.
+     * @param storageLink - Link near storage
+     * @param containerLink - Link near controller
+     * @param sourceLinks - Array of links near sources
+     */
     public constructor(
         storageLink: StructureLink | null,
         containerLink: StructureLink | null,
@@ -42,6 +63,11 @@ export default class LinkManager {
         this.sourceLinks = sourceLinks
     }
 
+    /**
+     * Creates a LinkManager from a room's calculated link positions.
+     * @param room - The room to create the manager for
+     * @returns LinkManager instance or null if no links configured
+     */
     public static createFromRoom(room: Room): LinkManager | null {
         const storedLinks = getCalculatedLinks(room)
         if (storedLinks === null) {
@@ -61,21 +87,31 @@ export default class LinkManager {
         return new LinkManager(storageLink, controllerLink, sourceLinks)
     }
 
+    /**
+     * Checks if a room has a controller link configured.
+     * @param room - The room to check
+     */
     public static hasControllerLink(room: Room): boolean {
         const linkManager = LinkManager.createFromRoom(room)
         return Boolean(linkManager && linkManager.controllerLink !== null)
     }
 
+    /** Gets the source links (energy producers) */
     get sources(): StructureLink[] {
         return this.sourceLinks
     }
 
+    /** Gets the sink links (energy consumers) */
     get sinks(): StructureLink[] {
         return [this.controllerLink, this.storageLink].filter(
             (link) => link !== null,
         ) as StructureLink[]
     }
 
+    /**
+     * Checks if a room can use link-based harvesting (2 source links + storage link).
+     * @param room - The room to check
+     */
     public static canLinkHarvest(room: Room): boolean {
         const linkManager = LinkManager.createFromRoom(room)
         if (linkManager === null) {
@@ -84,6 +120,7 @@ export default class LinkManager {
         return linkManager.sources.length === 2 && linkManager.storageLink !== null
     }
 
+    /** Runs link transfer logic, moving energy from sources to sinks */
     public run(): void {
         const sinkTracker = this.sinks.map((link) => ({
             amount: link.store.getFreeCapacity(RESOURCE_ENERGY),

@@ -5,16 +5,30 @@ import { isSurveyComplete } from 'surveyor'
 import { profile } from 'utils/profiling'
 import roleHarvester from 'roles/harvester'
 
+/** Options for creating harvester creeps */
 interface CreateOpts {
+    /** Whether to use available energy (rescue mode) */
     rescue?: boolean
+    /** Override energy capacity */
     capacity?: number
+    /** Whether roads are built (affects body parts) */
     roadsBuilt?: boolean
 }
 
+/**
+ * Manages all energy sources in a room.
+ * Coordinates harvester creation and assignment across multiple sources.
+ */
 export default class SourcesManager {
+    /** The room being managed */
     private room: Room
+    /** Individual source managers for each source */
     private sourceManagers: SourceManager[]
 
+    /**
+     * Creates a new SourcesManager.
+     * @param room - The room to manage sources for
+     */
     constructor(room: Room) {
         this.room = room
         this.sourceManagers = []
@@ -27,6 +41,11 @@ export default class SourcesManager {
         }
     }
 
+    /**
+     * Factory method to create a SourcesManager if survey is complete.
+     * @param room - The room to create manager for
+     * @returns SourcesManager or null if survey incomplete
+     */
     public static create(room: Room): SourcesManager | null {
         if (isSurveyComplete(room)) {
             return new SourcesManager(room)
@@ -34,6 +53,7 @@ export default class SourcesManager {
         return null
     }
 
+    /** Checks if any source has at least one harvester */
     public hasAHarvester(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (sourceManager.harvesters.length > 0) {
@@ -43,6 +63,7 @@ export default class SourcesManager {
         return false
     }
 
+    /** Checks if all sources have enough harvesters */
     public hasEnoughHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughHarvesters()) {
@@ -57,6 +78,7 @@ export default class SourcesManager {
         return true
     }
 
+    /** Checks if all sources have enough auxiliary harvesters */
     public hasEnoughAuxHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughAuxHarvesters()) {
@@ -66,10 +88,15 @@ export default class SourcesManager {
         return true
     }
 
+    /** Checks if all sources have a harvester at the container position */
     public hasAllContainerHarvesters(): boolean {
         return this.sourceManagers.every((sourceManager) => sourceManager.hasContainerHarvester())
     }
 
+    /**
+     * Gets the next target for a new dedicated harvester.
+     * Prioritizes container positions, then available adjacent positions.
+     */
     public getNextHarvesterMiningTarget(): {
         source: Id<Source>
         pos: RoomPosition
@@ -103,6 +130,7 @@ export default class SourcesManager {
         return null
     }
 
+    /** Gets the next target for an auxiliary harvester */
     @profile
     public getNextAuxHarvesterMiningTarget(): {
         source: Id<Source>
@@ -124,6 +152,13 @@ export default class SourcesManager {
         return null
     }
 
+    /**
+     * Creates a harvester creep for the next available position.
+     * @param spawn - The spawn to create from
+     * @param opts - Creation options
+     * @returns Spawn result code
+     * @throws Error if no positions available
+     */
     public createHarvester(
         spawn: StructureSpawn,
         opts: CreateOpts = { rescue: false, roadsBuilt: false, capacity: 0 },
@@ -137,6 +172,11 @@ export default class SourcesManager {
         return roleHarvester.create(spawn, sourceManager.id, pos, opts)
     }
 
+    /**
+     * Verifies a position is not already assigned to another harvester.
+     * @param pos - The position to check
+     * @param source - The source ID
+     */
     private verifyPositionAvailable(pos: RoomPosition, source: Id<Source>): boolean {
         const harvesters = getHarvesters(this.room)
         for (const harvester of harvesters) {

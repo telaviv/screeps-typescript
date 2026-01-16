@@ -6,50 +6,78 @@ import roleScout from 'roles/scout'
 
 declare global {
     interface RoomMemory {
+        /** Queue of room-level tasks */
         tasks: RoomTask[]
     }
 }
 
+/** Base interface for room-level tasks */
 export interface RoomTask {
+    /** Unique task identifier */
     id: number
+    /** Type of task */
     type: 'claim' | 'long-distance-mine' | 'scout'
+    /** Task-specific data */
     data: Record<string, unknown>
+    /** Game tick when task was created */
     timestamp: number
 }
 
+/** Task to claim a new room */
 interface ClaimRoomTask extends RoomTask {
     id: number
     type: 'claim'
     data: {
+        /** Name of the room to claim */
         name: string
     }
     timestamp: number
 }
 
+/** Task to scout a room */
 interface ScoutRoomTask extends RoomTask {
     id: number
     type: 'scout'
     data: {
+        /** Name of the room to scout */
         room: string
     }
     timestamp: number
 }
 
+/**
+ * Type guard for claim room tasks.
+ * @param task - The task to check
+ */
 export const isClaimRoomTask = (task: RoomTask): task is ClaimRoomTask => {
     return task.type === 'claim'
 }
 
+/**
+ * Type guard for scout room tasks.
+ * @param task - The task to check
+ */
 export const isScoutRoomTask = (task: RoomTask): task is ScoutRoomTask => {
     return task.type === 'scout'
 }
 
+/**
+ * Manages room-level tasks like claiming and scouting.
+ * Coordinates task creation and execution.
+ */
 export class RoomManager {
+    /** The room being managed */
     private room: Room
 
+    /**
+     * Creates a new RoomManager.
+     * @param room - The room to manage
+     */
     constructor(room: Room) {
         this.room = room
     }
 
+    /** Gets all scout tasks from all rooms */
     static getAllScoutTasks(): ScoutRoomTask[] {
         return Object.values(Game.rooms).reduce((acc, room) => {
             const roomManager = new RoomManager(room)
@@ -57,6 +85,7 @@ export class RoomManager {
         }, [] as ScoutRoomTask[])
     }
 
+    /** Gets all claim tasks from all rooms */
     static getAllClaimTasks(): ClaimRoomTask[] {
         return Object.values(Game.rooms).reduce((acc, room) => {
             const roomManager = new RoomManager(room)
@@ -64,6 +93,7 @@ export class RoomManager {
         }, [] as ClaimRoomTask[])
     }
 
+    /** Gets the room's task queue */
     get roomTasks(): RoomTask[] {
         if (!this.room.memory.tasks) {
             this.room.memory.tasks = []
@@ -71,6 +101,7 @@ export class RoomManager {
         return this.room.memory.tasks
     }
 
+    /** Sets the room's task queue */
     set roomTasks(tasks: RoomTask[]) {
         if (!this.room.memory.tasks) {
             this.room.memory.tasks = []
@@ -112,6 +143,7 @@ export class RoomManager {
         this.roomTasks.push(task)
     }
 
+    /** Checks if the room can initiate a claim operation */
     public canClaimRoom(): boolean {
         const roomsOwned = Object.keys(Game.rooms).filter(
             (roomName) => Game.rooms[roomName].controller?.my,
@@ -122,18 +154,22 @@ export class RoomManager {
         return this.hasClaimRoomTask() && roleClaimer.canCreate(this.room.find(FIND_MY_SPAWNS)[0])
     }
 
+    /** Checks if the room has a pending claim task */
     public hasClaimRoomTask(): boolean {
         return this.roomTasks.some((task) => task.type === 'claim')
     }
 
+    /** Gets all scout tasks for this room */
     public getScoutRoomTasks(): ScoutRoomTask[] {
         return this.roomTasks.filter((task) => task.type === 'scout') as ScoutRoomTask[]
     }
 
+    /** Gets all claim tasks for this room */
     public getClaimRoomTasks(): ClaimRoomTask[] {
         return this.roomTasks.filter((task) => task.type === 'claim') as ClaimRoomTask[]
     }
 
+    /** Initiates a room claim operation via the war department */
     public claimRoom(): boolean {
         const claimTask = this.getClaimRoomTask()
         const warDepartment = new WarDepartment(this.room)
@@ -156,6 +192,7 @@ export class RoomManager {
         return false
     }
 
+    /** Creates a scout creep for the first scout task */
     public scoutRoom(): boolean {
         const scoutTask = this.getScoutRoomTasks()[0]
         if (!scoutTask) {
@@ -176,6 +213,7 @@ export class RoomManager {
         return false
     }
 
+    /** Gets the first claim task in the queue */
     public getClaimRoomTask(): ClaimRoomTask | undefined {
         return this.roomTasks.find((task) => task.type === 'claim') as ClaimRoomTask
     }

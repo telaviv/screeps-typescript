@@ -8,7 +8,10 @@ import { getObstacles } from 'utils/room'
 import hash from 'utils/hash'
 import { subscribe } from 'pub-sub/pub-sub'
 
+/** Tags used to identify different cost matrix configurations */
 export type MatrixTag = 'default-terrain' | 'road-preferred-terrain' | 'no-edges' | 'no-obstacles'
+
+/** Order in which matrix tags are applied when building composite matrices */
 const TAG_ORDER: MatrixTag[] = [
     'default-terrain',
     'road-preferred-terrain',
@@ -17,17 +20,25 @@ const TAG_ORDER: MatrixTag[] = [
 ]
 const MATRIX_CACHE_ID = 'matrix-cache'
 const DEPRECATED_TAGS: MatrixTag[] = []
+/** Number of ticks before a cached matrix is eligible for eviction */
 const EVICTION_TIME = 2500
 
+/** Cost values for different terrain types in pathfinding */
 interface TerrainCosts {
     swamp: number
     plain: number
 }
+
+/** Default terrain costs favoring plains over swamps */
 const DEFAULT_TERRAIN_COSTS: TerrainCosts = { swamp: 10, plain: 2 }
+/** Terrain costs when roads are preferred (swamps less penalized) */
 const ROAD_PREFERRED_TERRAIN_COSTS: TerrainCosts = { swamp: 5, plain: 4 }
+/** Cost for traveling on roads */
 const ROAD_COST = 1
+/** Cost indicating an impassable tile */
 const WALL_COST = 255
 
+/** Cached cost matrices stored as serialized JSON strings with timestamps */
 interface MatrixCache {
     [key: string]: { matrix: string; time: number }
 }
@@ -44,6 +55,11 @@ declare global {
     }
 }
 
+/**
+ * Converts an array of matrix tags to a cache key string.
+ * @param tags - Array of matrix tags
+ * @returns Colon-separated key string
+ */
 const tagsToKey = wrap((tags: MatrixTag[]): string => {
     if (tags.length === 0) {
         throw new Error('Cannot convert empty tags to key')
@@ -53,16 +69,29 @@ const tagsToKey = wrap((tags: MatrixTag[]): string => {
     return sortedTags.join(':')
 }, 'matrix-cache:tagsToKey')
 
+/**
+ * Converts a cache key string back to an array of matrix tags.
+ * @param key - Colon-separated key string
+ */
 function keyToTags(key: string): MatrixTag[] {
     return key.split(':') as MatrixTag[]
 }
 
+/**
+ * Splits tags into prefix array and last tag for incremental matrix building.
+ * @param tags - Array of matrix tags
+ * @returns Tuple of [prefix tags, last tag]
+ */
 function splitTags(tags: MatrixTag[]): [MatrixTag[], MatrixTag | null] {
     const copy = tags.slice()
     const latest = copy.pop()
     return [copy, latest ?? null]
 }
 
+/**
+ * Debug utility to print a cost matrix to the console.
+ * @param matrix - The cost matrix to print
+ */
 export function printMatrix(matrix: CostMatrix): void {
     const rows = []
     for (let y = 0; y < 50; y++) {
@@ -76,9 +105,16 @@ export function printMatrix(matrix: CostMatrix): void {
     Logger.error('\n' + rows.join('\n'))
 }
 
+/**
+ * Manages cached cost matrices for pathfinding optimization.
+ * Builds composite matrices from tagged layers and handles cache eviction.
+ */
 export class MatrixCacheManager {
     private roomName: string
 
+    /**
+     * @param roomName - Name of the room to manage matrices for
+     */
     constructor(roomName: string) {
         this.roomName = roomName
     }
@@ -87,6 +123,7 @@ export class MatrixCacheManager {
         return Game.rooms[this.roomName]
     }
 
+    /** Subscribes to construction feature updates for cache invalidation. */
     public static addSubscriptions(): void {
         for (const [roomName, { matrixCache }] of Object.entries(Memory.rooms)) {
             if (!matrixCache) {
@@ -107,6 +144,11 @@ export class MatrixCacheManager {
         }
     }
 
+    /**
+     * Gets a full cost matrix for a room including terrain, edges, and obstacles.
+     * @param roomName - Name of the room
+     * @param roadPreferred - If true, uses road-preferred terrain costs
+     */
     @mprofile('MatrixCacheManager.getFullCostMatrix')
     public static getRoomMatrix(roomName: string, roadPreferred = false): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
@@ -116,6 +158,11 @@ export class MatrixCacheManager {
         return manager.getCostMatrix(keys)
     }
 
+    /**
+     * Gets a travel matrix without edge restrictions (for inter-room travel).
+     * @param roomName - Name of the room
+     * @param roadPreferred - If true, uses road-preferred terrain costs
+     */
     @mprofile('MatrixCacheManager.getRoomTravelMatrix')
     public static getTravelMatrix(roomName: string, roadPreferred = false): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
@@ -126,12 +173,20 @@ export class MatrixCacheManager {
         return cm
     }
 
+    /**
+     * Gets a default empty cost matrix for a room.
+     * @param roomName - Name of the room
+     */
     @mprofile('MatrixCacheManager.getDefaultCostMatrix')
     public static getDefaultCostMatrix(roomName: string): CostMatrix {
         const manager = new MatrixCacheManager(roomName)
         return manager.getCostMatrix([])
     }
 
+    /**
+     * Clears stale cached matrices based on eviction time and hash.
+     * @param clearAll - If true, clears all caches regardless of age
+     */
     @mprofile('MatrixCacheManager.clearCaches')
     public static clearCaches(clearAll = false): void {
         for (const [roomName, roomMemory] of Object.entries(Memory.rooms)) {
@@ -174,6 +229,10 @@ export class MatrixCacheManager {
         return Memory.rooms[this.roomName].matrixCache as MatrixCache
     }
 
+    /**
+     * Gets a cost matrix built from the specified tags.
+     * @param tags - Array of matrix tags defining the matrix configuration
+     */
     @profile
     public getCostMatrix(tags: MatrixTag[]): CostMatrix {
         this.ensureCache(tags)
@@ -183,6 +242,10 @@ export class MatrixCacheManager {
         )
     }
 
+    /**
+     * Gets a serialized cost matrix for the specified tags.
+     * @param tags - Array of matrix tags defining the matrix configuration
+     */
     @profile
     public getSerializedMatrix(tags: MatrixTag[]): number[] {
         if (tags.length === 0) {
@@ -193,6 +256,10 @@ export class MatrixCacheManager {
         return JSON.parse(this.matrixCache[key].matrix) as number[]
     }
 
+    /**
+     * Ensures a matrix is cached for the given tags, building it if necessary.
+     * @param tags - Array of matrix tags
+     */
     @profile
     private ensureCache(tags: MatrixTag[]): void {
         if (tags.length === 0) {
@@ -222,6 +289,10 @@ export class MatrixCacheManager {
         }
     }
 
+    /**
+     * Adds all obstacles to a cost matrix (buildings, roads, creeps, stationary points).
+     * @param matrix - The base matrix to add obstacles to
+     */
     @profile
     public addObstacles(matrix: CostMatrix): CostMatrix {
         if (!this.room) {
@@ -235,6 +306,11 @@ export class MatrixCacheManager {
         return matrix
     }
 
+    /**
+     * Applies terrain costs to a matrix based on the room's terrain.
+     * @param costs - Cost values for swamp and plain tiles
+     * @param matrix - The matrix to modify
+     */
     @profile
     private calculateTerrain(costs: TerrainCosts, matrix: CostMatrix): CostMatrix {
         const terrain = new Room.Terrain(this.roomName)
@@ -252,6 +328,10 @@ export class MatrixCacheManager {
         return matrix
     }
 
+    /**
+     * Marks room edge tiles as impassable (cost 255).
+     * @param matrix - The matrix to modify
+     */
     @profile
     private addEdges(matrix: CostMatrix): CostMatrix {
         matrix = matrix.clone()
@@ -266,6 +346,10 @@ export class MatrixCacheManager {
         return matrix
     }
 
+    /**
+     * Marks building and construction site positions as impassable.
+     * @param matrix - The matrix to modify
+     */
     @profile
     private addBuildings(matrix: CostMatrix): CostMatrix {
         if (!this.room) {
@@ -282,6 +366,10 @@ export class MatrixCacheManager {
         return matrix
     }
 
+    /**
+     * Sets road positions to low cost for faster pathing.
+     * @param matrix - The matrix to modify
+     */
     @profile
     private addRoads(matrix: CostMatrix): CostMatrix {
         if (!this.room) {
@@ -296,6 +384,10 @@ export class MatrixCacheManager {
         return matrix
     }
 
+    /**
+     * Marks creep positions as impassable.
+     * @param matrix - The matrix to modify
+     */
     @profile
     private addCreeps(matrix: CostMatrix): CostMatrix {
         if (!this.room) {
@@ -308,6 +400,10 @@ export class MatrixCacheManager {
         return matrix
     }
 
+    /**
+     * Marks stationary creep positions (harvesters, link haulers) as impassable.
+     * @param matrix - The matrix to modify
+     */
     @profile
     private addStationaryPoints(matrix: CostMatrix): CostMatrix {
         const points = getStationaryPoints(this.roomName)
@@ -325,6 +421,7 @@ export class MatrixCacheManager {
     }
 }
 
+/** Console command to clear all matrix caches. */
 function clearAllCaches(): void {
     MatrixCacheManager.clearCaches(true)
 }

@@ -9,10 +9,19 @@ declare global {
     }
 }
 
+/**
+ * Gets total available energy in a room (dropped + withdrawable).
+ * @param room - The room to check
+ */
 function getRoomEnergy(room: Room): number {
     return getTotalDroppedResources(room) + getTotalWithdrawableResources(room)
 }
 
+/**
+ * Initializes and updates sliding window energy tracking for a room.
+ * Creates windows of size 99 and 999 ticks for energy averaging.
+ * @param room - The room to track
+ */
 export const ensureSlidingWindow = wrap((room: Room): void => {
     if (!room.memory.window) {
         const window99 = SlidingWindowManager.create(99)
@@ -22,6 +31,11 @@ export const ensureSlidingWindow = wrap((room: Room): void => {
     updateSlidingWindow(room, room.memory.window['available-energy'])
 }, 'room-window:ensureSlidingWindow')
 
+/**
+ * Updates all sliding windows with current room energy.
+ * @param room - The room to get energy from
+ * @param windows - The sliding windows to update
+ */
 function updateSlidingWindow(room: Room, windows: Record<99 | 999, SlidingWindow>): void {
     const availableEnergy = getRoomEnergy(room)
     for (const window of Object.values(windows)) {
@@ -30,7 +44,13 @@ function updateSlidingWindow(room: Room, windows: Record<99 | 999, SlidingWindow
     }
 }
 
-/** Returns a % of 2 containers with how much energy can be picked up */
+/**
+ * Gets average energy as a percentage of container capacity.
+ * @param roomName - Name of the room
+ * @param size - Window size (99 or 999 ticks)
+ * @param sourceCount - Number of sources for normalization
+ * @returns Percentage of container capacity available
+ */
 export const getSlidingEnergy = wrap(
     (roomName: string, size: 99 | 999, sourceCount = 2): number => {
         const memory = Memory.rooms[roomName]

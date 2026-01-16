@@ -1,7 +1,7 @@
+import { sortBy } from 'lodash'
+
 import { RoomType, findMyRooms, getRoomType } from './room'
 import { profile } from './profiling'
-import { sortBy } from 'lodash'
-import * as Logger from './logger'
 
 export interface RoomDistanceInfo {
     roomName: string
@@ -21,6 +21,7 @@ declare global {
 const CLOSEST_ROOM_CACHE_TTL = 10000
 const CLOSEST_ROOM_CACHE: Map<string, { time: number; info: RoomDistanceInfo[] }> = new Map()
 
+/** Checks if room should be avoided: SK rooms, enemy-owned, wrong status, etc. */
 function isRoomUnsafe(roomName: string): boolean {
     const exitType = getRoomType(roomName)
     if ([RoomType.CENTER, RoomType.SOURCE_KEEPER].includes(exitType)) {
@@ -75,6 +76,7 @@ export function safeRoomCallback(roomName: string): boolean {
     return !isRoomUnsafe(roomName)
 }
 
+/** World map utilities for finding rooms and calculating distances */
 export class World {
     describeExits: (roomName: string) => ExitsInformation
 
@@ -83,6 +85,7 @@ export class World {
         this.describeExits = describeExits
     }
 
+    /** BFS to find all rooms within maxDistance, avoiding unsafe rooms */
     @profile
     getClosestRooms(roomNames: string[], maxDistance: number): RoomDistanceInfo[] {
         const cacheKey = World.getClosestRoomCacheKey(roomNames, maxDistance)
@@ -140,6 +143,7 @@ export class World {
         return null
     }
 
+    /** Finds the best owned room to handle a target, sorted by distance then progress */
     findBestOwnedRoom(
         targetRoom: string,
         maxDistance: number,

@@ -10,6 +10,7 @@ import { isPickupTask } from './utils'
 import { wrap } from 'utils/profiling'
 
 const KEY = 'pickup-total-resources'
+/** Finds dropped energy and creates a pickup task if available */
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity()
     if (capacity <= 0) {
@@ -129,6 +130,7 @@ function getResource(task: PickupTask): Resource {
     return Game.getObjectById(task.resourceId) as Resource
 }
 
+/** Filters dropped resources that have enough unclaimed amount */
 function getDroppedResources(room: Room, capacity: number, resource: ResourceConstant): Resource[] {
     const targets = PickupTarget.findInRoom(room, resource)
     const eligibles = targets.filter((target) => {
@@ -138,6 +140,7 @@ function getDroppedResources(room: Room, capacity: number, resource: ResourceCon
     return eligibles.map((eligible) => eligible.resource)
 }
 
+/** Returns total unclaimed dropped energy in a room (cached) */
 export function getTotalDroppedResources(room: Room): number {
     return TimeCache.get(`${KEY}:${room.name}`, () => {
         return PickupTarget.findInRoom(room, RESOURCE_ENERGY).reduce(

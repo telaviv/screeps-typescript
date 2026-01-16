@@ -7,6 +7,10 @@ import { getLinks } from 'utils/room'
 import { getTotalDroppedResources } from 'tasks/pickup'
 import { profile } from 'utils/profiling'
 
+/**
+ * Caching layer for expensive room queries during spawn decisions.
+ * Uses TimeCache to avoid recalculating the same data multiple times per tick.
+ */
 export default class RoomQuery {
     private room: Room
 
@@ -44,6 +48,7 @@ export default class RoomQuery {
         )
     }
 
+    /** Counts logistics creeps that have WORK parts (hybrid worker/haulers) */
     @profile
     public getWorkerLogisticsCreepCount(): number {
         return TimeCache.get(

@@ -10,13 +10,25 @@ import { getStationaryPoints } from 'construction-features'
 import { isMiningTask } from 'tasks/mining/utils'
 import { profile } from 'utils/profiling'
 
+/** Maximum WORK parts needed to fully harvest a source (5 + buffer) */
 const MAX_WORK_PARTS = 5 + 1 // allow for some buffer
 
+/**
+ * Manages a single energy source and its assigned harvesters.
+ * Tracks harvester positions and determines available slots.
+ */
 export default class SourceManager {
+    /** Unique identifier of the source */
     public readonly id: Id<Source>
+    /** The source game object */
     public readonly source: Source
+    /** Position of the container at this source */
     public readonly containerPosition: RoomPosition
 
+    /**
+     * Creates a new SourceManager (use factory methods instead).
+     * @param source - The source to manage
+     */
     private constructor(source: Source) {
         const stationaryPoints = getStationaryPoints(source.room)
         if (!stationaryPoints || !stationaryPoints.sources) {
@@ -32,10 +44,19 @@ export default class SourceManager {
         )
     }
 
+    /**
+     * Creates a SourceManager from a Source object.
+     * @param source - The source to manage
+     */
     public static createFromSource(source: Source): SourceManager {
         return new SourceManager(source)
     }
 
+    /**
+     * Creates a SourceManager from a source ID.
+     * @param id - The source ID
+     * @throws Error if source not found
+     */
     public static createFromSourceId(id: Id<Source>): SourceManager {
         const source = Game.getObjectById(id)
         if (!source) {
@@ -44,14 +65,17 @@ export default class SourceManager {
         return new SourceManager(source)
     }
 
+    /** Gets the room containing this source */
     public get room(): Room {
         return this.source.room
     }
 
+    /** Gets all dedicated harvesters assigned to this source */
     public get harvesters(): Harvester[] {
         return filter(getAllHarvesters(), (creep: Harvester) => creep.memory.source === this.id)
     }
 
+    /** Gets logistics creeps with mining tasks at this source */
     public get auxHarvesters(): LogisticsCreep[] {
         return filter(
             getLogisticsCreeps({ room: this.room, taskType: 'mining' }),
@@ -68,6 +92,7 @@ export default class SourceManager {
         )
     }
 
+    /** Gets all mining tasks assigned to auxiliary harvesters */
     public getAuxTasks(): MiningTask[] {
         const tasks: MiningTask[] = []
         for (const auxHarvester of this.auxHarvesters) {
@@ -79,24 +104,32 @@ export default class SourceManager {
         return tasks
     }
 
+    /** Gets all harvesters (dedicated + auxiliary) */
     public get allHarvesters(): Creep[] {
         return [...this.harvesters, ...this.auxHarvesters]
     }
 
+    /** Gets all valid harvest positions adjacent to this source */
     public getPositions(): RoomPosition[] {
         return getNonObstacleNeighbors(this.source.pos)
     }
 
+    /**
+     * Gets a SourceManager by source ID.
+     * @param sourceId - The source ID
+     */
     static getById(sourceId: Id<Source>): SourceManager {
         return SourceManager.createFromSourceId(sourceId)
     }
 
+    /** Checks if any harvester is assigned to this source */
     public hasStaticHarvester(): boolean {
         return this.harvesters.some(
             (harvester: Creep) => isHarvester(harvester) && harvester.memory.source === this.id,
         )
     }
 
+    /** Checks if a harvester is at the container position */
     public hasContainerHarvester(): boolean {
         return this.harvesters.some((harvester: Creep) => {
             return (
@@ -108,6 +141,7 @@ export default class SourceManager {
         })
     }
 
+    /** Checks if enough harvesters are assigned (container position filled or max work parts) */
     public hasEnoughHarvesters(): boolean {
         if (!this.hasContainerHarvester()) {
             return false
@@ -118,6 +152,7 @@ export default class SourceManager {
         return this.getNextAvailableHarvesterPosition() === null
     }
 
+    /** Checks if enough auxiliary harvesters are assigned */
     public hasEnoughAuxHarvesters(): boolean {
         if (hasEnoughWorkParts(this.allHarvesters)) {
             return true
@@ -125,6 +160,7 @@ export default class SourceManager {
         return this.getNextAvailableAuxHarvestPosition() === null
     }
 
+    /** Gets the next available position for a dedicated harvester */
     @profile
     public getNextAvailableHarvesterPosition(): RoomPosition | null {
         if (this.source.energy === 0 || hasEnoughWorkParts(this.harvesters)) {
@@ -147,6 +183,7 @@ export default class SourceManager {
         return null
     }
 
+    /** Gets the next available position for an auxiliary harvester */
     @profile
     public getNextAvailableAuxHarvestPosition(): RoomPosition | null {
         if (this.source.energy === 0 || hasEnoughWorkParts(this.allHarvesters)) {
@@ -188,12 +225,20 @@ export default class SourceManager {
     }
 }
 
+/**
+ * Calculates total WORK parts across a group of creeps.
+ * @param creeps - Array of creeps to count
+ */
 function totalWorkCount(creeps: Creep[]): number {
     return creeps.reduce((works, creep) => {
         return creep.getActiveBodyparts(WORK) + works
     }, 0)
 }
 
+/**
+ * Checks if creeps have enough WORK parts to fully harvest a source.
+ * @param creeps - Array of creeps to check
+ */
 function hasEnoughWorkParts(creeps: Creep[]): boolean {
     return totalWorkCount(creeps) >= MAX_WORK_PARTS
 }

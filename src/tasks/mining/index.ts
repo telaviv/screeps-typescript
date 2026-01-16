@@ -7,6 +7,7 @@ import autoIncrement from 'utils/autoincrement'
 import { isMiningTask } from './utils'
 import { wrap } from 'utils/profiling'
 
+/** Assigns creep to mine at an available auxiliary harvest position */
 export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     const capacity = creep.store.getFreeCapacity(RESOURCE_ENERGY)
     if (capacity <= 0) {
@@ -80,6 +81,7 @@ export function completeRequest(creep: ResourceCreep): void {
     task.complete = true
 }
 
+/** Removes task if source empty or a dedicated harvester took the position */
 export function cleanup(task: MiningTask, creep: ResourceCreep): boolean {
     const source = Game.getObjectById<Source>(task.source)
     if (!source) {

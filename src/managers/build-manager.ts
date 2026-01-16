@@ -35,19 +35,33 @@ import {
 import { profile, wrap } from 'utils/profiling'
 import { Position } from 'types'
 
+/** Maximum extensions to build early (enough for claiming) */
 const IMPORTANT_EXTENSION_MAX = 7 // this should let us get a claim going
 
 declare global {
     interface RoomMemory {
+        /** Construction state tracking */
         construction: { paused: boolean }
     }
 }
 
+/**
+ * Manages construction site creation and building priority.
+ * Ensures structures are built in the correct order based on RCL.
+ */
 export default class BuildManager {
+    /** Cache of build managers by room name */
     static cache = new Map<string, BuildManager>()
+    /** The room being managed */
     private room: Room
+    /** Construction features configuration */
     private constructionFeaturesV3: ConstructionFeaturesV3Base | ConstructionFeaturesV3Mine
 
+    /**
+     * Creates a new BuildManager.
+     * @param room - The room to manage construction for
+     * @param constructionFeaturesV3 - Construction features configuration
+     */
     constructor(
         room: Room,
         constructionFeaturesV3: ConstructionFeaturesV3Base | ConstructionFeaturesV3Mine,
@@ -60,18 +74,26 @@ export default class BuildManager {
         }
     }
 
+    /** Gets the construction features (structure positions) */
     get constructionFeatures(): ConstructionFeatures {
         return this.constructionFeaturesV3.features as ConstructionFeatures
     }
 
+    /** Gets the stationary points configuration */
     get points(): StationaryPoints {
         return this.constructionFeaturesV3.points as StationaryPoints
     }
 
+    /** Gets the room's controller level */
     get controllerLevel(): number {
         return this.room.controller?.level ?? 0
     }
 
+    /**
+     * Factory method to get a BuildManager for a room.
+     * @param room - The room to get manager for
+     * @returns BuildManager or null if no features configured
+     */
     static get(room: Room): BuildManager | null {
         const constructionFeatures = getConstructionFeaturesV3(room)
         if (!constructionFeatures || constructionFeatures.type === 'none') {
@@ -80,6 +102,10 @@ export default class BuildManager {
         return new BuildManager(room, constructionFeatures)
     }
 
+    /**
+     * Checks if all planned roads are built.
+     * @param room - The room to check
+     */
     static allRoadsBuilt(room: Room): boolean {
         const buildManager = BuildManager.get(room)
         if (!buildManager) {
@@ -88,6 +114,7 @@ export default class BuildManager {
         return buildManager.getNextRoad() === undefined
     }
 
+    /** Removes enemy construction sites from the room */
     removeEnemyConstructionSites(): void {
         const sites = this.room.find(FIND_HOSTILE_CONSTRUCTION_SITES)
         for (const site of sites) {
@@ -95,6 +122,7 @@ export default class BuildManager {
         }
     }
 
+    /** Creates construction sites for needed structures (owned rooms) */
     @profile
     ensureConstructionSites(): boolean {
         if (!this.room.controller || !this.room.controller.my) {
@@ -115,6 +143,7 @@ export default class BuildManager {
         return nonWall || wall
     }
 
+    /** Creates construction sites for mine rooms (containers and roads only) */
     @profile
     ensureMineConstructionSites(): boolean {
         if (this.room.memory.construction.paused || this.canBuild()) {
@@ -140,6 +169,7 @@ export default class BuildManager {
         return false
     }
 
+    /** Ensures a spawn construction site exists if needed */
     private ensureSpawnSite(): boolean {
         const sites = getConstructionSites(this.room)
         if (sites.length > 0 && sites.some((site) => site.structureType !== STRUCTURE_RAMPART)) {
@@ -148,6 +178,7 @@ export default class BuildManager {
         return this.buildNextSpawn()
     }
 
+    /** Ensures a wall/rampart construction site exists if needed */
     private ensureWallSite(): boolean {
         if (this.hasWallSite()) {
             return false
@@ -160,6 +191,7 @@ export default class BuildManager {
         return false
     }
 
+    /** Ensures a non-wall construction site exists, respecting build priority */
     private ensureNonWallSite(): boolean {
         if (this.hasNonWallSite()) {
             return false
@@ -232,20 +264,24 @@ export default class BuildManager {
         return false
     }
 
+    /** Checks if the room has any construction sites */
     hasConstructionSites(): boolean {
         return getConstructionSites(this.room).length > 0
     }
 
+    /** Checks if the room has non-wall construction sites */
     hasNonWallConstructionSites(): boolean {
         return getConstructionSites(this.room).some(
             (site) => site.structureType !== STRUCTURE_RAMPART,
         )
     }
 
+    /** Checks if there are construction sites to build */
     canBuild(): boolean {
         return this.hasConstructionSites()
     }
 
+    /** Checks if any important structure can be built or has a site */
     @profile
     canBuildImportant(): boolean {
         return (
@@ -261,6 +297,7 @@ export default class BuildManager {
         )
     }
 
+    /** Checks if an important (non-wall) construction site exists */
     private hasImportantConstructionSite = wrap((): boolean => {
         const sites = getConstructionSites(this.room)
         if (sites.length === 0) {
@@ -270,6 +307,10 @@ export default class BuildManager {
         return !includes([STRUCTURE_WALL, STRUCTURE_RAMPART], site.structureType)
     }, 'BuildManager:hasImportantConstructionSite')
 
+    /**
+     * Gets the next position to build a structure type.
+     * @param type - The structure type to build
+     */
     private nextBuildPosition(type: BuildableStructureConstant): RoomPosition | null {
         if (this.room.controller === undefined) {
             Logger.error('nextBuildPosition:controller:error:no-controller', this.room.name)
@@ -301,6 +342,10 @@ export default class BuildManager {
         return new RoomPosition(toBuild.x, toBuild.y, this.room.name)
     }
 
+    /**
+     * Creates a construction site for the next structure of a type.
+     * @param type - The structure type to build
+     */
     private buildNextStructure(type: BuildableStructureConstant): boolean {
         const toBuild = this.nextBuildPosition(type)
         if (toBuild === null) {
@@ -312,6 +357,7 @@ export default class BuildManager {
         )
     }
 
+    /** Creates a construction site for the next spawn */
     private buildNextSpawn(): boolean {
         const toBuild = this.nextBuildPosition(STRUCTURE_SPAWN)
         if (toBuild === null) {
@@ -320,6 +366,7 @@ export default class BuildManager {
         return makeSpawnConstructionSite(toBuild, pokemon()) === OK
     }
 
+    /** Checks if a source container needs to be built */
     private canBuildSourceContainer(): boolean {
         const points = getStationaryPoints(this.room)
         if (!points) {
@@ -336,6 +383,7 @@ export default class BuildManager {
         return Boolean(toBuild)
     }
 
+    /** Builds a container at the next source position needing one */
     private buildNextSourceContainer(): boolean {
         const sourcePositions = Object.values(this.points.sources)
         const existingContainers = getContainers(this.room)
@@ -355,6 +403,7 @@ export default class BuildManager {
         return err === OK
     }
 
+    /** Checks if a temporary storage container is needed (before RCL 4) */
     private canBuildVirtualStorageContainer(): boolean {
         if ((this.room.controller?.level ?? 0) >= 4) {
             return false
@@ -369,6 +418,7 @@ export default class BuildManager {
         )
     }
 
+    /** Builds a temporary container at the storage position */
     private buildVirtualStorageContainer(): boolean {
         if (!this.constructionFeatures[STRUCTURE_STORAGE]) {
             Logger.warning('buildVirtualStorageContainer:no-storage-features', this.room.name)
@@ -383,6 +433,7 @@ export default class BuildManager {
         )
     }
 
+    /** Checks if a mineral container needs to be built (disabled) */
     private canBuildMineralContainer(): boolean {
         return false
         /**
@@ -400,6 +451,7 @@ export default class BuildManager {
         */
     }
 
+    /** Builds a container at the mineral position */
     private buildMineralContainer(): boolean {
         if (this.points.type === 'mine') {
             Logger.warning('buildMineralContainer:mine', this.room.name)
@@ -414,6 +466,7 @@ export default class BuildManager {
         )
     }
 
+    /** Checks if more links can be built at current RCL */
     private canBuildLinks = wrap(() => {
         const links = getLinks(this.room)
         if (this.room.controller === undefined) {
@@ -429,6 +482,7 @@ export default class BuildManager {
         return links.length < Math.min(possibleLinkCount, linkPositions.length)
     }, 'BuildManager:canBuildLinks')
 
+    /** Checks if storage can be built (RCL 4+, no existing storage) */
     private canBuildStorage = wrap((): boolean => {
         if (!this.room.controller || this.room.controller.level < MIN_STORAGE_LEVEL) {
             return false
@@ -436,6 +490,7 @@ export default class BuildManager {
         return !hasStorage(this.room)
     }, 'BuildManager:canBuildStorage')
 
+    /** Checks if a non-wall construction site exists */
     private hasNonWallSite() {
         return hasConstructionSite(this.room, {
             filter: (site) =>
@@ -443,6 +498,7 @@ export default class BuildManager {
         })
     }
 
+    /** Checks if a wall/rampart construction site exists */
     private hasWallSite() {
         return hasConstructionSite(this.room, {
             filter: (site) =>
@@ -450,10 +506,12 @@ export default class BuildManager {
         })
     }
 
+    /** Checks if more towers can be built at current RCL */
     private canBuildTower = wrap((): boolean => {
         return !isAtTowerCap(this.room)
     }, 'BuildManager:canBuildTower')
 
+    /** Checks if a swamp road needs to be built (prioritized over plain roads) */
     private canBuildSwampRoad = wrap((): boolean => {
         const pos = this.getNextSwampRoad()
         if (pos === undefined) {
@@ -462,11 +520,13 @@ export default class BuildManager {
         return this.room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_SWAMP
     }, 'BuildManager:canBuildSwampRoad')
 
+    /** Checks if any road needs to be built */
     private canBuildRoad = wrap((): boolean => {
         const pos = this.getNextRoad()
         return Boolean(pos)
     }, 'BuildManager:canBuildRoad')
 
+    /** Gets the next swamp position needing a road */
     private getNextSwampRoad(): Position | undefined {
         return TimeCache.get(`build-manager:getNextSwampRoad:${this.room.name}`, () => {
             if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
@@ -484,6 +544,7 @@ export default class BuildManager {
         })
     }
 
+    /** Gets the next position needing a road */
     private getNextRoad(): Position | undefined {
         return TimeCache.get(`build-manager:getNextRoad:${this.room.name}`, () => {
             if (this.constructionFeatures[STRUCTURE_ROAD] === undefined) {
@@ -499,6 +560,7 @@ export default class BuildManager {
         })
     }
 
+    /** Checks if early-game important extensions can be built */
     private canBuildImportantExtension = (): boolean => {
         if ((this.room.controller?.level ?? 0) < 2) {
             return false
@@ -510,6 +572,7 @@ export default class BuildManager {
         return extensions.length < IMPORTANT_EXTENSION_MAX
     }
 
+    /** Checks if more extensions can be built at current RCL */
     private canBuildExtension = wrap(() => {
         if ((this.room.controller?.level ?? 0) < 2) {
             return false
@@ -517,6 +580,7 @@ export default class BuildManager {
         return !isAtExtensionCap(this.room)
     }, 'BuildManager:canBuildExtension')
 
+    /** Checks if more ramparts can be built at current RCL */
     private canBuildWall = wrap((): boolean => {
         if (!this.room.controller || this.room.controller.level < MIN_RAMPART_LEVEL) {
             return false
@@ -529,10 +593,12 @@ export default class BuildManager {
         return missingRamparts.length > 0
     }, 'BuildManager:canBuildWall')
 
+    /** Checks if terminal can be built (RCL 6+) */
     private canBuildTerminal = wrap((): boolean => {
         return Boolean((this.room.controller?.level ?? 0) >= 6 && !this.room.terminal)
     }, 'BuildManager:canBuildTerminal')
 
+    /** Checks if more labs can be built at current RCL */
     private canBuildLab = wrap((): boolean => {
         const labs = getLabs(this.room)
         return (
@@ -541,6 +607,7 @@ export default class BuildManager {
         )
     }, 'BuildManager:canBuildLab')
 
+    /** Checks if extractor can be built (disabled) */
     private canBuildExtractor = wrap((): boolean => {
         return false
         /**
@@ -549,12 +616,17 @@ export default class BuildManager {
         */
     }, 'BuildManager:canBuildExtractor')
 
+    /** Checks if factory can be built (RCL 7+) */
     private canBuildFactory = wrap((): boolean => {
         const factory = getFactory(this.room)
         return Boolean(factory && (this.room.controller?.level ?? 0) >= 7)
     }, 'BuildManager:canBuildFactory')
 }
 
+/**
+ * Gets a BuildManager for a room.
+ * @param room - The room to get manager for
+ */
 export function getBuildManager(room: Room): BuildManager | null {
     return BuildManager.get(room)
 }

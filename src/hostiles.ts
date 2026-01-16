@@ -3,6 +3,7 @@ import { getEnemyCreeps } from 'utils/room'
 
 type RecorderTimes = typeof HOSTILE_WINDOW
 
+/** Memory structure tracking hostile creep body parts over time windows */
 type HostileRecorderMemory = {
     [key in RecorderTimes]: { time: number; parts: BodyPartConstant[][] }
 }
@@ -13,10 +14,19 @@ declare global {
     }
 }
 
+/** Number of ticks to track hostile activity */
 const HOSTILE_WINDOW = 1000
 
+/**
+ * Records and tracks hostile creep activity in a room over time.
+ * Used to assess danger levels for defensive spawning decisions.
+ */
 export class HostileRecorder {
     private roomName: string
+
+    /**
+     * @param roomName - Name of the room to track hostiles for
+     */
     constructor(roomName: string) {
         const memory = Memory.rooms[roomName]
         if (!memory.hostiles) {
@@ -41,6 +51,7 @@ export class HostileRecorder {
         this.memory.hostiles = value
     }
 
+    /** Records current hostile creeps, keeping the most dangerous configuration seen */
     public record(): void {
         if (!this.room) {
             Logger.warning(`HostileRecorder.record: no vision for ${this.roomName}`)
@@ -61,6 +72,10 @@ export class HostileRecorder {
         }
     }
 
+    /**
+     * Calculates danger score from body parts (counts ATTACK and RANGED_ATTACK).
+     * @param parts - Array of body part arrays from hostile creeps
+     */
     private dangerFromParts(parts: BodyPartConstant[][]): number {
         return parts.reduce(
             (acc, p) => acc + p.filter((part) => part === ATTACK || part === RANGED_ATTACK).length,
@@ -68,6 +83,7 @@ export class HostileRecorder {
         )
     }
 
+    /** Returns current danger level including ATTACK, RANGED_ATTACK, and HEAL parts */
     public dangerLevel(): number {
         if (this.hostiles[HOSTILE_WINDOW].time + HOSTILE_WINDOW < Game.time) {
             return 0
@@ -81,6 +97,10 @@ export class HostileRecorder {
         )
     }
 
+    /**
+     * Static helper to get danger level for a room.
+     * @param roomName - Name of the room to check
+     */
     public static getDangerLevel(roomName: string): number {
         const recorder = new HostileRecorder(roomName)
         return recorder.dangerLevel()

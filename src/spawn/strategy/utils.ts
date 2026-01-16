@@ -5,6 +5,7 @@ import { LATENT_WORKER_INTERVAL_MULTIPLIER } from './constants'
 import { getSlidingEnergy } from 'room-window'
 import { wrap } from 'utils/profiling'
 
+/** Calculates delay between spawning "latent" workers based on room's energy capacity */
 export function getLatentWorkerInterval(room: Room): number {
     return Math.floor(minAvailableEnergy(room) * LATENT_WORKER_INTERVAL_MULTIPLIER)
 }
@@ -27,10 +28,19 @@ for (const [name, result] of regressions) {
     Logger.warning(`rcl-2:minAvailableEnergy:${name}`, result.string, `[r2: ${result.r2}]`)
 }
 
+/**
+ * Uses regression model to predict minimum energy threshold for a room.
+ * Higher capacity rooms should maintain higher energy reserves.
+ * The model is fitted against empirically-tuned data points.
+ */
 export function minAvailableEnergy(room: Room): number {
     return regressions[0][1].predict(room.energyCapacityAvailable)[1]
 }
 
+/**
+ * Checks if room's average energy (over 99 or 999 ticks) is below threshold.
+ * Used to limit spawning of non-essential creeps when energy is low.
+ */
 export const isEnergyRestricted = wrap((room: Room): boolean => {
     const minEnergy = minAvailableEnergy(room)
     return (

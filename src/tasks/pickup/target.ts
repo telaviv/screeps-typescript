@@ -3,6 +3,10 @@ import autoIncrement from 'utils/autoincrement'
 import { getAllTasks } from 'tasks/utils'
 import { isPickupTask } from './utils'
 
+/**
+ * Tracks a dropped resource and all pending pickup tasks targeting it.
+ * Prevents over-allocation by tracking claimed amounts.
+ */
 export class PickupTarget {
     public readonly resource: Resource
     public readonly tasks: PickupTask[]
@@ -12,6 +16,7 @@ export class PickupTarget {
         this.tasks = tasks
     }
 
+    /** Creates a PickupTarget by finding all tasks targeting this resource */
     public static create(id: Id<Resource>): PickupTarget {
         const tasks: PickupTask[] = []
         const resource = Game.getObjectById<Resource>(id)
@@ -38,10 +43,12 @@ export class PickupTarget {
         return resources.map((r) => PickupTarget.get(r.id))
     }
 
+    /** Returns unclaimed resources (total - sum of pending pickup tasks) */
     public resourcesAvailable(): number {
         return Math.max(this.resource.amount - this.sumOfPickups(), 0)
     }
 
+    /** Creates a pickup task for the minimum of creep capacity and available resources */
     public makeRequest(creep: Creep): PickupTask | null {
         const creepCapacity = creep.store.getFreeCapacity(this.resource.resourceType)
         const resourcesAvailable = this.resourcesAvailable()

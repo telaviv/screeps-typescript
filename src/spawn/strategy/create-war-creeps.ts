@@ -14,6 +14,11 @@ import roleClaimer from 'roles/claim'
 import roleScout from 'roles/scout'
 import { wrap } from 'utils/profiling'
 
+/**
+ * Spawns creeps for war operations based on WarStatus.
+ * Handles scouts, attackers/healers (paired), claimers, and remote workers.
+ * Returns OK if spawned, null if nothing needed.
+ */
 export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartment: WarDepartment):
     | number
     | null => {
@@ -136,6 +141,7 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
     return null
 }, 'createWarCreeps')
 
+/** Spawns extra workers for war target room when in SPAWN status (bootstrapping new room) */
 export const createLatentSpawnWorkers = (
     spawn: StructureSpawn,
     warDepartment: WarDepartment,

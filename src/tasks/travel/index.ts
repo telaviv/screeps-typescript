@@ -12,6 +12,7 @@ export const makeRequest = wrap((creep: ResourceCreep, destination: string): boo
     return true
 }, 'travel:makeRequest')
 
+/** Completes when creep reaches room center and construction features exist */
 export function run(task: TravelTask, creep: ResourceCreep): boolean {
     if (
         creep.room.name === task.destination &&
@@ -34,6 +35,7 @@ function addTravelTask(creep: ResourceCreep, destination: string): TravelTask {
     return task
 }
 
+/** Creates a travel task. If permanent=true, task never completes (for scouts) */
 export function createTravelTask(
     creepName: string,
     destination: string,

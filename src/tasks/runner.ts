@@ -8,6 +8,7 @@ import TravelRunner from 'tasks/travel'
 import WithdrawRunner from 'tasks/withdraw'
 import { wrap } from 'utils/profiling'
 
+/** All task runners in priority order */
 const runners: Runner<any>[] = [
     TransferRunner,
     WithdrawRunner,
@@ -17,6 +18,7 @@ const runners: Runner<any>[] = [
     TravelRunner,
 ]
 
+/** Dispatches a task to the appropriate runner based on type */
 export const run = wrap((task: Task<any>, creep: ResourceCreep): boolean => {
     if (task === undefined) {
         throw new Error(`undefined task: ${creep.name}`)
@@ -41,6 +43,7 @@ export function isResourceCreep(creep: Creep): creep is ResourceCreep {
     )
 }
 
+/** Removes completed/invalid tasks from all creeps */
 export const cleanup = wrap(() => {
     for (const creep of Object.values(Game.creeps)) {
         if (isResourceCreep(creep)) {
@@ -49,6 +52,7 @@ export const cleanup = wrap(() => {
     }
 }, 'TaskRunner:cleanup')
 
+/** Recursively removes completed tasks from a creep's queue */
 function cleanupCreepTask(creep: ResourceCreep) {
     const creepMemory = creep.memory
     if (!creepMemory.tasks || creepMemory.tasks.length === 0) {

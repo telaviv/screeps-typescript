@@ -10,11 +10,14 @@ import SourcesManager from './sources-manager'
 import { World } from 'utils/world'
 import { getConstructionFeaturesV3 } from 'construction-features'
 
+/** Minimum reservation ticks before spawning more reservers */
 const MIN_RESERVATION_TICKS = 3500
 const MIN_BUILD_PARTS = 15
 const MAX_BUILDER_COUNT = 4
+/** Estimated round-trip time for haulers to remote mines */
 const HAULER_ROUND_TRIP_TIME = 100
 
+/** Remote mining room configuration stored in memory */
 export interface Mine {
     name: string
     lastHaulerCreated?: number
@@ -44,6 +47,7 @@ declare global {
     }
 }
 
+/** Recalculates and assigns remote mines to their nearest owned room */
 export function assignMines(): void {
     clearMines()
     const mineDecider = new MineDecider(findMyRooms())
@@ -71,12 +75,17 @@ global.mines = {
     disable: disableMining,
 }
 
+/**
+ * Manages a remote mining room.
+ * Tracks harvester, hauler, and reserver needs for the mine.
+ */
 export class MineManager {
     private roomName: string
+    /** The owned room responsible for this mine */
     private minee: Room
     private sourcesManager: SourcesManager | null
 
-    get room(): Room{
+    get room(): Room {
         return Game.rooms[this.roomName]
     }
 
@@ -94,6 +103,10 @@ export class MineManager {
         this.sourcesManager = Game.rooms[roomName] ? new SourcesManager(Game.rooms[roomName]) : null
     }
 
+    /**
+     * Checks if the owning room can effectively reserve this mine.
+     * Requires enough energy capacity and accessible controller positions.
+     */
     hasCapacityToReserve(): boolean {
         if (!this.room) {
             Logger.error('mine-manager:hasCapacityToReserve:no-room', this.roomName)
@@ -103,12 +116,20 @@ export class MineManager {
         const unitCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]
         const mostClaims = Math.floor(this.minee.energyCapacityAvailable / unitCost)
         if (mostClaims === 0) {
-            Logger.error('mine-manager:hasCapacityToReserve:no-claims', this.minee.name, this.minee.energyCapacityAvailable, unitCost)
+            Logger.error(
+                'mine-manager:hasCapacityToReserve:no-claims',
+                this.minee.name,
+                this.minee.energyCapacityAvailable,
+                unitCost,
+            )
             return false
         }
         const scout = Memory.rooms[this.roomName].scout
         if (!scout || !scout.controllerPosition) {
-            Logger.error('mine-manager:hasCapacityToReserve:no-scout-or-controller-position', this.roomName)
+            Logger.error(
+                'mine-manager:hasCapacityToReserve:no-scout-or-controller-position',
+                this.roomName,
+            )
             return false
         }
         const controllerPos = new RoomPosition(
@@ -121,7 +142,13 @@ export class MineManager {
         const totalSpots = neighbors.filter(
             (pos) => terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL,
         ).length
-        Logger.error('mine-manager:hasCapacityToReserve', this.roomName, mostClaims, totalSpots, mostClaims * totalSpots >= 3)
+        Logger.error(
+            'mine-manager:hasCapacityToReserve',
+            this.roomName,
+            mostClaims,
+            totalSpots,
+            mostClaims * totalSpots >= 3,
+        )
         return mostClaims * totalSpots >= 3
     }
 
@@ -133,6 +160,7 @@ export class MineManager {
         return !!this.room.controller?.reservation
     }
 
+    /** Comprehensive check if the mine needs any creep spawning */
     needsAttention(): boolean {
         return (
             !this.hasVision() ||
@@ -272,12 +300,17 @@ export class MineManager {
         )
     }
 
+    /**
+     * Checks if hauler capacity matches energy production.
+     * Reserved rooms produce 10 energy/tick, unreserved produce 5.
+     */
     public hasEnoughHaulers(): boolean {
         if (!this.constructionFinished()) {
             return true
         }
 
-        const energyProducedPerRoundTrip = this.sourceCount() * (this.hasCapacityToReserve() ? 10 : 5) * HAULER_ROUND_TRIP_TIME
+        const energyProducedPerRoundTrip =
+            this.sourceCount() * (this.hasCapacityToReserve() ? 10 : 5) * HAULER_ROUND_TRIP_TIME
         let haulerCapacity = 0
         for (const hauler of this.getHaulers()) {
             haulerCapacity += hauler.getActiveBodyparts(CARRY) * CARRY_CAPACITY
@@ -323,6 +356,10 @@ export class MineManager {
     }
 }
 
+/**
+ * Determines which owned room should manage each remote mine.
+ * Assigns mines to adjacent owned rooms, preferring higher-level rooms.
+ */
 export class MineDecider {
     private myRooms: Room[]
     constructor(myRooms: Room[]) {
@@ -333,6 +370,7 @@ export class MineDecider {
         return new MineDecider(findMyRooms())
     }
 
+    /** Assigns each mine to its best adjacent owned room */
     assignMines(): void {
         const mines = this.getMines()
         for (const mine of mines) {
@@ -351,6 +389,7 @@ export class MineDecider {
         }
     }
 
+    /** Gets all valid mine rooms (adjacent, unowned, not enemy-mined) */
     private getMines(): string[] {
         const world = new World()
         const closest = world

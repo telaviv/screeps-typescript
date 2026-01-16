@@ -2,8 +2,10 @@ import { Graph, GraphEdge, GraphVertex } from './graph'
 import PriorityQueue from 'ts-priority-queue'
 
 /**
- * @param {Graph} graph
- * @return {Graph}
+ * Prim's algorithm for finding minimum spanning tree.
+ * Used to compute optimal road networks between structures.
+ * @param {Graph} graph - Undirected graph with weighted edges
+ * @return {Graph} - Minimum spanning tree
  */
 export default function prim(graph: Graph): Graph {
     // It should fire error if graph is directed since the algorithm works only

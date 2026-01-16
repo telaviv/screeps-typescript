@@ -42,6 +42,7 @@ import { SubscriptionEvent } from 'pub-sub/constants'
 import { destroyMovementStructures } from 'construction-movement'
 import { publish } from 'pub-sub/pub-sub'
 
+/** Minimum CPU bucket required before running survey calculations */
 const MIN_SURVEY_CPU = 1500
 
 declare global {
@@ -66,26 +67,44 @@ global.setConstructionFeaturesV3 = setConstructionFeaturesV3
 global.clearConstructionFeatures = clearConstructionFeatures
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
 
+/**
+ * Checks if all construction features have been calculated for a room.
+ * @param room - The room to check
+ * @returns True if features, links, and stationary points are all set
+ */
 export const isSurveyComplete = Profiling.wrap((room: Room): boolean => {
     return Boolean(
         getConstructionFeatures(room) && getCalculatedLinks(room) && getStationaryPoints(room),
     )
 }, 'isSurveyComplete')
 
+/**
+ * Clears cached construction features for a room.
+ * @param roomName - Name of the room
+ */
 function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeaturesV3 = undefined
 }
 
+/**
+ * Publishes an event when construction features change for a room.
+ * @param roomName - Name of the room
+ */
 function publishConstructionFeatureChange(roomName: string) {
     publish(SubscriptionEvent.CONSTRUCTION_FEATURES_UPDATES, roomName)
 }
 
+/** Clears construction features for all visible rooms. */
 function clearAllConstructionFeatures() {
     each(Game.rooms, (room: Room) => {
         clearConstructionFeatures(room.name)
     })
 }
 
+/**
+ * Calculates and stores construction features v3 for a room.
+ * @param roomName - Name of the room to calculate features for
+ */
 function setConstructionFeaturesV3(roomName: string) {
     // we need to have already scouted the room so that we don't waste time
     // on rooms with no controller or 1 source etc ....
@@ -95,6 +114,13 @@ function setConstructionFeaturesV3(roomName: string) {
     publishConstructionFeatureChange(roomName)
 }
 
+/**
+ * Calculates link positions for sources, controller, and storage.
+ * @param roomName - Name of the room
+ * @param sourcePositions - Map of source IDs to positions
+ * @param iroom - Immutable room data structure
+ * @returns Link configuration for the room
+ */
 function calculateLinks(
     roomName: string,
     sourcePositions: Record<Id<Source>, Position>,
@@ -125,6 +151,10 @@ function calculateLinks(
     }
 }
 
+/**
+ * Checks if room construction features match the current version.
+ * @param room - The room to check
+ */
 export function isConstructionFeaturesUpToDate(room: Room): boolean {
     return Boolean(
         room.memory.constructionFeaturesV3 &&
@@ -132,6 +162,11 @@ export function isConstructionFeaturesUpToDate(room: Room): boolean {
     )
 }
 
+/**
+ * Calculates complete construction features for a room including bunker layout and roads.
+ * @param roomName - Name of the room
+ * @returns Construction features v3 data structure
+ */
 function calculateConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 {
     if (getRoomType(roomName) !== RoomType.ROOM) {
         return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'none' }
@@ -197,6 +232,12 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
     }
 }
 
+/**
+ * Calculates and stores construction features for a remote mining room.
+ * @param mineName - Name of the mining room
+ * @param miner - Name of the home room that will mine this
+ * @param entrancePosition - Position where the road enters the mining room
+ */
 function setMineConstructionFeaturesV3(
     mineName: string,
     miner: string,
@@ -223,6 +264,13 @@ function setMineConstructionFeaturesV3(
     Memory.rooms[mineName].constructionFeaturesV3 = constructionFeaturesV3
 }
 
+/**
+ * Calculates differences between built structures and planned features.
+ * Used to identify structures that need to be moved or removed.
+ * @param room - The room to analyze
+ * @param features - The planned construction features
+ * @returns Movement instructions for misplaced structures
+ */
 function calculateBuildingDiff(room: Room, features: ConstructionFeatures): ConstructionMovement {
     const diff = {} as ConstructionMovement
     const builtStructures = getBuildableStructures(room)
@@ -286,6 +334,11 @@ function calculateBuildingDiff(room: Room, features: ConstructionFeatures): Cons
     return diff
 }
 
+/**
+ * Creates an ImmutableRoom with bunker layout applied from scout data.
+ * @param roomName - Name of the room
+ * @returns ImmutableRoom with bunker applied, or null if invalid
+ */
 function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
     const roomMemory = Memory.rooms[roomName]
     const scout = roomMemory.scout
@@ -316,6 +369,11 @@ function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
     return iroom
 }
 
+/**
+ * Calculates optimal rampart positions using min-cut algorithm.
+ * @param iroom - The immutable room data
+ * @returns Array of positions for rampart placement
+ */
 function getRampartPositions(iroom: ImmutableRoom): Position[] {
     type Position = [number, number]
     const isCenter = (pos: Position): boolean => {
@@ -328,6 +386,10 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
     return positions.map((pos) => ({ x: pos[0], y: pos[1] }))
 }
 
+/**
+ * Assigns construction features to rooms that need updates.
+ * Only runs when CPU bucket is sufficient.
+ */
 const assignRoomFeatures = Profiling.wrap(() => {
     if (Game.cpu.bucket <= MIN_SURVEY_CPU) {
         return
@@ -344,6 +406,10 @@ const assignRoomFeatures = Profiling.wrap(() => {
     }
 }, 'assignRoomFeatures')
 
+/**
+ * Clears invalid structures and construction sites from rooms.
+ * Handles structure movement when features don't match built structures.
+ */
 const clearRooms = Profiling.wrap(() => {
     const myRooms = findMyRooms()
     for (const room of myRooms) {
@@ -373,6 +439,11 @@ const clearRooms = Profiling.wrap(() => {
     }
 }, 'clearRooms')
 
+/**
+ * Removes construction sites that don't match planned features.
+ * @param room - The room to clear sites in
+ * @param features - The planned construction features
+ */
 function clearInvalidConstructionSites(room: Room, features: ConstructionFeatures) {
     const sites = getConstructionSites(room)
     for (const site of sites) {
@@ -385,6 +456,7 @@ function clearInvalidConstructionSites(room: Room, features: ConstructionFeature
     }
 }
 
+/** Calculates movement data for all visible rooms that need it. */
 function calculateRoomMovement() {
     for (const room of Object.values(Game.rooms)) {
         const constructionFeaturesV3 = getConstructionFeaturesV3(room)
@@ -401,6 +473,10 @@ function calculateRoomMovement() {
     }
 }
 
+/**
+ * Main survey function that runs all room analysis tasks.
+ * Assigns features, calculates movement, and clears invalid structures.
+ */
 const survey = Profiling.wrap(() => {
     assignRoomFeatures()
     calculateRoomMovement()

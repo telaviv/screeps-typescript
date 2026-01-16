@@ -14,6 +14,10 @@ interface RequestOpts {
     structure?: AnyStoreStructure
     excludeVirtualStorage?: boolean
 }
+/**
+ * Finds a structure needing energy and creates a transfer task.
+ * Priority: towers (if extensions filled) > extensions > spawns.
+ */
 export const makeRequest = wrap(
     (creep: ResourceCreep, opts?: RequestOpts): AnyStoreStructure | null => {
         const energy = currentEnergyHeld(creep)
@@ -163,6 +167,7 @@ function fillableSpawns(room: Room): AnyStoreStructure[] {
     return filterFillableStructures(spawns)
 }
 
+/** Filters structures that have free capacity not already claimed by pending tasks */
 function filterFillableStructures(
     structures: AnyStoreStructure[],
     opts?: RequestOpts,

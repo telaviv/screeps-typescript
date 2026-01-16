@@ -27,26 +27,42 @@ global.war = {
     },
 }
 
+/** Memory structure for tracking war operations */
 export interface WarMemory {
     status: WarStatus
     target: string
 }
 
+/** Extended war memory for spawn phase operations, optionally marking savior missions */
 export interface SpawnWarMemory extends WarMemory {
     status: WarStatus.SPAWN
     type?: 'savior'
 }
 
+/**
+ * Enum representing the current state of war operations for a room.
+ */
 export enum WarStatus {
+    /** No active war operations */
     NONE = 'none',
+    /** Actively attacking a hostile room */
     ATTACK = 'attack',
+    /** Claiming a neutral room */
     CLAIM = 'claim',
+    /** Spawning creeps to support a target room */
     SPAWN = 'spawn',
 }
 
+/**
+ * Manages offensive operations, claiming, and savior missions for a room.
+ * Tracks war status and provides methods for combat assessment.
+ */
 export default class WarDepartment {
     private readonly room: Room
 
+    /**
+     * @param room - The room managing war operations
+     */
     public constructor(room: Room) {
         this.room = room
         if (!this.room.memory || !this.room.memory.war) {
@@ -54,15 +70,21 @@ export default class WarDepartment {
         }
     }
 
+    /** Gets the Room object for the war target, if visible */
     public get targetRoom(): Room | undefined {
         return Game.rooms[this.target]
     }
 
+    /**
+     * Factory method to create a WarDepartment from a room name.
+     * @param roomName - Name of the room to manage
+     */
     public static create(roomName: string): WarDepartment {
         const room = Game.rooms[roomName]
         return new WarDepartment(room)
     }
 
+    /** Gets the current war memory for this room */
     public get warMemory(): WarMemory {
         return this.room.memory.war
     }
@@ -86,6 +108,7 @@ export default class WarDepartment {
         return this.warMemory.target
     }
 
+    /** Checks if the target room needs military protection based on danger level or hostiles */
     public get needsProtection(): boolean {
         if (!this.targetRoom) {
             return false
@@ -98,6 +121,7 @@ export default class WarDepartment {
         return false
     }
 
+    /** Checks if any creeps in the target room need healing */
     public needsHealing(): boolean {
         if (!this.targetRoom) {
             return false
@@ -106,10 +130,12 @@ export default class WarDepartment {
         return creeps.some((creep) => creep.hits < creep.hitsMax)
     }
 
+    /** Checks if safe mode is active (currently always returns false) */
     public hasSafeMode(): boolean {
         return false
     }
 
+    /** Checks if the target room has an invader core structure */
     public hasInvaderCore(): boolean {
         const invaderCores = this.targetRoom?.find(FIND_STRUCTURES, {
             filter: { structureType: STRUCTURE_INVADER_CORE },
@@ -117,6 +143,7 @@ export default class WarDepartment {
         return invaderCores ? invaderCores.length > 0 : false
     }
 
+    /** Checks if the target room has a reinforced invader core (>1000 hits) */
     public hasStrongInvaderCore(): boolean {
         const invaderCores = this.targetRoom?.find(FIND_STRUCTURES, {
             filter: { structureType: STRUCTURE_INVADER_CORE },
@@ -124,6 +151,7 @@ export default class WarDepartment {
         return invaderCores?.some((c) => c.hits > 1000) || false
     }
 
+    /** Checks if hostile attack power exceeds defensible threshold (>10 parts) */
     public hasOverwhelmingForce(): boolean {
         if (!this.targetRoom?.controller?.my && !this.targetRoom?.controller?.safeMode) {
             return false
@@ -139,6 +167,7 @@ export default class WarDepartment {
         return hostilePower > 10
     }
 
+    /** Returns the number of available positions adjacent to the controller for claimers */
     public claimerSpotsAvailable(): number {
         if (!this.targetRoom?.controller) {
             return 0
@@ -146,6 +175,7 @@ export default class WarDepartment {
         return getNonObstacleNeighbors(this.targetRoom.controller.pos).length
     }
 
+    /** Checks if the target room's controller is owned by an enemy */
     public hasHostileController(): boolean {
         return Boolean(
             this.targetRoom &&
@@ -155,6 +185,7 @@ export default class WarDepartment {
         )
     }
 
+    /** Checks if the target room has hostile creeps with combat or claim parts */
     public hasHostiles(): boolean {
         const hostiles = this.targetRoom?.find(FIND_HOSTILE_CREEPS)
         return Boolean(
@@ -168,6 +199,7 @@ export default class WarDepartment {
         )
     }
 
+    /** Checks if the target room can be claimed without military support */
     public canMinimallyClaim(): boolean {
         return Boolean(
             !this.needsProtection &&
@@ -177,6 +209,10 @@ export default class WarDepartment {
         )
     }
 
+    /**
+     * Updates war status based on current conditions.
+     * Transitions between CLAIM->SPAWN->NONE as objectives are met.
+     */
     @profile
     public update(): void {
         if (this.status === WarStatus.NONE) {
@@ -207,18 +243,31 @@ export default class WarDepartment {
         }
     }
 
+    /**
+     * Initiates an attack operation against a target room.
+     * @param target - Name of the room to attack
+     */
     public declareWar(target: string): void {
         this.warMemory = { status: WarStatus.ATTACK, target }
     }
 
+    /** Cancels all war operations and resets to NONE status */
     public cancelWar(): void {
         this.warMemory = { status: WarStatus.NONE, target: '' }
     }
 
+    /**
+     * Initiates a claim operation for a neutral room.
+     * @param target - Name of the room to claim
+     */
     public claimRoom(target: string): void {
         this.warMemory = { status: WarStatus.CLAIM, target }
     }
 
+    /**
+     * Initiates a savior mission to rebuild a room that lost its spawns.
+     * @param target - Name of the room to save
+     */
     public saveRoom(target: string): void {
         this.warMemory = { status: WarStatus.SPAWN, target, type: 'savior' } as SpawnWarMemory
     }

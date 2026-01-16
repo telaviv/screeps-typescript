@@ -1,3 +1,4 @@
+/** Generic comparator utility for consistent ordering in priority queues and sorting */
 export default class Comparator<K> {
     compare: (a: K, b: K) => number
 

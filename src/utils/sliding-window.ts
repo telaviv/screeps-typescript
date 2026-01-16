@@ -1,13 +1,25 @@
 /* eslint "@typescript-eslint/no-extra-semi": "off" */
 
+/** Base array size for hierarchical storage (10^n structure) */
 const ARRAY_SIZE = 10
 
+/**
+ * Serializable sliding window stored in memory.
+ * Uses hierarchical arrays to efficiently store running sums.
+ */
 export interface SlidingWindow {
+    /** Hierarchical storage: keys are magnitudes (1, 10, 100...), values are partial sums */
     elements: Record<number, number[] | undefined>
+    /** Last tick data was added */
     time: number
+    /** Maximum number of elements to track */
     maxSize: number
 }
 
+/**
+ * Manages a sliding window that efficiently tracks running averages.
+ * Uses a hierarchical structure to avoid storing every value individually.
+ */
 export class SlidingWindowManager {
     public window: SlidingWindow
 
@@ -26,6 +38,10 @@ export class SlidingWindowManager {
         })
     }
 
+    /**
+     * Adds a value and collapses full arrays into higher magnitudes.
+     * Resets if data gap detected (non-consecutive tick).
+     */
     public add(value: number, time: number | null): void {
         if (time === null) {
             time = Game.time

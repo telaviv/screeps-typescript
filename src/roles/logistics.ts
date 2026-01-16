@@ -41,11 +41,16 @@ import { spawnCreep } from 'utils/spawn'
 import { wander } from 'utils/creep'
 
 export const ROLE = 'logistics'
+/** Ticks of idle time before a worker logistics creep suicides */
 const SUICIDE_TIME = 40
+/** Maximum idle time before preventing new creep spawns */
 const RESPAWN_IDLE_LIMIT = 0
+/** Ticks idle before showing sleep emoji */
 const SLEEP_SAY_TIME = 10
+/** Controller downgrade threshold that triggers upgrading priority */
 const MAX_TICKS_TO_DOWNGRADE = 5000
 
+/** Emoji display for each task type */
 const TASK_EMOJIS = {
     [TASK_HAULING]: '🚚',
     [TASK_BUILDING]: '🏗️',
@@ -59,6 +64,7 @@ const TASK_EMOJIS = {
     [NO_TASK]: '🤔',
 }
 
+/** Emoji display for each preference type */
 const PREFERENCE_EMOJIS = {
     [TASK_HAULING]: '🚚',
     [TASK_BUILDING]: '🏗️',
@@ -69,8 +75,10 @@ const PREFERENCE_EMOJIS = {
     [PREFERENCE_WORKER]: '👷',
 }
 
+/** Base body unit for logistics creeps: 1 WORK, 1 CARRY, 2 MOVE */
 const BODY_PLAN_UNIT = [WORK, CARRY, MOVE, MOVE]
 
+/** Options for creating a logistics creep */
 interface CreateOpts {
     home?: string
     rescue?: boolean
@@ -79,6 +87,10 @@ interface CreateOpts {
     noRepairLimit?: boolean
 }
 
+/**
+ * General-purpose worker creep that dynamically switches between tasks.
+ * Tasks include collecting, hauling, building, upgrading, repairing, and wall repairs.
+ */
 class RoleLogistics {
     private creep: LogisticsCreep
 
@@ -86,6 +98,10 @@ class RoleLogistics {
         this.creep = creep
     }
 
+    /**
+     * Main logistics behavior loop.
+     * Manages task switching, idle detection, and task execution.
+     */
     @profile
     public run(): void {
         if (this.creep.spawning) {
@@ -139,6 +155,7 @@ class RoleLogistics {
         }
     }
 
+    /** Checks if the creep can sign the controller */
     @profile
     private canSign(): boolean {
         const home = Game.rooms[this.creep.memory.home]
@@ -149,10 +166,15 @@ class RoleLogistics {
         return task === undefined
     }
 
+    /**
+     * Static entry point for running logistics creep behavior.
+     * @param creep - The logistics creep to run
+     */
     public static staticRun(creep: LogisticsCreep): void {
         return new RoleLogistics(creep).run()
     }
 
+    /** Attempts to find and collect energy from available sources */
     @profile
     private getEnergy(): void {
         const energyTask = addEnergyTask(this.creep, { includeMining: true })
@@ -161,6 +183,10 @@ class RoleLogistics {
         }
     }
 
+    /**
+     * Sets the creep to idle state with no task.
+     * @param reason - Debug reason for the state change
+     */
     @profile
     private setToNoTask(reason: string): void {
         if (this.creep.memory.tasks.length > 0) {
@@ -170,6 +196,7 @@ class RoleLogistics {
         this.creep.memory.currentTask = NO_TASK
     }
 
+    /** Updates task state based on energy levels and room conditions */
     @profile
     private updateMemory() {
         const memory = this.creep.memory
@@ -200,6 +227,7 @@ class RoleLogistics {
         }
     }
 
+    /** Assigns the next task based on room priorities for worker-preference creeps */
     @profile
     private assignWorkerPreference() {
         this.creep.memory.currentTarget = undefined
@@ -233,6 +261,7 @@ class RoleLogistics {
         }
     }
 
+    /** Displays emoji indicating current preference and task */
     @profile
     say(): void {
         if (this.idleTime() > SLEEP_SAY_TIME) {
@@ -259,20 +288,24 @@ class RoleLogistics {
         }
     }
 
+    /** Returns ticks the creep has been idle */
     private idleTime(): number {
         return Game.time - (this.creep.memory.idleTimestamp || Game.time)
     }
 
+    /** Marks the creep as idle, recording the timestamp */
     private idle(): void {
         if (this.creep.memory.idleTimestamp === null) {
             this.creep.memory.idleTimestamp = Game.time
         }
     }
 
+    /** Clears the idle timestamp */
     private unidle(): void {
         this.creep.memory.idleTimestamp = null
     }
 
+    /** Builds construction sites (non-wall/rampart) */
     @profile
     private build(): void {
         const targets = this.getNonWallSites(this.creep.room)
@@ -288,6 +321,10 @@ class RoleLogistics {
         }
     }
 
+    /**
+     * Gets construction sites excluding walls and ramparts.
+     * @param room - The room to search
+     */
     @profile
     getNonWallSites(room: Room): ConstructionSite[] {
         return getConstructionSites(room, {
@@ -296,6 +333,7 @@ class RoleLogistics {
         })
     }
 
+    /** Repairs fragile walls and ramparts */
     @profile
     repairWalls(): void {
         const buildManager = getBuildManager(this.creep.room)
@@ -345,6 +383,7 @@ class RoleLogistics {
         }
     }
 
+    /** Repairs damaged non-wall structures */
     @mprofile('logistics:repair')
     repair(): void {
         const repairThreshold = this.creep.memory.noRepairLimit ? 1 : undefined
@@ -366,6 +405,7 @@ class RoleLogistics {
         }
     }
 
+    /** Upgrades the room controller */
     @mprofile('logistics:upgrade')
     upgrade(): void {
         const home = Game.rooms[this.creep.memory.home]
@@ -395,6 +435,7 @@ class RoleLogistics {
         }
     }
 
+    /** Transfers energy to spawns, extensions, and towers */
     @mprofile('logistics:haulEnergy')
     haulEnergy(): void {
         if (
@@ -414,11 +455,13 @@ class RoleLogistics {
         }
     }
 
+    /** Moves randomly when idle */
     @profile
     private wander(): void {
         wander(this.creep)
     }
 
+    /** Travels back to home room */
     @profile
     travel(): void {
         if (
@@ -439,18 +482,29 @@ class RoleLogistics {
         }
     }
 
+    /** Executes the current queued task */
     @profile
     private runTask(): void {
         const task = this.creep.memory.tasks[0]
         TaskRunner.run(task, this.creep)
     }
 
+    /**
+     * Calculates carry capacity for a logistics creep at spawn's energy capacity.
+     * @param spawn - The spawn to calculate for
+     */
     static requestedCarryCapacity(spawn: StructureSpawn): number {
         const parts = calculateParts(spawn.room.energyCapacityAvailable)
         const carrys = filter(parts, (p: BodyPartConstant) => p === CARRY)
         return carrys.length * 50
     }
 
+    /**
+     * Creates a logistics creep with the specified preference.
+     * @param spawn - The spawn to create from
+     * @param preference - The task preference for the creep
+     * @param opts - Creation options
+     */
     @profile
     public static createCreep(
         spawn: StructureSpawn,
@@ -484,11 +538,20 @@ class RoleLogistics {
         )
     }
 
+    /**
+     * Checks if a logistics creep can be created with the given capacity.
+     * @param capacity - Energy capacity available
+     */
     @profile
     public static canCreateCreep(capacity: number): boolean {
         return fromBodyPlanSafe(capacity, BODY_PLAN_UNIT) !== null
     }
 
+    /**
+     * Determines if a new logistics creep should be spawned based on idle times.
+     * @param spawn - The spawn to create from
+     * @param capacity - Optional energy capacity override
+     */
     @profile
     public static shouldCreateCreep(spawn: StructureSpawn, capacity?: number): boolean {
         capacity = capacity ?? spawn.room.energyAvailable

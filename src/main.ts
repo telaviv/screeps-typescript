@@ -50,7 +50,7 @@ if (!Memory.rooms) {
     Memory.rooms = {}
 }
 
-// cpu mins
+/** Minimum CPU bucket level required before rendering room visuals */
 const VISUALS_CPU_MIN = 1000
 
 declare global {
@@ -93,8 +93,13 @@ if (!Memory.creeps) {
     Memory.creeps = {}
 }
 
+/** Number of ticks between creep memory cleanup cycles */
 const CREEP_MEMORY_TIMEOUT = 500
 
+/**
+ * Removes memory entries for dead creeps.
+ * Runs every CREEP_MEMORY_TIMEOUT ticks to prevent memory bloat.
+ */
 const clearCreepMemory = wrap(() => {
     if (Game.time % CREEP_MEMORY_TIMEOUT !== 0) {
         return
@@ -106,6 +111,11 @@ const clearCreepMemory = wrap(() => {
     }
 }, 'main:clearCreepMemory')
 
+/**
+ * Executes per-tick logic for an owned room.
+ * Handles construction, link management, tower/spawn operations, and mine management.
+ * @param room - The owned room to process
+ */
 const runMyRoom = wrap((room: Room) => {
     recordRoomStats(room)
     ensureSlidingWindow(room)
@@ -141,6 +151,11 @@ const runMyRoom = wrap((room: Room) => {
     }
 }, 'main:runMyRoom')
 
+/**
+ * Executes per-tick logic for a remote mining room.
+ * Handles construction site management for mining infrastructure.
+ * @param mineName - The name of the remote mining room
+ */
 const runMine = wrap((mineName: string) => {
     const room = Game.rooms[mineName]
     if (!room) {
@@ -155,6 +170,11 @@ const runMine = wrap((mineName: string) => {
     buildManager.ensureMineConstructionSites()
 }, 'main:runMine')
 
+/**
+ * Activates safe mode if a non-creep structure is destroyed by hostiles.
+ * Monitors room event log for destruction events and triggers safe mode when needed.
+ * @param room - The room to check for safe mode activation
+ */
 const ensureSafeMode = wrap((room: Room) => {
     if (!room.controller || !room.controller.safeModeAvailable) {
         return
@@ -175,6 +195,11 @@ const ensureSafeMode = wrap((room: Room) => {
     }
 }, 'ensureSafeMode')
 
+/**
+ * Dispatches a creep to its role-specific behavior handler.
+ * Routes the creep to the appropriate role module based on memory.role.
+ * @param creepName - The name of the creep to run
+ */
 const runCreep = wrap((creepName: string) => {
     const creep = Game.creeps[creepName]
     if (creep.memory.role === 'harvester') {
@@ -208,6 +233,10 @@ const runCreep = wrap((creepName: string) => {
     }
 }, 'main:runCreep')
 
+/**
+ * Performs per-tick initialization tasks.
+ * Sets up global state, clears stale data, runs scouts, and executes empire-level logic.
+ */
 const initialize = wrap(() => {
     if (!global.USERNAME) {
         global.USERNAME = findUsername()
@@ -223,10 +252,17 @@ const initialize = wrap(() => {
     TaskRunner.cleanup()
 }, 'main:initialize')
 
+/**
+ * Registers event subscriptions for the matrix cache manager.
+ */
 const addSubscriptions = wrap(() => {
     MatrixCacheManager.addSubscriptions()
 }, 'main:addSubscriptions')
 
+/**
+ * Iterates over all visible rooms and executes room-level logic.
+ * Updates strategies, records hostiles, and runs owned room operations.
+ */
 const runAllRooms = wrap(() => {
     Object.values(Game.rooms).forEach((room) => {
         room.memory.updated = Game.time
@@ -239,12 +275,19 @@ const runAllRooms = wrap(() => {
     })
 }, 'main:runAllRooms')
 
+/**
+ * Executes behavior logic for all owned creeps.
+ */
 const runAllCreeps = () => {
     for (const name of Object.keys(Game.creeps)) {
         runCreep(name)
     }
 }
 
+/**
+ * Main game loop executed each tick without error mapping.
+ * Orchestrates initialization, room processing, creep execution, stats recording, and cache clearing.
+ */
 function unwrappedLoop(): void {
     initialize()
     runAllRooms()
@@ -271,6 +314,10 @@ function unwrappedLoop(): void {
 // const pretickProfiled = wrap(preTick, 'main:preTick')
 // const reconcileTrafficProfiled = wrap(reconcileTraffic, 'main:reconcileTraffic')
 
+/**
+ * Primary entry point called by Screeps each game tick.
+ * Wraps the main loop with error mapping for production environments.
+ */
 const loop = wrap(() => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore : global trickery in tests

@@ -7,10 +7,12 @@ import { wrap } from 'utils/profiling'
 
 const ROLE = 'attack'
 
+/** Attacker creep with typed memory */
 export interface Attacker extends Creep {
     memory: AttackerMemory
 }
 
+/** Memory structure for attacker creeps */
 export interface AttackerMemory extends CreepMemory {
     role: 'attack'
     roomName: string
@@ -19,14 +21,26 @@ export interface AttackerMemory extends CreepMemory {
     paired: boolean | undefined
 }
 
+/**
+ * Type guard to check if a target is a creep.
+ * @param target - The target to check
+ */
 function isCreep(target: Creep | Structure): target is Creep {
     return (target as Creep).hits !== undefined
 }
 
+/**
+ * Type guard to check if a structure is owned.
+ * @param obj - The structure to check
+ */
 export function isOwnedStructure(obj: Structure): obj is OwnedStructure {
     return 'owner' in obj
 }
 
+/**
+ * Creates a sort function for hostiles prioritizing nearby targets and attack parts.
+ * @param pos - Position to calculate range from
+ */
 const sortHostiles =
     (pos: RoomPosition) =>
     (hostiles: Creep[]): Creep[] => {
@@ -50,7 +64,12 @@ const sortHostiles =
         return hostiles
     }
 
+/** Role module for attacker combat creeps */
 const roleAttacker = {
+    /**
+     * Runs attacker behavior: attacks hostiles, structures, and clears construction sites.
+     * @param creep - The attacker creep
+     */
     run: wrap((creep: Attacker): void => {
         if (creep.spawning) {
             return
@@ -124,6 +143,10 @@ const roleAttacker = {
         creep.heal(creep)
     }, 'runAttacker'),
 
+    /**
+     * Finds a hostile creep or structure adjacent to the attacker.
+     * @param creep - The attacker creep
+     */
     getHostileNeighbor: (creep: Attacker): Creep | Structure | null => {
         if (!creep.room.controller?.my || creep.room.name !== creep.memory.roomName) {
             return null
@@ -158,6 +181,10 @@ const roleAttacker = {
         return null
     },
 
+    /**
+     * Checks if the creep is inside the target room (not on edge tiles).
+     * @param creep - The attacker creep
+     */
     isInRoom: (creep: Attacker): boolean => {
         return (
             creep.room.name === creep.memory.roomName &&
@@ -168,6 +195,11 @@ const roleAttacker = {
         )
     },
 
+    /**
+     * Attacks a target, following creeps or moving to structures.
+     * @param creep - The attacker creep
+     * @param target - The target to attack
+     */
     attack: (creep: Attacker, target: Creep | Structure): ScreepsReturnCode => {
         if (!creep.getActiveBodyparts(ATTACK)) {
             return ERR_NO_BODYPART
@@ -189,6 +221,10 @@ const roleAttacker = {
         return err
     },
 
+    /**
+     * Cleans up the attacker when no targets remain.
+     * @param creep - The attacker creep
+     */
     cleanup(creep: Creep): void {
         if (creep.room.name === creep.memory.home) {
             recycle(creep)
@@ -198,6 +234,14 @@ const roleAttacker = {
         Logger.info('attacker:no-targets', creep.name)
     },
 
+    /**
+     * Creates an attacker creep.
+     * @param spawn - The spawn to create from
+     * @param roomName - Target room for the attacker
+     * @param capacity - Energy capacity override
+     * @param maxAttackParts - Maximum attack parts limit
+     * @param asPair - Whether to spawn as a paired attacker
+     */
     create(
         spawn: StructureSpawn,
         roomName: string,
@@ -221,6 +265,11 @@ const roleAttacker = {
     },
 }
 
+/**
+ * Calculates body parts for an attacker with optional heal part.
+ * @param capacity - Available energy capacity
+ * @param maxCopies - Maximum number of body part copies
+ */
 export function calculateParts(
     capacity: number,
     maxCopies: number | null = null,

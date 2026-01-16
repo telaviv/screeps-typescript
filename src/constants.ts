@@ -1,3 +1,4 @@
+/** All structure types that can be built via construction sites */
 export const ALL_BUILDABLE_STRUCTURES: BuildableStructureConstant[] = [
     STRUCTURE_EXTENSION,
     STRUCTURE_RAMPART,
@@ -17,12 +18,19 @@ export const ALL_BUILDABLE_STRUCTURES: BuildableStructureConstant[] = [
     STRUCTURE_FACTORY,
 ]
 
+/**
+ * Type guard to check if a string is a valid buildable structure type.
+ * @param structure - The string to check
+ */
 export function isBuildableStructureConstant(
     structure: string,
 ): structure is BuildableStructureConstant {
     return ALL_BUILDABLE_STRUCTURES.includes(structure as BuildableStructureConstant)
 }
 
+/** Maximum room distance for sending savior creeps to rebuild a lost room */
 export const MAX_SAVIOR_DISTANCE = 5
+/** Maximum room distance for claiming a new room */
 export const MAX_CLAIM_DISTANCE = 3
+/** Minimum distance buffer from enemy rooms when selecting claim targets */
 export const ENEMY_DISTANCE_BUFFER = 1

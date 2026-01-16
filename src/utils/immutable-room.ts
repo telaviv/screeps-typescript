@@ -139,6 +139,10 @@ export class ImmutableRoomItem extends ImmutableRoomItemRecord implements IImmut
 
 type RoomGrid = List<List<ImmutableRoomItem>>
 
+/**
+ * Immutable representation of a room for planning base layout.
+ * Uses immutable.js to allow efficient cloning while testing placements.
+ */
 export class ImmutableRoom implements ValueObject {
     private readonly grid: RoomGrid
     public readonly name: string
@@ -294,6 +298,7 @@ export class ImmutableRoom implements ValueObject {
         }
     }
 
+    /** BFS generator starting from a position, yielding walkable tiles */
     public breadthFirst = function* (
         this: ImmutableRoom,
         x: number,
@@ -800,6 +805,10 @@ export class ImmutableRoom implements ValueObject {
         return iroom
     }
 
+    /**
+     * Places a bunker stamp optimally using distance transforms.
+     * Finds position that minimizes total distance to controller and sources.
+     */
     public setBunker(stamp: Stamp): ImmutableRoom | null {
         const controller = this.getObstacles('controller')[0]
         const links = this.getObstacles('link')
@@ -901,6 +910,7 @@ export class ImmutableRoom implements ValueObject {
         return neighbors.reduce((acc, val) => (val.isObstacle() ? acc : acc + 1), 0)
     }
 
+    /** Finds centroid of spawn, source, and controller positions for building placement */
     private findCentroid(): FlatRoomPosition {
         let xAcc = 0
         let yAcc = 0

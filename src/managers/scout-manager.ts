@@ -20,10 +20,14 @@ import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
 
+/** Current version of scout data format */
 const SCOUT_VERSION = '1.1.0'
 
+/** Maximum distance to scout from owned rooms */
 const MAX_SCOUT_DISTANCE = MAX_CLAIM_DISTANCE + ENEMY_DISTANCE_BUFFER
+/** Average seconds per tick on shard 0 */
 const TIME_PER_TICK = 4.7 // seconds on shard 0
+/** Time-to-live for scout data by room distance (in ticks) */
 export const DistanceTTL: Record<number, number> = {
     1: (60 * 60 * 24) / TIME_PER_TICK,
     2: (60 * 60 * 24) / TIME_PER_TICK,
@@ -36,48 +40,72 @@ if (Object.keys(DistanceTTL).length < MAX_SCOUT_DISTANCE) {
     throw new Error('DistanceTTL is not fully defined')
 }
 
+/** Default expiration TTL for scout data (48 hours in ticks) */
 export const EXPIRATION_TTL = !Game.cpu.generatePixel
     ? (60 * 60 * 48) / 0.2
     : (60 * 60 * 48) / TIME_PER_TICK
 
+/** Memory structure for storing scout data about a room */
+/** Memory structure for storing scout data about a room */
 export interface ScoutMemory {
+    /** Scout data format version */
     version: string
+    /** Game tick when data was recorded */
     updatedAt: number
+    /** Username of controller owner, if any */
     controllerOwner?: string
+    /** Controller progress total */
     controllerProgress?: number
+    /** Whether room has an invader core */
     hasInvaderCore?: boolean
+    /** Username of enemy mining in the room */
     enemyThatsMining?: string
+    /** Number of energy sources */
     sourceCount?: number
+    /** Whether controller has no accessible positions */
     controllerBlocked?: boolean
+    /** Count of wall terrain tiles */
     wallTerrain?: number
+    /** Positions of each source */
     sourcePositions?: Record<Id<Source>, Position>
+    /** Position of the controller */
     controllerPosition?: Position
+    /** Position of the mineral */
     mineralPosition?: Position
+    /** Remaining safe mode ticks */
     safeMode?: number
 }
 
 declare global {
     interface RoomMemory {
+        /** Scout data for this room */
         scout?: ScoutMemory
     }
 
     namespace NodeJS {
         interface Global {
+            /** Console utilities for scouting */
             scout: {
+                /** Shows the next room to scout */
                 next: () => void
+                /** Shows current scout creep location */
                 location: () => void
+                /** Immediately scout a room */
                 now: (destination: string, start: string) => void
             }
         }
     }
 }
 
+/** Console utilities for scouting operations */
 global.scout = {
+    /** Shows the next room to scout */
     next: () => {
         const scoutManager = ScoutManager.create()
         const room = scoutManager.findNextRoomToScout()
         console.log(`next room to scout: ${room}`)
     },
+    /** Shows current scout creep location */
     location: () => {
         const creep = Object.values(Game.creeps).find((c) => c.memory.role === 'scout')
         if (creep) {
@@ -86,17 +114,33 @@ global.scout = {
             console.log('no scout currently')
         }
     },
+    /** Immediately adds a scout task for a room */
     now: (destination: string, start: string): void => {
         new RoomManager(Game.rooms[start]).addScoutRoomTask(destination)
     },
 }
 
+/**
+ * Manages scouting operations to gather intel about nearby rooms.
+ * Records room data and coordinates scout creep assignments.
+ */
 class ScoutManager {
+    /** World map utility for room calculations */
     private world: World
+    /** Progress totals for owned rooms */
     private ownedRoomProgress: OwnedRoomProgress
+    /** Construction features data by room name */
     private featureRoomData: Record<string, ConstructionFeaturesV3>
+    /** Current game tick */
     private gameTime: number
 
+    /**
+     * Creates a new ScoutManager.
+     * @param world - World map utility
+     * @param ownedRoomProgress - Map of room names to progress totals
+     * @param featureRoomData - Construction features by room
+     * @param gameTime - Current game tick
+     */
     constructor(
         world: World,
         ownedRoomProgress: Map<string, number>,
@@ -109,6 +153,7 @@ class ScoutManager {
         this.gameTime = gameTime
     }
 
+    /** Factory method to create a ScoutManager with current game state */
     static create(): ScoutManager {
         const world = new World()
         const ownedRoomProgress = new Map<string, number>()
@@ -131,10 +176,12 @@ class ScoutManager {
         return new ScoutManager(world, ownedRoomProgress, featureRoomData)
     }
 
+    /** Gets list of owned room names */
     get ownedRooms(): string[] {
         return Array.from(this.ownedRoomProgress.keys())
     }
 
+    /** Main scout manager loop - records data and dispatches scouts */
     @profile
     run(): void {
         this.clearExpiredScoutData()
@@ -172,6 +219,7 @@ class ScoutManager {
         new RoomManager(Game.rooms[scoutRoom]).addScoutRoomTask(roomToScout)
     }
 
+    /** Finds the next room that needs scouting */
     @profile
     findNextRoomToScout(): string | null {
         const closestRooms = this.world.getClosestRooms(this.ownedRooms, MAX_SCOUT_DISTANCE)
@@ -189,6 +237,10 @@ class ScoutManager {
         return null
     }
 
+    /**
+     * Finds the best owned room to spawn a scout from.
+     * @param roomName - Target room to scout
+     */
     @profile
     findBestRoomToCreateScout(roomName: string): string | null {
         return this.world.findBestOwnedRoom(roomName, MAX_SCOUT_DISTANCE, this.ownedRoomProgress, {
@@ -196,6 +248,10 @@ class ScoutManager {
         })
     }
 
+    /**
+     * Checks if a room has valid, non-expired scout data.
+     * @param roomName - Room to check
+     */
     private hasValidScoutData(roomName: string): boolean {
         const memory = Memory.rooms[roomName]
         return Boolean(
@@ -207,6 +263,7 @@ class ScoutManager {
         )
     }
 
+    /** Clears expired scout data from memory */
     @profile
     clearExpiredScoutData(): void {
         for (const name of Object.keys(Memory.rooms)) {
@@ -216,6 +273,10 @@ class ScoutManager {
         }
     }
 
+    /**
+     * Records scout data for a visible room.
+     * @param room - The room to record data for
+     */
     @mprofile('scout-manager:record-scout-data')
     private recordScoutData(room: Room): void {
         const scoutMemory: ScoutMemory = room.memory.scout ?? ({} as ScoutMemory)
@@ -250,6 +311,10 @@ class ScoutManager {
         room.memory.scout = scoutMemory
     }
 
+    /**
+     * Checks if a room has an invader core.
+     * @param room - The room to check
+     */
     private static hasInvaderCore(room: Room): boolean {
         const invaderCores = room.find(FIND_STRUCTURES, {
             filter: { structureType: STRUCTURE_INVADER_CORE },
@@ -257,6 +322,11 @@ class ScoutManager {
         return invaderCores ? invaderCores.length > 0 : false
     }
 
+    /**
+     * Gets the username of an enemy mining in the room.
+     * @param room - The room to check
+     * @returns Enemy username or undefined
+     */
     private static enemyThatsMining(room: Room): string | undefined {
         const sources = room.find(FIND_SOURCES)
         for (const source of sources) {

@@ -9,6 +9,10 @@ interface AddEnergyTaskOpts {
     includeMining?: boolean
 }
 
+/**
+ * Tries to assign an energy acquisition task (pickup, withdraw, or mine).
+ * Attempts each task type in order until one succeeds.
+ */
 export const addEnergyTask = wrap((creep: ResourceCreep, opts: AddEnergyTaskOpts = {}): boolean => {
     const taskMap = [
         { tasker: PickupTask, name: 'pickup' },

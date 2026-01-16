@@ -1,6 +1,7 @@
 import { getSources, getWallPositions } from 'utils/room'
 import { Position } from '../types'
 
+/** Returns distance from walls for each position - used to find open spaces */
 export function getWallTransform(roomTerrain: RoomTerrain, roomName: string): number[][] {
     const wallPositions = getWallPositions(roomTerrain, roomName)
     return distanceTransform(roomTerrain, wallPositions)
@@ -15,7 +16,10 @@ export function getTransformFromId(room: Room, id: Id<Source | StructureControll
     return distanceTransform(roomTerrain, [obj.pos])
 }
 
-// This function is used to get the sum of the distance transforms of all sources and the controller
+/**
+ * Sums distance transforms from all sources and controller.
+ * Positions with lowest values are closest to all key structures - ideal for bunker placement.
+ */
 export function getSumTransform(room: Room): number[][] {
     const sources = getSources(room)
     const controller = room.controller
@@ -49,6 +53,10 @@ function sumTransforms(transforms: number[][][]): number[][] {
     return sumTransform
 }
 
+/**
+ * BFS-based distance transform: calculates minimum distance from each tile to any seed position.
+ * Walls are set to Infinity. Used for base placement and pathfinding heuristics.
+ */
 export function distanceTransform(roomTerrain: RoomTerrain, positions: Position[]): number[][] {
     const width = 50
     const height = 50

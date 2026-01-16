@@ -175,6 +175,7 @@ function isTemporary(withdrawable: WithdrawObject): boolean {
     return isRuin(object) || isTombstone(object)
 }
 
+/** Checks if a container is at the planned storage position (pre-RCL4 storage substitute) */
 export function isVirtualStorage(structure: Withdrawable): boolean {
     const features = getConstructionFeatures(structure.room as Room)
     if (!features || !features[STRUCTURE_STORAGE] || features[STRUCTURE_STORAGE].length === 0) {
@@ -184,6 +185,7 @@ export function isVirtualStorage(structure: Withdrawable): boolean {
     return pos.x === structure.pos.x && pos.y === structure.pos.y
 }
 
+/** Finds withdrawable targets, prioritizing tombstones/ruins then by capacity */
 const getEligibleTargets = wrap(
     (room: Room, capacity: number, opts?: RequestOpts): Withdrawable[] => {
         const withdrawObjects = WithdrawObject.getTargetsInRoom(room, opts)
@@ -219,6 +221,7 @@ const getEligibleTargets = wrap(
     'withdraw:getEligibleTargets',
 )
 
+/** Returns total unclaimed withdrawable energy in a room */
 export function getTotalWithdrawableResources(room: Room): number {
     const withdrawObjects = WithdrawObject.getTargetsInRoom(room)
     return withdrawObjects.reduce(

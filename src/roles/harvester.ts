@@ -17,10 +17,12 @@ import { moveToStationaryPoint } from 'utils/creep'
 import { profile } from 'utils/profiling'
 import { spawnCreep } from 'utils/spawn'
 
+/** Maximum WORK parts for harvest tick calculation */
 const MAX_WORK_PARTS = 5
 
 const ROLE = 'harvester'
 
+/** Body plans for harvesters, sorted from largest to smallest */
 const BODY_PLANS = [
     { [MOVE]: 11, [WORK]: 11, [CARRY]: 1 },
     { [MOVE]: 10, [WORK]: 10, [CARRY]: 1 },
@@ -36,20 +38,30 @@ const BODY_PLANS = [
     { [MOVE]: 1, [WORK]: 1 },
 ]
 
+/** Harvester creep with typed memory */
 export interface Harvester extends ResourceCreep {
     memory: HarvesterMemory
 }
 
+/** Memory structure for harvester creeps */
 interface HarvesterMemory extends ResourceCreepMemory {
     role: 'harvester'
     pos: FlatRoomPosition
     source: Id<Source>
 }
 
+/**
+ * Type guard to check if a creep is a harvester.
+ * @param creep - The creep to check
+ */
 export function isHarvester(creep: Creep): creep is Harvester {
     return creep.memory.role === ROLE
 }
 
+/**
+ * Manages stationary harvester behavior.
+ * Harvesters sit on designated positions, harvest sources, and transfer to links.
+ */
 export class HarvesterCreep {
     readonly creep: Harvester
 
@@ -57,10 +69,15 @@ export class HarvesterCreep {
         this.creep = creep
     }
 
+    /** Gets the container at the harvest position, if any */
     get container(): StructureContainer | null {
         return getContainerAt(this.harvestPos)
     }
 
+    /**
+     * Main harvester behavior loop.
+     * Moves to position, harvests, repairs container, and transfers to link.
+     */
     @profile
     public run(): void {
         if (this.creep.spawning) {
@@ -102,6 +119,7 @@ export class HarvesterCreep {
         }
     }
 
+    /** Gets the designated harvest position as a RoomPosition */
     get harvestPos(): RoomPosition {
         return new RoomPosition(
             this.creep.memory.pos.x,
@@ -118,6 +136,7 @@ export class HarvesterCreep {
         return Game.getObjectById(this.creep.memory.source) as Source
     }
 
+    /** Determines if this tick should harvest based on work parts and source energy */
     private isHarvestTick(): boolean {
         const workParts = this.creep.getActiveBodyparts(WORK)
         const harvestPower = workParts * HARVEST_POWER
@@ -131,6 +150,7 @@ export class HarvesterCreep {
         return Game.time % tickMod === 0
     }
 
+    /** Checks if the creep is at its designated harvest position */
     private isAtHarvestPos(): boolean {
         return (
             this.creep.pos.x === this.harvestPos.x &&
@@ -139,6 +159,7 @@ export class HarvesterCreep {
         )
     }
 
+    /** Moves the creep to its designated harvest position */
     private moveToHarvestPos(): void {
         let err
         if (this.creep.room.name !== this.harvestPos.roomName) {
@@ -156,6 +177,7 @@ export class HarvesterCreep {
         }
     }
 
+    /** Harvests energy from the assigned source */
     private harvestSource(): void {
         if (this.creep.getActiveBodyparts(WORK) === 0) {
             Logger.info('harvester:harvest:no-work', this.creep.name)
@@ -169,6 +191,7 @@ export class HarvesterCreep {
         }
     }
 
+    /** Checks if the harvester can transfer energy to a nearby link */
     @profile
     private canTransferEnergy(): boolean {
         if (
@@ -186,6 +209,7 @@ export class HarvesterCreep {
         return link.store.getFreeCapacity(RESOURCE_ENERGY) > 0
     }
 
+    /** Transfers carried energy to the adjacent link */
     @profile
     private transferEnergyToLink(): void {
         const link = this.getLink()
@@ -204,6 +228,7 @@ export class HarvesterCreep {
         }
     }
 
+    /** Checks if the container needs repair and creep can repair it */
     @profile
     private canRepairContainer(): boolean {
         if (this.creep.getActiveBodyparts(CARRY) === 0 || !this.hasEnergy()) {
@@ -218,6 +243,7 @@ export class HarvesterCreep {
         )
     }
 
+    /** Collects dropped energy and withdraws from container at harvest position */
     @profile
     private collectNonSourceEnergy(): void {
         if (this.creep.memory.tasks.length === 1) {
@@ -239,6 +265,7 @@ export class HarvesterCreep {
         addWithdrawTask(this.creep, container)
     }
 
+    /** Repairs the container at the harvest position */
     private repairContainer(): void {
         const container = this.container
         if (!container) {
@@ -256,6 +283,7 @@ export class HarvesterCreep {
         return !hasNoEnergy(this.creep)
     }
 
+    /** Finds the link adjacent to the harvest position */
     @profile
     private getLink(): StructureLink | null {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
@@ -271,17 +299,31 @@ export class HarvesterCreep {
         return null
     }
 }
+/** Options for creating a harvester creep */
 interface CreateOpts {
     rescue?: boolean
     capacity?: number
     roadsBuilt?: boolean
 }
+
+/** Role module for harvester creeps */
 const roleHarvester = {
+    /**
+     * Runs the harvester behavior for a creep.
+     * @param creep - The harvester creep to run
+     */
     run(creep: Harvester): void {
         const harvester = new HarvesterCreep(creep)
         harvester.run()
     },
 
+    /**
+     * Creates a harvester creep for a specific source.
+     * @param spawn - The spawn to create from
+     * @param sourceId - ID of the source to harvest
+     * @param pos - Optional override position
+     * @param opts - Creation options
+     */
     create(
         spawn: StructureSpawn,
         sourceId: Id<Source>,
@@ -325,6 +367,11 @@ const roleHarvester = {
     },
 }
 
+/**
+ * Calculates body parts for a harvester based on energy capacity.
+ * @param capacity - Available energy capacity
+ * @param roadsBuilt - If true, reduces MOVE parts for road travel
+ */
 export function calculateParts(capacity: number, roadsBuilt: boolean): BodyPartConstant[] {
     for (let plan of BODY_PLANS) {
         if (roadsBuilt) {

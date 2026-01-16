@@ -10,6 +10,11 @@ import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { profile } from 'utils/profiling'
 
+/**
+ * Type guard to check if war memory indicates spawn phase.
+ * @param mem - The war memory to check
+ * @returns True if the war status is SPAWN
+ */
 const isSpawnWarMemory = (mem: WarMemory): mem is SpawnWarMemory => mem.status === WarStatus.SPAWN
 
 declare global {
@@ -28,6 +33,10 @@ declare global {
 
 if (Memory.autoclaim === undefined) Memory.autoclaim = false
 
+/**
+ * Console command to find and display the best room claim candidate.
+ * Searches for claimable rooms and outputs the best match with distance info.
+ */
 function findClaimCandidates(): void {
     const empire = new Empire()
     const candidates = empire.findClaimCandidates()
@@ -40,6 +49,9 @@ function findClaimCandidates(): void {
     console.log(`candidate: ${candidate} claimer: ${claimer} distance: ${distance}`)
 }
 
+/**
+ * Console command to display the next room to scout.
+ */
 function nextScoutRoom(): void {
     const scout = ScoutManager.create().findNextRoomToScout()
     if (scout) {
@@ -49,10 +61,16 @@ function nextScoutRoom(): void {
     }
 }
 
+/**
+ * Console command to enable automatic room claiming.
+ */
 function enableAutoClaim(): void {
     Memory.autoclaim = true
 }
 
+/**
+ * Console command to disable automatic room claiming.
+ */
 function disableAutoClaim(): void {
     Memory.autoclaim = false
 }
@@ -62,6 +80,14 @@ global.nextScoutRoom = nextScoutRoom
 global.enableAutoClaim = enableAutoClaim
 global.disableAutoClaim = disableAutoClaim
 
+/**
+ * Finds the best nearby owned room that can assist with operations.
+ * Prioritizes by distance, then by controller progress.
+ * @param roomName - The target room to find assistance for
+ * @param distance - Maximum search distance
+ * @param opts - Optional filter function for candidate rooms
+ * @returns The best candidate room or null if none found
+ */
 function getBestNearbyRoom(
     roomName: string,
     distance: number,
@@ -92,12 +118,22 @@ function getBestNearbyRoom(
     return Game.rooms[candidates[0].roomName]
 }
 
+/**
+ * Manages empire-wide operations across all owned rooms.
+ * Handles auto-claiming, savior assignments, and war coordination.
+ */
 export default class Empire {
+    /** All rooms owned by the player */
     private rooms: Room[]
+
     constructor() {
         this.rooms = findMyRooms()
     }
 
+    /**
+     * Executes per-tick empire management.
+     * Manages savior assignments, auto-claiming, and war department updates.
+     */
     @profile
     public run(): void {
         this.clearSaviors()
@@ -113,6 +149,10 @@ export default class Empire {
         }
     }
 
+    /**
+     * Automatically claims new rooms when GCL allows.
+     * Waits for scouting to complete before selecting candidates.
+     */
     @profile
     autoClaim(): void {
         if (Game.gcl.level <= findMyRooms().length) return
@@ -145,12 +185,21 @@ export default class Empire {
         new RoomManager(claimer).addClaimRoomTask(candidate)
     }
 
+    /**
+     * Gets the list of rooms currently being claimed.
+     * @returns Array of room names that are active claim targets
+     */
     getRoomsBeingClaimed(): string[] {
         return this.rooms
             .map((room) => room.memory.war?.target)
             .filter((roomName) => roomName !== undefined)
     }
 
+    /**
+     * Finds rooms that are valid candidates for claiming.
+     * Filters by distance, construction features, and enemy proximity.
+     * @returns Array of room names sorted by distance
+     */
     @profile
     findClaimCandidates(): string[] {
         const world = new World()
@@ -176,6 +225,12 @@ export default class Empire {
         return candidates.map(({ roomName }) => roomName)
     }
 
+    /**
+     * Finds the optimal pairing of a claim candidate with a claimer room.
+     * Sorts by danger level, then distance, then claimer energy capacity.
+     * @param candidates - Array of potential rooms to claim
+     * @returns The best candidate-claimer pair or null if none found
+     */
     findBestClaimPair(
         candidates: string[],
     ): { candidate: string; claimer: string; distance: number } | null {
@@ -203,6 +258,10 @@ export default class Empire {
         return pairs[0]
     }
 
+    /**
+     * Assigns savior rooms to owned rooms that have lost their spawns.
+     * Finds nearby rooms to send assistance for reconstruction.
+     */
     private findSaviors(): void {
         for (const room of this.rooms) {
             const spawns = room.find(FIND_MY_SPAWNS)
@@ -222,6 +281,9 @@ export default class Empire {
         }
     }
 
+    /**
+     * Cancels savior operations for rooms that are no longer owned or have hostiles.
+     */
     private clearSaviors(): void {
         for (const room of this.rooms) {
             const warDepartment = new WarDepartment(room)
@@ -238,6 +300,10 @@ export default class Empire {
         }
     }
 
+    /**
+     * Collects all room tasks from the empire.
+     * @returns Array of all tasks across all owned rooms
+     */
     public getRoomTasks(): RoomTask[] {
         const tasks: RoomTask[] = []
         for (const room of this.rooms) {

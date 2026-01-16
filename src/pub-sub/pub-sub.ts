@@ -1,3 +1,7 @@
+/**
+ * Simple pub-sub system using global memory.
+ * Allows components to communicate without direct dependencies.
+ */
 import * as Logger from '../utils/logger'
 type SubscriptionCallback = (data: unknown) => void
 
@@ -9,6 +13,12 @@ declare global {
     }
 }
 
+/**
+ * Registers a callback for a specific event type and key.
+ * @param type - Event category (e.g., SubscriptionEvent.CONSTRUCTION_FEATURES_UPDATES)
+ * @param key - Specific identifier (e.g., room name)
+ * @param id - Unique subscriber ID to prevent duplicate subscriptions
+ */
 export function subscribe(
     type: string,
     key: string,
