@@ -347,7 +347,7 @@ const roleRemoteHauler = {
         for (const id of sourceIds) {
             pickupTracker[id as Id<Source>] = false
         }
-        const blueprint = opts.roadsBuilt ? [CARRY, MOVE] : [CARRY, CARRY, MOVE]
+        const blueprint = opts.roadsBuilt ? [CARRY, CARRY, MOVE] : [CARRY, MOVE]
         const err = spawn.spawnCreep(fromBodyPlan(opts.capacity, blueprint), name, {
             memory: {
                 role: ROLE,
