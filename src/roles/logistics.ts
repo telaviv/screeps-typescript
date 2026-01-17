@@ -349,19 +349,22 @@ class RoleLogistics {
         let structure = null
         if (this.creep.memory.currentTarget) {
             structure = Game.getObjectById<Structure>(this.creep.memory.currentTarget)
-            if (structure === null || !isFragileWall(structure, 0.05)) {
+            // Only clear target if structure doesn't exist or is fully repaired
+            // Continue repairing even if it's no longer "fragile" until we run out of energy
+            if (structure === null || structure.hits === structure.hitsMax) {
                 Logger.warning(
-                    'repair:target:failure',
+                    'repair:target:complete',
                     this.creep.name,
                     this.creep.memory.currentTarget,
                 )
                 this.creep.memory.currentTarget = undefined
+                structure = null
             }
         }
 
         if (structure === null) {
             structure = this.creep.pos.findClosestByRange(
-                this.creep.room.find(FIND_STRUCTURES, { filter: (s) => isFragileWall(s, 0.05) }),
+                this.creep.room.find(FIND_STRUCTURES, { filter: (s) => isFragileWall(s) }),
             )
             if (structure === null) {
                 // No fragile walls exist, reassign worker
