@@ -12,6 +12,10 @@ export default {
         format: 'esm',
         sourcemap: true,
     },
+    external: (id) => {
+        // Treat all game/* imports as external (provided by Screeps Arena runtime)
+        return id.startsWith('game/')
+    },
 
     plugins: [
         clear({ targets: ['arena-dist'] }),
