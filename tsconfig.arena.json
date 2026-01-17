@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "lib": ["es2020"],
+        "target": "es2020",
+        "moduleResolution": "Node",
+        "outDir": "arena-dist",
+        "baseUrl": "src/",
+        "sourceMap": true,
+        "strict": true,
+        "experimentalDecorators": true,
+        "noImplicitReturns": true,
+        "allowSyntheticDefaultImports": true,
+        "allowUnreachableCode": false,
+        "paths": {
+            "game/*": ["arena/types/game/*"]
+        }
+    },
+    "include": ["src/arena/**/*"],
+    "exclude": ["node_modules"]
+}

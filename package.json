@@ -7,6 +7,7 @@
     "scripts": {
         "lint:fix": "eslint --fix \"src/**/*.ts\" && prettier --write \"src/**/*.ts\"",
         "build": "rollup -c",
+        "build-arena": "rollup -c rollup.arena.config.js",
         "push-main": "rollup -c --environment DEST:main",
         "push-pserver": "rollup -c --environment DEST:pserver",
         "push-season": "rollup -c --environment DEST:season",
