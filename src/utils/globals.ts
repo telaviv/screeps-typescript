@@ -1,15 +1,16 @@
 import * as Logger from 'utils/logger'
-import { canMine } from 'managers/mine-manager'
-import { getConstructionFeaturesV3 } from 'construction-features'
 import { resetSnapshot, saveSnapshot } from 'snapshot'
-import Empire from 'empire'
-import ErrorMapper from './ErrorMapper'
 import { RoomManager } from 'managers/room-manager'
 import { Task } from 'tasks/types'
-import WarDepartment from 'war-department'
+import { canMine } from 'managers/mine-manager'
 import { findMyRooms } from './room'
 import { getAllTasks } from 'tasks/utils'
+import { getConstructionFeaturesV3 } from 'construction-features'
+
+import ErrorMapper from './ErrorMapper'
+import Empire from 'empire'
 import roleWrecker from 'roles/wrecker'
+import WarDepartment from 'war-department'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach((creep) => {
@@ -100,6 +101,18 @@ function debugRoom(roomName: string) {
     console.log(`Assigned as mine to: ${mines.length > 0 ? mines.join(', ') : 'none'}`)
 }
 
+function showClaimTasks() {
+    const claimTasks = RoomManager.getAllClaimTasks()
+    if (claimTasks.length === 0) {
+        console.log('No claim tasks found.')
+        return
+    }
+    console.log(`=== Claim Tasks (${claimTasks.length}) ===`)
+    claimTasks.forEach((task) => {
+        console.log(JSON.stringify(task))
+    })
+}
+
 export function isOwnedStructure(obj: Structure): obj is OwnedStructure {
     return 'owner' in obj
 }
@@ -132,6 +145,7 @@ export default function assignGlobals(): void {
     global.printTasks = printTasks
     global.findUsername = findUsername
     global.debugRoom = debugRoom
+    global.showClaimTasks = showClaimTasks
 }
 
 declare global {
@@ -151,6 +165,7 @@ declare global {
             printTasks: (type?: Task<any>) => void
             findUsername: () => string
             debugRoom: (roomName: string) => void
+            showClaimTasks: () => void
         }
     }
 }

@@ -418,7 +418,7 @@ const assignRoomFeatures = Profiling.wrap(() => {
 function hasSufficientWorkersForSpawnRelocation(room: Room): boolean {
     const workers = getLogisticsCreeps({ room, preference: PREFERENCE_WORKER })
     const healthyWorkers = workers.filter((worker) => (worker.ticksToLive ?? 0) > 1000)
-    return healthyWorkers.length >= 3
+    return healthyWorkers.length >= 2
 }
 
 /**

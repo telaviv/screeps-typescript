@@ -90,7 +90,7 @@ module.exports = {
         'one-var': ['error', 'never'],
         'quote-props': 'off',
         radix: 'error',
-        'sort-imports': ['warn', { allowSeparatedGroups: true, ignoreMemberSort: true }],
+        'sort-imports': 'off',
         'spaced-comment': 'error',
     },
 }
