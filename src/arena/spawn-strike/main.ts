@@ -4,19 +4,22 @@ import { getObjectsByPrototype } from 'game/utils'
 
 const mySpawn = getObjectsByPrototype(StructureSpawn).find((spawn) => spawn.my)
 const enemySpawn = getObjectsByPrototype(StructureSpawn).find((spawn) => !spawn.my)
-let creep: Creep | undefined
 
+const creeps: Creep[] = []
+let time = 0
 export function loop(): void {
+    time++
     if (!mySpawn || !enemySpawn) {
         return
     }
 
-    if (!creep) {
-        creep = mySpawn.spawnCreep([ATTACK, ATTACK, MOVE, MOVE]).object
+    const ncreep = mySpawn.spawnCreep([ATTACK, ATTACK, MOVE, MOVE]).object
+    if (ncreep) {
+        creeps.push(ncreep)
     }
-    console.log(creep)
-
-    if (creep && creep.attack(enemySpawn) === ERR_NOT_IN_RANGE) {
-        creep.moveTo(enemySpawn)
+    for (const creep of creeps) {
+        if (creep && creep.attack(enemySpawn) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(enemySpawn)
+        }
     }
 }

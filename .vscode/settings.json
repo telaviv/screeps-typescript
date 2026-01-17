@@ -1,23 +1,11 @@
 {
-  "editor.renderWhitespace": "boundary",
-  "files.encoding": "utf8",
-  "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true,
-  "search.exclude": {
-    "_book/**": true,
-    ".rpt2_cache/**": true,
-    "dist/**": true,
-    "node_modules/**": true,
-    "typings/**": true
+  "files.watcherExclude": {
+    "**/arena-dist/**": true
   },
-  "typescript.tsdk": "./node_modules/typescript/lib",
-  "[json]": {
-    "editor.formatOnSave": true
+  "triggerTaskOnSave.tasks": {
+    "Build Arena": ["src/arena/**/*.ts"]
   },
-  "[javascript]": {
-    "editor.formatOnSave": true
-  },
-  "[typescript]": {
-    "editor.formatOnSave": true
-  }
+  "triggerTaskOnSave.on": true,
+  "triggerTaskOnSave.restart": true,
+  "triggerTaskOnSave.showNotifications": false
 }
