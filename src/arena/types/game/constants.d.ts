@@ -41,3 +41,13 @@ export type BodyPartConstant =
     | typeof TOUGH
     | typeof HEAL
     | typeof CLAIM
+
+// Direction constants
+export declare const TOP: 1
+export declare const TOP_RIGHT: 2
+export declare const RIGHT: 3
+export declare const BOTTOM_RIGHT: 4
+export declare const BOTTOM: 5
+export declare const BOTTOM_LEFT: 6
+export declare const LEFT: 7
+export declare const TOP_LEFT: 8

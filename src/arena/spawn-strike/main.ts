@@ -1,4 +1,18 @@
-import { BodyPartConstant, HEAL, MOVE, RANGED_ATTACK, TERRAIN_WALL } from 'game/constants'
+import {
+    BodyPartConstant,
+    BOTTOM,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+    HEAL,
+    LEFT,
+    MOVE,
+    RANGED_ATTACK,
+    RIGHT,
+    TERRAIN_WALL,
+    TOP,
+    TOP_LEFT,
+    TOP_RIGHT,
+} from 'game/constants'
 import { Creep, Flag, Structure, StructureSpawn } from 'game/prototypes'
 import { CostMatrix, searchPath } from 'game/path-finder'
 import { getObjectsByPrototype, getTerrainAt } from 'game/utils'
@@ -109,11 +123,34 @@ export function loop(): void {
             continue
         }
 
-        // Check if packed
-        quad.isPacked = isQuadPacked(quad.creeps)
-        if (quad.isPacked) {
+        // Check if packed (only update if currently unpacked or if we've really broken formation)
+        const currentlyPacked = isQuadPacked(quad.creeps)
+
+        if (!quad.isPacked && currentlyPacked) {
+            // Just became packed
+            quad.isPacked = true
             assignQuadPositions(quad)
             console.log('Quad is packed and ready!')
+        } else if (quad.isPacked) {
+            // Already packed - update positions but stay in packed mode
+            // unless we've REALLY broken apart (distance > 2)
+            const maxDistance = Math.max(
+                ...quad.creeps.flatMap((c1, i) =>
+                    quad.creeps
+                        .slice(i + 1)
+                        .map((c2) => Math.max(Math.abs(c1.x - c2.x), Math.abs(c1.y - c2.y))),
+                ),
+            )
+
+            if (maxDistance > 2) {
+                // Actually broken apart - need to repack
+                console.log('Quad broke formation, repacking...')
+                quad.isPacked = false
+                quad.packingArea = null // Find new packing area
+            } else {
+                // Still together enough - update positions
+                assignQuadPositions(quad)
+            }
         }
 
         // Combat actions
@@ -210,7 +247,8 @@ function moveQuad(quad: Quad, target: { x: number; y: number }): void {
         const packArea = quad.packingArea
         if (!packArea) return
 
-        // Move all creeps toward their assigned positions
+        // When not packed, just use moveTo() to get to positions
+        // Formation doesn't matter until they're packed
         const positions = [
             { x: packArea.x, y: packArea.y }, // top-left
             { x: packArea.x + 1, y: packArea.y }, // top-right
@@ -248,13 +286,28 @@ function moveQuad(quad: Quad, target: { x: number; y: number }): void {
         const dx = nextPos.x - quad.topLeft.x
         const dy = nextPos.y - quad.topLeft.y
 
-        // Move all 4 creeps in the same direction
+        // Convert dx/dy to direction constant
+        const direction = getDirection(dx, dy)
+        if (direction === null) return
+
+        // Move all 4 creeps in the same direction using move() to maintain formation
         quad.creeps.forEach((creep) => {
-            const targetX = creep.x + dx
-            const targetY = creep.y + dy
-            creep.moveTo({ x: targetX, y: targetY })
+            creep.move(direction)
         })
     }
+}
+
+// Helper function to convert dx/dy offsets to direction constants
+function getDirection(dx: number, dy: number): number | null {
+    if (dx === 0 && dy === -1) return TOP
+    if (dx === 1 && dy === -1) return TOP_RIGHT
+    if (dx === 1 && dy === 0) return RIGHT
+    if (dx === 1 && dy === 1) return BOTTOM_RIGHT
+    if (dx === 0 && dy === 1) return BOTTOM
+    if (dx === -1 && dy === 1) return BOTTOM_LEFT
+    if (dx === -1 && dy === 0) return LEFT
+    if (dx === -1 && dy === -1) return TOP_LEFT
+    return null // No movement
 }
 
 // ============================================================================
