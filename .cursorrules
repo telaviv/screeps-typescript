@@ -7,6 +7,17 @@
 - Node.js is installed via nvm, not system package managers
 - If you need to run Node/npm/yarn commands, ensure nvm is properly configured
 
+**If yarn/npm commands fail with "command not found":**
+Use this command pattern to properly load nvm and activate the project's Node version:
+```bash
+bash -c "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && \. \"$NVM_DIR/nvm.sh\" && nvm use && <your-command-here>"
+```
+
+Example:
+```bash
+bash -c "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && \. \"$NVM_DIR/nvm.sh\" && nvm use && yarn precommit"
+```
+
 ## Code Quality Standards
 
 ### Pre-commit Checks
