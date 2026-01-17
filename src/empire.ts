@@ -6,6 +6,7 @@ import WarDepartment, { SpawnWarMemory, WarMemory, WarStatus } from 'war-departm
 import { findClaimCapableRooms, findMyRooms, findSpawnRooms, hasNoSpawns } from 'utils/room'
 import { HostileRecorder } from 'hostiles'
 import { ScoutManager } from 'managers/scout-manager'
+import { assignMines } from 'managers/mine-manager'
 import { canBeClaimCandidate } from 'claim'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { profile } from 'utils/profiling'
@@ -143,9 +144,33 @@ export default class Empire {
             this.autoClaim()
         }
 
+        // Track war statuses before update to detect claim completion
+        const previousWarStatuses = new Map<string, WarStatus>()
+        for (const room of this.rooms) {
+            const warDepartment = new WarDepartment(room)
+            previousWarStatuses.set(room.name, warDepartment.status)
+        }
+
+        // Update war departments
         for (const room of this.rooms) {
             const warDepartment = new WarDepartment(room)
             warDepartment.update()
+        }
+
+        // Check if any room transitioned from CLAIM to SPAWN (successful claim)
+        for (const room of this.rooms) {
+            const previousStatus = previousWarStatuses.get(room.name)
+            const warDepartment = new WarDepartment(room)
+            const currentStatus = warDepartment.status
+
+            if (previousStatus === WarStatus.CLAIM && currentStatus === WarStatus.SPAWN) {
+                Logger.warning(
+                    'empire:run: Room claimed successfully, auto-assigning mines',
+                    warDepartment.target,
+                )
+                assignMines()
+                break // Only need to assign once
+            }
         }
     }
 

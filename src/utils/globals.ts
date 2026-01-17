@@ -113,6 +113,42 @@ function showClaimTasks() {
     })
 }
 
+/**
+ * Initializes state for starting from scratch.
+ * Resets firstScoutingComplete flags, enables mining and autoclaim.
+ */
+function initialize() {
+    console.log('=== Initializing State ===')
+
+    // Reset firstScoutingComplete for all rooms
+    let resetCount = 0
+    for (const roomName in Memory.rooms) {
+        if (Memory.rooms[roomName].firstScoutingComplete) {
+            Memory.rooms[roomName].firstScoutingComplete = false
+            resetCount++
+        }
+    }
+    console.log(`Reset firstScoutingComplete flag for ${resetCount} room(s)`)
+
+    // Enable mining
+    if (!Memory.miningEnabled) {
+        Memory.miningEnabled = true
+        console.log('Mining enabled')
+    } else {
+        console.log('Mining already enabled')
+    }
+
+    // Enable autoclaim
+    if (!Memory.autoclaim) {
+        Memory.autoclaim = true
+        console.log('Autoclaim enabled')
+    } else {
+        console.log('Autoclaim already enabled')
+    }
+
+    console.log('=== Initialization Complete ===')
+}
+
 export function isOwnedStructure(obj: Structure): obj is OwnedStructure {
     return 'owner' in obj
 }
@@ -146,6 +182,7 @@ export default function assignGlobals(): void {
     global.findUsername = findUsername
     global.debugRoom = debugRoom
     global.showClaimTasks = showClaimTasks
+    global.initialize = initialize
 }
 
 declare global {
@@ -166,6 +203,7 @@ declare global {
             findUsername: () => string
             debugRoom: (roomName: string) => void
             showClaimTasks: () => void
+            initialize: () => void
         }
     }
 }

@@ -1,6 +1,4 @@
-/* eslint-disable sort-imports -- Empire import from parent causes linter conflicts with alphabetical sort */
 import * as Logger from 'utils/logger'
-import Empire from '../empire'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { HostileRecorder } from 'hostiles'
 import SourcesManager from './sources-manager'
@@ -11,7 +9,6 @@ import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import { getNeighbors, getNonObstacleNeighbors } from 'utils/room-position'
 import { findMyRooms, getHostileCreeps, getInjuredCreeps, getMyConstructionSites } from 'utils/room'
 import { World } from 'utils/world'
-/* eslint-enable sort-imports */
 
 /** Minimum reservation ticks before spawning more reservers */
 const MIN_RESERVATION_TICKS = 3500
@@ -56,9 +53,10 @@ declare global {
 /**
  * Checks if a room can be mined.
  * @param roomName - The room to check
+ * @param claimCandidates - Optional list of claim candidate rooms (to avoid mining them)
  * @returns True if the room can be used as a mine
  */
-export function canMine(roomName: string): boolean {
+export function canMine(roomName: string, claimCandidates?: string[]): boolean {
     const features = getConstructionFeaturesV3(roomName)
 
     // Must have construction features calculated as 'mine' or 'base' type
@@ -92,12 +90,9 @@ export function canMine(roomName: string): boolean {
             return true
         }
 
-        // Check if this room is a claim candidate
-        const empire = new Empire()
-        const candidates = empire.findClaimCandidates()
-
+        // If claim candidates list provided, check if this room is in it
         // If it's a claim candidate, don't mine it (save it for claiming)
-        if (candidates.includes(roomName)) {
+        if (claimCandidates && claimCandidates.includes(roomName)) {
             return false
         }
     }
@@ -106,9 +101,9 @@ export function canMine(roomName: string): boolean {
 }
 
 /** Recalculates and assigns remote mines to their nearest owned room */
-export function assignMines(): void {
+export function assignMines(claimCandidates?: string[]): void {
     clearMines()
-    const mineDecider = new MineDecider(findMyRooms())
+    const mineDecider = new MineDecider(findMyRooms(), claimCandidates)
     mineDecider.assignMines()
 }
 
@@ -246,7 +241,7 @@ export class MineManager {
         const unitCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]
         const mostClaims = Math.floor(this.minee.energyCapacityAvailable / unitCost)
         if (mostClaims === 0) {
-            Logger.error(
+            Logger.info(
                 'mine-manager:hasCapacityToReserve:no-claims',
                 this.minee.name,
                 this.minee.energyCapacityAvailable,
@@ -492,8 +487,11 @@ export class MineManager {
  */
 export class MineDecider {
     private myRooms: Room[]
-    constructor(myRooms: Room[]) {
+    private claimCandidates?: string[]
+
+    constructor(myRooms: Room[], claimCandidates?: string[]) {
         this.myRooms = myRooms
+        this.claimCandidates = claimCandidates
     }
 
     static create(): MineDecider {
@@ -528,7 +526,7 @@ export class MineDecider {
                 1,
             )
             .map((r) => r.roomName)
-        return closest.filter((name) => canMine(name))
+        return closest.filter((name) => canMine(name, this.claimCandidates))
     }
 
     private addMineToMiner(mine: string): void {

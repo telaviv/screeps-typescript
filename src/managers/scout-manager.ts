@@ -5,6 +5,7 @@ import { ConstructionFeaturesV3, getConstructionFeaturesV3 } from 'construction-
 import { ENEMY_DISTANCE_BUFFER, MAX_CLAIM_DISTANCE } from '../constants'
 import { OwnedRoomProgress, World } from 'utils/world'
 import {
+    findMyRooms,
     findSpawnRooms,
     getRoomType,
     getSources,
@@ -15,6 +16,7 @@ import {
 import { mprofile, profile } from 'utils/profiling'
 import { Position } from 'types'
 import { RoomManager } from './room-manager'
+import { assignMines } from './mine-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getNonObstacleNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
@@ -80,6 +82,8 @@ declare global {
     interface RoomMemory {
         /** Scout data for this room */
         scout?: ScoutMemory
+        /** Flag to track if first base scouting is complete */
+        firstScoutingComplete?: boolean
     }
 
     namespace NodeJS {
@@ -212,6 +216,10 @@ class ScoutManager {
         for (const room of Object.values(Game.rooms)) {
             this.recordScoutData(room)
         }
+
+        // Auto-assign mines when first base has all distance-1 rooms scouted
+        this.checkFirstBaseScoutingComplete()
+
         const roomToScout = this.findNextRoomToScout()
         if (!roomToScout) {
             return
@@ -241,6 +249,48 @@ class ScoutManager {
         }
         Logger.warning('scout-manager:run:scout-room:', scoutRoom, roomToScout)
         new RoomManager(Game.rooms[scoutRoom]).addScoutRoomTask(roomToScout)
+    }
+
+    /**
+     * Checks if we have exactly 1 base and all distance-1 rooms are scouted.
+     * If so, auto-assigns mines for the first time.
+     */
+    @profile
+    private checkFirstBaseScoutingComplete(): void {
+        const myRooms = findMyRooms()
+
+        // Only trigger when we have exactly 1 owned room
+        if (myRooms.length !== 1) {
+            return
+        }
+
+        // Check if we've already auto-assigned (using a memory flag)
+        const baseRoom = myRooms[0]
+        if (baseRoom.memory.firstScoutingComplete) {
+            return
+        }
+
+        // Get all distance-1 rooms
+        const distance1Rooms = this.world.getClosestRooms([baseRoom.name], 1)
+
+        // Check if all distance-1 rooms are scouted
+        const allScouted = distance1Rooms.every(({ roomName }) => {
+            const roomType = getRoomType(roomName)
+            if (roomType !== RoomType.ROOM) {
+                // Non-room types don't need scouting
+                return true
+            }
+            return this.hasValidScoutData(roomName)
+        })
+
+        if (allScouted) {
+            Logger.warning(
+                'scout-manager:checkFirstBaseScoutingComplete: All distance-1 rooms scouted, auto-assigning mines',
+                baseRoom.name,
+            )
+            assignMines()
+            baseRoom.memory.firstScoutingComplete = true
+        }
     }
 
     /** Finds the next room that needs scouting */
