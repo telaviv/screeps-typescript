@@ -16,6 +16,22 @@ export const LINK_COUNTS = [0, 0, 0, 0, 0, 2, 3, 4, 6]
 export const MIN_STORAGE_LEVEL = 4
 export const MIN_RAMPART_LEVEL = 2
 
+/**
+ * Calculates the total energy capacity available for spawning at a given RCL.
+ * Uses Screeps constants for precise calculation: spawns + extensions.
+ * @param rcl - Room Controller Level (1-8)
+ * @returns Total energy capacity in the room at that RCL
+ */
+export function getEnergyCapacityForRCL(rcl: number): number {
+    const clampedRcl = Math.max(0, Math.min(8, rcl))
+    const extensionCount = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][clampedRcl] || 0
+    const spawnCount = CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][clampedRcl] || 0
+
+    return (
+        extensionCount * EXTENSION_ENERGY_CAPACITY[clampedRcl] + spawnCount * SPAWN_ENERGY_CAPACITY
+    )
+}
+
 const STRONG_WALL_HITS = 100000000
 const FRAGILE_WALL_HITS = [1, 1, 1000, 10000, 15000, 20000, 100000, 100000, 1000000]
 

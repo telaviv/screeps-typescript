@@ -202,6 +202,7 @@ class RoleLogistics {
         const memory = this.creep.memory
         const currentTask = memory.currentTask
         const rq = new RoomQuery(this.creep.room)
+        const homeRoom = Game.rooms[memory.home]
 
         if (
             currentTask === TASK_COLLECTING &&
@@ -213,8 +214,8 @@ class RoleLogistics {
             ) {
                 memory.currentTask = TASK_HAULING
             } else if (
-                this.creep.room.controller &&
-                this.creep.room.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
+                homeRoom?.controller?.my &&
+                homeRoom.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
             ) {
                 memory.currentTask = TASK_UPGRADING
             } else if (memory.preference === PREFERENCE_WORKER) {
@@ -235,29 +236,45 @@ class RoleLogistics {
         const buildManager = getBuildManager(this.creep.room)
         const rq = new RoomQuery(this.creep.room)
         const hasSafeMode = this.creep.room.controller?.safeMode
+        const homeRoom = Game.rooms[memory.home]
+        const homeController = homeRoom?.controller
 
         if (this.creep.room.name !== memory.home) {
+            Logger.info('logistics:assignWorkerPreference:traveling', this.creep.name)
             memory.currentTask = TASK_TRAVELING
-        } else if (
-            this.creep.room.controller &&
-            this.creep.room.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
-        ) {
+        } else if (homeController?.my && homeController.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE) {
+            Logger.info('logistics:assignWorkerPreference:upgrading-downgrade', this.creep.name)
             memory.currentTask = TASK_UPGRADING
             return
-        } else if (hasNoSpawns(this.creep.room)) {
+        } else if (this.creep.room.controller?.my && hasNoSpawns(this.creep.room)) {
+            Logger.info('logistics:assignWorkerPreference:building-no-spawns', this.creep.name)
             memory.currentTask = TASK_BUILDING
         } else if (!rq.getCreepCount('energy-hauler') && TransferTask.makeRequest(this.creep)) {
+            Logger.info('logistics:assignWorkerPreference:hauling', this.creep.name)
             memory.currentTask = TASK_HAULING
         } else if (!hasSafeMode && hasOwnFragileWall(this.creep.room)) {
+            Logger.info(
+                'logistics:assignWorkerPreference:wall-repairs-no-safemode',
+                this.creep.name,
+            )
             memory.currentTask = TASK_WALL_REPAIRS
         } else if (buildManager && buildManager.hasNonWallConstructionSites()) {
+            Logger.info('logistics:assignWorkerPreference:building', this.creep.name)
             memory.currentTask = TASK_BUILDING
         } else if (hasSafeMode && hasOwnFragileWall(this.creep.room)) {
+            Logger.info('logistics:assignWorkerPreference:wall-repairs-safemode', this.creep.name)
             memory.currentTask = TASK_WALL_REPAIRS
         } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
+            Logger.info('logistics:assignWorkerPreference:repairing', this.creep.name)
             memory.currentTask = TASK_REPAIRING
-        } else {
+        } else if (homeController?.my) {
+            Logger.info('logistics:assignWorkerPreference:upgrading-owned', this.creep.name)
+            // Only upgrade if we own the controller
             memory.currentTask = TASK_UPGRADING
+        } else {
+            Logger.info('logistics:assignWorkerPreference:no-task', this.creep.name)
+            // No work available in mine room
+            memory.currentTask = NO_TASK
         }
     }
 
@@ -315,6 +332,11 @@ class RoleLogistics {
                 moveWithinRoom(this.creep, { pos: target.pos, range: 3 })
             }
         } else if (isFullOfEnergy(this.creep)) {
+            Logger.info(
+                'logistics:build:no-targets:calling-assignWorkerPreference',
+                this.creep.name,
+                this.creep.memory.preference,
+            )
             this.assignWorkerPreference()
         } else {
             this.creep.memory.currentTask = TASK_COLLECTING
@@ -412,8 +434,14 @@ class RoleLogistics {
     @mprofile('logistics:upgrade')
     upgrade(): void {
         const home = Game.rooms[this.creep.memory.home]
-        if (!home.controller) {
-            this.creep.say('???')
+        if (!home.controller || !home.controller.my) {
+            // Can't upgrade a controller we don't own - mark as no task
+            Logger.warning(
+                'logistics:upgrade:failure:not-owned',
+                this.creep.name,
+                this.creep.memory.home,
+            )
+            this.creep.memory.currentTask = NO_TASK
             return
         }
 

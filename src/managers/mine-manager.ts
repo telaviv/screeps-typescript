@@ -313,6 +313,13 @@ export class MineManager {
         return this.sourcesManager.hasAllContainerHarvesters()
     }
 
+    hasAnyHarvester(): boolean {
+        if (!this.sourcesManager) {
+            return false
+        }
+        return this.sourcesManager.hasAHarvester()
+    }
+
     needsHealer(): boolean {
         if (!this.room) {
             return false

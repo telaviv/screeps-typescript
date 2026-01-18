@@ -28,7 +28,7 @@ import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
-import { getConstructionSites } from 'utils/room'
+import { getConstructionSites, getEnergyCapacityForRCL } from 'utils/room'
 import { getStationaryPoints } from 'construction-features'
 import { getVirtualStorage } from 'utils/virtual-storage'
 import hash from 'utils/hash'
@@ -347,29 +347,35 @@ const createMineWorkers = wrap(
             return
         }
 
-        Logger.error(
-            'createMineWorkers:reservers',
-            mineManager.hasCapacityToReserve(),
-            !mineManager.hasEnoughReservers(),
-            mineManager.hasClaimSpotAvailable(),
-        )
-        if (
-            mineManager.hasCapacityToReserve() &&
-            !mineManager.hasEnoughReservers() &&
-            mineManager.hasClaimSpotAvailable()
-        ) {
-            roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
-            return
-        }
-
         if (mineManager.needsHealer()) {
             roleHealer.create(spawn, mineManager.name)
+        }
+
+        // Check if mine is struggling (no harvesters or no haulers)
+        const hasAnyHarvester = mineManager.hasAnyHarvester()
+        const hasAnyHauler = mineManager.getHaulers().length > 0
+        const mineIsStruggling = !hasAnyHarvester || !hasAnyHauler
+
+        // Override capacity if mine is struggling
+        let effectiveCapacity = capacity
+        if (mineIsStruggling) {
+            const room = spawn.room
+            const targetRcl = Math.max(1, (room.controller?.level ?? 1) - 1)
+            effectiveCapacity = getEnergyCapacityForRCL(targetRcl)
+            Logger.info(
+                `createMineWorkers:struggling:${mineManager.name}`,
+                `hasHarvester=${hasAnyHarvester}`,
+                `hasHauler=${hasAnyHauler}`,
+                `rcl=${room.controller?.level}`,
+                `targetRcl=${targetRcl}`,
+                `capacity=${effectiveCapacity}`,
+            )
         }
 
         if (!mineManager.hasEnoughConstructionParts() && mineManager.getWorkers().length === 0) {
             RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: mineManager.name,
-                capacity,
+                capacity: effectiveCapacity,
             })
             return
         }
@@ -379,20 +385,27 @@ const createMineWorkers = wrap(
         const roadsBuilt = roomQuery.allRoadsBuilt() && mineQuery.allRoadsBuilt()
         if (!mineManager.hasEnoughHarvesters()) {
             const sourcesManager = new SourcesManager(mineManager.room)
-            sourcesManager.createHarvester(spawn, { capacity, roadsBuilt })
+            sourcesManager.createHarvester(spawn, {
+                capacity: effectiveCapacity,
+                roadsBuilt,
+            })
             return
         }
 
         if (!mineManager.hasEnoughConstructionParts()) {
             RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: mineManager.name,
-                capacity,
+                capacity: effectiveCapacity,
             })
             return
         }
 
         if (!mineManager.hasEnoughHaulers()) {
-            roleRemoteHauler.create(spawn, { remote: mineManager.name, capacity, roadsBuilt })
+            roleRemoteHauler.create(spawn, {
+                remote: mineManager.name,
+                capacity: effectiveCapacity,
+                roadsBuilt,
+            })
             return
         }
 
@@ -403,6 +416,21 @@ const createMineWorkers = wrap(
                 capacity,
                 noRepairLimit: true,
             })
+            return
+        }
+
+        Logger.error(
+            `createMineWorkers:reservers:${mineManager.name}`,
+            mineManager.hasCapacityToReserve(),
+            !mineManager.hasEnoughReservers(),
+            mineManager.hasClaimSpotAvailable(),
+        )
+        if (
+            mineManager.hasCapacityToReserve() &&
+            !mineManager.hasEnoughReservers() &&
+            mineManager.hasClaimSpotAvailable()
+        ) {
+            roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
             return
         }
     },

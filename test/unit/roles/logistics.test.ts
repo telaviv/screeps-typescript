@@ -40,6 +40,7 @@ describe('logistics', () => {
                 name: 'test',
                 controller: {
                     ticksToDowngrade: 10000,
+                    my: true,
                 },
                 find: stub().returns([]),
             }

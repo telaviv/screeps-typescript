@@ -6,6 +6,7 @@ import { canMine } from 'managers/mine-manager'
 import { findMyRooms } from './room'
 import { getAllTasks } from 'tasks/utils'
 import { getConstructionFeaturesV3 } from 'construction-features'
+import { LogisticsCreep } from 'roles/logistics-constants'
 
 import ErrorMapper from './ErrorMapper'
 import Empire from 'empire'
@@ -114,6 +115,169 @@ function showClaimTasks() {
 }
 
 /**
+ * Debugs why mine logistics workers aren't switching tasks
+ * @param roomName - The mine room name to check
+ */
+function debugMineWorkers(roomName: string) {
+    console.log(`=== Debug Mine Workers: ${roomName} ===`)
+
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log('ERROR: Room not visible')
+        return
+    }
+
+    // Find mine logistics workers in this room
+    const workers = Object.values(Game.creeps).filter(
+        (creep) =>
+            creep.memory.role === 'logistics' &&
+            creep.memory.home === roomName &&
+            creep.room.name === roomName,
+    ) as LogisticsCreep[]
+
+    console.log(`\n--- Workers (${workers.length}) ---`)
+    if (workers.length === 0) {
+        console.log('No logistics workers found in this mine!')
+        return
+    }
+
+    workers.forEach((creep) => {
+        console.log(`\nCreep: ${creep.name}`)
+        console.log(`  Position: ${creep.pos}`)
+        console.log(`  Preference: ${creep.memory.preference}`)
+        console.log(`  Current Task: ${creep.memory.currentTask}`)
+        console.log(`  Energy: ${creep.store.energy}/${creep.store.getCapacity()}`)
+        console.log(`  Tasks Queue: ${creep.memory.tasks.length} items`)
+        console.log(`  Idle Time: ${Game.time - (creep.memory.idleTimestamp || Game.time)}`)
+    })
+
+    // Check room conditions
+    console.log(`\n--- Room Conditions ---`)
+
+    // Construction sites
+    const sites = room.find(FIND_CONSTRUCTION_SITES)
+    const nonWallSites = sites.filter(
+        (s) => s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART,
+    )
+    console.log(`Construction Sites: ${sites.length} (${nonWallSites.length} non-wall)`)
+
+    // Repairable structures
+    const MIN_REPAIR_THRESHOLD = 0.66
+    const repairableStructures = room.find(FIND_STRUCTURES, {
+        filter: (s) => {
+            if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) {
+                return false
+            }
+            return s.hits / s.hitsMax < MIN_REPAIR_THRESHOLD
+        },
+    })
+    console.log(`Repairable Structures: ${repairableStructures.length}`)
+    if (repairableStructures.length > 0) {
+        repairableStructures.forEach((s) => {
+            console.log(
+                `  - ${s.structureType} at ${s.pos}: ${s.hits}/${s.hitsMax} (${(
+                    (s.hits / s.hitsMax) *
+                    100
+                ).toFixed(1)}%)`,
+            )
+        })
+    }
+
+    // Check specific conditions from assignWorkerPreference
+    console.log(`\n--- Task Assignment Conditions ---`)
+    console.log(`Has No Spawns: ${!room.find(FIND_MY_SPAWNS).length}`)
+    console.log(`Has SafeMode: ${!!room.controller?.safeMode}`)
+    console.log(`Controller Downgrade: ${room.controller?.ticksToDowngrade ?? 'N/A'} ticks`)
+
+    // Check fragile walls
+    const fragileWalls = room.find(FIND_STRUCTURES, {
+        filter: (s) => {
+            if (s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART) {
+                return false
+            }
+            return s.hits < 10000
+        },
+    })
+    console.log(`Fragile Walls (<10k hits): ${fragileWalls.length}`)
+
+    console.log(`\n--- Task Priority Order ---`)
+    console.log(`1. Travel (if not in home)`)
+    console.log(`2. Upgrade (if controller downgrade < 5000)`)
+    console.log(`3. Build (if no spawns)`)
+    console.log(`4. Haul (if no energy hauler and can transfer)`)
+    console.log(`5. Wall Repairs (if no safe mode and fragile walls)`)
+    console.log(`6. Build (if non-wall construction sites exist)`)
+    console.log(`7. Wall Repairs (if safe mode and fragile walls)`)
+    console.log(`8. Repair (if repairable non-walls exist)`)
+    console.log(`9. Upgrade (default fallback)`)
+}
+
+/**
+ * Debugs a single worker to see why it's not working
+ * @param creepName - The name of the creep to debug
+ */
+function debugWorker(creepName: string) {
+    const creep = Game.creeps[creepName] as LogisticsCreep
+    if (!creep) {
+        console.log(`ERROR: Creep ${creepName} not found`)
+        return
+    }
+
+    console.log(`=== Debug Worker: ${creepName} ===`)
+    console.log(`Position: ${creep.pos}`)
+    console.log(`Home: ${creep.memory.home}`)
+    console.log(`Current Room: ${creep.room.name}`)
+    console.log(`Preference: ${creep.memory.preference}`)
+    console.log(`Current Task: ${creep.memory.currentTask}`)
+    console.log(`Energy: ${creep.store.energy}/${creep.store.getCapacity()}`)
+    console.log(`Tasks Queue: ${creep.memory.tasks.length} items`)
+    console.log(`Idle Time: ${Game.time - (creep.memory.idleTimestamp || Game.time)} ticks`)
+    console.log(`TTL: ${creep.ticksToLive}`)
+
+    const room = creep.room
+    const homeRoom = Game.rooms[creep.memory.home]
+    console.log(`\n--- Room Status: ${room.name} ---`)
+    console.log(`Has Controller: ${!!room.controller}`)
+    console.log(`Controller Owner: ${room.controller?.owner?.username ?? 'none'}`)
+    console.log(`Controller My: ${!!room.controller?.my}`)
+
+    if (homeRoom) {
+        console.log(`\n--- Home Room Status: ${homeRoom.name} ---`)
+        console.log(`Home Has Controller: ${!!homeRoom.controller}`)
+        console.log(`Home Controller My: ${!!homeRoom.controller?.my}`)
+        console.log(
+            `Home Controller Downgrade: ${homeRoom.controller?.ticksToDowngrade ?? 'N/A'} ticks`,
+        )
+    }
+
+    const sites = room.find(FIND_CONSTRUCTION_SITES)
+    console.log(`\nConstruction Sites: ${sites.length}`)
+
+    const MIN_REPAIR_THRESHOLD = 0.66
+    const repairableStructures = room.find(FIND_STRUCTURES, {
+        filter: (s) => {
+            if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) {
+                return false
+            }
+            return s.hits / s.hitsMax < MIN_REPAIR_THRESHOLD
+        },
+    })
+    console.log(`Repairable Structures: ${repairableStructures.length}`)
+
+    console.log(`\n--- What Should Happen Next Tick ---`)
+    if (creep.memory.currentTask === 'building' && sites.length === 0) {
+        if (creep.store.energy === creep.store.getCapacity()) {
+            console.log(
+                '✅ Worker is full and has no construction sites -> will call assignWorkerPreference()',
+            )
+            console.log(`Expected outcome: currentTask should become 'no-task'`)
+        } else {
+            console.log('✅ Worker is not full -> will switch to collecting energy')
+        }
+    }
+}
+
+/**
  * Initializes state for starting from scratch.
  * Resets firstScoutingComplete flags, enables mining and autoclaim.
  */
@@ -183,6 +347,8 @@ export default function assignGlobals(): void {
     global.debugRoom = debugRoom
     global.showClaimTasks = showClaimTasks
     global.initialize = initialize
+    global.debugMineWorkers = debugMineWorkers
+    global.debugWorker = debugWorker
 }
 
 declare global {
@@ -204,6 +370,8 @@ declare global {
             debugRoom: (roomName: string) => void
             showClaimTasks: () => void
             initialize: () => void
+            debugMineWorkers: (roomName: string) => void
+            debugWorker: (creepName: string) => void
         }
     }
 }
