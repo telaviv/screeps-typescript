@@ -1,7 +1,7 @@
 import {
     MoveOpts,
     MoveTarget,
-    moveTo as moveToCartographer,
+    moveTo as moveToCartographerUnwrapped,
     generatePath as generatePathCartographer,
 } from 'screeps-cartographer'
 
@@ -13,6 +13,17 @@ import { wrap } from './profiling'
 const MAX_ROOM_RANGE = 20
 
 type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
+
+export const moveToCartographer = wrap(
+    (
+        creep: Creep,
+        target: MoveToTarget,
+        opts: MoveOpts = {},
+    ): ReturnType<typeof moveToCartographerUnwrapped> => {
+        return moveToCartographerUnwrapped(creep, target, opts)
+    },
+    'travel:moveToCartographer',
+)
 
 function hasRoomPosition(target: MoveToTarget): target is _HasRoomPosition {
     return (target as _HasRoomPosition).pos !== undefined
@@ -55,13 +66,13 @@ const moveToRoomRoomCallback =
 
 /** Moves creep to center of a room, avoiding unsafe rooms */
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
-    typeof moveToCartographer
+    typeof moveToCartographerUnwrapped
 > => {
     // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
-    const err = moveToCartographer(
+    const err = moveToCartographerUnwrapped(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
         {
@@ -91,13 +102,13 @@ export function generatePathToRoom(
 }
 
 export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts = {}): ReturnType<
-    typeof moveToCartographer
+    typeof moveToCartographerUnwrapped
 > => {
     // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
-    let err = moveToCartographer(creep, target, { roomCallback, routeCallback, ...opts })
+    let err = moveToCartographerUnwrapped(creep, target, { roomCallback, routeCallback, ...opts })
     if (err === ERR_NO_PATH) {
         if (Array.isArray(target)) {
             target = target[0]
@@ -106,7 +117,7 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
         if (creep.room.name === pos.roomName) {
             return moveToRoom(creep, pos.roomName, opts)
         } else {
-            err = moveToCartographer(creep, target, {
+            err = moveToCartographerUnwrapped(creep, target, {
                 swampCost: 5,
                 maxOps: 2000,
                 roomCallback,

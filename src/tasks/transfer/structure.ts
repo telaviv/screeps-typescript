@@ -8,6 +8,7 @@ import { getAllTasks } from 'tasks/utils'
 import { isTransferTask } from 'tasks/transfer/utils'
 
 const CACHE_KEY = 'transfer-structure:remainingCapacity'
+const ALL_STRUCTURES_CACHE_KEY = 'transfer-structure:all-structures'
 
 type Transferable = AnyStoreStructure
 
@@ -42,13 +43,32 @@ export class TransferStructure {
 
     @mprofile('TransferStructure:getAllStructures')
     public static getAllStructures(): Record<Id<Transferable>, TransferStructure> {
-        const transferStructures: Record<string, TransferStructure> = {}
-        for (const task of getAllTasks()) {
-            if (isTransferTask(task)) {
-                transferStructures[task.structureId] = TransferStructure.get(task.structureId)
+        return TimeCache.get(ALL_STRUCTURES_CACHE_KEY, () => {
+            // Group tasks by structure ID first to avoid O(n²) complexity
+            const tasksByStructure = new Map<Id<AnyStoreStructure>, TransferTask[]>()
+
+            for (const task of getAllTasks()) {
+                if (isTransferTask(task)) {
+                    const existing = tasksByStructure.get(task.structureId)
+                    if (existing) {
+                        existing.push(task)
+                    } else {
+                        tasksByStructure.set(task.structureId, [task])
+                    }
+                }
             }
-        }
-        return transferStructures
+
+            // Now create TransferStructure instances with pre-grouped tasks
+            const transferStructures: Record<string, TransferStructure> = {}
+            for (const [structureId, tasks] of tasksByStructure.entries()) {
+                const structure = Game.getObjectById<AnyStoreStructure>(structureId)
+                if (structure !== null) {
+                    transferStructures[structureId] = new TransferStructure(structure, tasks)
+                }
+            }
+
+            return transferStructures
+        })
     }
 
     @profile
@@ -84,6 +104,7 @@ export class TransferStructure {
         }
         this.tasks.push(task)
         TimeCache.clearRecord(`${CACHE_KEY}:${this.structure.id}`)
+        TimeCache.clearRecord(ALL_STRUCTURES_CACHE_KEY)
         return task
     }
 
