@@ -1,4 +1,6 @@
 import * as Logger from 'utils/logger'
+import { MAX_SAVIOR_DISTANCE } from '../constants'
+import { getLogisticsCreeps } from './creep'
 import { resetSnapshot, saveSnapshot } from 'snapshot'
 import { RoomManager } from 'managers/room-manager'
 import { Task } from 'tasks/types'
@@ -7,11 +9,13 @@ import { findMyRooms } from './room'
 import { getAllTasks } from 'tasks/utils'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { LogisticsCreep } from 'roles/logistics-constants'
+import { World } from './world'
+import SourcesManager from 'managers/sources-manager'
+import WarDepartment, { SpawnWarMemory, WarStatus } from 'war-department'
 
 import ErrorMapper from './ErrorMapper'
 import Empire from 'empire'
 import roleWrecker from 'roles/wrecker'
-import WarDepartment from 'war-department'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach((creep) => {
@@ -278,6 +282,250 @@ function debugWorker(creepName: string) {
 }
 
 /**
+ * Debugs why a savior room isn't spawning rescue creeps
+ * @param saviorName - The room that should be spawning rescue creeps
+ */
+function debugSavior(saviorName: string) {
+    console.log(`=== Debug Savior: ${saviorName} ===\n`)
+
+    const room = Game.rooms[saviorName]
+    if (!room) {
+        console.log('❌ ERROR: Room not visible')
+        return
+    }
+
+    // Check war department status
+    const warDept = new WarDepartment(room)
+    console.log(`--- War Department Status ---`)
+    console.log(`War Status: ${warDept.status}`)
+    console.log(`War Target: ${room.memory.war?.target ?? 'none'}`)
+    const warType = (room.memory.war as SpawnWarMemory).type
+    console.log(`War Type: ${warType ?? 'N/A'}`)
+
+    if (warDept.status !== WarStatus.SPAWN) {
+        console.log(`\n❌ Not in SPAWN status, won't create war creeps`)
+        return
+    }
+
+    const targetRoom = warDept.targetRoom
+    if (!targetRoom) {
+        console.log(`\n❌ Can't see target room ${warDept.target}`)
+        return
+    }
+
+    console.log(`\n--- Target Room: ${targetRoom.name} ---`)
+    console.log(`Has spawns: ${targetRoom.find(FIND_MY_SPAWNS).length > 0}`)
+
+    // Check spawns in savior room
+    const spawns = room.find(FIND_MY_SPAWNS)
+    console.log(`\n--- Spawns in ${saviorName} ---`)
+    console.log(`Total spawns: ${spawns.length}`)
+    if (spawns.length === 0) {
+        console.log('❌ No spawns to create rescue creeps!')
+        return
+    }
+
+    for (const spawn of spawns) {
+        console.log(`\nSpawn: ${spawn.name}`)
+        console.log(`  Spawning: ${spawn.spawning ? spawn.spawning.name : 'no'}`)
+        console.log(`  Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`)
+    }
+
+    // Check remote workers in target room
+    const remoteWorkers = getLogisticsCreeps({ room: targetRoom })
+    console.log(`\n--- Remote Workers in ${targetRoom.name} ---`)
+    console.log(`Count: ${remoteWorkers.length}`)
+    remoteWorkers.forEach((w) => {
+        console.log(`  - ${w.name} (home: ${w.memory.home}, pos: ${w.pos})`)
+    })
+
+    // Check harvester situation
+    console.log(`\n--- Harvester Status ---`)
+    const sourcesManager = SourcesManager.create(targetRoom)
+    if (!sourcesManager) {
+        console.log('❌ No SourcesManager available')
+    } else {
+        const hasAllHarvesters = sourcesManager.hasAllContainerHarvesters()
+        console.log(`Has all container harvesters: ${hasAllHarvesters}`)
+    }
+
+    // Trace through createImportantWarCreeps logic
+    console.log(`\n--- createImportantWarCreeps() Logic ---`)
+
+    if (warDept.hasSafeMode() || warDept.hasOverwhelmingForce()) {
+        console.log(
+            `❌ Safe mode or overwhelming force (safe: ${warDept.hasSafeMode()}, overwhelming: ${warDept.hasOverwhelmingForce()})`,
+        )
+        return
+    }
+
+    if (!warDept.targetRoom) {
+        console.log(`❌ Target room not visible`)
+        return
+    }
+
+    console.log(`\n✅ Passed safe mode check`)
+    console.log(`✅ Target room visible`)
+
+    // SPAWN status logic
+    console.log(`\n--- SPAWN Status Decision Tree ---`)
+    if (remoteWorkers.length === 0) {
+        console.log(`1. ✅ No remote workers -> SHOULD spawn worker with home=${targetRoom.name}`)
+    } else if (remoteWorkers.length < 2) {
+        console.log(
+            `2. ✅ Remote workers (${remoteWorkers.length}) < 2 -> SHOULD spawn worker with home=${targetRoom.name}`,
+        )
+    } else if (sourcesManager && !sourcesManager.hasAllContainerHarvesters()) {
+        console.log(`3. ✅ Missing container harvesters -> SHOULD spawn harvester`)
+    } else if (remoteWorkers.length < 4) {
+        console.log(
+            `4. ✅ Remote workers (${remoteWorkers.length}) < 4 -> SHOULD spawn worker with home=${targetRoom.name}`,
+        )
+    } else {
+        console.log(
+            `5. ❌ Has ${remoteWorkers.length} workers and all harvesters -> Nothing to spawn`,
+        )
+    }
+
+    console.log(`\n--- Spawn Strategy Check ---`)
+    console.log(`Strategy calls createImportantWarCreeps at line 178 of rcl-2.ts`)
+    console.log(`This happens AFTER:`)
+    console.log(`  - Scout room tasks`)
+    console.log(`  - Energy check (>= 300)`)
+    console.log(`  - Defense needs`)
+    console.log(`  - Hauler/harvester needs`)
+    console.log(`  - Upgraders/builders`)
+    console.log(`  - Rebalancers`)
+    console.log(`\nSo if spawn is creating those first, war creeps wait.`)
+}
+
+/**
+ * Debugs why a room without spawns is not being rescued
+ * @param roomName - The room that needs rescue
+ */
+function debugRescue(roomName: string) {
+    console.log(`=== Debug Rescue: ${roomName} ===\n`)
+
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log('❌ ERROR: Room not visible')
+        return
+    }
+
+    // Check if room is owned
+    if (!room.controller?.my) {
+        console.log('❌ ERROR: Room is not owned by you')
+        return
+    }
+
+    // Check spawn situation
+    const spawns = room.find(FIND_MY_SPAWNS)
+    console.log(`Spawns in room: ${spawns.length}`)
+    if (spawns.length > 0) {
+        console.log('✅ Room has spawns - no rescue needed!\n')
+        return
+    }
+
+    console.log('❌ Room has no spawns - NEEDS RESCUE\n')
+
+    // Check collapsed status
+    console.log(`--- Collapsed Status ---`)
+    console.log(`room.memory.collapsed: ${room.memory.collapsed ?? 'undefined'}`)
+
+    // Check if any room is already trying to save this room
+    console.log(`\n--- Existing Rescue Operations ---`)
+    let foundRescueOp = false
+    for (const [rName, mem] of Object.entries(Memory.rooms)) {
+        if (mem.war?.target === roomName) {
+            console.log(`✅ ${rName} has war.target = ${roomName}`)
+            console.log(`   War Status: ${mem.war.status}`)
+            const warType = (mem.war as SpawnWarMemory).type
+            console.log(`   War Type: ${warType ?? 'N/A'}`)
+            foundRescueOp = true
+        }
+    }
+    if (!foundRescueOp) {
+        console.log('❌ No rooms are currently targeting this room for rescue')
+    }
+
+    // Find potential saviors
+    console.log(`\n--- Potential Saviors (within ${MAX_SAVIOR_DISTANCE} range) ---`)
+    const world = new World()
+    const closestRooms = world.getClosestRooms([roomName], MAX_SAVIOR_DISTANCE)
+
+    const candidates = closestRooms
+        .filter(({ roomName: rn }) => {
+            const r = Game.rooms[rn]
+            return r?.controller?.my && r.find(FIND_MY_SPAWNS).length > 0
+        })
+        .sort((a, b) => a.distance - b.distance)
+
+    if (candidates.length === 0) {
+        console.log(`❌ No owned rooms with spawns within ${MAX_SAVIOR_DISTANCE} distance`)
+    } else {
+        console.log(`Found ${candidates.length} potential savior room(s):`)
+        for (const { roomName: rn, distance } of candidates) {
+            const r = Game.rooms[rn]
+            const warDepartment = new WarDepartment(r)
+            const warStatus = warDepartment.status
+            console.log(
+                `  ${rn} - distance: ${distance}, war status: ${warStatus}, spawns: ${
+                    r.find(FIND_MY_SPAWNS).length
+                }`,
+            )
+        }
+
+        // Check the best candidate specifically
+        const best = candidates[0]
+        const bestRoom = Game.rooms[best.roomName]
+        console.log(`\n--- Best Candidate: ${best.roomName} ---`)
+        console.log(`Distance: ${best.distance}`)
+
+        const warDept = new WarDepartment(bestRoom)
+        console.log(`War Status: ${warDept.status}`)
+        console.log(`War Target: ${bestRoom.memory.war?.target ?? 'none'}`)
+
+        // Check if this savior is blocked by another war
+        if (warDept.status !== WarStatus.NONE) {
+            console.log(`⚠️  This room is already in a war operation`)
+            console.log(`   Target: ${bestRoom.memory.war?.target}`)
+            const warType = (bestRoom.memory.war as SpawnWarMemory).type
+            console.log(`   Type: ${warType ?? 'N/A'}`)
+        }
+    }
+
+    // Check findSaviors logic from empire.ts
+    console.log(`\n--- Empire.findSaviors() Logic Check ---`)
+    console.log(
+        `1. Does room have spawns? ${
+            spawns.length > 0 ? 'YES (skip rescue)' : 'NO (needs rescue)'
+        }`,
+    )
+
+    const alreadyTargeted = Object.values(Memory.rooms).some((r) => r.war?.target === roomName)
+    console.log(
+        `2. Is already a war target? ${alreadyTargeted ? 'YES (skip rescue)' : 'NO (can rescue)'}`,
+    )
+
+    console.log(
+        `3. Can find savior within ${MAX_SAVIOR_DISTANCE}? ${candidates.length > 0 ? 'YES' : 'NO'}`,
+    )
+
+    if (candidates.length > 0 && !alreadyTargeted) {
+        console.log(`\n✅ Empire should assign ${candidates[0].roomName} as savior on next tick`)
+    } else if (alreadyTargeted) {
+        console.log(`\n⚠️  A rescue operation is already active (or was started this tick)`)
+    } else {
+        console.log(`\n❌ No eligible savior rooms found`)
+    }
+
+    // Additional debugging
+    console.log(`\n--- Additional Info ---`)
+    console.log(`Game.time: ${Game.time}`)
+    console.log(`MAX_SAVIOR_DISTANCE constant: ${MAX_SAVIOR_DISTANCE}`)
+}
+
+/**
  * Initializes state for starting from scratch.
  * Resets firstScoutingComplete flags, enables mining and autoclaim.
  */
@@ -349,6 +597,8 @@ export default function assignGlobals(): void {
     global.initialize = initialize
     global.debugMineWorkers = debugMineWorkers
     global.debugWorker = debugWorker
+    global.debugRescue = debugRescue
+    global.debugSavior = debugSavior
 }
 
 declare global {
@@ -372,6 +622,8 @@ declare global {
             initialize: () => void
             debugMineWorkers: (roomName: string) => void
             debugWorker: (creepName: string) => void
+            debugRescue: (roomName: string) => void
+            debugSavior: (saviorName: string) => void
         }
     }
 }

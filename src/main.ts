@@ -325,7 +325,7 @@ function unwrappedLoop(): void {
 
     if (Game.cpu.bucket === 10000 && Game.cpu.generatePixel) {
         Game.cpu.generatePixel()
-        Logger.warning('PIXEL generated')
+        Logger.info('PIXEL generated')
     }
 
     if (Game.cpu.bucket >= VISUALS_CPU_MIN) {
