@@ -5,11 +5,12 @@ import {
     generatePath as generatePathCartographer,
 } from 'screeps-cartographer'
 
+import { DEADLOCK_THRESHOLD } from '../constants'
 import { MatrixCacheManager } from 'matrix-cache'
 import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
-import { shouldBreakDeadlock, moveToRandomNearbyPosition, updatePositionTracking } from './deadlock'
+import { moveToRandomNearbyPosition, updatePositionTracking } from './deadlock'
 
 const MAX_ROOM_RANGE = 20
 
@@ -74,8 +75,9 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
         return ERR_TIRED
     }
 
-    // Check if creep should break deadlock
-    if (shouldBreakDeadlock(creep)) {
+    // Inline deadlock check for performance
+    // eslint-disable-next-line no-underscore-dangle
+    if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
         return moveToRandomNearbyPosition(creep)
     }
 
@@ -123,8 +125,9 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
         return ERR_TIRED
     }
 
-    // Check if creep should break deadlock
-    if (shouldBreakDeadlock(creep)) {
+    // Inline deadlock check for performance
+    // eslint-disable-next-line no-underscore-dangle
+    if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
         return moveToRandomNearbyPosition(creep)
     }
 
@@ -162,8 +165,9 @@ export const moveWithinRoom = wrap(
     (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
         // const startCPU = Game.cpu.getUsed()
 
-        // Check if creep should break deadlock
-        if (shouldBreakDeadlock(creep)) {
+        // Inline deadlock check for performance
+        // eslint-disable-next-line no-underscore-dangle
+        if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
             return moveToRandomNearbyPosition(creep)
         }
 
