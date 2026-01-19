@@ -11,6 +11,7 @@ export const TASK_MINING = 'mining'
 export const TASK_TRAVELING = 'traveling'
 export const NO_TASK = 'no-task'
 export const PREFERENCE_WORKER = 'worker'
+export const PREFERENCE_BASE_REPAIRER = 'base-repairer'
 
 export type DeliveryTask =
     | typeof TASK_HAULING
@@ -28,6 +29,7 @@ export type LogisticsPreference =
     | typeof TASK_REPAIRING
     | typeof TASK_WALL_REPAIRS
     | typeof PREFERENCE_WORKER
+    | typeof PREFERENCE_BASE_REPAIRER
 
 export interface LogisticsCreep extends Creep {
     memory: LogisticsMemory

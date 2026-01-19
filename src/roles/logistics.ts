@@ -9,6 +9,7 @@ import {
     LogisticsMemory,
     LogisticsPreference,
     NO_TASK,
+    PREFERENCE_BASE_REPAIRER,
     PREFERENCE_WORKER,
     TASK_BUILDING,
     TASK_COLLECTING,
@@ -31,6 +32,7 @@ import {
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { mprofile, profile } from 'utils/profiling'
+import DefenseDepartment from 'defense-department'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import RoomQuery from 'spawn/room-query'
 import { addEnergyTask } from 'tasks/usage-utils'
@@ -73,6 +75,7 @@ const PREFERENCE_EMOJIS = {
     [TASK_UPGRADING]: '🌃',
     [TASK_WALL_REPAIRS]: '🧱',
     [PREFERENCE_WORKER]: '👷',
+    [PREFERENCE_BASE_REPAIRER]: '🛡️',
 }
 
 /** Base body unit for logistics creeps: 1 WORK, 1 CARRY, 2 MOVE */
@@ -218,7 +221,10 @@ class RoleLogistics {
                 homeRoom.controller.ticksToDowngrade < MAX_TICKS_TO_DOWNGRADE
             ) {
                 memory.currentTask = TASK_UPGRADING
-            } else if (memory.preference === PREFERENCE_WORKER) {
+            } else if (
+                memory.preference === PREFERENCE_WORKER ||
+                memory.preference === PREFERENCE_BASE_REPAIRER
+            ) {
                 this.assignWorkerPreference()
             } else {
                 memory.currentTask = memory.preference
@@ -252,29 +258,68 @@ class RoleLogistics {
         } else if (!rq.getCreepCount('energy-hauler') && TransferTask.makeRequest(this.creep)) {
             Logger.info('logistics:assignWorkerPreference:hauling', this.creep.name)
             memory.currentTask = TASK_HAULING
-        } else if (!hasSafeMode && hasOwnFragileWall(this.creep.room)) {
-            Logger.info(
-                'logistics:assignWorkerPreference:wall-repairs-no-safemode',
-                this.creep.name,
-            )
-            memory.currentTask = TASK_WALL_REPAIRS
-        } else if (buildManager && buildManager.hasNonWallConstructionSites()) {
-            Logger.info('logistics:assignWorkerPreference:building', this.creep.name)
-            memory.currentTask = TASK_BUILDING
-        } else if (hasSafeMode && hasOwnFragileWall(this.creep.room)) {
-            Logger.info('logistics:assignWorkerPreference:wall-repairs-safemode', this.creep.name)
-            memory.currentTask = TASK_WALL_REPAIRS
-        } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
-            Logger.info('logistics:assignWorkerPreference:repairing', this.creep.name)
-            memory.currentTask = TASK_REPAIRING
-        } else if (homeController?.my) {
-            Logger.info('logistics:assignWorkerPreference:upgrading-owned', this.creep.name)
-            // Only upgrade if we own the controller
-            memory.currentTask = TASK_UPGRADING
+        } else if (memory.preference === PREFERENCE_BASE_REPAIRER) {
+            // Base repairer only repairs walls and structures, prioritizes walls
+            if (hasOwnFragileWall(this.creep.room)) {
+                Logger.info('logistics:assignWorkerPreference:base-repairer-walls', this.creep.name)
+                memory.currentTask = TASK_WALL_REPAIRS
+            } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
+                Logger.info(
+                    'logistics:assignWorkerPreference:base-repairer-structures',
+                    this.creep.name,
+                )
+                memory.currentTask = TASK_REPAIRING
+            } else if (homeController?.my) {
+                Logger.info(
+                    'logistics:assignWorkerPreference:base-repairer-upgrading',
+                    this.creep.name,
+                )
+                memory.currentTask = TASK_UPGRADING
+            } else {
+                Logger.info(
+                    'logistics:assignWorkerPreference:base-repairer-no-task',
+                    this.creep.name,
+                )
+                memory.currentTask = NO_TASK
+            }
         } else {
-            Logger.info('logistics:assignWorkerPreference:no-task', this.creep.name)
-            // No work available in mine room
-            memory.currentTask = NO_TASK
+            // Check for overwhelming healing - prioritize wall repairs
+            const defenseDepartment = new DefenseDepartment(this.creep.room)
+            const hasOverwhelmingHealing = defenseDepartment.hasOverwhelmingHealing()
+
+            if (hasOverwhelmingHealing && hasOwnFragileWall(this.creep.room)) {
+                Logger.info(
+                    'logistics:assignWorkerPreference:wall-repairs-overwhelming-healing',
+                    this.creep.name,
+                )
+                memory.currentTask = TASK_WALL_REPAIRS
+            } else if (!hasSafeMode && hasOwnFragileWall(this.creep.room)) {
+                Logger.info(
+                    'logistics:assignWorkerPreference:wall-repairs-no-safemode',
+                    this.creep.name,
+                )
+                memory.currentTask = TASK_WALL_REPAIRS
+            } else if (buildManager && buildManager.hasNonWallConstructionSites()) {
+                Logger.info('logistics:assignWorkerPreference:building', this.creep.name)
+                memory.currentTask = TASK_BUILDING
+            } else if (hasSafeMode && hasOwnFragileWall(this.creep.room)) {
+                Logger.info(
+                    'logistics:assignWorkerPreference:wall-repairs-safemode',
+                    this.creep.name,
+                )
+                memory.currentTask = TASK_WALL_REPAIRS
+            } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
+                Logger.info('logistics:assignWorkerPreference:repairing', this.creep.name)
+                memory.currentTask = TASK_REPAIRING
+            } else if (homeController?.my) {
+                Logger.info('logistics:assignWorkerPreference:upgrading-owned', this.creep.name)
+                // Only upgrade if we own the controller
+                memory.currentTask = TASK_UPGRADING
+            } else {
+                Logger.info('logistics:assignWorkerPreference:no-task', this.creep.name)
+                // No work available in mine room
+                memory.currentTask = NO_TASK
+            }
         }
     }
 

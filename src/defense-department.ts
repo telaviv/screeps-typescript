@@ -1,13 +1,15 @@
 import { getInjuredCreeps, getTowers } from 'utils/room'
 import { HostileRecorder } from 'hostiles'
 import { getCreeps } from 'utils/creep'
-import roleAttacker from 'roles/attacker'
+import roleAttacker, { calculateParts as calculateAttackerParts } from 'roles/attacker'
 import roleHealer from 'roles/healer'
 
 /** Multiplier applied to hostile danger level when calculating defender needs */
 const FORCE_MULTIPLIER = 2
 /** Attack parts equivalence per tower for defense calculations */
 const TOWER_DANGER_OFFSET = 4
+/** Number of attackers we can effectively support in defense */
+const SUPPORTED_ATTACKERS = 2
 
 /**
  * Manages defensive operations for a room.
@@ -52,6 +54,10 @@ export default class DefenseDepartment {
 
     /** Calculates how many additional ATTACK parts are needed, accounting for towers */
     private attackPartsNeeded(): number {
+        if (this.hasOverwhelmingHealing()) {
+            return 0
+        }
+
         if (this.hasOverwhelmingForce()) {
             return 0
         }
@@ -104,5 +110,67 @@ export default class DefenseDepartment {
             0,
         )
         return hostilePower > 10
+    }
+
+    /**
+     * Calculates total healing power of hostile creeps, accounting for boosts.
+     * Only counts creeps that have RANGED_ATTACK (the threatening combination).
+     * @returns Total healing power per tick
+     */
+    private calculateHostileHealingPower(): number {
+        const hostiles = this.room.find(FIND_HOSTILE_CREEPS)
+        if (!hostiles || hostiles.length === 0) {
+            return 0
+        }
+
+        let totalHealPower = 0
+
+        for (const hostile of hostiles) {
+            // Only count healing from creeps with ranged attack capability
+            const hasRangedAttack = hostile.getActiveBodyparts(RANGED_ATTACK) > 0
+            if (!hasRangedAttack) {
+                continue
+            }
+
+            // Calculate healing power from each HEAL body part
+            for (const part of hostile.body) {
+                if (part.type === HEAL && part.hits > 0) {
+                    let healPower = HEAL_POWER
+                    // Check for boost multiplier using Screeps built-in BOOSTS constant
+                    if (part.boost && BOOSTS[HEAL][part.boost]) {
+                        const boostEffect = BOOSTS[HEAL][part.boost]
+                        // BOOSTS.heal contains { heal: multiplier } where multiplier is the boost amount
+                        healPower *= boostEffect.heal
+                    }
+                    totalHealPower += healPower
+                }
+            }
+        }
+
+        return totalHealPower
+    }
+
+    /**
+     * Checks if hostile creeps have overwhelming healing power compared to our attack capability.
+     * Returns true when enemy healing exceeds the damage output of 2 attackers we can support.
+     */
+    public hasOverwhelmingHealing(): boolean {
+        if (!this.room.controller?.my) {
+            return false
+        }
+
+        const hostileHealPower = this.calculateHostileHealingPower()
+        if (hostileHealPower === 0) {
+            return false
+        }
+
+        // Calculate our potential attack power with 2 supported attackers
+        // Use actual attacker body part calculation for the room's energy capacity
+        const capacity = this.room.energyCapacityAvailable
+        const attackerBody = calculateAttackerParts(capacity)
+        const attackPartsPerCreep = attackerBody.filter((part) => part === ATTACK).length
+        const ourAttackPower = SUPPORTED_ATTACKERS * attackPartsPerCreep * ATTACK_POWER
+
+        return hostileHealPower > ourAttackPower
     }
 }

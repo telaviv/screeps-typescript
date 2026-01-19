@@ -1,5 +1,6 @@
 import * as Logger from 'utils/logger'
 import {
+    PREFERENCE_BASE_REPAIRER,
     PREFERENCE_WORKER,
     TASK_BUILDING,
     TASK_REPAIRING,
@@ -88,6 +89,29 @@ export default wrap((spawn: StructureSpawn): void => {
     if (defenseDepartment.needsHealer()) {
         defenseDepartment.createHealer(spawn)
         return
+    }
+
+    // If overwhelming healing detected, prioritize wall repair workers
+    if (defenseDepartment.hasOverwhelmingHealing()) {
+        const baseRepairers = roomQuery.getLogisticsCreepCount({
+            preference: PREFERENCE_BASE_REPAIRER,
+        })
+        const totalWorkers = roomQuery.getLogisticsCreepCount({
+            preference: PREFERENCE_WORKER,
+        })
+        // Spawn base-repairer specialists focused on defense repairs
+        if (baseRepairers < 3) {
+            RoleLogistics.createCreep(spawn, PREFERENCE_BASE_REPAIRER, {
+                capacity,
+            })
+            return
+        }
+        if (totalWorkers < 2) {
+            RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                capacity,
+            })
+            return
+        }
     }
 
     if (roomQuery.linkCount() >= 2) {
