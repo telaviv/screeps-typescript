@@ -1,5 +1,4 @@
 import { each } from 'lodash'
-import { minCutWalls } from 'screeps-min-cut-wall'
 import semverGte from 'semver/functions/gte'
 
 import * as Logger from 'utils/logger'
@@ -373,20 +372,90 @@ function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
 }
 
 /**
- * Calculates optimal rampart positions using min-cut algorithm.
+ * Calculates rampart positions using bunker stamp and stationaryPoints heuristic.
  * @param iroom - The immutable room data
  * @returns Array of positions for rampart placement
  */
 function getRampartPositions(iroom: ImmutableRoom): Position[] {
-    type Position = [number, number]
-    const isCenter = (pos: Position): boolean => {
-        return Boolean(iroom.get(pos[0], pos[1]).obstacle)
+    // Start with bunker stamp ramparts
+    const ramparts = iroom.getNonObstacles('rampart')
+    const rampartSet = new Set<string>()
+
+    // Add bunker ramparts
+    ramparts.forEach((pos) => rampartSet.add(`${pos.x},${pos.y}`))
+
+    // Get stationaryPoints
+    const points = iroom.stationaryPoints
+    const stationaryPositions: Position[] = []
+
+    if (points.controllerLink) stationaryPositions.push(points.controllerLink)
+    if (points.storageLink) stationaryPositions.push(points.storageLink)
+    if (points.mineral) stationaryPositions.push(points.mineral)
+    if (points.sources) {
+        Object.values(points.sources).forEach((pos) => stationaryPositions.push(pos))
     }
-    const isWall = ([x, y]: Position): boolean => {
-        return iroom.get(x, y).terrain === TERRAIN_MASK_WALL
+
+    // Add ramparts at stationaryPoints and their neighbors
+    for (const pos of stationaryPositions) {
+        // Add the position itself
+        rampartSet.add(`${pos.x},${pos.y}`)
+
+        // Add all 8 neighbors (excluding walls)
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue
+                const x = pos.x + dx
+                const y = pos.y + dy
+                if (x >= 0 && x < 50 && y >= 0 && y < 50) {
+                    // Don't add ramparts on walls
+                    if (iroom.get(x, y).terrain !== TERRAIN_MASK_WALL) {
+                        rampartSet.add(`${x},${y}`)
+                    }
+                }
+            }
+        }
     }
-    const positions = minCutWalls({ isCenter, isWall })
-    return positions.map((pos) => ({ x: pos[0], y: pos[1] }))
+
+    // Get important structure positions (sources, mineral, controller)
+    const importantStructures: Position[] = []
+
+    // Add sources
+    iroom.getObstacles('source').forEach((source) => {
+        importantStructures.push({ x: source.x, y: source.y })
+    })
+
+    // Add mineral
+    iroom.getObstacles('mineral').forEach((mineral) => {
+        importantStructures.push({ x: mineral.x, y: mineral.y })
+    })
+
+    // Add controller
+    iroom.getObstacles('controller').forEach((controller) => {
+        importantStructures.push({ x: controller.x, y: controller.y })
+    })
+
+    // Add ramparts on walls adjacent to important structures
+    for (const pos of importantStructures) {
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue
+                const x = pos.x + dx
+                const y = pos.y + dy
+                if (x >= 0 && x < 50 && y >= 0 && y < 50) {
+                    // Add ramparts on walls adjacent to important structures
+                    if (iroom.get(x, y).terrain === TERRAIN_MASK_WALL) {
+                        rampartSet.add(`${x},${y}`)
+                    }
+                }
+            }
+        }
+    }
+
+    // Convert back to Position array
+    return Array.from(rampartSet).map((key) => {
+        const [x, y] = key.split(',').map(Number)
+        return { x, y }
+    })
 }
 
 /**
