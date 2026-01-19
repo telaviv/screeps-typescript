@@ -9,6 +9,7 @@ import { MatrixCacheManager } from 'matrix-cache'
 import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
+import { shouldBreakDeadlock, moveToRandomNearbyPosition, updatePositionTracking } from './deadlock'
 
 const MAX_ROOM_RANGE = 20
 
@@ -66,13 +67,22 @@ const moveToRoomRoomCallback =
 
 /** Moves creep to center of a room, avoiding unsafe rooms */
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
-    typeof moveToCartographerUnwrapped
+    typeof moveToCartographer
 > => {
     // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
-    const err = moveToCartographerUnwrapped(
+
+    // Check if creep should break deadlock
+    if (shouldBreakDeadlock(creep)) {
+        return moveToRandomNearbyPosition(creep)
+    }
+
+    // Store position before move attempt
+    const previousPos = creep.pos
+
+    const err = moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
         {
@@ -81,6 +91,10 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
             ...opts,
         },
     )
+
+    // Update position tracking after move attempt
+    updatePositionTracking(creep, previousPos)
+
     // Logger.error(`moveToRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, roomName, err)
     return err
 }, 'travel:moveToRoom')
@@ -102,13 +116,22 @@ export function generatePathToRoom(
 }
 
 export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts = {}): ReturnType<
-    typeof moveToCartographerUnwrapped
+    typeof moveToCartographer
 > => {
     // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
-    let err = moveToCartographerUnwrapped(creep, target, { roomCallback, routeCallback, ...opts })
+
+    // Check if creep should break deadlock
+    if (shouldBreakDeadlock(creep)) {
+        return moveToRandomNearbyPosition(creep)
+    }
+
+    // Store position before move attempt
+    const previousPos = creep.pos
+
+    let err = moveToCartographer(creep, target, { roomCallback, routeCallback, ...opts })
     if (err === ERR_NO_PATH) {
         if (Array.isArray(target)) {
             target = target[0]
@@ -117,7 +140,7 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
         if (creep.room.name === pos.roomName) {
             return moveToRoom(creep, pos.roomName, opts)
         } else {
-            err = moveToCartographerUnwrapped(creep, target, {
+            err = moveToCartographer(creep, target, {
                 swampCost: 5,
                 maxOps: 2000,
                 roomCallback,
@@ -127,6 +150,10 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
             // Logger.error(`moveTo: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
         }
     }
+
+    // Update position tracking after move attempt
+    updatePositionTracking(creep, previousPos)
+
     return err
 }, 'travel:moveTo')
 
@@ -134,6 +161,15 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
 export const moveWithinRoom = wrap(
     (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
         // const startCPU = Game.cpu.getUsed()
+
+        // Check if creep should break deadlock
+        if (shouldBreakDeadlock(creep)) {
+            return moveToRandomNearbyPosition(creep)
+        }
+
+        // Store position before move attempt
+        const previousPos = creep.pos
+
         const moveCount = creep.getActiveBodyparts(MOVE)
         const totalCount = creep.body.length
         const roadPreferred = moveCount / totalCount >= 0.5
@@ -155,6 +191,10 @@ export const moveWithinRoom = wrap(
             routeCallback: nRouteCallback,
             ...opts,
         })
+
+        // Update position tracking after move attempt
+        updatePositionTracking(creep, previousPos)
+
         // Logger.error(`moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
         return err
     },

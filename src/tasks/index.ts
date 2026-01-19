@@ -5,6 +5,8 @@ export { Task, TaskMemory } from './types'
 declare global {
     interface CreepMemory {
         tasks: Task<any>[]
+        _dlPos?: string // Deadlock detection: serialized position from last tick
+        _dlWait?: number // Deadlock detection: number of ticks waiting at same position
     }
 
     namespace NodeJS {

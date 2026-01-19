@@ -52,6 +52,8 @@ declare global {
     interface CreepMemory {
         role: string
         home: string | undefined
+        _dlPos?: string // Deadlock detection: serialized position from last tick
+        _dlWait?: number // Deadlock detection: number of ticks waiting at same position
     }
 }
 
