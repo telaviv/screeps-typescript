@@ -434,21 +434,9 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
         importantStructures.push({ x: controller.x, y: controller.y })
     })
 
-    // Add ramparts on walls adjacent to important structures
+    // Add ramparts on important structures themselves
     for (const pos of importantStructures) {
-        for (let dx = -1; dx <= 1; dx++) {
-            for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue
-                const x = pos.x + dx
-                const y = pos.y + dy
-                if (x >= 0 && x < 50 && y >= 0 && y < 50) {
-                    // Add ramparts on walls adjacent to important structures
-                    if (iroom.get(x, y).terrain === TERRAIN_MASK_WALL) {
-                        rampartSet.add(`${x},${y}`)
-                    }
-                }
-            }
-        }
+        rampartSet.add(`${pos.x},${pos.y}`)
     }
 
     // Convert back to Position array

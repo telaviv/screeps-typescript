@@ -12,6 +12,7 @@ import { LogisticsCreep } from 'roles/logistics-constants'
 import { World } from './world'
 import SourcesManager from 'managers/sources-manager'
 import WarDepartment, { SpawnWarMemory, WarStatus } from 'war-department'
+import DefenseDepartment from 'defense-department'
 
 import ErrorMapper from './ErrorMapper'
 import Empire from 'empire'
@@ -104,6 +105,114 @@ function debugRoom(roomName: string) {
         .filter(([, mem]) => mem.mines?.some((m) => m.name === roomName))
         .map(([name]) => name)
     console.log(`Assigned as mine to: ${mines.length > 0 ? mines.join(', ') : 'none'}`)
+}
+
+/**
+ * Defense namespace for debugging defense systems
+ */
+const defense = {
+    /**
+     * Debugs the defense system to see why towers aren't switching to repair mode
+     * @param roomName - The room name to check
+     */
+    debug: (roomName: string) => {
+        console.log(`=== Debug Defense: ${roomName} ===`)
+
+        const room = Game.rooms[roomName]
+        if (!room) {
+            console.log('ERROR: Room not visible')
+            return
+        }
+
+        const defenseDepartment = new DefenseDepartment(room)
+
+        // Check hostile creeps
+        const hostiles = room.find(FIND_HOSTILE_CREEPS)
+        console.log(`\n--- Hostile Creeps (${hostiles.length}) ---`)
+        if (hostiles.length === 0) {
+            console.log('No hostile creeps found')
+        } else {
+            hostiles.forEach((hostile) => {
+                const healParts = hostile.body.filter((p) => p.type === HEAL).length
+                const rangedParts = hostile.body.filter((p) => p.type === RANGED_ATTACK).length
+                const boosts = hostile.body
+                    .filter((p) => p.boost)
+                    .map((p) => `${p.type}:${p.boost}`)
+                    .join(', ')
+                console.log(`  ${hostile.name} (${hostile.owner.username})`)
+                console.log(`    HEAL parts: ${healParts}, RANGED_ATTACK parts: ${rangedParts}`)
+                if (boosts) {
+                    console.log(`    Boosts: ${boosts}`)
+                }
+            })
+        }
+
+        // Calculate healing power
+        const hasRangedAttackers = hostiles.some((h) => h.getActiveBodyparts(RANGED_ATTACK) > 0)
+        const hostileHealingPower = defenseDepartment.calculateHostileHealingPower()
+        console.log(`\n--- Healing Power ---`)
+        console.log(`Has ranged attackers: ${hasRangedAttackers}`)
+        console.log(`Total hostile healing power: ${hostileHealingPower} HP/tick`)
+        if (!hasRangedAttackers && hostiles.some((h) => h.getActiveBodyparts(HEAL) > 0)) {
+            console.log(`  (Healers present but no ranged attackers, so healing not counted)`)
+        }
+
+        // Calculate our attack power
+        const towers = room.find(FIND_MY_STRUCTURES, {
+            filter: { structureType: STRUCTURE_TOWER },
+        })
+        console.log(`\n--- Our Defense ---`)
+        console.log(`Towers: ${towers.length}`)
+
+        // Check current attackers
+        const attackers = Object.values(Game.creeps).filter(
+            (c) => c.memory.role === 'attacker' && c.memory.home === roomName,
+        )
+        console.log(`Current attackers: ${attackers.length}`)
+
+        // Check overwhelming healing status
+        const hasOverwhelming = defenseDepartment.hasOverwhelmingHealing()
+        console.log(`\n--- Overwhelming Healing Check ---`)
+        console.log(`hasOverwhelmingHealing(): ${hasOverwhelming}`)
+
+        // Check base defense state
+        const baseDefenseState = room.memory.baseDefense?.state
+        const isInBaseDefense = defenseDepartment.isInBaseDefense()
+        console.log(`\n--- Base Defense State ---`)
+        console.log(`Memory state: ${baseDefenseState ?? 'null'}`)
+        console.log(`isInBaseDefense(): ${isInBaseDefense}`)
+
+        // Check base-repairer creeps
+        const baseRepairers = Object.values(Game.creeps).filter(
+            (c) => c.memory.role === 'base-repairer' && c.memory.home === roomName,
+        )
+        console.log(`Base-repairer creeps: ${baseRepairers.length}`)
+
+        // Check matrix cache
+        const hasMatrix = defenseDepartment.getBaseDefenseMatrix() !== null
+        const repairTargets = defenseDepartment.getRepairTargets()
+        console.log(`Base defense matrix cached: ${hasMatrix}`)
+        console.log(`Pre-computed repair targets: ${repairTargets.length}`)
+
+        // Check what towers should be doing
+        console.log(`\n--- Tower Behavior ---`)
+        console.log(
+            `Towers should ${hasOverwhelming ? 'PRIORITIZE REPAIR/HEALING' : 'ATTACK HOSTILES'}`,
+        )
+
+        // Check for rampart construction sites
+        const rampartSites = room.find(FIND_CONSTRUCTION_SITES, {
+            filter: { structureType: STRUCTURE_RAMPART },
+        })
+        console.log(`\n--- Rampart Construction Sites ---`)
+        console.log(
+            `Rampart sites: ${rampartSites.length} ${
+                rampartSites.length > 0 ? '(blocking matrix generation)' : ''
+            }`,
+        )
+
+        console.log(`\n=== End Debug ===`)
+    },
 }
 
 function showClaimTasks() {
@@ -593,6 +702,7 @@ export default function assignGlobals(): void {
     global.printTasks = printTasks
     global.findUsername = findUsername
     global.debugRoom = debugRoom
+    global.defense = defense
     global.showClaimTasks = showClaimTasks
     global.initialize = initialize
     global.debugMineWorkers = debugMineWorkers
@@ -618,6 +728,9 @@ declare global {
             printTasks: (type?: Task<any>) => void
             findUsername: () => string
             debugRoom: (roomName: string) => void
+            defense: {
+                debug: (roomName: string) => void
+            }
             showClaimTasks: () => void
             initialize: () => void
             debugMineWorkers: (roomName: string) => void

@@ -16,10 +16,22 @@ interface Memory {
     stats: StatsMemory
 }
 
-interface RoomMemory {
-    roadPositions: RoomPosition[]
-    collapsed: boolean
-    visuals: { snapshot: boolean }
+export interface FlatRoomPosition {
+    x: number
+    y: number
+    roomName: string
+}
+
+declare global {
+    interface RoomMemory {
+        roadPositions: RoomPosition[]
+        collapsed: boolean
+        visuals: { snapshot: boolean }
+        baseDefense?: {
+            state: null | 'repair' // null = inactive, 'repair' = active defense mode
+            repairTargets?: FlatRoomPosition[] // pre-computed repair target positions
+        }
+    }
 }
 
 // `global` extension samples

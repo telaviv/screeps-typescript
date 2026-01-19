@@ -1,8 +1,17 @@
 import { getInjuredCreeps, getTowers } from 'utils/room'
 import { HostileRecorder } from 'hostiles'
-import { getCreeps } from 'utils/creep'
+import { getCreeps, getLogisticsCreeps } from 'utils/creep'
 import roleAttacker, { calculateParts as calculateAttackerParts } from 'roles/attacker'
 import roleHealer from 'roles/healer'
+import roleBaseRepairer, {
+    convertLogisticsToBaseRepairer,
+    isBaseRepairer,
+} from 'roles/base-repairer'
+import { LogisticsCreep } from 'roles/logistics-constants'
+import { MatrixCacheManager } from 'matrix-cache'
+import { FlatRoomPosition } from 'types'
+import * as Logger from 'utils/logger'
+import { profile } from 'utils/profiling'
 
 /** Multiplier applied to hostile danger level when calculating defender needs */
 const FORCE_MULTIPLIER = 2
@@ -114,24 +123,26 @@ export default class DefenseDepartment {
 
     /**
      * Calculates total healing power of hostile creeps, accounting for boosts.
-     * Only counts creeps that have RANGED_ATTACK (the threatening combination).
+     * Only counts if there are hostiles with RANGED_ATTACK present (the threatening combination).
      * @returns Total healing power per tick
      */
-    private calculateHostileHealingPower(): number {
+    public calculateHostileHealingPower(): number {
         const hostiles = this.room.find(FIND_HOSTILE_CREEPS)
         if (!hostiles || hostiles.length === 0) {
             return 0
         }
 
+        // First check if there are any hostiles with ranged attack capability
+        const hasRangedAttackers = hostiles.some((h) => h.getActiveBodyparts(RANGED_ATTACK) > 0)
+        if (!hasRangedAttackers) {
+            return 0
+        }
+
+        // If there are ranged attackers, count ALL healing power from ALL hostile creeps
+        // (healers and attackers are often separate creeps)
         let totalHealPower = 0
 
         for (const hostile of hostiles) {
-            // Only count healing from creeps with ranged attack capability
-            const hasRangedAttack = hostile.getActiveBodyparts(RANGED_ATTACK) > 0
-            if (!hasRangedAttack) {
-                continue
-            }
-
             // Calculate healing power from each HEAL body part
             for (const part of hostile.body) {
                 if (part.type === HEAL && part.hits > 0) {
@@ -172,5 +183,128 @@ export default class DefenseDepartment {
         const ourAttackPower = SUPPORTED_ATTACKERS * attackPartsPerCreep * ATTACK_POWER
 
         return hostileHealPower > ourAttackPower
+    }
+
+    /**
+     * Checks if the room is currently in base defense mode.
+     */
+    public isInBaseDefense(): boolean {
+        return (this.room.memory.baseDefense?.state ?? null) === 'repair'
+    }
+
+    /**
+     * Updates base defense state each tick.
+     * Enters defense mode when overwhelming healing detected.
+     * Exits defense mode when threat has passed.
+     */
+    public updateBaseDefenseState(): void {
+        const hasOverwhelming = this.hasOverwhelmingHealing()
+        const inDefense = this.isInBaseDefense()
+
+        if (hasOverwhelming && !inDefense) {
+            this.enterBaseDefense()
+        } else if (!hasOverwhelming && inDefense) {
+            this.exitBaseDefense()
+        }
+    }
+
+    /**
+     * Enters base defense mode: generates matrix, pre-computes targets, converts logistics.
+     */
+    private enterBaseDefense(): void {
+        Logger.info('defense:enter-base-defense', this.room.name)
+
+        // Initialize defense state
+        if (!this.room.memory.baseDefense) {
+            this.room.memory.baseDefense = { state: 'repair' }
+        } else {
+            const baseDefense = this.room.memory.baseDefense
+            baseDefense.state = 'repair'
+        }
+
+        // Generate and cache the base defense matrix
+        const matrix = MatrixCacheManager.generateBaseDefenseBounds(this.room.name)
+
+        if (matrix && this.room.memory.baseDefense) {
+            // Pre-compute all repairable structure positions inside the base bounds
+            const repairTargets: FlatRoomPosition[] = []
+
+            const structures = this.room.find(FIND_STRUCTURES, {
+                filter: (s) => {
+                    const isWall =
+                        s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART
+                    const insideBounds = matrix.get(s.pos.x, s.pos.y) < 255
+                    return isWall && insideBounds
+                },
+            })
+
+            for (const structure of structures) {
+                repairTargets.push({
+                    x: structure.pos.x,
+                    y: structure.pos.y,
+                    roomName: this.room.name,
+                })
+            }
+
+            this.room.memory.baseDefense.repairTargets = repairTargets
+            Logger.info('defense:targets-computed', this.room.name, repairTargets.length)
+        }
+
+        // Convert all logistics creeps to base-repairers
+        const logistics: LogisticsCreep[] = getLogisticsCreeps({ room: this.room })
+        for (const creep of logistics) {
+            convertLogisticsToBaseRepairer(creep)
+        }
+    }
+
+    /**
+     * Gets the base defense cost matrix if available.
+     */
+    @profile
+    public getBaseDefenseMatrix(): CostMatrix | null {
+        return MatrixCacheManager.getBaseDefenseBounds(this.room.name)
+    }
+
+    /**
+     * Gets the pre-computed repair targets for base defense.
+     */
+    @profile
+    public getRepairTargets(): FlatRoomPosition[] {
+        return this.room.memory.baseDefense?.repairTargets || []
+    }
+
+    /**
+     * Exits base defense mode: clears matrix and converts base-repairers back to logistics.
+     */
+    private exitBaseDefense(): void {
+        Logger.info('defense:exit-base-defense', this.room.name)
+
+        // Clear defense state
+        const baseDefense = this.room.memory.baseDefense
+        if (baseDefense) {
+            baseDefense.state = null
+            if (baseDefense.repairTargets) {
+                delete baseDefense.repairTargets
+            }
+        }
+
+        // Clear the matrix from cache
+        MatrixCacheManager.clearBaseDefenseBounds(this.room.name)
+
+        // Convert all base-repairers back to logistics
+        this.revertBaseRepairersToLogistics()
+    }
+
+    /**
+     * Reverts all base-repairer creeps back to logistics.
+     */
+    @profile
+    private revertBaseRepairersToLogistics(): void {
+        const allCreeps = this.room.find(FIND_MY_CREEPS)
+        const baseRepairers = allCreeps.filter(isBaseRepairer)
+
+        for (const creep of baseRepairers) {
+            roleBaseRepairer.run(creep) // Will trigger transformToLogistics
+        }
     }
 }

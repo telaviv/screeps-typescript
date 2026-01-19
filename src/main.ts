@@ -4,6 +4,7 @@ import * as TimeCache from 'utils/time-cache'
 import assignGlobals, { findUsername } from 'utils/globals'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
+import roleBaseRepairer, { BaseRepairerCreep } from 'roles/base-repairer'
 import roleClaimer, { Claimer } from 'roles/claim'
 import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleHarvester, { Harvester } from 'roles/harvester'
@@ -19,6 +20,7 @@ import roleWrecker, { Wrecker } from 'roles/wrecker'
 import survey, { isSurveyComplete } from './surveyor'
 import { trackProfiler, wrap } from 'utils/profiling'
 import updateStrategy, { StrategyPhase } from './strategy'
+import DefenseDepartment from 'defense-department'
 import Empire from 'empire'
 import ErrorMapper from 'utils/ErrorMapper'
 import { HostileRecorder } from 'hostiles'
@@ -91,10 +93,20 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-empty-interface
     interface Memory {}
 
+    interface FlatRoomPosition {
+        x: number
+        y: number
+        roomName: string
+    }
+
     interface RoomMemory {
         strategy: StrategyPhase
         collapsed: boolean
         updated: number
+        baseDefense?: {
+            state: null | 'repair'
+            repairTargets?: FlatRoomPosition[]
+        }
     }
 
     interface CreepMemory {
@@ -151,6 +163,10 @@ const runMyRoom = wrap((room: Room) => {
         return
     }
     buildManager.removeEnemyConstructionSites()
+
+    // Update base defense state
+    const defenseDepartment = new DefenseDepartment(room)
+    defenseDepartment.updateBaseDefenseState()
     buildManager.ensureConstructionSites()
     ensureSafeMode(room)
 
@@ -233,6 +249,8 @@ const runCreep = wrap((creepName: string) => {
         roleHarvester.run(creep as unknown as Harvester)
     } else if (creep.memory.role === 'logistics') {
         RoleLogistics.staticRun(creep as LogisticsCreep)
+    } else if (creep.memory.role === 'base-repairer') {
+        roleBaseRepairer.run(creep as BaseRepairerCreep)
     } else if (creep.memory.role === 'claimer') {
         roleClaimer.run(creep as Claimer)
     } else if (creep.memory.role === 'wrecker') {

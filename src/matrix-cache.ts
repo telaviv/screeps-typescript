@@ -9,7 +9,12 @@ import hash from 'utils/hash'
 import { subscribe } from 'pub-sub/pub-sub'
 
 /** Tags used to identify different cost matrix configurations */
-export type MatrixTag = 'default-terrain' | 'road-preferred-terrain' | 'no-edges' | 'no-obstacles'
+export type MatrixTag =
+    | 'default-terrain'
+    | 'road-preferred-terrain'
+    | 'no-edges'
+    | 'no-obstacles'
+    | 'base-defense-bounds'
 
 /** Order in which matrix tags are applied when building composite matrices */
 const TAG_ORDER: MatrixTag[] = [
@@ -17,6 +22,7 @@ const TAG_ORDER: MatrixTag[] = [
     'road-preferred-terrain',
     'no-edges',
     'no-obstacles',
+    'base-defense-bounds',
 ]
 const MATRIX_CACHE_ID = 'matrix-cache'
 const DEPRECATED_TAGS: MatrixTag[] = []
@@ -184,6 +190,136 @@ export class MatrixCacheManager {
     }
 
     /**
+     * Gets the base defense bounds matrix for a room.
+     * Returns null if the matrix hasn't been generated yet.
+     * @param roomName - Name of the room
+     */
+    @mprofile('MatrixCacheManager.getBaseDefenseBounds')
+    public static getBaseDefenseBounds(roomName: string): CostMatrix | null {
+        const manager = new MatrixCacheManager(roomName)
+        const cache = manager.matrixCache // Access private property
+        const key = 'base-defense-bounds'
+
+        if (!cache[key]) {
+            return null
+        }
+
+        return manager.getCostMatrix(['base-defense-bounds'])
+    }
+
+    /**
+     * Generates and caches the base defense bounds matrix.
+     * Uses BFS from spawn to mark inside positions.
+     * Returns null if rampart construction sites exist or no spawn found.
+     * @param roomName - Name of the room
+     */
+    @mprofile('MatrixCacheManager.generateBaseDefenseBounds')
+    public static generateBaseDefenseBounds(roomName: string): CostMatrix | null {
+        const room = Game.rooms[roomName]
+        if (!room) {
+            return null
+        }
+
+        // Check if rampart construction sites exist
+        const rampartSites = room.find(FIND_CONSTRUCTION_SITES, {
+            filter: (s) => s.structureType === STRUCTURE_RAMPART,
+        })
+
+        if (rampartSites.length > 0) {
+            Logger.info('base-defense:matrix-skipped:rampart-sites', roomName, rampartSites.length)
+            return null
+        }
+
+        const spawns = room.find(FIND_MY_SPAWNS)
+        if (spawns.length === 0) {
+            Logger.error('base-defense:matrix-failed:no-spawn', roomName)
+            return null
+        }
+
+        const matrix = new PathFinder.CostMatrix()
+        const terrain = new Room.Terrain(roomName)
+
+        // Initialize all positions to 255 (outside)
+        for (let x = 0; x < 50; x++) {
+            for (let y = 0; y < 50; y++) {
+                matrix.set(x, y, 255)
+            }
+        }
+
+        // BFS from spawn to mark inside positions
+        const start = spawns[0].pos
+        const queue: RoomPosition[] = [start]
+        const visited = new Set<string>()
+        visited.add(`${start.x},${start.y}`)
+
+        // Get ramparts for walkability check
+        const ramparts = room.find(FIND_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_RAMPART,
+        })
+        const rampartPositions = new Set(ramparts.map((r) => `${r.pos.x},${r.pos.y}`))
+
+        while (queue.length > 0) {
+            const pos = queue.shift()
+            if (!pos) break
+            const terrainType = terrain.get(pos.x, pos.y)
+
+            // Set cost based on terrain
+            if (terrainType === TERRAIN_MASK_WALL) {
+                matrix.set(pos.x, pos.y, 255)
+            } else if (terrainType === TERRAIN_MASK_SWAMP) {
+                matrix.set(pos.x, pos.y, 10)
+            } else {
+                matrix.set(pos.x, pos.y, 2)
+            }
+
+            // Check all adjacent positions
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue
+
+                    const nx = pos.x + dx
+                    const ny = pos.y + dy
+
+                    if (nx < 0 || nx >= 50 || ny < 0 || ny >= 50) continue
+
+                    const key = `${nx},${ny}`
+                    if (visited.has(key)) continue
+
+                    const neighborTerrain = terrain.get(nx, ny)
+                    const hasRampart = rampartPositions.has(key)
+
+                    // Walkable if: (plain or swamp) OR has rampart
+                    const isWalkable = neighborTerrain !== TERRAIN_MASK_WALL || hasRampart
+
+                    if (isWalkable) {
+                        visited.add(key)
+                        queue.push(new RoomPosition(nx, ny, roomName))
+                    }
+                }
+            }
+        }
+
+        // Cache the matrix
+        const manager = new MatrixCacheManager(roomName)
+        manager.matrixCache['base-defense-bounds'] = {
+            matrix: JSON.stringify(matrix.serialize()),
+            time: Game.time,
+        }
+
+        return matrix
+    }
+
+    /**
+     * Clears the base defense bounds matrix from cache.
+     * @param roomName - Name of the room
+     */
+    public static clearBaseDefenseBounds(roomName: string): void {
+        const manager = new MatrixCacheManager(roomName)
+        const cache = manager.matrixCache
+        delete cache['base-defense-bounds']
+    }
+
+    /**
      * Clears stale cached matrices based on eviction time and hash.
      * @param clearAll - If true, clears all caches regardless of age
      */
@@ -269,6 +405,14 @@ export class MatrixCacheManager {
         if (this.matrixCache[key]) {
             return
         }
+
+        // Special handling for base-defense-bounds (standalone tag)
+        if (key === 'base-defense-bounds') {
+            // This matrix is generated externally via generateBaseDefenseBounds
+            // If it's not in cache, it hasn't been generated yet
+            throw new Error('base-defense-bounds matrix not generated yet')
+        }
+
         const [prefix, latest] = splitTags(tags)
         let prefixMatrix =
             prefix.length === 0 ? new PathFinder.CostMatrix() : this.getCostMatrix(prefix)

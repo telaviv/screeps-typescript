@@ -5,6 +5,7 @@ export const TASK_BUILDING = 'building'
 export const TASK_UPGRADING = 'upgrading'
 export const TASK_REPAIRING = 'repairing'
 export const TASK_WALL_REPAIRS = 'wall-repairs'
+export const TASK_BASE_DEFENSE = 'base-defense'
 export const TASK_COLLECTING = 'collecting'
 export const TASK_STORE = 'store'
 export const TASK_MINING = 'mining'
@@ -19,6 +20,7 @@ export type DeliveryTask =
     | typeof TASK_UPGRADING
     | typeof TASK_REPAIRING
     | typeof TASK_WALL_REPAIRS
+    | typeof TASK_BASE_DEFENSE
     | typeof TASK_STORE
     | typeof TASK_TRAVELING
 export type LogisticsTask = typeof NO_TASK | DeliveryTask | typeof TASK_COLLECTING
@@ -42,6 +44,7 @@ export interface LogisticsMemory extends ResourceCreepMemory {
     preference: LogisticsPreference
     currentTask: LogisticsTask
     currentTarget: Id<Structure> | undefined
+    formerPreference?: LogisticsPreference // Added for base-repairer conversion
     noSuicide?: boolean
     noRepairLimit?: boolean
 }

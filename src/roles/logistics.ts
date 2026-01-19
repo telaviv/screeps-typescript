@@ -11,6 +11,7 @@ import {
     NO_TASK,
     PREFERENCE_BASE_REPAIRER,
     PREFERENCE_WORKER,
+    TASK_BASE_DEFENSE,
     TASK_BUILDING,
     TASK_COLLECTING,
     TASK_HAULING,
@@ -32,7 +33,6 @@ import {
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { mprofile, profile } from 'utils/profiling'
-import DefenseDepartment from 'defense-department'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import RoomQuery from 'spawn/room-query'
 import { addEnergyTask } from 'tasks/usage-utils'
@@ -62,6 +62,7 @@ const TASK_EMOJIS = {
     [TASK_MINING]: '⛏️',
     [TASK_STORE]: '🏪',
     [TASK_WALL_REPAIRS]: '🧱',
+    [TASK_BASE_DEFENSE]: '🛡️',
     [TASK_TRAVELING]: '🚎',
     [NO_TASK]: '🤔',
 }
@@ -147,6 +148,8 @@ class RoleLogistics {
             this.repair()
         } else if (currentTask === TASK_WALL_REPAIRS) {
             this.repairWalls()
+        } else if (currentTask === TASK_BASE_DEFENSE) {
+            this.baseDefense()
         } else if (currentTask === TASK_TRAVELING) {
             this.travel()
         } else if (currentTask === NO_TASK) {
@@ -259,41 +262,12 @@ class RoleLogistics {
             Logger.info('logistics:assignWorkerPreference:hauling', this.creep.name)
             memory.currentTask = TASK_HAULING
         } else if (memory.preference === PREFERENCE_BASE_REPAIRER) {
-            // Base repairer only repairs walls and structures, prioritizes walls
-            if (hasOwnFragileWall(this.creep.room)) {
-                Logger.info('logistics:assignWorkerPreference:base-repairer-walls', this.creep.name)
-                memory.currentTask = TASK_WALL_REPAIRS
-            } else if (EnergySinkManager.canRepairNonWalls(this.creep.room)) {
-                Logger.info(
-                    'logistics:assignWorkerPreference:base-repairer-structures',
-                    this.creep.name,
-                )
-                memory.currentTask = TASK_REPAIRING
-            } else if (homeController?.my) {
-                Logger.info(
-                    'logistics:assignWorkerPreference:base-repairer-upgrading',
-                    this.creep.name,
-                )
-                memory.currentTask = TASK_UPGRADING
-            } else {
-                Logger.info(
-                    'logistics:assignWorkerPreference:base-repairer-no-task',
-                    this.creep.name,
-                )
-                memory.currentTask = NO_TASK
-            }
+            // Base repairer focuses on base defense (wall repairs even if not fragile)
+            Logger.info('logistics:assignWorkerPreference:base-defense', this.creep.name)
+            memory.currentTask = TASK_BASE_DEFENSE
         } else {
-            // Check for overwhelming healing - prioritize wall repairs
-            const defenseDepartment = new DefenseDepartment(this.creep.room)
-            const hasOverwhelmingHealing = defenseDepartment.hasOverwhelmingHealing()
-
-            if (hasOverwhelmingHealing && hasOwnFragileWall(this.creep.room)) {
-                Logger.info(
-                    'logistics:assignWorkerPreference:wall-repairs-overwhelming-healing',
-                    this.creep.name,
-                )
-                memory.currentTask = TASK_WALL_REPAIRS
-            } else if (!hasSafeMode && hasOwnFragileWall(this.creep.room)) {
+            // Prioritize wall repairs when needed
+            if (!hasSafeMode && hasOwnFragileWall(this.creep.room)) {
                 Logger.info(
                     'logistics:assignWorkerPreference:wall-repairs-no-safemode',
                     this.creep.name,
@@ -450,6 +424,55 @@ class RoleLogistics {
             )
         } else if (err !== OK) {
             Logger.warning('logistics:repair-wall:failure', this.creep.name, err)
+        }
+    }
+
+    /** Performs base defense repairs (walls even if not fragile) */
+    @profile
+    baseDefense(): void {
+        let structure = null
+        if (this.creep.memory.currentTarget) {
+            structure = Game.getObjectById<Structure>(this.creep.memory.currentTarget)
+            // Only clear target if structure doesn't exist or is fully repaired
+            if (structure === null || structure.hits === structure.hitsMax) {
+                Logger.warning(
+                    'base-defense:target:complete',
+                    this.creep.name,
+                    this.creep.memory.currentTarget,
+                )
+                this.creep.memory.currentTarget = undefined
+                structure = null
+            }
+        }
+
+        if (structure === null) {
+            // Find any wall or rampart that needs repair (not just fragile)
+            structure = this.creep.pos.findClosestByRange(
+                this.creep.room.find(FIND_STRUCTURES, {
+                    filter: (s) =>
+                        (s.structureType === STRUCTURE_WALL ||
+                            s.structureType === STRUCTURE_RAMPART) &&
+                        s.hits < s.hitsMax,
+                }),
+            )
+            if (structure === null) {
+                // No walls need repair, reassign worker
+                this.assignWorkerPreference()
+                return
+            }
+            this.creep.memory.currentTarget = structure.id
+        }
+
+        const err = this.creep.repair(structure)
+        if (err === ERR_NOT_IN_RANGE) {
+            moveWithinRoom(
+                this.creep,
+                { pos: structure.pos, range: 3 },
+                { visualizePathStyle: { stroke: '#ffffff' } },
+            )
+        } else if (err !== OK) {
+            Logger.warning('logistics:base-defense:failure', this.creep.name, err)
+            this.creep.memory.currentTarget = undefined
         }
     }
 
@@ -614,6 +637,11 @@ class RoleLogistics {
         )
     }
 
+    /**
+     * Transforms this logistics creep to a base-repairer.
+     * Saves the current preference so it can be restored later.
+     * @param preference - Optional preference to save (defaults to current preference)
+     */
     /**
      * Checks if a logistics creep can be created with the given capacity.
      * @param capacity - Energy capacity available

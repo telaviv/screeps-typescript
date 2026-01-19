@@ -240,6 +240,24 @@ export function hasOwnFragileWall(room: Room): boolean {
     return walls.length > 0
 }
 
+export function hasOwnWalls(room: Room): boolean {
+    if (!room.controller?.my) {
+        return false
+    }
+    const walls = room.find(FIND_STRUCTURES, {
+        filter: (structure) => {
+            if (structure.structureType === STRUCTURE_WALL) {
+                return structure.hits < structure.hitsMax
+            }
+            if (structure.structureType === STRUCTURE_RAMPART) {
+                return structure.hits < structure.hitsMax && structure.my
+            }
+            return false
+        },
+    })
+    return walls.length > 0
+}
+
 export function hasFragileWall(room: Room): boolean {
     const walls = room.find(FIND_STRUCTURES, {
         filter: (structure) => isFragileWall(structure),

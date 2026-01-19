@@ -9,6 +9,15 @@ export interface FlatRoomPosition {
     roomName: string
 }
 
+declare global {
+    interface RoomMemory {
+        baseDefense?: {
+            state: null | 'repair'
+            repairTargets?: FlatRoomPosition[]
+        }
+    }
+}
+
 export interface SourceMemory extends CreepMemory {
     source: Id<Source>
 }
