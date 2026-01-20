@@ -2,9 +2,7 @@ import { Stamp } from './types'
 
 export default {
     rcl: 8,
-    stationaryPoints: {
-        storageLink: { x: 22, y: 16 },
-    },
+    stationaryPoints: { storageLink: { x: 22, y: 16 } },
     buildings: {
         spawn: [
             { x: 21, y: 15 },
@@ -30,12 +28,10 @@ export default {
             { x: 26, y: 20 },
             { x: 27, y: 20 },
             { x: 18, y: 17 },
-            { x: 25, y: 15 },
             { x: 24, y: 13 },
             { x: 21, y: 13 },
             { x: 23, y: 13 },
             { x: 25, y: 14 },
-            { x: 19, y: 15 },
             { x: 18, y: 16 },
             { x: 19, y: 14 },
             { x: 20, y: 13 },
@@ -70,6 +66,10 @@ export default {
             { x: 23, y: 18 },
             { x: 17, y: 13 },
             { x: 27, y: 13 },
+            { x: 19, y: 16 },
+            { x: 25, y: 16 },
+            { x: 19, y: 15 },
+            { x: 25, y: 15 },
         ],
         link: [{ x: 22, y: 15 }],
         road: [
@@ -241,7 +241,6 @@ export default {
             { x: 25, y: 20 },
             { x: 19, y: 14 },
             { x: 24, y: 14 },
-            { x: 25, y: 15 },
             { x: 20, y: 14 },
             { x: 21, y: 15 },
             { x: 23, y: 15 },
