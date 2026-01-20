@@ -365,13 +365,13 @@ export class MineManager {
     }
 
     getDefenders(): Creep[] {
-        const mineeClaimers = getCreeps('attacker', this.minee).filter(
+        const mineeClaimers = getCreeps('attack', this.minee).filter(
             (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
         )
         if (!this.room) {
             return mineeClaimers
         }
-        const minerClaimers = getCreeps('attacker', this.room).filter(
+        const minerClaimers = getCreeps('attack', this.room).filter(
             (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
         )
         return minerClaimers

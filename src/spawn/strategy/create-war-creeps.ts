@@ -51,14 +51,14 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
         return null
     }
 
-    if (warDepartment.needsProtection && roomQuery.getCreepCount('attacker') < ATTACKERS_COUNT) {
+    if (warDepartment.needsProtection && roomQuery.getCreepCount('attack') < ATTACKERS_COUNT) {
         return roleAttacker.create(spawn, warDepartment.target, capacity)
     }
 
     const attackers = room
         .find(FIND_MY_CREEPS)
         .filter(
-            (c) => c.memory.role === 'attacker' && (c.memory as AttackerMemory).asPair === true,
+            (c) => c.memory.role === 'attack' && (c.memory as AttackerMemory).asPair === true,
         ).length
     const healers = room
         .find(FIND_MY_CREEPS)
@@ -68,7 +68,7 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
     if (status === WarStatus.ATTACK) {
         Logger.info('war-stuff', room.name, attackers, healers)
         if (attackers < ATTACKERS_COUNT * 2 && attackers <= healers) {
-            return roleAttacker.create(spawn, warDepartment.target, capacity, null, true)
+            return roleAttacker.create(spawn, warDepartment.target, capacity, null, false)
         } else if (healers < ATTACKERS_COUNT && healers < attackers) {
             return roleHealer.create(spawn, warDepartment.target, true, true)
         } else if (warDepartment.hasHostileController()) {

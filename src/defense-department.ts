@@ -44,7 +44,7 @@ export default class DefenseDepartment {
 
     /** Returns the total ATTACK parts on current defender creeps */
     public currentAttackParts(): number {
-        const attackers = getCreeps('attacker', this.room)
+        const attackers = getCreeps('attack', this.room)
         return attackers.reduce((acc, creep) => acc + creep.getActiveBodyparts(ATTACK), 0)
     }
 

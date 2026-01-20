@@ -13,6 +13,7 @@ import { World } from './world'
 import SourcesManager from 'managers/sources-manager'
 import WarDepartment, { SpawnWarMemory, WarStatus } from 'war-department'
 import DefenseDepartment from 'defense-department'
+import { AttackerMemory } from 'roles/attacker'
 
 import ErrorMapper from './ErrorMapper'
 import Empire from 'empire'
@@ -166,7 +167,7 @@ const defense = {
 
         // Check current attackers
         const attackers = Object.values(Game.creeps).filter(
-            (c) => c.memory.role === 'attacker' && c.memory.home === roomName,
+            (c) => c.memory.role === 'attack' && c.memory.home === roomName,
         )
         console.log(`Current attackers: ${attackers.length}`)
 
@@ -683,6 +684,80 @@ export function findUsername(): string {
     return ''
 }
 
+/**
+ * Fixes attackers stuck in pairing mode by removing their pairing memory.
+ * This allows them to attack immediately instead of wandering.
+ */
+function fixStuckAttackers(): void {
+    let fixedCount = 0
+    for (const creep of Object.values(Game.creeps)) {
+        if (creep.memory.role === 'attack') {
+            const attackerMemory = creep.memory as AttackerMemory
+            if (attackerMemory.asPair === true || attackerMemory.paired === false) {
+                console.log(`Fixing stuck attacker: ${creep.name} in ${attackerMemory.roomName}`)
+                delete attackerMemory.asPair
+                delete attackerMemory.paired
+                fixedCount++
+            }
+        }
+    }
+    if (fixedCount > 0) {
+        console.log(`Fixed ${fixedCount} stuck attacker(s). They should start attacking now!`)
+    } else {
+        console.log('No stuck attackers found.')
+    }
+}
+
+/**
+ * Debug function to show what attackers are doing and what they see.
+ */
+function debugAttackers(): void {
+    const attackers = Object.values(Game.creeps).filter((c) => c.memory.role === 'attack')
+
+    if (attackers.length === 0) {
+        console.log('No attackers found')
+        return
+    }
+
+    console.log(`=== Found ${attackers.length} attacker(s) ===`)
+
+    for (const creep of attackers) {
+        const mem = creep.memory as AttackerMemory
+        console.log(`\n${creep.name}:`)
+        console.log(`  Position: ${creep.pos}`)
+        console.log(`  Target room: ${mem.roomName}`)
+        console.log(`  Current room: ${creep.room.name}`)
+        console.log(`  In target room: ${creep.room.name === mem.roomName}`)
+        console.log(`  asPair: ${mem.asPair}`)
+        console.log(`  paired: ${mem.paired}`)
+
+        const targetRoom = Game.rooms[mem.roomName]
+        if (targetRoom) {
+            const hostileCreeps = targetRoom.find(FIND_HOSTILE_CREEPS)
+            const hostileStructures = targetRoom.find(FIND_HOSTILE_STRUCTURES)
+            const hostileSites = targetRoom.find(FIND_HOSTILE_CONSTRUCTION_SITES)
+
+            console.log(`  Target room vision: YES`)
+            console.log(`  Hostile creeps: ${hostileCreeps.length}`)
+            console.log(`  Hostile structures: ${hostileStructures.length}`)
+            console.log(`  Hostile construction sites: ${hostileSites.length}`)
+
+            if (hostileSites.length > 0) {
+                const closest = creep.pos.findClosestByRange(hostileSites)
+                if (closest) {
+                    console.log(
+                        `  Closest site: ${closest.structureType} at ${
+                            closest.pos
+                        } (range: ${creep.pos.getRangeTo(closest)})`,
+                    )
+                }
+            }
+        } else {
+            console.log(`  Target room vision: NO`)
+        }
+    }
+}
+
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
@@ -709,6 +784,8 @@ export default function assignGlobals(): void {
     global.debugWorker = debugWorker
     global.debugRescue = debugRescue
     global.debugSavior = debugSavior
+    global.fixStuckAttackers = fixStuckAttackers
+    global.debugAttackers = debugAttackers
 }
 
 declare global {
@@ -737,6 +814,8 @@ declare global {
             debugWorker: (creepName: string) => void
             debugRescue: (roomName: string) => void
             debugSavior: (saviorName: string) => void
+            fixStuckAttackers: () => void
+            debugAttackers: () => void
         }
     }
 }

@@ -1,6 +1,6 @@
 import * as Logger from 'utils/logger'
 import { followCreep, moveToRoom, moveWithinRoom } from 'utils/travel'
-import { goHome, moveToStationaryPoint, recycle, wander } from 'utils/creep'
+import { goHome, recycle, wander } from 'utils/creep'
 import { fromBodyPlan } from 'utils/parts'
 import { getHostileConstructionSites } from 'utils/room'
 import { wrap } from 'utils/profiling'
@@ -128,6 +128,38 @@ const roleAttacker = {
             return
         }
 
+        // Prioritize destroying construction sites before attacking structures
+        if (constructionSites.length > 0) {
+            // Move directly onto construction sites to destroy them
+            const site = constructionSites[0]
+            if (creep.pos.isEqualTo(site.pos)) {
+                // Already on a construction site, move to the next one or wander to step on others
+                if (constructionSites.length > 1) {
+                    const result = creep.moveTo(constructionSites[1].pos, {
+                        ignoreCreeps: false,
+                        reusePath: 0,
+                    })
+                    Logger.info('attacker:on-site:move-to-next', creep.name, result)
+                } else {
+                    // Only one site, just move randomly to get off it and destroy it
+                    const result = wander(creep)
+                    Logger.info('attacker:on-site:wander', creep.name, result)
+                }
+            } else {
+                // Use moveTo to path directly to construction site
+                const result = creep.moveTo(site.pos, { ignoreCreeps: false, reusePath: 0 })
+                Logger.info(
+                    'attacker:move-to-site',
+                    creep.name,
+                    site.structureType,
+                    site.pos,
+                    result,
+                )
+            }
+            creep.heal(creep)
+            return
+        }
+
         const structureTargets = targetRoom.find(FIND_HOSTILE_STRUCTURES)
         if (structureTargets.length > 0) {
             const structureTarget = structureTargets[0]
@@ -135,11 +167,7 @@ const roleAttacker = {
             return
         }
 
-        if (constructionSites.length > 0) {
-            moveToStationaryPoint(constructionSites[0].pos, creep)
-        } else {
-            wander(creep)
-        }
+        wander(creep)
         creep.heal(creep)
     }, 'runAttacker'),
 

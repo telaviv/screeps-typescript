@@ -19,8 +19,9 @@ import {
 } from './constants'
 import WarDepartment, { WarStatus } from 'war-department'
 import { createImportantWarCreeps, createLatentSpawnWorkers } from './create-war-creeps'
-import { getCreeps, getLogisticsCreeps } from 'utils/creep'
+import { getCreeps, getLogisticsCreeps, getScouts } from 'utils/creep'
 import { getLatentWorkerInterval, isEnergyRestricted } from './utils'
+import { isTravelTask } from 'tasks/travel/utils'
 import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleMason, { MasonCreep } from 'roles/mason'
 import DefenseDepartment from 'defense-department'
@@ -357,6 +358,30 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
 const createMineWorkers = wrap(
     (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
         if (!mineManager.room) {
+            // Check if there's already a scout on the way to this mine
+            const scouts = getScouts(true) // Get permanent scouts
+            const scoutAlreadyTraveling = scouts.some((scout) =>
+                scout.memory.tasks.some(
+                    (task) => isTravelTask(task) && task.destination === mineManager.name,
+                ),
+            )
+            if (scoutAlreadyTraveling) {
+                return
+            }
+
+            // Check if there's already a scout task queued for this mine
+            if (
+                RoomManager.getAllScoutTasks().some((task) => task.data.room === mineManager.name)
+            ) {
+                return
+            }
+
+            // Check if there's already a claimer on the way (which would also provide vision)
+            const claimers = mineManager.getClaimers()
+            if (claimers.length > 0) {
+                return
+            }
+
             if (mineManager.hasCapacityToReserve()) {
                 roleClaimer.create(spawn, mineManager.name, { reserve: true, capacity })
                 return

@@ -51,6 +51,8 @@ const RESPAWN_IDLE_LIMIT = 0
 const SLEEP_SAY_TIME = 10
 /** Controller downgrade threshold that triggers upgrading priority */
 const MAX_TICKS_TO_DOWNGRADE = 5000
+/** Safe mode threshould to safely ignore wall repairs */
+const SAFE_MODE_WALL_REPAIRS_THRESHOLD = 4000
 
 /** Emoji display for each task type */
 const TASK_EMOJIS = {
@@ -276,6 +278,16 @@ class RoleLogistics {
             } else if (buildManager && buildManager.hasNonWallConstructionSites()) {
                 Logger.info('logistics:assignWorkerPreference:building', this.creep.name)
                 memory.currentTask = TASK_BUILDING
+            } else if (
+                homeController?.level === 2 &&
+                (this.creep.room.controller?.safeMode ?? 0) > SAFE_MODE_WALL_REPAIRS_THRESHOLD &&
+                homeController?.my
+            ) {
+                Logger.info(
+                    'logistics:assignWorkerPreference:upgrading-rcl2-safemode',
+                    this.creep.name,
+                )
+                memory.currentTask = TASK_UPGRADING
             } else if (hasSafeMode && hasOwnFragileWall(this.creep.room)) {
                 Logger.info(
                     'logistics:assignWorkerPreference:wall-repairs-safemode',
