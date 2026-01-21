@@ -383,17 +383,172 @@ function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
 }
 
 /**
+ * Gets rampart positions that are on the edges of the bunker.
+ * Edge ramparts have the most extreme x or y coordinates.
+ * @param bunkerRamparts - Rampart positions from the bunker stamp
+ * @returns Set of position keys for edge ramparts
+ */
+function getBunkerEdgeRamparts(bunkerRamparts: Position[]): Set<string> {
+    const edges = new Set<string>()
+
+    // Group by y-coordinate (rows) and find min/max x values
+    const rowMap = new Map<number, { minX: number; maxX: number; positions: Position[] }>()
+    for (const pos of bunkerRamparts) {
+        if (!rowMap.has(pos.y)) {
+            rowMap.set(pos.y, { minX: pos.x, maxX: pos.x, positions: [pos] })
+        } else {
+            const row = rowMap.get(pos.y)
+            if (row) {
+                row.minX = Math.min(row.minX, pos.x)
+                row.maxX = Math.max(row.maxX, pos.x)
+                row.positions.push(pos)
+            }
+        }
+    }
+
+    // Add ramparts with extreme x values in each row
+    for (const row of rowMap.values()) {
+        for (const pos of row.positions) {
+            if (pos.x === row.minX || pos.x === row.maxX) {
+                edges.add(`${pos.x},${pos.y}`)
+            }
+        }
+    }
+
+    // Group by x-coordinate (columns) and find min/max y values
+    const colMap = new Map<number, { minY: number; maxY: number; positions: Position[] }>()
+    for (const pos of bunkerRamparts) {
+        if (!colMap.has(pos.x)) {
+            colMap.set(pos.x, { minY: pos.y, maxY: pos.y, positions: [pos] })
+        } else {
+            const col = colMap.get(pos.x)
+            if (col) {
+                col.minY = Math.min(col.minY, pos.y)
+                col.maxY = Math.max(col.maxY, pos.y)
+                col.positions.push(pos)
+            }
+        }
+    }
+
+    // Add ramparts with extreme y values in each column
+    for (const col of colMap.values()) {
+        for (const pos of col.positions) {
+            if (pos.y === col.minY || pos.y === col.maxY) {
+                edges.add(`${pos.x},${pos.y}`)
+            }
+        }
+    }
+
+    return edges
+}
+
+/**
+ * Gets rampart positions that protect important structures.
+ * @param iroom - The immutable room data
+ * @param allRamparts - Set of all rampart position keys
+ * @returns Set of position keys for structure protection ramparts
+ */
+function getStructureProtectionRamparts(
+    iroom: ImmutableRoom,
+    allRamparts: Set<string>,
+): Set<string> {
+    const structureProtection = new Set<string>()
+    const structurePositions: Position[] = []
+
+    // Collect all important structure positions
+    const structureTypes: (
+        | 'link'
+        | 'controller'
+        | 'source'
+        | 'mineral'
+        | 'storage'
+        | 'spawn'
+        | 'tower'
+        | 'terminal'
+        | 'factory'
+        | 'lab'
+        | 'nuker'
+        | 'observer'
+    )[] = [
+        'link',
+        'controller',
+        'source',
+        'mineral',
+        'storage',
+        'spawn',
+        'tower',
+        'terminal',
+        'factory',
+        'lab',
+        'nuker',
+        'observer',
+    ]
+
+    for (const structureType of structureTypes) {
+        iroom.getObstacles(structureType).forEach((obstacle) => {
+            structurePositions.push({ x: obstacle.x, y: obstacle.y })
+        })
+    }
+
+    // Find ramparts that match structure positions
+    for (const pos of structurePositions) {
+        const key = `${pos.x},${pos.y}`
+        if (allRamparts.has(key)) {
+            structureProtection.add(key)
+        }
+    }
+
+    return structureProtection
+}
+
+/**
+ * Categorizes ramparts into priority groups.
+ * @param iroom - The immutable room data
+ * @param bunkerRamparts - Rampart positions from the bunker stamp
+ * @param allRamparts - All rampart positions
+ * @returns Ramparts categorized by priority
+ */
+function categorizeRamparts(
+    iroom: ImmutableRoom,
+    bunkerRamparts: Position[],
+    allRamparts: Position[],
+): { edges: Position[]; structures: Position[]; others: Position[] } {
+    const allRampartsSet = new Set<string>()
+    allRamparts.forEach((pos) => allRampartsSet.add(`${pos.x},${pos.y}`))
+
+    const edgeKeys = getBunkerEdgeRamparts(bunkerRamparts)
+    const structureKeys = getStructureProtectionRamparts(iroom, allRampartsSet)
+
+    const edges: Position[] = []
+    const structures: Position[] = []
+    const others: Position[] = []
+
+    for (const pos of allRamparts) {
+        const key = `${pos.x},${pos.y}`
+        if (edgeKeys.has(key)) {
+            edges.push(pos)
+        } else if (structureKeys.has(key)) {
+            structures.push(pos)
+        } else {
+            others.push(pos)
+        }
+    }
+
+    return { edges, structures, others }
+}
+
+/**
  * Calculates rampart positions using bunker stamp and stationaryPoints heuristic.
  * @param iroom - The immutable room data
- * @returns Array of positions for rampart placement
+ * @returns Array of positions for rampart placement in priority order
  */
 function getRampartPositions(iroom: ImmutableRoom): Position[] {
     // Start with bunker stamp ramparts
-    const ramparts = iroom.getNonObstacles('rampart')
+    const bunkerRamparts = iroom.getNonObstacles('rampart')
     const rampartSet = new Set<string>()
 
     // Add bunker ramparts
-    ramparts.forEach((pos) => rampartSet.add(`${pos.x},${pos.y}`))
+    bunkerRamparts.forEach((pos) => rampartSet.add(`${pos.x},${pos.y}`))
 
     // Get stationaryPoints
     const points = iroom.stationaryPoints
@@ -450,11 +605,17 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
         rampartSet.add(`${pos.x},${pos.y}`)
     }
 
-    // Convert back to Position array
-    return Array.from(rampartSet).map((key) => {
+    // Convert to array
+    const allRamparts: Position[] = Array.from(rampartSet).map((key) => {
         const [x, y] = key.split(',').map(Number)
         return { x, y }
     })
+
+    // Categorize ramparts by priority
+    const { edges, structures, others } = categorizeRamparts(iroom, bunkerRamparts, allRamparts)
+
+    // Return in priority order: edges first, then structure protection, then everything else
+    return [...edges, ...structures, ...others]
 }
 
 /**

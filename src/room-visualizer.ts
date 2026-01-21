@@ -18,7 +18,7 @@ import { findMyRooms } from 'utils/room'
 const MAX_BUNKER_DIMENSION = 13
 
 /** Types of room visualizations available */
-type VisualType = 'construction' | 'transform'
+type VisualType = 'construction' | 'transform' | 'ramparts'
 /** Types of map-level visualizations available */
 type MapVisualType = 'mining' | 'types'
 
@@ -50,6 +50,7 @@ declare global {
                 wallTransform: (roomName: string) => void
                 transformFromId: (roomName: string, id: Id<Source | StructureController>) => void
                 sumTransform: (roomName: string) => void
+                ramparts: (roomName: string) => void
                 clear: (roomName: string) => void
             }
         }
@@ -95,6 +96,22 @@ function transformColor(value: number): string {
     const colors = colormap({ colormap: 'cool', nshades: MAX_BUNKER_DIMENSION * 2, format: 'hex' })
     const normalizedValue = Math.max(Math.min(value * 2 - 1, MAX_BUNKER_DIMENSION * 2 - 1), 0)
     return colors[normalizedValue]
+}
+
+/**
+ * Converts a rampart priority index to a color transitioning from green to red.
+ * @param index - The index in the rampart array (0-based)
+ * @param total - Total number of ramparts
+ * @returns HSL color string with transparency
+ */
+function rampartPriorityColor(index: number, total: number): string {
+    // Map index to hue: 0 (first/high priority) -> green (120), last -> red (0)
+    const normalizedPosition = total > 1 ? index / (total - 1) : 0
+    const hue = 120 - normalizedPosition * 120 // 120 (green) to 0 (red)
+    const saturation = 100
+    const lightness = 50
+    const alpha = 0.4 // Transparent
+    return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`
 }
 
 function drawRampart(visual: RoomVisual, pos: RoomPosition): void {
@@ -272,6 +289,25 @@ export default class RoomVisualizer {
             }
         }
     }
+
+    /**
+     * Renders ramparts with color-coded priority (green = high priority, red = low priority).
+     * @param rampartPositions - Array of rampart positions in priority order
+     */
+    renderRampartPriorities(rampartPositions: { x: number; y: number }[]): void {
+        const total = rampartPositions.length
+        for (let i = 0; i < total; i++) {
+            const pos = rampartPositions[i]
+            const roomPos = new RoomPosition(pos.x, pos.y, this.room.name)
+            const color = rampartPriorityColor(i, total)
+
+            // Draw a filled square covering the entire tile
+            this.room.visual.rect(roomPos.x - 0.5, roomPos.y - 0.5, 1, 1, {
+                fill: color,
+                opacity: 1,
+            })
+        }
+    }
 }
 
 /** Main visualization function called each tick to render all active visuals. */
@@ -301,6 +337,13 @@ function visualizeRoom(room: Room): void {
         roomVisual.renderConstructionFeatures(constructionFeatures, visuals.showRoads)
     } else if (visuals.visualType === 'transform') {
         roomVisual.renderTransform(visuals.transform as number[][])
+    } else if (visuals.visualType === 'ramparts') {
+        const constructionFeatures = getConstructionFeatures(room)
+        if (!constructionFeatures || !constructionFeatures.rampart) {
+            Logger.info('room-visualizer:visualizeRoom:missing-ramparts', room.name)
+            return
+        }
+        roomVisual.renderRampartPriorities(constructionFeatures.rampart)
     }
 }
 
@@ -365,6 +408,22 @@ function setSumTransformVisuals(roomName: string): void {
     room.memory.visuals = { visualType: 'transform', transform }
 }
 
+/**
+ * Console command to visualize rampart build priorities for a room.
+ * Green = high priority (bunker edges), Red = low priority (interior).
+ * @param roomName - Name of the room
+ */
+function setRampartPriorityVisuals(roomName: string): void {
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log(`Room ${roomName} not visible`)
+        return
+    }
+    room.memory.visuals = { visualType: 'ramparts' }
+    console.log(`Rampart priority visualization enabled for ${roomName}`)
+    console.log(`Green = high priority (bunker edges), Red = low priority (interior)`)
+}
+
 /** Console command to clear all visualizations. */
 function cancelVisuals(): void {
     for (const room of Object.values(Memory.rooms)) {
@@ -378,6 +437,7 @@ global.visuals = {
     wallTransform: setWallTransformVisuals,
     transformFromId: setTransformFromId,
     sumTransform: setSumTransformVisuals,
+    ramparts: setRampartPriorityVisuals,
     clear: cancelVisuals,
     map: {
         mining: setMiningMapVisuals,
