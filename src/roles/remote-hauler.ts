@@ -89,6 +89,18 @@ export class RemoteHaulerCreep {
             return
         }
 
+        // If stationary points are missing for the remote room, suicide
+        const points = getStationaryPointsMine(this.memory.remote)
+        if (!points) {
+            Logger.error(
+                'remote-hauler:run:no-stationary-points-suiciding',
+                this.creep.name,
+                this.memory.remote,
+            )
+            this.creep.suicide()
+            return
+        }
+
         const freeCapacity = this.creep.store.getFreeCapacity()
         const isHome = this.creep.room.name === this.memory.home
         const isRemote = this.creep.room.name === this.memory.remote
@@ -197,12 +209,12 @@ export class RemoteHaulerCreep {
     }
 
     getPositionFromSourceId(id: Id<Source>): RoomPosition | null {
-        const points = getStationaryPointsMine(this.creep.room)
+        const points = getStationaryPointsMine(this.memory.remote)
         if (!points) {
             Logger.error(
                 'remote-hauler:getPositionFromSourceId:no-stationary-points',
                 this.creep.name,
-                this.creep.room.name,
+                this.memory.remote,
             )
             return null
         }
@@ -211,7 +223,7 @@ export class RemoteHaulerCreep {
             Logger.error(
                 'remote-hauler:getPositionFromSourceId:no-id-in-sources',
                 this.creep.name,
-                this.creep.room.name,
+                this.memory.remote,
                 points.sources,
             )
             return null

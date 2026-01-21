@@ -23,7 +23,7 @@ import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
 
 /** Current version of scout data format */
-const SCOUT_VERSION = '1.1.0'
+const SCOUT_VERSION = '1.2.0'
 
 /** Maximum distance to scout from owned rooms */
 const MAX_SCOUT_DISTANCE = MAX_CLAIM_DISTANCE + ENEMY_DISTANCE_BUFFER
@@ -76,6 +76,10 @@ export interface ScoutMemory {
     mineralPosition?: Position
     /** Remaining safe mode ticks */
     safeMode?: number
+    /** Game tick when respawn period expires (from closeTime) */
+    respawnRoomUntil?: number
+    /** Array of blocked exit directions ("1", "3", "5", "7") */
+    respawnBlocks?: string[]
 }
 
 declare global {
@@ -398,6 +402,23 @@ class ScoutManager {
         if (controller?.safeMode) {
             scoutMemory.safeMode = controller.safeMode
         }
+
+        // Check if this is a respawn room and detect respawn blocks
+        const roomStatus = Game.map.getRoomStatus(room.name)
+        if (roomStatus.status === 'respawn') {
+            if (roomStatus.timestamp !== undefined) {
+                scoutMemory.respawnRoomUntil = roomStatus.timestamp
+            }
+            const blocks = ScoutManager.detectRespawnBlocks(room)
+            if (blocks.length > 0) {
+                scoutMemory.respawnBlocks = blocks
+            }
+        } else {
+            // Clear respawn data if room is no longer a respawn room
+            scoutMemory.respawnRoomUntil = undefined
+            scoutMemory.respawnBlocks = undefined
+        }
+
         room.memory.scout = scoutMemory
     }
 
@@ -428,6 +449,54 @@ class ScoutManager {
             }
         }
         return undefined
+    }
+
+    /**
+     * Detects respawn blocks by checking for constructed walls on room edges.
+     * Only the game can place walls at x=0, x=49, y=0, y=49.
+     * @param room - The room to check
+     * @returns Array of blocked exit directions ("1", "3", "5", "7")
+     */
+    private static detectRespawnBlocks(room: Room): string[] {
+        const blocks: string[] = []
+
+        // Check top edge (y=0) for walls -> direction "1" (TOP)
+        for (let x = 0; x < 50; x++) {
+            const structures = room.lookForAt(LOOK_STRUCTURES, x, 0)
+            if (structures.some((s) => s.structureType === STRUCTURE_WALL)) {
+                blocks.push('1')
+                break
+            }
+        }
+
+        // Check right edge (x=49) for walls -> direction "3" (RIGHT)
+        for (let y = 0; y < 50; y++) {
+            const structures = room.lookForAt(LOOK_STRUCTURES, 49, y)
+            if (structures.some((s) => s.structureType === STRUCTURE_WALL)) {
+                blocks.push('3')
+                break
+            }
+        }
+
+        // Check bottom edge (y=49) for walls -> direction "5" (BOTTOM)
+        for (let x = 0; x < 50; x++) {
+            const structures = room.lookForAt(LOOK_STRUCTURES, x, 49)
+            if (structures.some((s) => s.structureType === STRUCTURE_WALL)) {
+                blocks.push('5')
+                break
+            }
+        }
+
+        // Check left edge (x=0) for walls -> direction "7" (LEFT)
+        for (let y = 0; y < 50; y++) {
+            const structures = room.lookForAt(LOOK_STRUCTURES, 0, y)
+            if (structures.some((s) => s.structureType === STRUCTURE_WALL)) {
+                blocks.push('7')
+                break
+            }
+        }
+
+        return blocks
     }
 }
 

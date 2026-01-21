@@ -664,31 +664,51 @@ const clearRooms = Profiling.wrap(() => {
             return
         }
     }
-    for (const room of myRooms) {
+    // Process both owned rooms and reserved mine rooms
+    const roomsToProcess = Object.values(Game.rooms).filter((room) => {
+        if (!room.controller) {
+            return false
+        }
+        // Include owned rooms
+        if (room.controller.my) {
+            return true
+        }
+        // Include reserved mine rooms
+        if (
+            room.controller.reservation &&
+            room.controller.reservation.username === global.USERNAME
+        ) {
+            return true
+        }
+        return false
+    })
+    for (const room of roomsToProcess) {
         const constructionFeatures = getConstructionFeaturesV3(room)
         const features = getConstructionFeatures(room)
         if (!constructionFeatures || !features) {
-            return
+            continue
         }
         if (constructionFeatures.type !== 'none' && constructionFeatures.movement) {
-            if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
-                return
-            }
             // Check if we have sufficient workers before destroying spawn
             const movementHasSpawn = constructionFeatures.movement.spawn !== undefined
-            if (movementHasSpawn && !hasSufficientWorkersForSpawnRelocation(room)) {
-                Logger.warning(
-                    'clearRooms:insufficient-workers',
-                    room.name,
-                    'Waiting for 3 workers with >1000 TTL before relocating spawn',
-                )
-                return
+            // Only apply spawn safety checks if this room's movement involves spawn
+            if (movementHasSpawn) {
+                if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
+                    continue
+                }
+                if (!hasSufficientWorkersForSpawnRelocation(room)) {
+                    Logger.warning(
+                        'clearRooms:insufficient-workers',
+                        room.name,
+                        'Waiting for 3 workers with >1000 TTL before relocating spawn',
+                    )
+                    continue
+                }
             }
             constructionFeatures.movement = calculateBuildingDiff(room, features)
             clearInvalidConstructionSites(room, features)
             destroyMovementStructures(room)
             constructionFeatures.movement = undefined
-            return
         }
     }
 }, 'clearRooms')

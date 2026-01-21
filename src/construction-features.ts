@@ -363,16 +363,23 @@ export function willBeDestroyedByMovement(
 
 /**
  * Validates construction features for duplicate positions.
+ * Only checks for conflicts between OBSTACLE structures, since ramparts/roads can overlap.
  * @param features - Construction features to validate
- * @returns Array of conflicts found
+ * @returns Array of conflicts found (only obstacle structure conflicts)
  */
 export function validateConstructionFeatures(
     features: ConstructionFeatures,
 ): { pos: Position; types: BuildableStructureConstant[] }[] {
     const positionMap = new Map<string, BuildableStructureConstant[]>()
 
+    // Non-obstacle structures that can overlap with others
+    const nonObstacles = new Set<string>([STRUCTURE_RAMPART, STRUCTURE_ROAD, STRUCTURE_CONTAINER])
+
     for (const [structureType, positions] of Object.entries(features)) {
         if (!positions) continue
+
+        // Skip non-obstacle structures in conflict detection
+        if (nonObstacles.has(structureType)) continue
 
         for (const pos of positions) {
             const key = `${pos.x},${pos.y}`

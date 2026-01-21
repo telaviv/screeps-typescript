@@ -32,7 +32,7 @@ import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
 import { getConstructionSites, getEnergyCapacityForRCL } from 'utils/room'
 import { getStationaryPoints } from 'construction-features'
-import { getVirtualControllerLink, getVirtualStorage } from 'utils/virtual-storage'
+import { getVirtualStorage } from 'utils/virtual-storage'
 import hash from 'utils/hash'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
@@ -171,17 +171,7 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
         return
     }
 
-    // Spawn static upgrader if virtual controller link exists, otherwise spawn logistics upgraders
-    const virtualControllerLink = getVirtualControllerLink(room.name)
-    if (virtualControllerLink && virtualControllerLink.structureType === STRUCTURE_CONTAINER) {
-        if (
-            roomQuery.getCreepCount('static-upgrader') === 0 &&
-            roleStaticUpgrader.canCreate(spawn, capacity)
-        ) {
-            roleStaticUpgrader.create(spawn, room.name, capacity)
-            return
-        }
-    } else if (roomQuery.getLogisticsCreepCount({ preference: TASK_UPGRADING }) < UPGRADERS_COUNT) {
+    if (roomQuery.getLogisticsCreepCount({ preference: TASK_UPGRADING }) < UPGRADERS_COUNT) {
         RoleLogistics.createCreep(spawn, TASK_UPGRADING, { capacity })
         return
     }

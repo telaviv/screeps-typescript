@@ -786,6 +786,85 @@ function checkFeatureConflicts(roomName: string): void {
     }
 }
 
+/**
+ * Forces recalculation of mine construction features for a specific mine room.
+ * Use this when a mine has constructionFeaturesV3 but is missing the points field.
+ * @param mineName - The name of the mine room to fix
+ * @param baseRoomName - Optional: the base room that should own this mine. If not provided, will search for it.
+ */
+function fixMineFeatures(mineName: string, baseRoomName?: string): void {
+    console.log(`=== Fixing Mine Features: ${mineName} ===`)
+
+    const memory = Memory.rooms[mineName]
+    if (!memory) {
+        console.log(`❌ No memory found for ${mineName}`)
+        return
+    }
+
+    const features = memory.constructionFeaturesV3
+    if (!features) {
+        console.log(`❌ No constructionFeaturesV3 found for ${mineName}`)
+        console.log(`Hint: This room has never been set up as a mine`)
+        return
+    }
+
+    if (features.type !== 'mine') {
+        console.log(`❌ Room is not a mine (type: ${features.type})`)
+        return
+    }
+
+    console.log(`Found mine features:`)
+    console.log(`  version: ${features.version}`)
+    console.log(`  has points: ${!!features.points}`)
+    console.log(`  has minee: ${!!features.minee}`)
+    console.log(`  has features: ${!!features.features}`)
+
+    // Find the base room that owns this mine
+    let baseRoom: string | null = baseRoomName || null
+
+    if (!baseRoom) {
+        for (const [roomName, roomMem] of Object.entries(Memory.rooms)) {
+            if (roomMem.mines?.some((m) => m.name === mineName)) {
+                baseRoom = roomName
+                break
+            }
+        }
+    }
+
+    if (!baseRoom) {
+        console.log(`\n❌ This mine is orphaned - not listed in any room's 'mines' array`)
+        console.log(`\nTo fix, you need to specify which base room owns it:`)
+        console.log(`Example: global.fixMineFeatures('${mineName}', 'E56S29')`)
+        console.log(`\nOr manually delete the broken features:`)
+        console.log(`delete Memory.rooms['${mineName}'].constructionFeaturesV3`)
+        return
+    }
+
+    const baseMemory = Memory.rooms[baseRoom]
+    if (!baseMemory) {
+        console.log(`❌ Base room ${baseRoom} has no memory`)
+        return
+    }
+
+    // Check if the mine is in the base room's mines array
+    const mineInArray = baseMemory.mines?.some((m) => m.name === mineName)
+    if (!mineInArray) {
+        console.log(`\n⚠️  WARNING: ${mineName} is NOT in ${baseRoom}'s mines array!`)
+        console.log(`The base room doesn't know it should manage this mine.`)
+        console.log(`You should either:`)
+        console.log(`1. Add it to the mines array (if it should be managed)`)
+        console.log(`2. Delete the mine's constructionFeaturesV3 (if it's abandoned)`)
+        return
+    }
+
+    console.log(`✓ Found base room: ${baseRoom}`)
+    console.log(`\nForcing recalculation by deleting base room features...`)
+    delete Memory.rooms[baseRoom].constructionFeaturesV3
+    console.log(`✓ Deleted ${baseRoom}.constructionFeaturesV3`)
+    console.log(`\nThe surveyor will recalculate on the next tick (if CPU bucket > 1500)`)
+    console.log(`Current CPU bucket: ${Game.cpu.bucket}`)
+}
+
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
@@ -815,6 +894,7 @@ export default function assignGlobals(): void {
     global.fixStuckAttackers = fixStuckAttackers
     global.debugAttackers = debugAttackers
     global.checkFeatureConflicts = checkFeatureConflicts
+    global.fixMineFeatures = fixMineFeatures
 }
 
 declare global {
@@ -846,6 +926,7 @@ declare global {
             fixStuckAttackers: () => void
             debugAttackers: () => void
             checkFeatureConflicts: (roomName: string) => void
+            fixMineFeatures: (mineName: string, baseRoomName?: string) => void
         }
     }
 }

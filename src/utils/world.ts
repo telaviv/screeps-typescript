@@ -73,8 +73,41 @@ function currentStatusSearchSpace(): 'normal' | 'respawn' {
     return 'normal'
 }
 
-function safeDescribeExits(roomName: string): ExitsInformation {
+/**
+ * Wraps Game.map.describeExits to filter out exits blocked by respawn room walls.
+ * Cleans up expired respawn data automatically.
+ * @param roomName - The room to get exits for
+ * @returns Exit information with respawn blocks filtered out
+ */
+function describeExitsWithRespawnBlocks(roomName: string): ExitsInformation {
     const exits = Game.map.describeExits(roomName)
+    const scout = Memory.rooms[roomName]?.scout
+
+    if (!scout || !scout.respawnBlocks || scout.respawnBlocks.length === 0) {
+        return exits
+    }
+
+    // Check if respawn period has expired
+    if (scout.respawnRoomUntil !== undefined && Game.time > scout.respawnRoomUntil) {
+        // Clean up expired respawn data
+        delete scout.respawnRoomUntil
+        delete scout.respawnBlocks
+        return exits
+    }
+
+    // Filter out blocked exits
+    const filteredExits = {} as ExitsInformation
+    for (const [direction, exit] of Object.entries(exits)) {
+        if (!scout.respawnBlocks.includes(direction)) {
+            filteredExits[direction as keyof ExitsInformation] = exit
+        }
+    }
+
+    return filteredExits
+}
+
+function safeDescribeExits(roomName: string): ExitsInformation {
+    const exits = describeExitsWithRespawnBlocks(roomName)
     const exitCopy = {} as ExitsInformation
     const filtered: string[] = []
 
