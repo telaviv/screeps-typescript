@@ -324,3 +324,71 @@ export function getStationaryPointsMine(room: Room | string): StationaryPointsMi
     }
     return null
 }
+
+/**
+ * Checks if a construction site at the given position will be destroyed by movement code.
+ * This happens when multiple structure types are planned for the same position.
+ * @param room - The room to check
+ * @param pos - Position to check
+ * @param structureType - Type of structure being built
+ * @returns Object with conflict info, or null if no conflict
+ */
+export function willBeDestroyedByMovement(
+    room: Room,
+    pos: { x: number; y: number },
+    structureType: BuildableStructureConstant,
+): { conflictingType: BuildableStructureConstant; reason: string } | null {
+    const features = getConstructionFeaturesV3(room)
+    if (!features || features.type === 'none' || !features.features) {
+        return null
+    }
+
+    // Check if any OTHER structure type also claims this position
+    for (const [otherType, positions] of Object.entries(features.features)) {
+        if (otherType === structureType) {
+            continue
+        }
+
+        const hasConflict = positions?.some((p) => p.x === pos.x && p.y === pos.y)
+        if (hasConflict) {
+            return {
+                conflictingType: otherType as BuildableStructureConstant,
+                reason: `Both ${structureType} and ${otherType} are planned for position (${pos.x}, ${pos.y})`,
+            }
+        }
+    }
+
+    return null
+}
+
+/**
+ * Validates construction features for duplicate positions.
+ * @param features - Construction features to validate
+ * @returns Array of conflicts found
+ */
+export function validateConstructionFeatures(
+    features: ConstructionFeatures,
+): { pos: Position; types: BuildableStructureConstant[] }[] {
+    const positionMap = new Map<string, BuildableStructureConstant[]>()
+
+    for (const [structureType, positions] of Object.entries(features)) {
+        if (!positions) continue
+
+        for (const pos of positions) {
+            const key = `${pos.x},${pos.y}`
+            const existing = positionMap.get(key) || []
+            existing.push(structureType as BuildableStructureConstant)
+            positionMap.set(key, existing)
+        }
+    }
+
+    const conflicts: { pos: Position; types: BuildableStructureConstant[] }[] = []
+    for (const [key, types] of positionMap.entries()) {
+        if (types.length > 1) {
+            const [x, y] = key.split(',').map(Number)
+            conflicts.push({ pos: { x, y }, types })
+        }
+    }
+
+    return conflicts
+}

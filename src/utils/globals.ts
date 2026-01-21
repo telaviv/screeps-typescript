@@ -7,7 +7,11 @@ import { Task } from 'tasks/types'
 import { canMine } from 'managers/mine-manager'
 import { findMyRooms } from './room'
 import { getAllTasks } from 'tasks/utils'
-import { getConstructionFeaturesV3 } from 'construction-features'
+import {
+    getConstructionFeatures,
+    getConstructionFeaturesV3,
+    validateConstructionFeatures,
+} from 'construction-features'
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { World } from './world'
 import SourcesManager from 'managers/sources-manager'
@@ -758,6 +762,30 @@ function debugAttackers(): void {
     }
 }
 
+/**
+ * Checks construction features for position conflicts that would cause structures to be destroyed.
+ * @param roomName - The room to check
+ */
+function checkFeatureConflicts(roomName: string): void {
+    const features = getConstructionFeatures(roomName)
+    if (!features) {
+        console.log(`No features found for ${roomName}`)
+        return
+    }
+
+    const conflicts = validateConstructionFeatures(features)
+    if (conflicts.length === 0) {
+        console.log(`✓ No conflicts found in ${roomName}`)
+    } else {
+        console.log(`✗ Found ${conflicts.length} conflict(s) in ${roomName}:`)
+        for (const conflict of conflicts) {
+            console.log(
+                `  Position (${conflict.pos.x}, ${conflict.pos.y}): ${conflict.types.join(', ')}`,
+            )
+        }
+    }
+}
+
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
@@ -786,6 +814,7 @@ export default function assignGlobals(): void {
     global.debugSavior = debugSavior
     global.fixStuckAttackers = fixStuckAttackers
     global.debugAttackers = debugAttackers
+    global.checkFeatureConflicts = checkFeatureConflicts
 }
 
 declare global {
@@ -816,6 +845,7 @@ declare global {
             debugSavior: (saviorName: string) => void
             fixStuckAttackers: () => void
             debugAttackers: () => void
+            checkFeatureConflicts: (roomName: string) => void
         }
     }
 }
