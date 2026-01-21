@@ -7,6 +7,7 @@ import {
     ConstructionFeatures,
     ConstructionFeaturesV3Base,
     ConstructionFeaturesV3Mine,
+    getCalculatedLinks,
     getConstructionFeaturesV3,
     getStationaryPoints,
     StationaryPoints,
@@ -205,6 +206,10 @@ export default class BuildManager {
             return this.buildVirtualStorageContainer()
         }
 
+        if (this.canBuildVirtualControllerLinkContainer()) {
+            return this.buildVirtualControllerLinkContainer()
+        }
+
         if (this.canBuildImportantExtension()) {
             return this.buildNextStructure(STRUCTURE_EXTENSION)
         }
@@ -230,6 +235,19 @@ export default class BuildManager {
         }
 
         if (this.canBuildLinks()) {
+            // Destroy any container at link positions before building
+            const linkPositions = this.constructionFeatures[STRUCTURE_LINK]
+            if (linkPositions) {
+                for (const linkPos of linkPositions) {
+                    const container = this.room
+                        .lookForAt(LOOK_STRUCTURES, linkPos.x, linkPos.y)
+                        .find((s) => s.structureType === STRUCTURE_CONTAINER)
+                    if (container) {
+                        Logger.warning('ensureNonWallSite:link:container-exists', this.room.name)
+                        container.destroy()
+                    }
+                }
+            }
             return this.buildNextStructure(STRUCTURE_LINK)
         }
 
@@ -291,6 +309,7 @@ export default class BuildManager {
             this.canBuildTower() ||
             this.canBuildSourceContainer() ||
             this.canBuildVirtualStorageContainer() ||
+            this.canBuildVirtualControllerLinkContainer() ||
             this.canBuildStorage() ||
             this.canBuildLinks() ||
             this.canBuildRoad()
@@ -428,6 +447,46 @@ export default class BuildManager {
         return (
             makeConstructionSite(
                 new RoomPosition(storage.x, storage.y, this.room.name),
+                STRUCTURE_CONTAINER,
+            ) === OK
+        )
+    }
+
+    /** Checks if a temporary controller link container is needed (before RCL 5) */
+    private canBuildVirtualControllerLinkContainer(): boolean {
+        if ((this.room.controller?.level ?? 0) >= 5) {
+            return false
+        }
+        const links = getCalculatedLinks(this.room)
+        if (!links || !links.controller) {
+            return false
+        }
+        const controllerLink = links.controller
+        const existingContainers = getContainers(this.room)
+        const existingLinks = getLinks(this.room)
+        // Check if there's already a container or link at this position
+        const hasStructureAtPosition =
+            existingContainers.some(
+                (container) =>
+                    container.pos.x === controllerLink.x && container.pos.y === controllerLink.y,
+            ) ||
+            existingLinks.some(
+                (link) => link.pos.x === controllerLink.x && link.pos.y === controllerLink.y,
+            )
+        return !hasStructureAtPosition
+    }
+
+    /** Builds a temporary container at the controller link position */
+    private buildVirtualControllerLinkContainer(): boolean {
+        const links = getCalculatedLinks(this.room)
+        if (!links || !links.controller) {
+            Logger.warning('buildVirtualControllerLinkContainer:no-links', this.room.name)
+            return false
+        }
+        const controllerLink = links.controller
+        return (
+            makeConstructionSite(
+                new RoomPosition(controllerLink.x, controllerLink.y, this.room.name),
                 STRUCTURE_CONTAINER,
             ) === OK
         )

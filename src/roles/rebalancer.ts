@@ -3,7 +3,11 @@ import * as TaskRunner from 'tasks/runner'
 import * as TransferTask from 'tasks/transfer'
 import * as WithdrawTask from 'tasks/withdraw'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
-import { getNonVirtualContainers, getVirtualStorage } from '../utils/virtual-storage'
+import {
+    getNonVirtualContainers,
+    getVirtualControllerLink,
+    getVirtualStorage,
+} from '../utils/virtual-storage'
 import { profile, wrap } from 'utils/profiling'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
@@ -103,6 +107,15 @@ export class RebalancerCreep {
         const virtualStorage = getVirtualStorage(this.creep.memory.home)
         if (virtualStorage) {
             const structure = TransferTask.makeRequest(this.creep, { structure: virtualStorage })
+            if (structure) {
+                return
+            }
+        }
+        const virtualControllerLink = getVirtualControllerLink(this.creep.memory.home)
+        if (virtualControllerLink && virtualControllerLink.structureType === STRUCTURE_CONTAINER) {
+            const structure = TransferTask.makeRequest(this.creep, {
+                structure: virtualControllerLink,
+            })
             if (structure) {
                 return
             }

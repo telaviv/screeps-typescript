@@ -1,7 +1,6 @@
 import * as Logger from 'utils/logger'
 import {
     isStationaryBase,
-    getCalculatedLinks,
     getStationaryPoints,
     getStationaryPointsBase,
 } from 'construction-features'
@@ -9,6 +8,7 @@ import { Position } from 'types'
 import autoIncrement from 'utils/autoincrement'
 import { fromBodyPlanSafe } from 'utils/parts'
 import { getTotalWithdrawableResources } from 'tasks/withdraw'
+import { getVirtualControllerLink } from 'utils/virtual-storage'
 import { hasNoEnergy } from 'utils/energy-harvesting'
 import { moveToStationaryPoint } from 'utils/creep'
 import { wrap } from 'utils/profiling'
@@ -23,7 +23,7 @@ export interface StaticUpgrader extends Creep {
 interface StaticUpgraderMemory extends CreepMemory {
     role: 'static-upgrader'
     pos: Position
-    sourceId: Id<StructureLink>
+    sourceId: Id<StructureLink | StructureContainer>
     sinkId: Id<StructureController>
 }
 
@@ -70,10 +70,12 @@ class StaticUpgraderCreep {
     }
 
     getEnergy() {
-        const source = Game.getObjectById<StructureLink>(this.creep.memory.sourceId)
+        const source = Game.getObjectById<StructureLink | StructureContainer>(
+            this.creep.memory.sourceId,
+        )
         if (!source) {
             Logger.warning(
-                'static-upgrader:get-energy:link-not-found',
+                'static-upgrader:get-energy:source-not-found',
                 this.creep.name,
                 this.creep.memory.sourceId,
             )
@@ -157,17 +159,12 @@ const roleStaticUpgrader = {
 
     getMemory(room: Room): StaticUpgraderMemory | null {
         const points = getStationaryPoints(room)
-        const links = getCalculatedLinks(room)
-        if (!points || !links) {
+        if (!points) {
             return null
         }
         const storage = room.controller
-        const link = room
-            .lookForAt(LOOK_STRUCTURES, links.controller.x, links.controller.y)
-            .filter((structure) => structure.structureType === STRUCTURE_LINK)[0] as
-            | StructureLink
-            | undefined
-        if (!storage || !link) {
+        const virtualLink = getVirtualControllerLink(room.name)
+        if (!storage || !virtualLink) {
             return null
         }
         if (!isStationaryBase(points)) {
@@ -178,7 +175,7 @@ const roleStaticUpgrader = {
             role: ROLE,
             home: room.name,
             pos,
-            sourceId: link.id,
+            sourceId: virtualLink.id,
             sinkId: storage.id,
             tasks: [],
         } as StaticUpgraderMemory

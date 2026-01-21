@@ -291,6 +291,17 @@ function calculateBuildingDiff(room: Room, features: ConstructionFeatures): Cons
             if (storage && (room.controller?.level ?? 0) < 4) {
                 continue
             }
+            // if there's a container temporarily replacing a link, don't worry about it
+            const links = getCalculatedLinks(room)
+            if (links && (room.controller?.level ?? 0) < 5) {
+                const controllerLink = links.controller
+                if (
+                    controllerLink.x === builtStructure.pos.x &&
+                    controllerLink.y === builtStructure.pos.y
+                ) {
+                    continue
+                }
+            }
         }
         if (!diff[builtStructure.structureType]) {
             diff[builtStructure.structureType] = {
