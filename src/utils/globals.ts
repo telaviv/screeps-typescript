@@ -787,6 +787,55 @@ function checkFeatureConflicts(roomName: string): void {
 }
 
 /**
+ * Checks if a specific position is in the rampart construction features.
+ * @param roomName - The room to check
+ * @param x - X coordinate
+ * @param y - Y coordinate
+ */
+function debugRampartPosition(roomName: string, x: number, y: number): void {
+    const features = getConstructionFeatures(roomName)
+    if (!features || !features.rampart) {
+        console.log(`No rampart features found for ${roomName}`)
+        return
+    }
+
+    const ramparts = features.rampart
+    const index = ramparts.findIndex((pos) => pos.x === x && pos.y === y)
+
+    if (index >= 0) {
+        console.log(`✓ Rampart at (${x}, ${y}) found at index ${index} of ${ramparts.length}`)
+        console.log(
+            `  Priority: ${
+                index < ramparts.length / 3
+                    ? 'HIGH (bunker edge)'
+                    : index < (ramparts.length * 2) / 3
+                    ? 'MEDIUM (structure protection)'
+                    : 'LOW (interior)'
+            }`,
+        )
+    } else {
+        console.log(`✗ Rampart at (${x}, ${y}) NOT FOUND in construction features`)
+        console.log(`  Total ramparts in features: ${ramparts.length}`)
+
+        // Check if it's in the bunker stamp
+        const room = Game.rooms[roomName]
+        if (room) {
+            const terrain = room.getTerrain()
+            const terrainType = terrain.get(x, y)
+            console.log(
+                `  Terrain: ${
+                    terrainType === TERRAIN_MASK_WALL
+                        ? 'wall'
+                        : terrainType === TERRAIN_MASK_SWAMP
+                        ? 'swamp'
+                        : 'plain'
+                }`,
+            )
+        }
+    }
+}
+
+/**
  * Forces recalculation of mine construction features for a specific mine room.
  * Use this when a mine has constructionFeaturesV3 but is missing the points field.
  * @param mineName - The name of the mine room to fix
@@ -895,6 +944,7 @@ export default function assignGlobals(): void {
     global.debugAttackers = debugAttackers
     global.checkFeatureConflicts = checkFeatureConflicts
     global.fixMineFeatures = fixMineFeatures
+    global.debugRampartPosition = debugRampartPosition
 }
 
 declare global {
@@ -927,6 +977,7 @@ declare global {
             debugAttackers: () => void
             checkFeatureConflicts: (roomName: string) => void
             fixMineFeatures: (mineName: string, baseRoomName?: string) => void
+            debugRampartPosition: (roomName: string, x: number, y: number) => void
         }
     }
 }

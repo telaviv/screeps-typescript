@@ -625,6 +625,18 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
     // Categorize ramparts by priority
     const { edges, structures, others } = categorizeRamparts(iroom, bunkerRamparts, allRamparts)
 
+    // Debug logging
+    if (iroom.name === 'E56S29') {
+        Logger.info(
+            `getRampartPositions: final counts - edges: ${edges.length}, structures: ${
+                structures.length
+            }, others: ${others.length}, total: ${
+                edges.length + structures.length + others.length
+            }`,
+        )
+        Logger.info(`getRampartPositions: allRamparts before categorization: ${allRamparts.length}`)
+    }
+
     // Return in priority order: edges first, then structure protection, then everything else
     return [...edges, ...structures, ...others]
 }

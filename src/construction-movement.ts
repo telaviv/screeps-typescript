@@ -59,6 +59,11 @@ export function destroyMovementStructures(room: Room): void {
     }
     for (const [structureType, { moveTo, moveFrom }] of Object.entries(movement)) {
         for (const { x, y } of moveTo) {
+            // Ramparts and containers can be placed on top of other structures, so skip conflict check
+            if (structureType === STRUCTURE_RAMPART || structureType === STRUCTURE_CONTAINER) {
+                continue
+            }
+
             const obstacle = getObstacleAt(room, x, y)
             if (obstacle) {
                 if (obstacle.structureType === structureType) {
