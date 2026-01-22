@@ -33,6 +33,7 @@ import chalk from 'chalk'
 
 import bunkerStamp from '../src/stamps/bunker'
 import { placeBunker } from '../src/stamps/placement'
+import { calculateBunkerRoads } from '../src/stamps/roads'
 import { visualizeBunkerPlacement } from '../src/stamps/visualizer'
 
 // Mock RoomTerrain for standalone use
@@ -138,10 +139,10 @@ async function main() {
                 } else if (anyObj.type === 'controller') {
                     controller = { x: anyObj.x, y: anyObj.y }
                 } else if (anyObj.type === 'mineral') {
-                    minerals.push({ 
-                        x: anyObj.x, 
+                    minerals.push({
+                        x: anyObj.x,
                         y: anyObj.y,
-                        mineralType: anyObj.mineralType || '?'
+                        mineralType: anyObj.mineralType || '?',
                     })
                 }
             }
@@ -175,6 +176,25 @@ async function main() {
             controller,
             stamp: bunkerStamp,
         })
+
+        // Calculate roads
+        if (result.success && minerals.length > 0) {
+            console.log(chalk.gray(`🛣️  Calculating road network...`))
+            const roads = calculateBunkerRoads(
+                mockTerrain,
+                result.buildings,
+                sources,
+                controller,
+                minerals[0],
+            )
+            // Add new roads to existing bunker roads
+            const existingRoads = result.buildings.get('road') || []
+            const allRoads = [...existingRoads, ...roads]
+            result.buildings.set('road', allRoads)
+            console.log(chalk.gray(`  Bunker roads: ${existingRoads.length} tiles`))
+            console.log(chalk.gray(`  External roads: ${roads.length} tiles`))
+            console.log(chalk.gray(`  Total roads: ${allRoads.length} tiles`))
+        }
 
         // Visualize
         const visualization = visualizeBunkerPlacement(
