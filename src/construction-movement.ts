@@ -64,19 +64,14 @@ export function destroyMovementStructures(room: Room): void {
                 if (obstacle.structureType === structureType) {
                     Logger.error(
                         'construction-movement:destroyMovementStructures:moveTo:mismatch',
-                        structureType,
-                        room.name,
-                        x,
-                        y,
+                        `MISMATCH: ${structureType} at (${x},${y}) in ${room.name} is already where it should be but is in moveTo list (this should not happen!)`,
                     )
                 } else {
                     Logger.error(
                         'construction-movement:destroyMovementStructures:moveTo:destroy',
-                        room.name,
-                        structureType,
-                        obstacle.structureType,
-                        x,
-                        y,
+                        `🔨 DESTROYING ${obstacle.structureType} at (${x},${y}) in ${room.name}`,
+                        `Reason: Position needed for ${structureType}`,
+                        `Features want ${structureType} here, but found ${obstacle.structureType}`,
                     )
                     obstacle.destroy()
                 }
@@ -87,10 +82,9 @@ export function destroyMovementStructures(room: Room): void {
             if (building) {
                 Logger.warning(
                     'construction-movement:destroyMovementStructures:moveFrom:destroy',
-                    room.name,
-                    building.structureType,
-                    x,
-                    y,
+                    `🔨 DESTROYING ${building.structureType} at (${x},${y}) in ${room.name}`,
+                    `Reason: This ${structureType} is in the wrong location`,
+                    `Features want ${structureType} to move FROM here to a new position`,
                 )
                 building.destroy()
             }

@@ -22,13 +22,29 @@ declare global {
 const CLOSEST_ROOM_CACHE_TTL = 10000
 const CLOSEST_ROOM_CACHE: Map<string, { time: number; info: RoomDistanceInfo[] }> = new Map()
 
+/** Checks if any owned room is in a respawn area */
+function isInRespawnArea(): boolean {
+    const rooms = findMyRooms()
+    return rooms.some((room) => Game.map.getRoomStatus(room.name).status === 'respawn')
+}
+
 /** Checks if room should be avoided: SK rooms, enemy-owned, wrong status, etc. */
 function isRoomUnsafe(roomName: string): boolean {
+    // Block highway rooms when in respawn area (highway rules differ in respawn)
+    if (isInRespawnArea() && getRoomType(roomName) === RoomType.HIGHWAY) {
+        Logger.debug(`isRoomUnsafe(${roomName}): highway room while in respawn area`)
+        return true
+    }
+
+    /**
+     * Let's try to trust Traveler
+     * 
     const exitType = getRoomType(roomName)
     if ([RoomType.CENTER, RoomType.SOURCE_KEEPER].includes(exitType)) {
         Logger.debug(`isRoomUnsafe(${roomName}): CENTER/SK room`)
         return true
     }
+    **/
 
     const status = currentStatusSearchSpace()
     const roomStatus = Game.map.getRoomStatus(roomName).status
@@ -83,7 +99,7 @@ function describeExitsWithRespawnBlocks(roomName: string): ExitsInformation {
     const exits = Game.map.describeExits(roomName)
     const scout = Memory.rooms[roomName]?.scout
 
-    if (!scout || !scout.respawnBlocks || scout.respawnBlocks.length === 0) {
+    if (!scout || !scout.respawnBlocks || scout?.respawnBlocks.length === 0) {
         return exits
     }
 

@@ -318,6 +318,14 @@ export function calculateParts(
             SORT_ORDER.indexOf(a as TOUGH | MOVE | ATTACK | HEAL) -
             SORT_ORDER.indexOf(b as TOUGH | MOVE | ATTACK | HEAL),
     )
+
+    // Validate that we have at least one ATTACK part
+    const hasAttackPart = parts.some((part) => part === ATTACK)
+    if (!hasAttackPart) {
+        Logger.warning('attacker:calculateParts:no-attack-parts', capacity, parts)
+        return []
+    }
+
     return parts
 }
 

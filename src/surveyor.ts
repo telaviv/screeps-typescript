@@ -303,6 +303,11 @@ function calculateBuildingDiff(room: Room, features: ConstructionFeatures): Cons
                 }
             }
         }
+        Logger.warning(
+            'calculateBuildingDiff:moveFrom',
+            `📍 ${builtStructure.structureType} at (${builtStructure.pos.x},${builtStructure.pos.y}) in ${room.name} NOT in features at that position`,
+            `Will be added to moveFrom list (marked for destruction)`,
+        )
         if (!diff[builtStructure.structureType]) {
             diff[builtStructure.structureType] = {
                 moveTo: [],
@@ -331,6 +336,12 @@ function calculateBuildingDiff(room: Room, features: ConstructionFeatures): Cons
             if (!match) {
                 continue
             }
+            Logger.warning(
+                'calculateBuildingDiff:moveTo',
+                `📍 Features want ${structureType} at (${pos.x},${pos.y}) in ${room.name}`,
+                `But found ${match.structureType} there instead`,
+                `Position added to ${structureType}'s moveTo list (will clear ${match.structureType})`,
+            )
             if (!diff[structureType as BuildableStructureConstant]) {
                 diff[structureType as BuildableStructureConstant] = {
                     moveTo: [{ x: match.pos.x, y: match.pos.y }],

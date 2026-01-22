@@ -21,7 +21,8 @@
         "prettier": "prettier . --write",
         "precommit": "yarn run prettier && yarn run lint:fix && yarn run test && yarn run build",
         "hook-install": "precommit install",
-        "hook-remove": "precommit remove"
+        "hook-remove": "precommit remove",
+        "layout:bunker": "ts-node -r tsconfig-paths/register --project cli/tsconfig.json cli/layout-bunker.ts"
     },
     "precommit": {
         "tasks": [
@@ -60,7 +61,9 @@
         "@typescript-eslint/parser": "^5.62.0",
         "@typescript-eslint/typescript-estree": "^4.29.1",
         "chai": "^4.2.0",
+        "chalk": "4",
         "colormap": "^2.3.2",
+        "commander": "8",
         "eslint": "8.56.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-import-resolver-typescript": "^2.4.0",
@@ -77,6 +80,7 @@
         "rollup-plugin-clear": "^2.0.7",
         "rollup-plugin-screeps": "^1.0.1",
         "rollup-plugin-typescript2": "^0.31.0",
+        "screeps-api": "^1.16.1",
         "screeps-cartographer": "^1.8.10",
         "semver": "^7.6.3",
         "sinon": "^6.3.5",

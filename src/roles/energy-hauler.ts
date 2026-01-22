@@ -9,7 +9,7 @@ import { getSpawns, getTowers } from 'utils/room'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
 import { getRenewInformation } from 'utils/creep'
-import { getVirtualStorage } from '../utils/virtual-storage'
+import { getVirtualControllerLink, getVirtualStorage } from '../utils/virtual-storage'
 import { isWithdrawTask } from 'tasks/withdraw/utils'
 import { moveWithinRoom } from 'utils/travel'
 import { profile } from 'utils/profiling'
@@ -166,7 +166,22 @@ export class EnergyHaulerCreep {
             ) {
                 return
             }
-            TransferTask.makeRequest(this.creep, { structure: virtualStorage })
+            const transferred = TransferTask.makeRequest(this.creep, { structure: virtualStorage })
+            if (transferred) {
+                return
+            }
+        }
+
+        // Try virtual controller link container
+        const virtualControllerLink = getVirtualControllerLink(this.creep.memory.home)
+        if (virtualControllerLink && virtualControllerLink.structureType === STRUCTURE_CONTAINER) {
+            if (
+                this.creep.memory.lastWithdraw &&
+                this.creep.memory.lastWithdraw.id === virtualControllerLink.id
+            ) {
+                return
+            }
+            TransferTask.makeRequest(this.creep, { structure: virtualControllerLink })
         }
     }
 

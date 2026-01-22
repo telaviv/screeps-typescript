@@ -32,7 +32,7 @@ import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
 import { getConstructionSites, getEnergyCapacityForRCL } from 'utils/room'
 import { getStationaryPoints } from 'construction-features'
-import { getVirtualStorage } from 'utils/virtual-storage'
+import { getVirtualControllerLink, getVirtualStorage } from 'utils/virtual-storage'
 import hash from 'utils/hash'
 import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
@@ -195,6 +195,19 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
         virtualStorage
     ) {
         roleRebalancer.create(spawn, capacity)
+        return
+    }
+
+    // Spawn static upgrader if virtual controller link container is full
+    const virtualControllerLink = getVirtualControllerLink(room.name)
+    if (
+        virtualControllerLink &&
+        virtualControllerLink.structureType === STRUCTURE_CONTAINER &&
+        virtualControllerLink.store.getFreeCapacity(RESOURCE_ENERGY) === 0 &&
+        roomQuery.getCreepCount('static-upgrader') === 0 &&
+        roleStaticUpgrader.canCreate(spawn, capacity)
+    ) {
+        roleStaticUpgrader.create(spawn, room.name, capacity)
         return
     }
 
@@ -400,21 +413,23 @@ const createMineWorkers = wrap(
             roleHealer.create(spawn, mineManager.name)
         }
 
-        // Check if mine is struggling (no harvesters or no haulers)
-        const hasAnyHarvester = mineManager.hasAnyHarvester()
-        const hasAnyHauler = mineManager.getHaulers().length > 0
-        const mineIsStruggling = !hasAnyHarvester || !hasAnyHauler
+        // Use lower capacity until BOTH conditions are met:
+        // 1. Mine has > 1000 ticks of reservation
+        // 2. Dropped resources < 1000
+        const mineQuery = new RoomQuery(mineManager.room)
+        const reservationTicks = mineManager.controllerReservationTicksLeft()
+        const droppedResources = mineQuery.getDroppedResourceCount()
+        const useLowerCapacity = reservationTicks <= 1000 || droppedResources >= 1000
 
-        // Override capacity if mine is struggling
         let effectiveCapacity = capacity
-        if (mineIsStruggling) {
+        if (useLowerCapacity) {
             const room = spawn.room
             const targetRcl = Math.max(1, (room.controller?.level ?? 1) - 1)
             effectiveCapacity = getEnergyCapacityForRCL(targetRcl)
             Logger.info(
-                `createMineWorkers:struggling:${mineManager.name}`,
-                `hasHarvester=${hasAnyHarvester}`,
-                `hasHauler=${hasAnyHauler}`,
+                `createMineWorkers:lower-capacity:${mineManager.name}`,
+                `reservationTicks=${reservationTicks}`,
+                `droppedResources=${droppedResources}`,
                 `rcl=${room.controller?.level}`,
                 `targetRcl=${targetRcl}`,
                 `capacity=${effectiveCapacity}`,
@@ -428,8 +443,6 @@ const createMineWorkers = wrap(
             })
             return
         }
-
-        const mineQuery = new RoomQuery(mineManager.room)
         const roomQuery = new RoomQuery(spawn.room)
         const roadsBuilt = roomQuery.allRoadsBuilt() && mineQuery.allRoadsBuilt()
         if (!mineManager.hasEnoughHarvesters()) {
