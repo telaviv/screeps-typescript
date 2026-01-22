@@ -37,11 +37,17 @@ export function calculateBunkerRoads(
     // Create base terrain cost callback
     const baseCost = createTerrainCostCallback(terrain)
 
-    // Build obstacle set from bunker structures (excluding roads, ramparts, and storage)
+    // Build rampart position set first (ramparts allow movement through structures)
+    const rampartPositions = new Set<string>()
+    const ramparts = bunkerBuildings.get('rampart') || []
+    for (const pos of ramparts) {
+        rampartPositions.add(`${pos.x},${pos.y}`)
+    }
+
+    // Build obstacle set from bunker structures (excluding roads, ramparts, storage, and structures under ramparts)
     const obstacles = new Set<string>()
     for (const [structureType, positions] of bunkerBuildings.entries()) {
         // Roads, ramparts, and storage don't block pathfinding
-        // (storage is the origin, so it must be walkable)
         if (
             structureType === 'road' ||
             structureType === 'rampart' ||
@@ -50,7 +56,11 @@ export function calculateBunkerRoads(
             continue
         }
         for (const pos of positions) {
-            obstacles.add(`${pos.x},${pos.y}`)
+            const key = `${pos.x},${pos.y}`
+            // Structures under ramparts are walkable (ramparts don't block movement)
+            if (!rampartPositions.has(key)) {
+                obstacles.add(key)
+            }
         }
     }
 
@@ -76,75 +86,25 @@ export function calculateBunkerRoads(
         preferredCosts.set(`${road.x},${road.y}`, 1)
     }
 
-    // Find the edges of the bunker to use as starting points for external paths
-    // Use storage as fallback if no roads found
-    const startPositions = existingRoads.length > 0 ? existingRoads : [storage]
-
     // Create initial cost callback with obstacles and existing roads
     let costCallback = withPreferred(withObstacles(baseCost, obstacles), preferredCosts)
 
-    // Path to each source (range: 1 for adjacent)
-    // Try from each start position and use the shortest path
+    // Path to each source from storage (range: 1 for adjacent)
     for (const source of sources) {
-        let bestPath: Position[] | undefined
-        let bestCost = Infinity
-
-        for (const start of startPositions) {
-            const path = findPath(start, source, costCallback, { range: 1 })
-            if (path) {
-                // Calculate path cost
-                let cost = 0
-                for (const pos of path) {
-                    cost += costCallback(pos.x, pos.y)
-                }
-                if (cost < bestCost) {
-                    bestCost = cost
-                    bestPath = path
-                }
-            }
-        }
-
-        addPath(bestPath)
-        // Update cost callback to prefer existing roads
+        const path = findPath(storage, source, costCallback, { range: 1 })
+        addPath(path)
+        // Update cost callback to prefer newly added roads
         costCallback = withPreferred(withObstacles(baseCost, obstacles), preferredCosts)
     }
 
-    // Path to controller (range: 1 for adjacent)
-    let bestControllerPath: Position[] | undefined
-    let bestControllerCost = Infinity
-    for (const start of startPositions) {
-        const path = findPath(start, controller, costCallback, { range: 1 })
-        if (path) {
-            let cost = 0
-            for (const pos of path) {
-                cost += costCallback(pos.x, pos.y)
-            }
-            if (cost < bestControllerCost) {
-                bestControllerCost = cost
-                bestControllerPath = path
-            }
-        }
-    }
-    addPath(bestControllerPath)
+    // Path to controller from storage (range: 1 for adjacent)
+    const controllerPath = findPath(storage, controller, costCallback, { range: 1 })
+    addPath(controllerPath)
     costCallback = withPreferred(withObstacles(baseCost, obstacles), preferredCosts)
 
-    // Path to mineral (range: 1 for adjacent)
-    let bestMineralPath: Position[] | undefined
-    let bestMineralCost = Infinity
-    for (const start of startPositions) {
-        const path = findPath(start, mineral, costCallback, { range: 1 })
-        if (path) {
-            let cost = 0
-            for (const pos of path) {
-                cost += costCallback(pos.x, pos.y)
-            }
-            if (cost < bestMineralCost) {
-                bestMineralCost = cost
-                bestMineralPath = path
-            }
-        }
-    }
-    addPath(bestMineralPath)
+    // Path to mineral from storage (range: 1 for adjacent)
+    const mineralPath = findPath(storage, mineral, costCallback, { range: 1 })
+    addPath(mineralPath)
 
     // Convert road positions to array, filtering out any that overlap with structures
     const roads: Position[] = []
