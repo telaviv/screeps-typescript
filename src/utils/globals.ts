@@ -960,34 +960,35 @@ function compareOldVsNewBunker(roomName: string) {
         return
     }
 
-    // Save old flag state
+    // Save old state
     const oldFlag = Memory.rooms[roomName]?.useNewBunkerSystem ?? false
+    const oldFeatures = Memory.rooms[roomName]?.constructionFeaturesV3
 
-    // Calculate with old system
+    // Calculate with old system (temporarily)
     Memory.rooms[roomName].useNewBunkerSystem = false
     Memory.rooms[roomName].constructionFeaturesV3 = undefined
-    const oldFeatures = getConstructionFeaturesV3(roomName)
+    const oldSystemFeatures = getConstructionFeaturesV3(roomName)
 
-    // Calculate with new system
+    // Calculate with new system (temporarily)
     Memory.rooms[roomName].useNewBunkerSystem = true
     Memory.rooms[roomName].constructionFeaturesV3 = undefined
-    const newFeatures = getConstructionFeaturesV3(roomName)
+    const newSystemFeatures = getConstructionFeaturesV3(roomName)
 
-    // Restore original flag state
+    // CRITICAL: Restore original state exactly as it was
     Memory.rooms[roomName].useNewBunkerSystem = oldFlag
-    Memory.rooms[roomName].constructionFeaturesV3 = undefined
+    Memory.rooms[roomName].constructionFeaturesV3 = oldFeatures
 
     Logger.info('compareOldVsNewBunker:results', roomName)
 
-    if (!oldFeatures || !newFeatures) {
+    if (!oldSystemFeatures || !newSystemFeatures) {
         Logger.warning('compareOldVsNewBunker:features-null')
         return
     }
 
-    if (oldFeatures.type !== 'base' || newFeatures.type !== 'base') {
+    if (oldSystemFeatures.type !== 'base' || newSystemFeatures.type !== 'base') {
         Logger.warning('compareOldVsNewBunker:type-mismatch', {
-            old: oldFeatures.type,
-            new: newFeatures.type,
+            old: oldSystemFeatures.type,
+            new: newSystemFeatures.type,
         })
         return
     }
@@ -995,15 +996,15 @@ function compareOldVsNewBunker(roomName: string) {
     // Compare structure counts
     Logger.info('Structure Counts:')
     const allStructureTypes = new Set([
-        ...Object.keys(oldFeatures.features),
-        ...Object.keys(newFeatures.features),
+        ...Object.keys(oldSystemFeatures.features),
+        ...Object.keys(newSystemFeatures.features),
     ])
 
     for (const structureType of allStructureTypes) {
         const oldCount =
-            oldFeatures.features[structureType as BuildableStructureConstant]?.length || 0
+            oldSystemFeatures.features[structureType as BuildableStructureConstant]?.length || 0
         const newCount =
-            newFeatures.features[structureType as BuildableStructureConstant]?.length || 0
+            newSystemFeatures.features[structureType as BuildableStructureConstant]?.length || 0
         const diff = newCount - oldCount
         const diffStr = diff > 0 ? `+${diff}` : diff.toString()
         Logger.info(`  ${structureType}: old=${oldCount}, new=${newCount}, diff=${diffStr}`)
@@ -1011,8 +1012,8 @@ function compareOldVsNewBunker(roomName: string) {
 
     // Compare stationary points
     Logger.info('Stationary Points:')
-    const oldPoints = oldFeatures.points
-    const newPoints = newFeatures.points
+    const oldPoints = oldSystemFeatures.points
+    const newPoints = newSystemFeatures.points
     Logger.info('  Sources:')
     const allSourceIds = new Set([
         ...Object.keys(oldPoints?.sources || {}),
@@ -1064,14 +1065,14 @@ function compareOldVsNewBunker(roomName: string) {
     // Compare links
     Logger.info('Links:')
     Logger.info(
-        `  Controller: old=(${oldFeatures.links?.controller.x},${oldFeatures.links?.controller.y}), new=(${newFeatures.links?.controller.x},${newFeatures.links?.controller.y})`,
+        `  Controller: old=(${oldSystemFeatures.links?.controller.x},${oldSystemFeatures.links?.controller.y}), new=(${newSystemFeatures.links?.controller.x},${newSystemFeatures.links?.controller.y})`,
     )
     Logger.info(
-        `  Storage: old=(${oldFeatures.links?.storage.x},${oldFeatures.links?.storage.y}), new=(${newFeatures.links?.storage.x},${newFeatures.links?.storage.y})`,
+        `  Storage: old=(${oldSystemFeatures.links?.storage.x},${oldSystemFeatures.links?.storage.y}), new=(${newSystemFeatures.links?.storage.x},${newSystemFeatures.links?.storage.y})`,
     )
     Logger.info(
-        `  Source containers: old=${oldFeatures.links?.sourceContainers.length || 0}, new=${
-            newFeatures.links?.sourceContainers.length || 0
+        `  Source containers: old=${oldSystemFeatures.links?.sourceContainers.length || 0}, new=${
+            newSystemFeatures.links?.sourceContainers.length || 0
         }`,
     )
 
