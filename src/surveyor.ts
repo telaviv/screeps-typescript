@@ -323,11 +323,21 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
 
 /**
  * Calculates complete construction features for a room including bunker layout and roads.
+ *
+ * ⚠️ IMPORTANT: The new stamp-based system calculates different structure positions
+ * than the old ImmutableRoom system. Switching systems will cause the build manager
+ * to destroy existing structures and rebuild them in new locations!
+ *
+ * Safe usage:
+ *   - Enable for NEW rooms: Memory.rooms['ROOMNAME'].useNewBunkerSystem = true
+ *   - Enable for EXISTING rooms: Only if you can afford a full rebuild
+ *   - All other rooms: Leave flag unset (defaults to false, uses old system)
+ *
  * @param roomName - Name of the room
  * @returns Construction features v3 data structure
  */
 function calculateConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 {
-    // Check if room should use new system
+    // Check if room should use new system (defaults to false - SAFE by default)
     const useNewSystem = Memory.rooms[roomName]?.useNewBunkerSystem ?? false
 
     if (useNewSystem) {
