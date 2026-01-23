@@ -1,5 +1,15 @@
 # Cursor Rules for screeps-typescript
 
+## ⚠️ CRITICAL RULES ⚠️
+
+### Git Commits and Pushes
+- **NEVER EVER commit or push changes without EXPLICIT user permission**
+- **ALWAYS ask the user before running `git commit`, `git add`, or `git push`**
+- Even if the user says "build it" or "implement it", that does NOT mean commit
+- The user will explicitly say "commit" or "push" when they want you to do so
+- It is VERY IMPORTANT to only commit when directly and explicitly requested
+- Violating this rule makes the user feel you are being too proactive
+
 ## Development Environment
 
 ### Node Version Management
@@ -34,8 +44,10 @@ This command runs:
 
 All checks must pass before the code is ready to commit. If any check fails, fix the issues before proceeding.
 
-### Git Commit Policy
+### Git Commit Policy (See CRITICAL RULES at top of file)
 - **NEVER commit changes unless the user explicitly asks you to**
+- Commands like "build it", "implement it", "make the changes" do NOT include permission to commit
+- Only explicit commands like "commit this", "commit and push", "git commit" grant permission
 - It is VERY IMPORTANT to only commit when explicitly requested
 - Otherwise the user will feel that you are being too proactive
 - Always wait for the user's permission before running `git commit` or `git push`
