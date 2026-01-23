@@ -94,8 +94,14 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
         },
     )
 
-    // Update position tracking after move attempt
-    updatePositionTracking(creep, previousPos)
+    // Only track deadlock if move was attempted (not already at target)
+    if (err !== OK && err !== ERR_TIRED) {
+        updatePositionTracking(creep, previousPos)
+    } else {
+        // Reset counter on successful move
+        // eslint-disable-next-line no-underscore-dangle
+        creep.memory._dlWait = 0
+    }
 
     // Logger.error(`moveToRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, roomName, err)
     return err
@@ -154,8 +160,15 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
         }
     }
 
-    // Update position tracking after move attempt
-    updatePositionTracking(creep, previousPos)
+    // Only track deadlock if move was attempted (not already at target)
+    // If err is OK or ERR_TIRED, the creep either moved or couldn't due to fatigue (not stuck)
+    if (err !== OK && err !== ERR_TIRED) {
+        updatePositionTracking(creep, previousPos)
+    } else {
+        // Reset counter on successful move
+        // eslint-disable-next-line no-underscore-dangle
+        creep.memory._dlWait = 0
+    }
 
     return err
 }, 'travel:moveTo')
@@ -196,8 +209,14 @@ export const moveWithinRoom = wrap(
             ...opts,
         })
 
-        // Update position tracking after move attempt
-        updatePositionTracking(creep, previousPos)
+        // Only track deadlock if move was attempted (not already at target)
+        if (err !== OK && err !== ERR_TIRED) {
+            updatePositionTracking(creep, previousPos)
+        } else {
+            // Reset counter on successful move
+            // eslint-disable-next-line no-underscore-dangle
+            creep.memory._dlWait = 0
+        }
 
         // Logger.error(`moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
         return err

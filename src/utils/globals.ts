@@ -945,6 +945,138 @@ export default function assignGlobals(): void {
     global.checkFeatureConflicts = checkFeatureConflicts
     global.fixMineFeatures = fixMineFeatures
     global.debugRampartPosition = debugRampartPosition
+    global.compareOldVsNewBunker = compareOldVsNewBunker
+}
+
+/**
+ * Compares bunker layouts calculated by old vs new systems
+ * @param roomName - Name of the room to compare
+ */
+function compareOldVsNewBunker(roomName: string) {
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
+    const room = Game.rooms[roomName]
+    if (!room) {
+        Logger.warning('compareOldVsNewBunker:no-room', roomName)
+        return
+    }
+
+    // Save old flag state
+    const oldFlag = Memory.rooms[roomName]?.useNewBunkerSystem ?? false
+
+    // Calculate with old system
+    Memory.rooms[roomName].useNewBunkerSystem = false
+    Memory.rooms[roomName].constructionFeaturesV3 = undefined
+    const oldFeatures = getConstructionFeaturesV3(roomName)
+
+    // Calculate with new system
+    Memory.rooms[roomName].useNewBunkerSystem = true
+    Memory.rooms[roomName].constructionFeaturesV3 = undefined
+    const newFeatures = getConstructionFeaturesV3(roomName)
+
+    // Restore original flag state
+    Memory.rooms[roomName].useNewBunkerSystem = oldFlag
+    Memory.rooms[roomName].constructionFeaturesV3 = undefined
+
+    Logger.info('compareOldVsNewBunker:results', roomName)
+
+    if (!oldFeatures || !newFeatures) {
+        Logger.warning('compareOldVsNewBunker:features-null')
+        return
+    }
+
+    if (oldFeatures.type !== 'base' || newFeatures.type !== 'base') {
+        Logger.warning('compareOldVsNewBunker:type-mismatch', {
+            old: oldFeatures.type,
+            new: newFeatures.type,
+        })
+        return
+    }
+
+    // Compare structure counts
+    Logger.info('Structure Counts:')
+    const allStructureTypes = new Set([
+        ...Object.keys(oldFeatures.features),
+        ...Object.keys(newFeatures.features),
+    ])
+
+    for (const structureType of allStructureTypes) {
+        const oldCount =
+            oldFeatures.features[structureType as BuildableStructureConstant]?.length || 0
+        const newCount =
+            newFeatures.features[structureType as BuildableStructureConstant]?.length || 0
+        const diff = newCount - oldCount
+        const diffStr = diff > 0 ? `+${diff}` : diff.toString()
+        Logger.info(`  ${structureType}: old=${oldCount}, new=${newCount}, diff=${diffStr}`)
+    }
+
+    // Compare stationary points
+    Logger.info('Stationary Points:')
+    const oldPoints = oldFeatures.points
+    const newPoints = newFeatures.points
+    Logger.info('  Sources:')
+    const allSourceIds = new Set([
+        ...Object.keys(oldPoints?.sources || {}),
+        ...Object.keys(newPoints?.sources || {}),
+    ])
+    for (const sourceId of allSourceIds) {
+        const oldPos = oldPoints?.sources?.[sourceId]
+        const newPos = newPoints?.sources?.[sourceId]
+        if (oldPos && newPos) {
+            const distance = Math.max(Math.abs(oldPos.x - newPos.x), Math.abs(oldPos.y - newPos.y))
+            Logger.info(
+                `    ${sourceId}: old=(${oldPos.x},${oldPos.y}), new=(${newPos.x},${newPos.y}), distance=${distance}`,
+            )
+        } else {
+            Logger.warning(`    ${sourceId}: ${oldPos ? 'old only' : 'new only'}`)
+        }
+    }
+
+    if (oldPoints?.mineral && newPoints?.mineral) {
+        const distance = Math.max(
+            Math.abs(oldPoints.mineral.x - newPoints.mineral.x),
+            Math.abs(oldPoints.mineral.y - newPoints.mineral.y),
+        )
+        Logger.info(
+            `  Mineral: old=(${oldPoints.mineral.x},${oldPoints.mineral.y}), new=(${newPoints.mineral.x},${newPoints.mineral.y}), distance=${distance}`,
+        )
+    }
+
+    if (oldPoints?.controllerLink && newPoints?.controllerLink) {
+        const distance = Math.max(
+            Math.abs(oldPoints.controllerLink.x - newPoints.controllerLink.x),
+            Math.abs(oldPoints.controllerLink.y - newPoints.controllerLink.y),
+        )
+        Logger.info(
+            `  ControllerLink: old=(${oldPoints.controllerLink.x},${oldPoints.controllerLink.y}), new=(${newPoints.controllerLink.x},${newPoints.controllerLink.y}), distance=${distance}`,
+        )
+    }
+
+    if (oldPoints?.storageLink && newPoints?.storageLink) {
+        const distance = Math.max(
+            Math.abs(oldPoints.storageLink.x - newPoints.storageLink.x),
+            Math.abs(oldPoints.storageLink.y - newPoints.storageLink.y),
+        )
+        Logger.info(
+            `  StorageLink: old=(${oldPoints.storageLink.x},${oldPoints.storageLink.y}), new=(${newPoints.storageLink.x},${newPoints.storageLink.y}), distance=${distance}`,
+        )
+    }
+
+    // Compare links
+    Logger.info('Links:')
+    Logger.info(
+        `  Controller: old=(${oldFeatures.links?.controller.x},${oldFeatures.links?.controller.y}), new=(${newFeatures.links?.controller.x},${newFeatures.links?.controller.y})`,
+    )
+    Logger.info(
+        `  Storage: old=(${oldFeatures.links?.storage.x},${oldFeatures.links?.storage.y}), new=(${newFeatures.links?.storage.x},${newFeatures.links?.storage.y})`,
+    )
+    Logger.info(
+        `  Source containers: old=${oldFeatures.links?.sourceContainers.length || 0}, new=${
+            newFeatures.links?.sourceContainers.length || 0
+        }`,
+    )
+
+    Logger.info('compareOldVsNewBunker:complete')
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 }
 
 declare global {
@@ -978,6 +1110,7 @@ declare global {
             checkFeatureConflicts: (roomName: string) => void
             fixMineFeatures: (mineName: string, baseRoomName?: string) => void
             debugRampartPosition: (roomName: string, x: number, y: number) => void
+            compareOldVsNewBunker: (roomName: string) => void
         }
     }
 }

@@ -2,9 +2,16 @@ import chalk from 'chalk'
 
 import { BunkerPlacementResult } from './placement'
 import { Position } from '../types'
+import { StationaryPointsResult } from './stationary-points'
+import { LinksResult } from './links'
 
 export interface MineralPosition extends Position {
     mineralType: string
+}
+
+export interface VisualizationOptions {
+    stationaryPoints?: StationaryPointsResult
+    links?: LinksResult
 }
 
 /**
@@ -17,6 +24,7 @@ export function visualizeBunkerPlacement(
     sources: Position[] = [],
     controller: Position | null = null,
     minerals: MineralPosition[] = [],
+    options?: VisualizationOptions,
 ): string {
     const lines: string[] = []
 
@@ -52,6 +60,7 @@ export function visualizeBunkerPlacement(
             if (!buildingMap.has(key)) {
                 buildingMap.set(key, [])
             }
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             buildingMap.get(key)!.push(type)
         }
     }
@@ -60,6 +69,44 @@ export function visualizeBunkerPlacement(
     const sourcePositions = new Set(sources.map((s) => `${s.x},${s.y}`))
     const mineralMap = new Map(minerals.map((m) => [`${m.x},${m.y}`, m.mineralType]))
     const controllerKey = controller ? `${controller.x},${controller.y}` : null
+
+    // Build lookup sets for stationary points if provided
+    const stationaryPointsSet = new Set<string>()
+    const stationaryPointTypes = new Map<string, string>() // key -> type
+    if (options?.stationaryPoints) {
+        const sp = options.stationaryPoints
+        Object.values(sp.sources).forEach((pos) => {
+            const key = `${pos.x},${pos.y}`
+            stationaryPointsSet.add(key)
+            stationaryPointTypes.set(key, 'source-harvester')
+        })
+        if (sp.mineral) {
+            const key = `${sp.mineral.x},${sp.mineral.y}`
+            stationaryPointsSet.add(key)
+            stationaryPointTypes.set(key, 'mineral-harvester')
+        }
+        if (sp.controllerLink) {
+            const key = `${sp.controllerLink.x},${sp.controllerLink.y}`
+            stationaryPointsSet.add(key)
+            stationaryPointTypes.set(key, 'controller-upgrader')
+        }
+        if (sp.storageLink) {
+            const key = `${sp.storageLink.x},${sp.storageLink.y}`
+            stationaryPointsSet.add(key)
+            stationaryPointTypes.set(key, 'storage-link-hauler')
+        }
+    }
+
+    // Build lookup sets for links if provided
+    const linkPositions = new Set<string>()
+    if (options?.links) {
+        const l = options.links
+        linkPositions.add(`${l.controller.x},${l.controller.y}`)
+        linkPositions.add(`${l.storage.x},${l.storage.y}`)
+        l.sourceContainers.forEach((sc) => {
+            linkPositions.add(`${sc.link.x},${sc.link.y}`)
+        })
+    }
 
     // Terrain analysis
     lines.push(chalk.bold('\n🌍 Terrain Analysis:'))
@@ -125,8 +172,20 @@ export function visualizeBunkerPlacement(
             const isSource = sourcePositions.has(key)
             const mineralType = mineralMap.get(key)
             const isController = key === controllerKey
+            const isStationaryPoint = stationaryPointsSet.has(key)
+            const stationaryType = stationaryPointTypes.get(key)
+            const isLink = linkPositions.has(key)
 
-            line += renderCell(buildingTypes, terrainType, isSource, mineralType, isController)
+            line += renderCell(
+                buildingTypes,
+                terrainType,
+                isSource,
+                mineralType,
+                isController,
+                isStationaryPoint,
+                stationaryType,
+                isLink,
+            )
         }
 
         line += chalk.dim('║')
@@ -151,11 +210,25 @@ export function visualizeBunkerPlacement(
             chalk.cyan.bold('X'),
         )} Mineral (H/O/U/etc)   ${chalk.bgWhite(chalk.magenta.bold('⚙'))} Controller`,
     )
+    if (options?.stationaryPoints) {
+        lines.push(
+            `  Stationary: ${chalk.bgBlue(
+                chalk.yellow.bold('◎'),
+            )} Source Harvester   ${chalk.bgBlue(
+                chalk.cyan.bold('⊕'),
+            )} Mineral Harvester   ${chalk.bgBlue(
+                chalk.magenta.bold('⚡'),
+            )} Controller Upgrader   ${chalk.bgBlue(chalk.blue.bold('⊙'))} Storage Link Hauler`,
+        )
+    }
     lines.push(
-        `  ${chalk.bgGreen('  ')} Bright green = Rampart   ${chalk.yellow.bold(
+        `  Structures: ${chalk.bgGreen('  ')} Rampart   ${chalk.yellow.bold(
             'S',
         )} Spawn   ${chalk.red.bold('T')} Tower   ${chalk.white.bold('E')} Extension`,
     )
+    if (options?.links) {
+        lines.push(`  ${chalk.magenta.bold('L')} Link (energy transfer network)`)
+    }
 
     lines.push(chalk.bold.cyan(`\n═══════════════════════════════════════════════════════\n`))
 
@@ -171,6 +244,9 @@ function renderCell(
     isSource: boolean,
     mineralType: string | undefined,
     isController: boolean,
+    isStationaryPoint: boolean,
+    stationaryType: string | undefined,
+    _isLink: boolean,
 ): string {
     // Natural objects (source, mineral, controller) get white background
     if (isSource || mineralType || isController) {
@@ -190,6 +266,36 @@ function renderCell(
         }
 
         return chalk.bgWhite(color(symbol) + ' ')
+    }
+
+    // Stationary points get blue background with specific symbols
+    if (isStationaryPoint && stationaryType) {
+        let symbol: string
+        let color: (s: string) => string
+
+        switch (stationaryType) {
+            case 'source-harvester':
+                symbol = '◎'
+                color = chalk.yellow.bold
+                break
+            case 'mineral-harvester':
+                symbol = '⊕'
+                color = chalk.cyan.bold
+                break
+            case 'controller-upgrader':
+                symbol = '⚡'
+                color = chalk.magenta.bold
+                break
+            case 'storage-link-hauler':
+                symbol = '⊙'
+                color = chalk.blue.bold
+                break
+            default:
+                symbol = '●'
+                color = chalk.white.bold
+        }
+
+        return chalk.bgBlue(color(symbol) + ' ')
     }
 
     // Check if there's a rampart
@@ -264,7 +370,7 @@ function getStructureColor(type: string): (s: string) => string {
         road: chalk.gray,
         wall: chalk.white,
         rampart: chalk.green,
-        link: chalk.yellow,
+        link: chalk.magenta.bold, // Magenta for links (energy network)
         storage: chalk.blue.bold,
         tower: chalk.red.bold,
         observer: chalk.magenta,

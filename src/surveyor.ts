@@ -44,6 +44,13 @@ import { publish } from 'pub-sub/pub-sub'
 import { PREFERENCE_WORKER } from 'roles/logistics-constants'
 import { getLogisticsCreeps } from 'utils/creep'
 
+// New stamp-based system imports
+import { placeBunker, BunkerPlacementResult } from 'stamps/placement'
+import { calculateStationaryPoints, StationaryPointsResult } from 'stamps/stationary-points'
+import { calculateLinks as calculateLinksNew, LinksResult } from 'stamps/links'
+import { calculateRamparts } from 'stamps/ramparts'
+import { calculateBunkerRoads } from 'stamps/roads'
+
 /** Minimum CPU bucket required before running survey calculations */
 const MIN_SURVEY_CPU = 1500
 
@@ -54,6 +61,8 @@ declare global {
          */
         calculateConstructionFeaturesV3?: void
         constructionFeaturesV3?: ConstructionFeaturesV3
+        /** Opt-in flag to use new stamp-based bunker system */
+        useNewBunkerSystem?: boolean
     }
 
     namespace NodeJS {
@@ -165,11 +174,168 @@ export function isConstructionFeaturesUpToDate(room: Room): boolean {
 }
 
 /**
+ * Calculates complete construction features for a room using new stamp-based system.
+ * @param roomName - Name of the room
+ * @returns Construction features v3 data structure
+ */
+function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeaturesV3 {
+    if (getRoomType(roomName) !== RoomType.ROOM) {
+        return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'none' }
+    }
+
+    // Get scout data
+    const roomMemory = Memory.rooms[roomName]
+    const scout = roomMemory.scout
+    if (
+        !scout ||
+        !scout.sourcePositions ||
+        !scout.controllerPosition ||
+        !scout.mineralPosition ||
+        Object.keys(scout.sourcePositions).length !== 2
+    ) {
+        Logger.warning(
+            'calculateConstructionFeaturesV3New:no-scout-data',
+            roomName,
+            'Needs scouting with 2 sources',
+        )
+        return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'mine' }
+    }
+
+    const sourcePositions = scout.sourcePositions
+    const controllerPosition = scout.controllerPosition
+    const mineralPosition = scout.mineralPosition
+
+    // Convert source positions to array format
+    const sourcesArray = Object.entries(sourcePositions).map(([id, pos]) => ({
+        id,
+        x: pos.x,
+        y: pos.y,
+    }))
+
+    // Get terrain
+    const terrain = new Room.Terrain(roomName)
+
+    // Place bunker
+    const placementResult: BunkerPlacementResult = placeBunker({
+        terrain,
+        roomName,
+        sources: sourcesArray,
+        controller: controllerPosition,
+        stamp: BUNKER,
+    })
+
+    if (!placementResult.success) {
+        Logger.warning('calculateConstructionFeaturesV3New:placement-failed', roomName)
+        return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'mine' }
+    }
+
+    // Calculate stationary points
+    const stationaryPoints: StationaryPointsResult = calculateStationaryPoints(
+        terrain,
+        placementResult.buildings,
+        sourcesArray,
+        controllerPosition,
+        mineralPosition,
+    )
+
+    // Calculate links
+    const linksResult: LinksResult = calculateLinksNew(
+        terrain,
+        placementResult.buildings,
+        stationaryPoints,
+        sourcesArray,
+        controllerPosition,
+    )
+
+    // Calculate ramparts
+    const rampartPositions = calculateRamparts(
+        terrain,
+        placementResult.buildings,
+        stationaryPoints,
+        sourcesArray.map((s) => ({ x: s.x, y: s.y })),
+        controllerPosition,
+        mineralPosition,
+    )
+
+    // Calculate roads
+    const roadPositions = calculateBunkerRoads(
+        terrain,
+        placementResult.buildings,
+        sourcesArray.map((s) => ({ x: s.x, y: s.y })),
+        controllerPosition,
+        mineralPosition,
+    )
+
+    // Build features map
+    const features: ConstructionFeatures = {
+        [STRUCTURE_EXTENSION]: placementResult.buildings.get('extension') || [],
+        [STRUCTURE_TOWER]: placementResult.buildings.get('tower') || [],
+        [STRUCTURE_STORAGE]: placementResult.buildings.get('storage') || [],
+        [STRUCTURE_TERMINAL]: placementResult.buildings.get('terminal') || [],
+        [STRUCTURE_NUKER]: placementResult.buildings.get('nuker') || [],
+        [STRUCTURE_LAB]: placementResult.buildings.get('lab') || [],
+        [STRUCTURE_OBSERVER]: placementResult.buildings.get('observer') || [],
+        [STRUCTURE_FACTORY]: placementResult.buildings.get('factory') || [],
+        [STRUCTURE_LINK]: placementResult.buildings.get('link') || [],
+        [STRUCTURE_CONTAINER]: sourcesArray
+            .map((s) => stationaryPoints.sources[s.id])
+            .concat([stationaryPoints.mineral]),
+        [STRUCTURE_SPAWN]: placementResult.buildings.get('spawn') || [],
+        [STRUCTURE_RAMPART]: rampartPositions,
+        [STRUCTURE_ROAD]: roadPositions,
+    }
+
+    // Build stationary points in expected format
+    const stationaryPointsBase: StationaryPointsBase = {
+        type: 'base',
+        version: STATIONARY_POINTS_VERSION,
+        sources: stationaryPoints.sources,
+        mineral: stationaryPoints.mineral,
+        controllerLink: stationaryPoints.controllerLink,
+        storageLink: stationaryPoints.storageLink,
+    }
+
+    // Build links in expected format
+    const links: Links = {
+        version: linksResult.version,
+        controller: linksResult.controller,
+        storage: linksResult.storage,
+        sourceContainers: linksResult.sourceContainers.map((sc) => ({
+            source: sc.source as Id<Source>,
+            container: sc.container,
+            link: sc.link,
+        })),
+    }
+
+    // For now, no mine information (deferred)
+    const miner: MinerInformation = {}
+
+    return {
+        version: CONSTRUCTION_FEATURES_V3_VERSION,
+        type: 'base',
+        features,
+        points: stationaryPointsBase,
+        links,
+        miner,
+        movement: null,
+    }
+}
+
+/**
  * Calculates complete construction features for a room including bunker layout and roads.
  * @param roomName - Name of the room
  * @returns Construction features v3 data structure
  */
 function calculateConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 {
+    // Check if room should use new system
+    const useNewSystem = Memory.rooms[roomName]?.useNewBunkerSystem ?? false
+
+    if (useNewSystem) {
+        Logger.warning('calculateConstructionFeaturesV3:using-new-system', roomName)
+        return calculateConstructionFeaturesV3New(roomName)
+    }
+
+    // Original implementation
     if (getRoomType(roomName) !== RoomType.ROOM) {
         return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'none' }
     }

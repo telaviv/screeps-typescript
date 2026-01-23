@@ -435,6 +435,7 @@ export class MineManager {
     /**
      * Checks if hauler capacity matches energy production.
      * Reserved rooms produce 10 energy/tick, unreserved produce 5.
+     * Uses 1.5x buffer to account for pathing delays, congestion, and spikes.
      */
     public hasEnoughHaulers(): boolean {
         if (!this.constructionFinished()) {
@@ -448,7 +449,8 @@ export class MineManager {
             haulerCapacity += hauler.getActiveBodyparts(CARRY) * CARRY_CAPACITY
         }
 
-        return haulerCapacity >= energyProducedPerRoundTrip
+        // Increase the capacity requirement to account for slack/buffer
+        return haulerCapacity >= 1.5 * energyProducedPerRoundTrip
     }
 
     hasClaimSpotAvailable(): boolean {

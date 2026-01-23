@@ -34,6 +34,9 @@ import chalk from 'chalk'
 import bunkerStamp from '../src/stamps/bunker'
 import { placeBunker } from '../src/stamps/placement'
 import { calculateBunkerRoads } from '../src/stamps/roads'
+import { calculateStationaryPoints } from '../src/stamps/stationary-points'
+import { calculateLinks } from '../src/stamps/links'
+import { calculateRamparts } from '../src/stamps/ramparts'
 import { visualizeBunkerPlacement } from '../src/stamps/visualizer'
 
 // Mock RoomTerrain for standalone use
@@ -177,8 +180,59 @@ async function main() {
             stamp: bunkerStamp,
         })
 
-        // Calculate roads
+        // Calculate stationary points, links, ramparts, and roads
+        let stationaryPoints
+        let links
         if (result.success && minerals.length > 0) {
+            console.log(chalk.gray(`🧮 Calculating bunker features...`))
+
+            // Stationary points
+            const sourcesWithIds = sources.map((s, idx) => ({
+                id:
+                    Object.keys(
+                        roomDetailsResponse.objects?.find(
+                            (o: any) => o.type === 'source' && o.x === s.x && o.y === s.y,
+                        ) || {},
+                    )[0] || `source${idx}`,
+                x: s.x,
+                y: s.y,
+            }))
+
+            stationaryPoints = calculateStationaryPoints(
+                mockTerrain,
+                result.buildings,
+                sourcesWithIds,
+                controller,
+                minerals[0],
+            )
+            console.log(chalk.gray(`  ✓ Stationary points calculated`))
+
+            // Links
+            links = calculateLinks(
+                mockTerrain,
+                result.buildings,
+                stationaryPoints,
+                sourcesWithIds,
+                controller,
+            )
+            console.log(chalk.gray(`  ✓ Links calculated`))
+
+            // Ramparts
+            console.log(chalk.gray(`🛡️  Calculating rampart network...`))
+            const ramparts = calculateRamparts(
+                mockTerrain,
+                result.buildings,
+                stationaryPoints,
+                sources,
+                controller,
+                minerals[0],
+            )
+            const existingRamparts = result.buildings.get('rampart') || []
+            result.buildings.set('rampart', ramparts)
+            console.log(chalk.gray(`  Bunker ramparts: ${existingRamparts.length} tiles`))
+            console.log(chalk.gray(`  Total ramparts: ${ramparts.length} tiles`))
+
+            // Roads
             console.log(chalk.gray(`🛣️  Calculating road network...`))
             const roads = calculateBunkerRoads(
                 mockTerrain,
@@ -187,7 +241,6 @@ async function main() {
                 controller,
                 minerals[0],
             )
-            // Add new roads to existing bunker roads
             const existingRoads = result.buildings.get('road') || []
             const allRoads = [...existingRoads, ...roads]
             result.buildings.set('road', allRoads)
@@ -204,6 +257,10 @@ async function main() {
             sources,
             controller,
             minerals,
+            {
+                stationaryPoints,
+                links,
+            },
         )
         console.log(visualization)
 
