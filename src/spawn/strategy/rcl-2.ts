@@ -237,7 +237,7 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     if (Memory.miningEnabled) {
         for (const mm of roomQuery.getMineManagers()) {
             if (mm.needsAttention()) {
-                Logger.error('swarmStrategy:mineManager:needs-attention', mm.name)
+                Logger.warning('swarmStrategy:mineManager:needs-attention', mm.name)
                 createMineWorkers(spawn, capacity, mm)
                 return
             }
