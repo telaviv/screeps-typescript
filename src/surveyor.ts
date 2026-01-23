@@ -51,6 +51,7 @@ import { calculateLinks as calculateLinksNew, LinksResult } from 'stamps/links'
 import { calculateRamparts } from 'stamps/ramparts'
 import { calculateBunkerRoads } from 'stamps/roads'
 import { calculateMineRoads } from 'stamps/mine-roads'
+import { calculateMineInternal } from 'stamps/mine-internal'
 
 /** Minimum CPU bucket required before running survey calculations */
 const MIN_SURVEY_CPU = 1500
@@ -436,6 +437,7 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
 
 /**
  * Calculates and stores construction features for a remote mining room.
+ * Uses the new stamp system if the miner room is using it, otherwise uses the old system.
  * @param mineName - Name of the mining room
  * @param miner - Name of the home room that will mine this
  * @param entrancePosition - Position where the road enters the mining room
@@ -446,11 +448,23 @@ function setMineConstructionFeaturesV3(
     entrancePosition: Position,
 ): void {
     const flatPos = { x: entrancePosition.x, y: entrancePosition.y, roomName: mineName }
-    const ret = calculateMineConstructionFeaturesV3(mineName, flatPos)
+    const useNewSystem = Memory.rooms[miner]?.useNewBunkerSystem ?? false
+
+    let ret: { features: ConstructionFeatures; points: { [id: Id<Source>]: Position } } | null
+
+    if (useNewSystem) {
+        // Use new stamp-based mine calculation
+        ret = calculateMineInternal(mineName, flatPos)
+    } else {
+        // Use old ImmutableRoom-based mine calculation
+        ret = calculateMineConstructionFeaturesV3(mineName, flatPos)
+    }
+
     if (!ret) {
-        Logger.error('setMineConstructionFeaturesV3:failed', mineName)
+        Logger.error('setMineConstructionFeaturesV3:failed', mineName, useNewSystem ? 'new' : 'old')
         return
     }
+
     const { features, points } = ret
     const constructionFeaturesV3: ConstructionFeaturesV3 = {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
