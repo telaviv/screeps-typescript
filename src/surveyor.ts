@@ -50,6 +50,7 @@ import { calculateStationaryPoints, StationaryPointsResult } from 'stamps/statio
 import { calculateLinks as calculateLinksNew, LinksResult } from 'stamps/links'
 import { calculateRamparts } from 'stamps/ramparts'
 import { calculateBunkerRoads } from 'stamps/roads'
+import { calculateMineRoads } from 'stamps/mine-roads'
 
 /** Minimum CPU bucket required before running survey calculations */
 const MIN_SURVEY_CPU = 1500
@@ -257,14 +258,30 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
         mineralPosition,
     )
 
-    // Calculate roads
-    const roadPositions = calculateBunkerRoads(
+    // Calculate bunker roads (within base room)
+    const bunkerRoads = calculateBunkerRoads(
         terrain,
         placementResult.buildings,
         sourcesArray.map((s) => ({ x: s.x, y: s.y })),
         controllerPosition,
         mineralPosition,
     )
+
+    // Calculate mine roads (from base to remote mines)
+    const mines: Mine[] = roomMemory.mines ?? []
+    const mineRoadResults = calculateMineRoads(
+        roomName,
+        stationaryPoints.storageLink,
+        mines,
+        placementResult.buildings,
+    )
+
+    // Combine all roads
+    const mineRoadsInBase: Position[] = []
+    for (const result of mineRoadResults) {
+        mineRoadsInBase.push(...result.minerRoads)
+    }
+    const allRoads = bunkerRoads.concat(mineRoadsInBase)
 
     // Build features map
     const features: ConstructionFeatures = {
@@ -282,7 +299,7 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
             .concat([stationaryPoints.mineral]),
         [STRUCTURE_SPAWN]: placementResult.buildings.get('spawn') || [],
         [STRUCTURE_RAMPART]: rampartPositions,
-        [STRUCTURE_ROAD]: roadPositions,
+        [STRUCTURE_ROAD]: allRoads,
     }
 
     // Build stationary points in expected format
@@ -307,35 +324,14 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
         })),
     }
 
-    // Calculate mine information (required to prevent recalculation every tick)
-    // The new system doesn't yet calculate external mine roads, but we need to
-    // populate the miner field to match what's in Memory.rooms[roomName].mines
-    //
-    // For now, we preserve existing mine calculations from the old system.
-    // Mine road calculations are deferred to a future update.
-    const mines: Mine[] = roomMemory.mines ?? []
+    // Build miner information from mine road results
     const miner: MinerInformation = {}
+    for (const result of mineRoadResults) {
+        // Store exit position for this mine
+        miner[result.name] = { exitPosition: result.exitPosition }
 
-    for (const mine of mines) {
-        const mineRoom = Memory.rooms[mine.name]
-        const mineFeatures = mineRoom?.constructionFeaturesV3
-
-        if (mineFeatures && mineFeatures.type === 'mine' && mineFeatures.minee) {
-            // Preserve existing mine exit position from the mine's entrance
-            miner[mine.name] = { exitPosition: mineFeatures.minee.entrancePosition }
-        } else {
-            // Mine hasn't been calculated yet - add a placeholder to satisfy validation
-            // The actual position will be calculated when the mine is processed
-            // For now, use a dummy position at the room center
-            Logger.info(
-                'calculateConstructionFeaturesV3New:mine-placeholder',
-                mine.name,
-                'Using placeholder - mine features not yet calculated',
-            )
-            miner[mine.name] = {
-                exitPosition: { x: 25, y: 25, roomName: mine.name },
-            }
-        }
+        // Calculate mine's internal features using the entrance position
+        setMineConstructionFeaturesV3(result.name, roomName, result.entrancePosition)
     }
 
     return {
