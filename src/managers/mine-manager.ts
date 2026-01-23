@@ -267,7 +267,7 @@ export class MineManager {
         const totalSpots = neighbors.filter(
             (pos) => terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL,
         ).length
-        Logger.error(
+        Logger.info(
             'mine-manager:hasCapacityToReserve',
             this.roomName,
             mostClaims,
