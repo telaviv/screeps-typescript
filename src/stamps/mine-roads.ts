@@ -3,6 +3,7 @@ import {
     createMultiRoomTerrainCost,
     findMultiRoomPath,
     withMultiRoomObstacles,
+    withMultiRoomPreferredPaths,
 } from '../libs/pathfinding'
 import { FlatRoomPosition, Position } from '../types'
 import { Mine } from '../managers/mine-manager'
@@ -58,8 +59,7 @@ export function calculateMineRoads(
             y: pos.y,
         }))
 
-        // Create cost callback that avoids base bunker structures
-        const baseCost = createMultiRoomTerrainCost()
+        // Build obstacles and roads from bunker buildings
         const obstacles = new Set<string>()
         const roadPositions = new Set<string>()
 
@@ -85,7 +85,10 @@ export function calculateMineRoads(
         // Remove the start position from obstacles (storage shouldn't block itself)
         obstacles.delete(`${baseRoomName}:${storage.x},${storage.y}`)
 
-        const getCost: MultiRoomCostCallback = withMultiRoomObstacles(baseCost, obstacles)
+        // Build cost callback: base terrain + obstacles (255) + preferred roads (cost 1)
+        let getCost: MultiRoomCostCallback = createMultiRoomTerrainCost()
+        getCost = withMultiRoomPreferredPaths(getCost, roadPositions, 1)
+        getCost = withMultiRoomObstacles(getCost, obstacles)
 
         // Find path from storage to mine sources
         const path = findMultiRoomPath(
