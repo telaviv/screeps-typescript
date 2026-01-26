@@ -268,6 +268,9 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
         mineralPosition,
     )
 
+    // Add bunker roads to buildings map so mine road pathfinding can use them
+    placementResult.buildings.set('road', bunkerRoads)
+
     // Calculate mine roads (from base to remote mines)
     const mines: Mine[] = roomMemory.mines ?? []
 
