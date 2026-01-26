@@ -436,6 +436,9 @@ const createMineWorkers = wrap(
             )
         }
 
+        // Ensure we never try to spawn with more energy than available
+        effectiveCapacity = Math.min(effectiveCapacity, spawn.room.energyAvailable)
+
         if (!mineManager.hasEnoughConstructionParts() && mineManager.getWorkers().length === 0) {
             RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
                 home: mineManager.name,

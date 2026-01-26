@@ -1,11 +1,11 @@
 import * as Logger from 'utils/logger'
 import { MAX_SAVIOR_DISTANCE } from '../constants'
-import { getLogisticsCreeps } from './creep'
+import { getCreeps, getLogisticsCreeps } from './creep'
 import { resetSnapshot, saveSnapshot } from 'snapshot'
 import { RoomManager } from 'managers/room-manager'
 import { Task } from 'tasks/types'
-import { canMine } from 'managers/mine-manager'
-import { findMyRooms } from './room'
+import { canMine, MineManager } from 'managers/mine-manager'
+import { findMyRooms, getLinks } from './room'
 import { getAllTasks } from 'tasks/utils'
 import {
     getConstructionFeatures,
@@ -18,6 +18,8 @@ import SourcesManager from 'managers/sources-manager'
 import WarDepartment, { SpawnWarMemory, WarStatus } from 'war-department'
 import DefenseDepartment from 'defense-department'
 import { AttackerMemory } from 'roles/attacker'
+import hash from './hash'
+import { getTotalDroppedResources } from 'tasks/pickup'
 import { getBuildManager } from 'managers/build-manager'
 
 import ErrorMapper from './ErrorMapper'
@@ -394,6 +396,475 @@ function debugWorker(creepName: string) {
             console.log('✅ Worker is not full -> will switch to collecting energy')
         }
     }
+}
+
+/**
+ * Debugs why a spawn is not creating new creeps
+ * @param roomName - The room to debug spawn behavior for
+ */
+function debugSpawn(roomName: string) {
+    console.log(`=== Debug Spawn: ${roomName} ===\n`)
+
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log('❌ ERROR: Room not visible')
+        return
+    }
+
+    const spawns = room.find(FIND_MY_SPAWNS)
+    console.log(`--- Spawns (${spawns.length}) ---`)
+    if (spawns.length === 0) {
+        console.log('❌ No spawns in room!')
+        return
+    }
+
+    for (const spawnStructure of spawns) {
+        console.log(`\nSpawn: ${spawnStructure.name}`)
+        console.log(`  ID: ${spawnStructure.id}`)
+        console.log(
+            `  Spawning: ${
+                spawnStructure.spawning ? `YES - ${spawnStructure.spawning.name}` : 'NO'
+            }`,
+        )
+
+        if (spawnStructure.spawning) {
+            console.log(`    Remaining time: ${spawnStructure.spawning.remainingTime} ticks`)
+            console.log(`    ✅ This spawn is currently spawning, will check again when done`)
+        }
+    }
+
+    const spawn = spawns[0] // Debug first spawn
+
+    // Check collapsed status
+    console.log(`\n--- Room Status ---`)
+    console.log(`Collapsed: ${room.memory.collapsed ?? 'false'}`)
+    if (room.memory.collapsed) {
+        console.log(`⚠️  Room is COLLAPSED - only spawning rescue creeps`)
+        return
+    }
+
+    // Check spawn timing
+    const SPAWN_CHECK_MOD = 4
+    const currentMod = (hash(spawn.id) + Game.time) % SPAWN_CHECK_MOD
+    console.log(`\n--- Spawn Timing ---`)
+    console.log(`Game.time: ${Game.time}`)
+    console.log(
+        `Spawn check mod: (hash(${spawn.id}) + ${Game.time}) % ${SPAWN_CHECK_MOD} = ${currentMod}`,
+    )
+    if (currentMod !== 0) {
+        console.log(`⚠️  Not a spawn check tick (waits for mod = 0)`)
+        console.log(`   Next spawn check in ${SPAWN_CHECK_MOD - currentMod} tick(s)`)
+    } else {
+        console.log(`✅ This is a spawn check tick`)
+    }
+
+    // Check energy
+    console.log(`\n--- Energy ---`)
+    console.log(`Available: ${room.energyAvailable}`)
+    console.log(`Capacity: ${room.energyCapacityAvailable}`)
+    console.log(
+        `Percentage: ${((room.energyAvailable / room.energyCapacityAvailable) * 100).toFixed(1)}%`,
+    )
+
+    const SPAWN_ENERGY_CAPACITY = 300
+    if (room.energyAvailable < SPAWN_ENERGY_CAPACITY) {
+        console.log(`❌ Energy too low (need ${SPAWN_ENERGY_CAPACITY})`)
+    } else {
+        console.log(`✅ Enough energy for basic spawn`)
+    }
+
+    const minEnergy = Math.min(0.95 * room.energyCapacityAvailable, 1800) // MAX_USEFUL_ENERGY
+    if (room.energyAvailable < minEnergy) {
+        console.log(`⚠️  Below 95% threshold (${minEnergy}) for swarm strategy`)
+    } else {
+        console.log(`✅ Above 95% threshold for swarm strategy`)
+    }
+
+    // Check room manager tasks
+    const roomManager = new RoomManager(room)
+    const scoutTasks = roomManager.getScoutRoomTasks()
+    console.log(`\n--- Room Manager ---`)
+    console.log(`Scout room tasks: ${scoutTasks.length}`)
+    if (scoutTasks.length > 0) {
+        const taskRoomNames = scoutTasks.map((t) => t.data.room).join(', ')
+        console.log(`⚠️  Priority: Spawning scouts for: ${taskRoomNames}`)
+    }
+
+    // Check defense
+    const defenseDepartment = new DefenseDepartment(room)
+    console.log(`\n--- Defense ---`)
+    console.log(`Needs defenders: ${defenseDepartment.needsDefenders()}`)
+    console.log(`Needs healer: ${defenseDepartment.needsHealer()}`)
+    console.log(`Has overwhelming healing: ${defenseDepartment.hasOverwhelmingHealing()}`)
+
+    if (defenseDepartment.needsDefenders() || defenseDepartment.needsHealer()) {
+        console.log(`⚠️  Priority: Defense needs`)
+    }
+
+    if (defenseDepartment.hasOverwhelmingHealing()) {
+        const baseRepairers = getLogisticsCreeps({ room, preference: 'base-repairer' }).length
+        const workers = getLogisticsCreeps({ room, preference: 'worker' }).length
+        console.log(`  Base-repairers: ${baseRepairers}/3`)
+        console.log(`  Workers: ${workers}/2`)
+        if (baseRepairers < 3 || workers < 2) {
+            console.log(`⚠️  Priority: Overwhelming healing detected, need more repair workers`)
+        }
+    }
+
+    // Check creep counts
+    console.log(`\n--- Creep Counts ---`)
+    const roles = [
+        'harvester',
+        'energy-hauler',
+        'logistics',
+        'mason',
+        'rebalancer',
+        'scout',
+        'attack',
+        'healer',
+        'claimer',
+    ]
+    for (const role of roles) {
+        const creeps = getCreeps(role, room)
+        console.log(`  ${role}: ${creeps.length}`)
+    }
+
+    const logisticsWorkers = getLogisticsCreeps({ room, preference: 'worker' }).length
+    const logisticsUpgraders = getLogisticsCreeps({ room, preference: 'upgrading' }).length
+    const logisticsBuilders = getLogisticsCreeps({ room, preference: 'building' }).length
+    console.log(`  logistics (worker): ${logisticsWorkers}`)
+    console.log(`  logistics (upgrading): ${logisticsUpgraders}`)
+    console.log(`  logistics (building): ${logisticsBuilders}`)
+
+    // Check sources manager
+    const sourcesManager = new SourcesManager(room)
+    console.log(`\n--- Sources Manager ---`)
+    console.log(`Has all container harvesters: ${sourcesManager.hasAllContainerHarvesters()}`)
+    console.log(`Has enough harvesters: ${sourcesManager.hasEnoughHarvesters()}`)
+
+    if (!sourcesManager.hasAllContainerHarvesters()) {
+        console.log(`⚠️  Priority: Missing container harvesters`)
+    }
+
+    // Check construction sites
+    const constructionSites = room
+        .find(FIND_CONSTRUCTION_SITES)
+        .filter((site) => site.structureType !== STRUCTURE_RAMPART)
+    console.log(`\n--- Construction ---`)
+    console.log(`Construction sites (non-rampart): ${constructionSites.length}`)
+    if (constructionSites.length > 0) {
+        const siteTypes = constructionSites
+            .map((s) => s.structureType)
+            .reduce((acc: { [key: string]: number }, type) => {
+                acc[type] = (acc[type] || 0) + 1
+                return acc
+            }, {})
+        for (const [type, count] of Object.entries(siteTypes)) {
+            console.log(`  - ${type}: ${count}`)
+        }
+    }
+
+    // Check dropped resources
+    const droppedResources = getTotalDroppedResources(room)
+    console.log(`\n--- Dropped Resources ---`)
+    console.log(`Total dropped energy: ${droppedResources}`)
+    const MAX_DROPPED_RESOURCES = 1000
+    if (droppedResources > MAX_DROPPED_RESOURCES) {
+        console.log(`⚠️  Above threshold (${MAX_DROPPED_RESOURCES}) - may spawn 2nd rebalancer`)
+    }
+
+    // Check war status
+    const warDepartment = new WarDepartment(room)
+    console.log(`\n--- War Department ---`)
+    console.log(`Status: ${warDepartment.status}`)
+    console.log(`Target: ${room.memory.war?.target ?? 'none'}`)
+    if (warDepartment.status !== 'none') {
+        console.log(`⚠️  War operations active`)
+    }
+
+    // Check link count
+    const linkCount = getLinks(room).length
+    console.log(`\n--- Strategy ---`)
+    console.log(`Links: ${linkCount}`)
+    console.log(`Using: ${linkCount >= 2 ? 'LINK strategy' : 'SWARM strategy'}`)
+
+    // Check virtual storage
+    const virtualStorage = room.storage || room.terminal
+    console.log(`Virtual storage: ${virtualStorage ? 'YES' : 'NO'}`)
+
+    // Check mining status
+    console.log(`\n--- Mining ---`)
+    console.log(`Mining enabled: ${Memory.miningEnabled ?? false}`)
+    if (Memory.miningEnabled && room.memory.mines) {
+        console.log(`Mines assigned: ${room.memory.mines.length}`)
+        let minesNeedingAttention = 0
+        for (const mine of room.memory.mines) {
+            const mineManager = new MineManager(mine.name, room)
+            const needsAttention = mineManager.needsAttention()
+            if (needsAttention) {
+                minesNeedingAttention++
+            }
+            console.log(`  - ${mine.name}: ${needsAttention ? '⚠️  NEEDS ATTENTION' : '✅ OK'}`)
+        }
+        if (minesNeedingAttention > 0) {
+            console.log(`\n⚠️  ${minesNeedingAttention} mine(s) need attention`)
+            console.log(`   Use global.mines.status() for detailed mine info`)
+        }
+    }
+
+    // Check latent worker cooldown
+    console.log(`\n--- Latent Worker Spawning ---`)
+    const lastLatentWorker = room.memory.lastLatentWorker ?? 0
+    const LATENT_WORKER_INTERVAL_MULTIPLIER = 200
+    const minAvailableEnergy = Math.min(room.energyAvailable, room.energyCapacityAvailable)
+    const latentInterval = Math.floor(minAvailableEnergy * LATENT_WORKER_INTERVAL_MULTIPLIER)
+    const ticksSinceLastLatent = Game.time - lastLatentWorker
+    const ticksUntilNext = latentInterval - ticksSinceLastLatent
+
+    console.log(
+        `Last latent worker: ${lastLatentWorker === 0 ? 'never' : `tick ${lastLatentWorker}`}`,
+    )
+    console.log(`Latent interval: ${latentInterval} ticks`)
+    console.log(`Ticks since last: ${ticksSinceLastLatent}`)
+    if (ticksUntilNext > 0) {
+        console.log(`⏳ Next latent worker in: ${ticksUntilNext} ticks`)
+    } else {
+        console.log(`✅ Ready to spawn latent worker`)
+    }
+
+    // Provide suggestions
+    console.log(`\n--- Analysis ---`)
+
+    if (spawn.spawning) {
+        console.log(`✅ Spawn is working - creating ${spawn.spawning.name}`)
+    } else if (currentMod !== 0) {
+        console.log(`⏳ Waiting for spawn check tick (${SPAWN_CHECK_MOD - currentMod} more ticks)`)
+    } else if (room.energyAvailable < SPAWN_ENERGY_CAPACITY) {
+        console.log(`❌ Not enough energy (${room.energyAvailable}/${SPAWN_ENERGY_CAPACITY})`)
+    } else if (scoutTasks.length > 0) {
+        console.log(`📍 Priority: Scouting ${scoutTasks[0].data.room}`)
+    } else if (defenseDepartment.needsDefenders()) {
+        console.log(`⚔️  Priority: Creating defenders`)
+    } else if (defenseDepartment.needsHealer()) {
+        console.log(`⚕️  Priority: Creating healer`)
+    } else if (!sourcesManager.hasAllContainerHarvesters()) {
+        console.log(`⛏️  Priority: Creating harvester for source`)
+    } else if (room.energyAvailable < minEnergy) {
+        console.log(`⏳ Waiting for more energy (${room.energyAvailable}/${minEnergy.toFixed(0)})`)
+    } else if (Memory.miningEnabled && room.memory.mines) {
+        // Check if any mines need attention
+        const minesNeedingAttention = room.memory.mines.filter((mine) => {
+            const mm = new MineManager(mine.name, room)
+            return mm.needsAttention()
+        })
+        if (minesNeedingAttention.length > 0) {
+            console.log(
+                `⛏️  Priority: ${minesNeedingAttention.length} mine(s) need attention (should spawn mine workers)`,
+            )
+            console.log(
+                `   This should trigger createMineWorkers() - if not spawning, there may be a blocking condition`,
+            )
+            console.log(`   Run global.mines.status() for details on what each mine needs`)
+        } else if (droppedResources > MAX_DROPPED_RESOURCES && !virtualStorage) {
+            console.log(
+                `💰 ${droppedResources} dropped resources but no virtual storage for rebalancer`,
+            )
+            console.log(`   Workers should pick these up, but may need more workers`)
+        } else if (ticksUntilNext > 0) {
+            console.log(`⏳ Waiting for latent worker cooldown (${ticksUntilNext} ticks)`)
+        } else {
+            console.log(`🤔 All spawn conditions checked:`)
+            console.log(`   ✅ Has all required creep types`)
+            console.log(`   ✅ All mines OK`)
+            console.log(`   ✅ Latent worker cooldown expired`)
+            console.log(
+                `   → Should spawn a latent worker on next spawn check tick (if shouldCreateCreep passes)`,
+            )
+        }
+    } else if (droppedResources > MAX_DROPPED_RESOURCES && !virtualStorage) {
+        console.log(
+            `💰 ${droppedResources} dropped resources but no virtual storage for rebalancer`,
+        )
+        console.log(`   Workers should pick these up, but may need more workers`)
+    } else if (ticksUntilNext > 0) {
+        console.log(`⏳ Waiting for latent worker cooldown (${ticksUntilNext} ticks)`)
+    } else {
+        console.log(`🤔 All spawn conditions checked:`)
+        console.log(`   ✅ Has all required creep types`)
+        console.log(`   ✅ Latent worker cooldown expired`)
+        console.log(
+            `   → Should spawn a latent worker on next spawn check tick (if shouldCreateCreep passes)`,
+        )
+    }
+
+    console.log(`\n=== End Debug ===`)
+}
+
+/**
+ * Debugs why mine workers aren't being spawned for a specific mine
+ * @param mineName - The mine room name
+ * @param baseRoomName - The base room that should spawn workers
+ */
+function debugMineWorkerSpawn(mineName: string, baseRoomName: string) {
+    console.log(`=== Debug Mine Worker Spawn: ${mineName} (from ${baseRoomName}) ===\n`)
+
+    const baseRoom = Game.rooms[baseRoomName]
+    if (!baseRoom) {
+        console.log('❌ ERROR: Base room not visible')
+        return
+    }
+
+    const mineManager = new MineManager(mineName, baseRoom)
+
+    console.log(`--- Mine Status ---`)
+    console.log(`Needs attention: ${mineManager.needsAttention()}`)
+
+    if (!mineManager.needsAttention()) {
+        console.log('✅ Mine does not need attention - nothing to spawn')
+        return
+    }
+
+    // Check spawn
+    const spawns = baseRoom.find(FIND_MY_SPAWNS)
+    if (spawns.length === 0) {
+        console.log('❌ No spawns in base room')
+        return
+    }
+    const spawn = spawns[0]
+    console.log(`Spawn: ${spawn.name}`)
+    console.log(`Energy available: ${baseRoom.energyAvailable}/${baseRoom.energyCapacityAvailable}`)
+
+    const capacity = Math.min(1800, baseRoom.energyCapacityAvailable)
+
+    // Check vision
+    console.log(`\n--- Step 1: Vision Check ---`)
+    if (!mineManager.hasVision()) {
+        console.log(`❌ No vision of mine room`)
+
+        const scouts = getCreeps('scout', baseRoom)
+        const scoutsToMine = scouts.filter((s) =>
+            s.memory.tasks.some(
+                (task) =>
+                    task.type === 'travel' &&
+                    'destination' in task &&
+                    task.destination === mineName,
+            ),
+        )
+        console.log(`Scouts going there: ${scoutsToMine.length}`)
+
+        const scoutTasks = RoomManager.getAllScoutTasks().filter(
+            (task) => task.data.room === mineName,
+        )
+        console.log(`Scout tasks queued: ${scoutTasks.length}`)
+
+        const claimers = mineManager.getClaimers()
+        console.log(`Claimers going there: ${claimers.length}`)
+
+        if (scoutsToMine.length > 0 || scoutTasks.length > 0 || claimers.length > 0) {
+            console.log(
+                `⏳ Scout/claimer already on the way - createMineWorkers returns early (line 381-395)`,
+            )
+            return
+        }
+
+        console.log(`✅ Should spawn scout or claimer`)
+        console.log(
+            `   - Has capacity to reserve: ${mineManager.hasCapacityToReserve()} (would spawn claimer if true)`,
+        )
+        return
+    }
+
+    console.log(`✅ Has vision of mine room`)
+
+    // Check defenders
+    console.log(`\n--- Step 2: Defense Check ---`)
+    const defenders = mineManager.getDefenders()
+    const needsProtection = mineManager.needsProtection()
+    console.log(`Needs protection: ${needsProtection}`)
+    console.log(`Defenders: ${defenders.length}`)
+
+    if (needsProtection && defenders.length < 2) {
+        console.log(`✅ Should spawn attacker (line 407-410)`)
+        return
+    }
+
+    // Check healer
+    console.log(`\n--- Step 3: Healer Check ---`)
+    console.log(`Needs healer: ${mineManager.needsHealer()}`)
+    if (mineManager.needsHealer()) {
+        console.log(`✅ Should spawn healer (line 412-414)`)
+        return
+    }
+
+    // Check capacity adjustment
+    console.log(`\n--- Step 4: Capacity Adjustment ---`)
+    const mineRoom = mineManager.room
+    if (!mineRoom) {
+        console.log('❌ ERROR: Mine room not visible (but hasVision returned true?)')
+        return
+    }
+
+    const reservationTicks = mineManager.controllerReservationTicksLeft()
+    const droppedInMine = getTotalDroppedResources(mineRoom)
+    const useLowerCapacity = reservationTicks <= 1000 || droppedInMine >= 1000
+
+    console.log(`Reservation ticks: ${reservationTicks}`)
+    console.log(`Dropped resources in mine: ${droppedInMine}`)
+    console.log(`Use lower capacity: ${useLowerCapacity}`)
+
+    let effectiveCapacity = capacity
+    if (useLowerCapacity) {
+        const targetRcl = Math.max(1, (baseRoom.controller?.level ?? 1) - 1)
+        const energyCapacityByRcl = [300, 300, 550, 800, 1300, 1800, 2300, 5600, 12900]
+        effectiveCapacity = energyCapacityByRcl[targetRcl] || 300
+        console.log(`   Effective capacity reduced to: ${effectiveCapacity}`)
+    }
+
+    // Check workers (first pass)
+    console.log(`\n--- Step 5: Initial Worker Check ---`)
+    const hasEnoughConstructionParts = mineManager.hasEnoughConstructionParts()
+    const workers = mineManager.getWorkers()
+    console.log(`Has enough construction parts: ${hasEnoughConstructionParts}`)
+    console.log(`Workers: ${workers.length}`)
+
+    if (!hasEnoughConstructionParts && workers.length === 0) {
+        console.log(`✅ Should spawn worker (no construction parts, no workers) (line 439-445)`)
+        return
+    }
+
+    // Check harvesters
+    console.log(`\n--- Step 6: Harvester Check ---`)
+    const hasEnoughHarvesters = mineManager.hasEnoughHarvesters()
+    console.log(`Has enough harvesters: ${hasEnoughHarvesters}`)
+
+    if (!hasEnoughHarvesters) {
+        console.log(`✅ Should spawn harvester (line 448-455)`)
+        return
+    }
+
+    // Check workers (second pass)
+    console.log(`\n--- Step 7: Worker Check (Second Pass) ---`)
+    if (!hasEnoughConstructionParts) {
+        console.log(`✅ Should spawn worker (has harvesters but needs construction) (line 457-463)`)
+        return
+    }
+
+    // Check haulers
+    console.log(`\n--- Step 8: Hauler Check ---`)
+    const hasEnoughHaulers = mineManager.hasEnoughHaulers()
+    console.log(`Has enough haulers: ${hasEnoughHaulers}`)
+
+    if (!hasEnoughHaulers) {
+        console.log(`✅ Should spawn hauler (line 465-471)`)
+        return
+    }
+
+    console.log(`\n--- Result ---`)
+    console.log(`🤔 All checks passed - mine doesn't actually need anything?`)
+    console.log(`   This suggests needsAttention() returned true but all specific needs are met`)
+    console.log(`   Mine might be transitioning states or there's a logic inconsistency`)
+
+    console.log(`\n=== End Debug ===`)
 }
 
 /**
@@ -1015,6 +1486,8 @@ export default function assignGlobals(): void {
     global.fixMineFeatures = fixMineFeatures
     global.debugRampartPosition = debugRampartPosition
     global.compareOldVsNewBunker = compareOldVsNewBunker
+    global.debugSpawn = debugSpawn
+    global.debugMineWorkerSpawn = debugMineWorkerSpawn
 }
 
 /**
@@ -1182,6 +1655,8 @@ declare global {
             fixMineFeatures: (mineName: string, baseRoomName?: string) => void
             debugRampartPosition: (roomName: string, x: number, y: number) => void
             compareOldVsNewBunker: (roomName: string) => void
+            debugSpawn: (roomName: string) => void
+            debugMineWorkerSpawn: (mineName: string, baseRoomName: string) => void
         }
     }
 }

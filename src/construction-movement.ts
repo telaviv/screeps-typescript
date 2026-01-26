@@ -57,6 +57,13 @@ export function destroyMovementStructures(room: Room): void {
     if (!movement) {
         return
     }
+
+    Logger.info(
+        'destroyMovementStructures:start',
+        room.name,
+        `Processing ${Object.keys(movement).length} structure types`,
+    )
+
     for (const [structureType, { moveTo, moveFrom }] of Object.entries(movement)) {
         for (const { x, y } of moveTo) {
             // Ramparts and containers can be placed on top of other structures, so skip conflict check
@@ -78,7 +85,14 @@ export function destroyMovementStructures(room: Room): void {
                         `Reason: Position needed for ${structureType}`,
                         `Features want ${structureType} here, but found ${obstacle.structureType}`,
                     )
-                    obstacle.destroy()
+                    const result = obstacle.destroy()
+                    if (result !== OK) {
+                        Logger.error(
+                            'construction-movement:destroyMovementStructures:moveTo:destroy-failed',
+                            `Failed to destroy ${obstacle.structureType} at (${x},${y}) in ${room.name}`,
+                            `Error code: ${result}`,
+                        )
+                    }
                 }
             }
         }
@@ -91,7 +105,26 @@ export function destroyMovementStructures(room: Room): void {
                     `Reason: This ${structureType} is in the wrong location`,
                     `Features want ${structureType} to move FROM here to a new position`,
                 )
-                building.destroy()
+                const result = building.destroy()
+                if (result !== OK) {
+                    Logger.error(
+                        'construction-movement:destroyMovementStructures:moveFrom:destroy-failed',
+                        `Failed to destroy ${building.structureType} at (${x},${y}) in ${room.name}`,
+                        `Error code: ${result}`,
+                        `Room owned: ${room.controller?.my}, Reserved: ${!!room.controller
+                            ?.reservation}`,
+                    )
+                } else {
+                    Logger.info(
+                        'construction-movement:destroyMovementStructures:moveFrom:destroy-success',
+                        `Successfully marked ${building.structureType} at (${x},${y}) in ${room.name} for destruction`,
+                    )
+                }
+            } else {
+                Logger.warning(
+                    'construction-movement:destroyMovementStructures:moveFrom:not-found',
+                    `No ${structureType} found at (${x},${y}) in ${room.name} to destroy`,
+                )
             }
         }
     }

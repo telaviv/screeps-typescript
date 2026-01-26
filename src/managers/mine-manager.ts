@@ -1,7 +1,12 @@
 import * as Logger from 'utils/logger'
-import { getConstructionFeaturesV3 } from 'construction-features'
+import {
+    ConstructionMovement,
+    getConstructionFeatures,
+    getConstructionFeaturesV3,
+} from 'construction-features'
 import { HostileRecorder } from 'hostiles'
 import SourcesManager from './sources-manager'
+import { calculateBuildingDiff, setConstructionFeaturesV3 } from '../surveyor'
 import { ClaimerMemory } from 'roles/claim'
 import { HealerMemory } from 'roles/healer'
 import { RemoteHaulerMemory } from 'roles/remote-hauler'
@@ -39,6 +44,7 @@ declare global {
         interface Global {
             mines: {
                 assign: () => void
+                assignOnly: () => void
                 clear: () => void
                 enable: () => void
                 disable: () => void
@@ -105,6 +111,81 @@ export function assignMines(claimCandidates?: string[]): void {
     clearMines()
     const mineDecider = new MineDecider(findMyRooms(), claimCandidates)
     mineDecider.assignMines()
+}
+
+/**
+ * Recalculates and assigns remote mines, then calculates building diffs for visible mines.
+ * This ensures that misplaced structures are detected immediately after mine assignment.
+ */
+export function assignMinesAndCalculateMovement(claimCandidates?: string[]): void {
+    assignMines(claimCandidates)
+
+    // Force recalculation of construction features for all owned rooms
+    // This is needed because assignMines() changes room.memory.mines
+    for (const room of findMyRooms()) {
+        const mines = room.memory.mines
+        if (!mines || mines.length === 0) {
+            continue
+        }
+
+        // Force recalculation of base room features (which will also recalculate mine features)
+        Logger.info('assignMinesAndCalculateMovement:recalculating', room.name)
+        try {
+            setConstructionFeaturesV3(room.name)
+        } catch (error) {
+            Logger.error(
+                'assignMinesAndCalculateMovement:recalc-failed',
+                room.name,
+                error instanceof Error ? error.message : String(error),
+            )
+            continue
+        }
+
+        // Now calculate movement diffs for visible mine rooms
+        for (const mine of mines) {
+            const mineRoom = Game.rooms[mine.name]
+            if (!mineRoom) {
+                continue // No vision
+            }
+
+            const constructionFeatures = getConstructionFeaturesV3(mineRoom)
+            if (!constructionFeatures || constructionFeatures.type === 'none') {
+                continue
+            }
+
+            // After recalculation, movement will be null
+            // Calculate the diff immediately if we have vision
+            if (constructionFeatures.movement === null) {
+                const features = getConstructionFeatures(mineRoom)
+                if (features) {
+                    const diff: ConstructionMovement = calculateBuildingDiff(mineRoom, features)
+                    constructionFeatures.movement = diff
+                    const movementKeys = Object.keys(diff)
+                    Logger.info(
+                        'assignMinesAndCalculateMovement:calculated-diff',
+                        mineRoom.name,
+                        `Found ${
+                            movementKeys.length
+                        } structure types with diffs: ${movementKeys.join(', ')}`,
+                    )
+                } else {
+                    Logger.warning(
+                        'assignMinesAndCalculateMovement:no-features',
+                        mineRoom.name,
+                        'Could not get construction features',
+                    )
+                }
+            } else {
+                Logger.warning(
+                    'assignMinesAndCalculateMovement:movement-not-null',
+                    mineRoom.name,
+                    `Movement is ${
+                        constructionFeatures.movement === undefined ? 'undefined' : 'set'
+                    }`,
+                )
+            }
+        }
+    }
 }
 
 function clearMines() {
@@ -191,7 +272,8 @@ function showNextMine() {
 }
 
 global.mines = {
-    assign: assignMines,
+    assign: assignMinesAndCalculateMovement,
+    assignOnly: assignMines,
     clear: clearMines,
     enable: enableMining,
     disable: disableMining,

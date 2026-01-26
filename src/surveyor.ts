@@ -118,7 +118,7 @@ function clearAllConstructionFeatures() {
  * Calculates and stores construction features v3 for a room.
  * @param roomName - Name of the room to calculate features for
  */
-function setConstructionFeaturesV3(roomName: string) {
+export function setConstructionFeaturesV3(roomName: string): void {
     // we need to have already scouted the room so that we don't waste time
     // on rooms with no controller or 1 source etc ....
     const roomMemory = Memory.rooms[roomName]
@@ -489,7 +489,10 @@ function setMineConstructionFeaturesV3(
  * @param features - The planned construction features
  * @returns Movement instructions for misplaced structures
  */
-function calculateBuildingDiff(room: Room, features: ConstructionFeatures): ConstructionMovement {
+export function calculateBuildingDiff(
+    room: Room,
+    features: ConstructionFeatures,
+): ConstructionMovement {
     const diff = {} as ConstructionMovement
     const builtStructures = getBuildableStructures(room)
     for (const builtStructure of builtStructures) {
