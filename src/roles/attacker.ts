@@ -160,7 +160,31 @@ const roleAttacker = {
             return
         }
 
-        const structureTargets = targetRoom.find(FIND_HOSTILE_STRUCTURES)
+        const structureTargets = targetRoom
+            .find(FIND_HOSTILE_STRUCTURES)
+            .filter((s) => s.structureType !== STRUCTURE_CONTROLLER) // Don't target controllers
+            .sort((a, b) => {
+                // Prioritize spawns and towers first
+                const priority = (struct: Structure): number => {
+                    if (struct.structureType === STRUCTURE_SPAWN) return 0
+                    if (struct.structureType === STRUCTURE_TOWER) return 1
+                    if (struct.structureType === STRUCTURE_EXTENSION) return 2
+                    if (struct.structureType === STRUCTURE_STORAGE) return 3
+                    if (struct.structureType === STRUCTURE_TERMINAL) return 4
+                    return 5
+                }
+
+                const priorityDiff = priority(a) - priority(b)
+                if (priorityDiff !== 0) return priorityDiff
+
+                // Then by distance
+                const distanceDiff = creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b)
+                if (distanceDiff !== 0) return distanceDiff
+
+                // Finally by hits (weaker first)
+                return a.hits - b.hits
+            })
+
         if (structureTargets.length > 0) {
             const structureTarget = structureTargets[0]
             roleAttacker.attack(creep, structureTarget)

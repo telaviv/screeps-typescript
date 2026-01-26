@@ -223,82 +223,306 @@ export function getRoomNameFromCoords(x: number, y: number): string {
 }
 
 /**
- * Calculates bounding box of rooms needed for pathfinding
+ * Direction between two adjacent rooms
  */
-function getRoomBounds(rooms: string[]): {
-    minX: number
-    maxX: number
-    minY: number
-    maxY: number
-} {
-    let minX = Infinity
-    let maxX = -Infinity
-    let minY = Infinity
-    let maxY = -Infinity
+enum RoomDirection {
+    East,
+    West,
+    North,
+    South,
+}
 
-    for (const roomName of rooms) {
-        const { x, y } = parseRoomName(roomName)
-        minX = Math.min(minX, x)
-        maxX = Math.max(maxX, x)
-        minY = Math.min(minY, y)
-        maxY = Math.max(maxY, y)
+/**
+ * Coordinate translation functions for converting between world and grid coordinates
+ */
+interface CoordinateTranslator {
+    /** Grid dimensions */
+    gridWidth: number
+    gridHeight: number
+    /** Translate start position from world to grid coordinates */
+    translateStart: (pos: FlatRoomPosition) => Position
+    /** Translate goal position from world to grid coordinates */
+    translateGoal: (pos: FlatRoomPosition) => Position
+    /** Translate grid position back to world coordinates */
+    translateBack: (gridPos: Position) => FlatRoomPosition
+}
+
+/**
+ * Determines the direction from start room to goal room
+ */
+function getAdjacentRoomDirection(
+    startRoom: string,
+    goalRoom: string,
+): { direction: RoomDirection; dx: number; dy: number } {
+    const startCoords = parseRoomName(startRoom)
+    const goalCoords = parseRoomName(goalRoom)
+
+    const dx = goalCoords.x - startCoords.x
+    const dy = goalCoords.y - startCoords.y
+
+    if (Math.abs(dx) + Math.abs(dy) !== 1) {
+        throw new Error(`Rooms ${startRoom} and ${goalRoom} are not adjacent`)
     }
 
-    return { minX, maxX, minY, maxY }
+    if (dx > 0) return { direction: RoomDirection.East, dx, dy }
+    if (dx < 0) return { direction: RoomDirection.West, dx, dy }
+    if (dy > 0) return { direction: RoomDirection.North, dx, dy }
+    return { direction: RoomDirection.South, dx, dy }
 }
 
 /**
- * Converts a world position (roomName + x,y) to grid coordinates
+ * Creates coordinate translators for horizontal adjacency (East/West)
  */
-function worldToGrid(
-    pos: FlatRoomPosition,
-    bounds: { minX: number; minY: number },
+function createHorizontalTranslator(
+    direction: RoomDirection.East | RoomDirection.West,
+    startRoom: string,
+    goalRoom: string,
     roomSize: number,
-): Position {
-    const roomCoords = parseRoomName(pos.roomName)
-    const gridX = (roomCoords.x - bounds.minX) * roomSize + pos.x
-    const gridY = (roomCoords.y - bounds.minY) * roomSize + pos.y
-    return { x: gridX, y: gridY }
+): CoordinateTranslator {
+    const gridWidth = roomSize * 2
+    const gridHeight = roomSize
+
+    if (direction === RoomDirection.East) {
+        return {
+            gridWidth,
+            gridHeight,
+            translateStart: (pos) => ({ x: pos.x, y: pos.y }),
+            translateGoal: (pos) => ({ x: pos.x + roomSize, y: pos.y }),
+            translateBack: (gpos) => ({
+                roomName: gpos.x < roomSize ? startRoom : goalRoom,
+                x: gpos.x % roomSize,
+                y: gpos.y,
+            }),
+        }
+    } else {
+        return {
+            gridWidth,
+            gridHeight,
+            translateStart: (pos) => ({ x: pos.x + roomSize, y: pos.y }),
+            translateGoal: (pos) => ({ x: pos.x, y: pos.y }),
+            translateBack: (gpos) => ({
+                roomName: gpos.x >= roomSize ? startRoom : goalRoom,
+                x: gpos.x % roomSize,
+                y: gpos.y,
+            }),
+        }
+    }
 }
 
 /**
- * Converts grid coordinates back to world position
+ * Creates coordinate translators for vertical adjacency (North/South)
  */
-function gridToWorld(
-    gridPos: Position,
-    bounds: { minX: number; minY: number },
+function createVerticalTranslator(
+    direction: RoomDirection.North | RoomDirection.South,
+    startRoom: string,
+    goalRoom: string,
     roomSize: number,
-): FlatRoomPosition {
-    const roomX = bounds.minX + Math.floor(gridPos.x / roomSize)
-    const roomY = bounds.minY + Math.floor(gridPos.y / roomSize)
-    const x = gridPos.x % roomSize
-    const y = gridPos.y % roomSize
-    const roomName = getRoomNameFromCoords(roomX, roomY)
-    return { roomName, x, y }
+): CoordinateTranslator {
+    const gridWidth = roomSize
+    const gridHeight = roomSize * 2
+
+    if (direction === RoomDirection.North) {
+        return {
+            gridWidth,
+            gridHeight,
+            translateStart: (pos) => ({ x: pos.x, y: pos.y }),
+            translateGoal: (pos) => ({ x: pos.x, y: pos.y + roomSize }),
+            translateBack: (gpos) => ({
+                roomName: gpos.y < roomSize ? startRoom : goalRoom,
+                x: gpos.x,
+                y: gpos.y % roomSize,
+            }),
+        }
+    } else {
+        return {
+            gridWidth,
+            gridHeight,
+            translateStart: (pos) => ({ x: pos.x, y: pos.y + roomSize }),
+            translateGoal: (pos) => ({ x: pos.x, y: pos.y }),
+            translateBack: (gpos) => ({
+                roomName: gpos.y >= roomSize ? startRoom : goalRoom,
+                x: gpos.x,
+                y: gpos.y % roomSize,
+            }),
+        }
+    }
 }
 
 /**
- * Finds a path across multiple rooms using Jump Point Search
+ * Creates appropriate coordinate translator based on room direction
+ */
+function createCoordinateTranslator(
+    direction: RoomDirection,
+    startRoom: string,
+    goalRoom: string,
+    roomSize: number,
+): CoordinateTranslator {
+    if (direction === RoomDirection.East || direction === RoomDirection.West) {
+        return createHorizontalTranslator(direction, startRoom, goalRoom, roomSize)
+    } else {
+        return createVerticalTranslator(direction, startRoom, goalRoom, roomSize)
+    }
+}
+
+/**
+ * Populates pathfinding grid with costs from the world
+ */
+function populateGrid(
+    grid: PF.Grid,
+    translator: CoordinateTranslator,
+    getCost: MultiRoomCostCallback,
+): void {
+    const { gridWidth, gridHeight, translateBack } = translator
+
+    for (let gx = 0; gx < gridWidth; gx++) {
+        for (let gy = 0; gy < gridHeight; gy++) {
+            const worldPos = translateBack({ x: gx, y: gy })
+            const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+            // Explicitly set walkable state for ALL tiles
+            if (cost >= 255) {
+                grid.setWalkableAt(gx, gy, false)
+            } else {
+                grid.setWalkableAt(gx, gy, true)
+            }
+        }
+    }
+}
+
+/**
+ * Gets all target positions within range of a goal
+ */
+function getTargetPositions(
+    goalGrid: Position,
+    range: number,
+    translator: CoordinateTranslator,
+    getCost: MultiRoomCostCallback,
+): Position[] {
+    if (range === 0) {
+        return [goalGrid]
+    }
+
+    const { gridWidth, gridHeight, translateBack } = translator
+    const targetPositions: Position[] = []
+
+    for (let ddx = -range; ddx <= range; ddx++) {
+        for (let ddy = -range; ddy <= range; ddy++) {
+            const tx = goalGrid.x + ddx
+            const ty = goalGrid.y + ddy
+
+            if (tx >= 0 && tx < gridWidth && ty >= 0 && ty < gridHeight) {
+                const dist = Math.max(Math.abs(ddx), Math.abs(ddy))
+                const worldPos = translateBack({ x: tx, y: ty })
+                const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+
+                if (dist <= range && cost < 255) {
+                    targetPositions.push({ x: tx, y: ty })
+                }
+            }
+        }
+    }
+
+    return targetPositions
+}
+
+/**
+ * Calculates the total cost of a path
+ */
+function calculatePathCost(
+    path: number[][],
+    translator: CoordinateTranslator,
+    getCost: MultiRoomCostCallback,
+): number {
+    const { translateBack } = translator
+    let pathCost = 0
+
+    for (let i = 1; i < path.length; i++) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        const pathStep: [number, number] = path[i] as [number, number]
+        const [gx, gy] = pathStep
+        const worldPos = translateBack({ x: gx, y: gy })
+        const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        const prevStep: [number, number] = path[i - 1] as [number, number]
+        const [pgx, pgy] = prevStep
+        const isDiagonal = Math.abs(gx - pgx) === 1 && Math.abs(gy - pgy) === 1
+
+        pathCost += cost * (isDiagonal ? Math.SQRT2 : 1)
+    }
+
+    return pathCost
+}
+
+/**
+ * Finds the best path to any of the given target positions
+ */
+function findBestPath(
+    startGrid: Position,
+    targetPositions: Position[],
+    grid: PF.Grid,
+    translator: CoordinateTranslator,
+    getCost: MultiRoomCostCallback,
+    maxOps: number,
+): { path: number[][]; cost: number } | null {
+    // Use Dijkstra which properly handles weighted grids
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const finder = new (PF as any).DijkstraFinder({
+        allowDiagonal: true,
+        dontCrossCorners: true,
+    })
+
+    let bestPath: number[][] | null = null
+    let bestPathCost = Infinity
+
+    for (const target of targetPositions) {
+        const gridClone = grid.clone()
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const path: number[][] = finder.findPath(
+            startGrid.x,
+            startGrid.y,
+            target.x,
+            target.y,
+            gridClone,
+        )
+
+        if (path.length > 0) {
+            const pathCost = calculatePathCost(path, translator, getCost)
+
+            if (pathCost < bestPathCost) {
+                bestPath = path
+                bestPathCost = pathCost
+            }
+        }
+
+        // Early exit if we have a reasonable path
+        if (bestPath && bestPath.length < maxOps / 10) {
+            break
+        }
+    }
+
+    return bestPath ? { path: bestPath, cost: bestPathCost } : null
+}
+
+/**
+ * Finds a path across two adjacent rooms using A* pathfinding
+ *
+ * This function creates a combined grid representing both rooms and uses A* to find
+ * the optimal path. It only works for adjacent rooms (one step apart).
  *
  * @param start Starting position with room name
  * @param goal Goal position (or array of positions) with room name
  * @param getCost Callback that returns cost for a position in any room
- * @param options Pathfinding options
+ * @param options Pathfinding options (range, maxOps, roomSize)
  * @returns Array of positions with room names, or undefined if no path found
  *
  * @example
  * ```typescript
- * // Path from E5S7 to E6S7
+ * // Path from E5S7 to E6S7 (adjacent rooms going east)
  * const path = findMultiRoomPath(
  *   { roomName: 'E5S7', x: 45, y: 25 },
  *   { roomName: 'E6S7', x: 5, y: 25 },
- *   (roomName, x, y) => {
- *     const terrain = Game.map.getRoomTerrain(roomName)
- *     const terrainType = terrain.get(x, y)
- *     if (terrainType === TERRAIN_MASK_WALL) return 255
- *     if (terrainType === TERRAIN_MASK_SWAMP) return 5
- *     return 2
- *   }
+ *   createMultiRoomTerrainCost()
  * )
  * ```
  */
@@ -310,113 +534,44 @@ export function findMultiRoomPath(
 ): FlatRoomPosition[] | undefined {
     const { range = 0, maxOps = 20000, roomSize = 50 } = options
 
-    // Normalize goal to array
     const goals = Array.isArray(goal) ? goal : [goal]
+    const startRoom = start.roomName
+    const goalRoom = goals[0].roomName
 
-    // Get all unique rooms involved
-    const allRooms = new Set<string>([start.roomName, ...goals.map((g) => g.roomName)])
-
-    // Calculate bounding box
-    const bounds = getRoomBounds(Array.from(allRooms))
-    const gridWidth = (bounds.maxX - bounds.minX + 1) * roomSize
-    const gridHeight = (bounds.maxY - bounds.minY + 1) * roomSize
-
-    // Create grid
-    const grid = new PF.Grid(gridWidth, gridHeight)
-
-    // Fill grid based on cost callback
-    for (let gx = 0; gx < gridWidth; gx++) {
-        for (let gy = 0; gy < gridHeight; gy++) {
-            const worldPos = gridToWorld({ x: gx, y: gy }, bounds, roomSize)
-            const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
-            if (cost >= 255) {
-                grid.setWalkableAt(gx, gy, false)
-            }
-        }
+    if (startRoom === goalRoom) {
+        throw new Error('Use findPath for same-room pathfinding')
     }
+
+    // Determine room direction and create coordinate translator
+    const { direction } = getAdjacentRoomDirection(startRoom, goalRoom)
+    const translator = createCoordinateTranslator(direction, startRoom, goalRoom, roomSize)
+
+    // Create and populate pathfinding grid
+    const grid = new PF.Grid(translator.gridWidth, translator.gridHeight)
+    populateGrid(grid, translator, getCost)
 
     // Convert start and goals to grid coordinates
-    const startGrid = worldToGrid(start, bounds, roomSize)
-    const goalsGrid = goals.map((g) => worldToGrid(g, bounds, roomSize))
+    const startGrid = translator.translateStart(start)
+    const goalsGrid = goals.map((g) => translator.translateGoal(g))
 
-    // Use A* for reliable multi-room pathfinding
-    const finder = new PF.AStarFinder({
-        allowDiagonal: true,
-        dontCrossCorners: true,
-    })
+    // Find best path across all goals
+    let bestResult: { path: number[][]; cost: number } | null = null
 
-    let bestPath: number[][] | undefined
-    let bestPathCost = Infinity
-
-    // Try pathfinding to each goal
     for (const goalGrid of goalsGrid) {
-        // Calculate all positions within range of this goal
-        const targetPositions: Position[] = []
-        if (range === 0) {
-            targetPositions.push(goalGrid)
-        } else {
-            for (let dx = -range; dx <= range; dx++) {
-                for (let dy = -range; dy <= range; dy++) {
-                    const tx = goalGrid.x + dx
-                    const ty = goalGrid.y + dy
-                    if (tx >= 0 && tx < gridWidth && ty >= 0 && ty < gridHeight) {
-                        const dist = Math.max(Math.abs(dx), Math.abs(dy))
-                        const worldPos = gridToWorld({ x: tx, y: ty }, bounds, roomSize)
-                        if (
-                            dist <= range &&
-                            getCost(worldPos.roomName, worldPos.x, worldPos.y) < 255
-                        ) {
-                            targetPositions.push({ x: tx, y: ty })
-                        }
-                    }
-                }
-            }
-        }
+        const targetPositions = getTargetPositions(goalGrid, range, translator, getCost)
 
-        // Try each target position
-        for (const target of targetPositions) {
-            const gridClone = grid.clone()
+        const result = findBestPath(startGrid, targetPositions, grid, translator, getCost, maxOps)
 
-            try {
-                const path = finder.findPath(
-                    startGrid.x,
-                    startGrid.y,
-                    target.x,
-                    target.y,
-                    gridClone,
-                )
-
-                if (path.length > 0) {
-                    // Calculate actual path cost
-                    let pathCost = 0
-                    for (let i = 1; i < path.length; i++) {
-                        const [gx, gy] = path[i]
-                        const worldPos = gridToWorld({ x: gx, y: gy }, bounds, roomSize)
-                        const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
-                        const [pgx, pgy] = path[i - 1]
-                        const isDiagonal = Math.abs(gx - pgx) === 1 && Math.abs(gy - pgy) === 1
-                        pathCost += cost * (isDiagonal ? Math.SQRT2 : 1)
-                    }
-
-                    if (pathCost < bestPathCost) {
-                        bestPath = path
-                        bestPathCost = pathCost
-                    }
-                }
-            } catch (e) {
-                continue
-            }
-
-            // Early exit if we have a reasonable path
-            if (bestPath && bestPath.length < maxOps / 10) {
-                break
-            }
+        if (result && (!bestResult || result.cost < bestResult.cost)) {
+            bestResult = result
         }
     }
 
-    // Convert path back to world coordinates, excluding start position
-    if (bestPath && bestPath.length > 0) {
-        return bestPath.slice(1).map(([gx, gy]) => gridToWorld({ x: gx, y: gy }, bounds, roomSize))
+    // Convert best path back to world coordinates
+    if (bestResult) {
+        return bestResult.path
+            .slice(1)
+            .map(([gx, gy]) => translator.translateBack({ x: gx, y: gy }))
     }
 
     return undefined
@@ -486,6 +641,37 @@ export function withMultiRoomObstacles(
     return (roomName: string, x: number, y: number): number => {
         if (obstacles.has(`${roomName}:${x},${y}`)) {
             return 255
+        }
+        return baseCost(roomName, x, y)
+    }
+}
+
+/**
+ * Creates a multi-room cost callback with preferred low-cost paths
+ *
+ * @param baseCost Base cost callback
+ * @param preferredPaths Set of position keys ("roomName:x,y") that should have low cost (e.g., roads)
+ * @param preferredCost Cost for preferred positions (default: 1)
+ * @returns Combined cost callback
+ *
+ * @example
+ * ```typescript
+ * const roads = new Set(['E5S7:25,25', 'E6S7:10,10'])
+ * const getCost = withMultiRoomPreferredPaths(
+ *   createMultiRoomTerrainCost(),
+ *   roads,
+ *   1
+ * )
+ * ```
+ */
+export function withMultiRoomPreferredPaths(
+    baseCost: MultiRoomCostCallback,
+    preferredPaths: Set<string>,
+    preferredCost = 1,
+): MultiRoomCostCallback {
+    return (roomName: string, x: number, y: number): number => {
+        if (preferredPaths.has(`${roomName}:${x},${y}`)) {
+            return preferredCost
         }
         return baseCost(roomName, x, y)
     }

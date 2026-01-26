@@ -18,6 +18,7 @@ import SourcesManager from 'managers/sources-manager'
 import WarDepartment, { SpawnWarMemory, WarStatus } from 'war-department'
 import DefenseDepartment from 'defense-department'
 import { AttackerMemory } from 'roles/attacker'
+import { getBuildManager } from 'managers/build-manager'
 
 import ErrorMapper from './ErrorMapper'
 import Empire from 'empire'
@@ -50,9 +51,9 @@ function sendWrecker(endRoom: string, startRoom: string) {
     Logger.info('sendWrecker:create', err)
 }
 
-function declareWar(endRoom: string, warRoom: string) {
+function declareWar(endRoom: string, warRoom: string, ownRoom = true) {
     const warDepartment = new WarDepartment(Game.rooms[warRoom])
-    warDepartment.declareWar(endRoom)
+    warDepartment.declareWar(endRoom, ownRoom)
 }
 
 function cancelWar(warRoom: string) {
@@ -713,6 +714,73 @@ function fixStuckAttackers(): void {
 }
 
 /**
+ * Debug function to show what logistics creeps in a room are doing.
+ */
+function debugLogistics(roomName: string): void {
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log(`❌ ERROR: Room ${roomName} not visible`)
+        return
+    }
+
+    const logistics = room
+        .find(FIND_MY_CREEPS)
+        .filter((c) => c.memory.role === 'logistics') as LogisticsCreep[]
+
+    if (logistics.length === 0) {
+        console.log(`No logistics creeps found in ${roomName}`)
+        return
+    }
+
+    console.log(`=== Logistics creeps in ${roomName} (${logistics.length} total) ===\n`)
+
+    for (const creep of logistics) {
+        const mem = creep.memory
+        console.log(`${creep.name}:`)
+        console.log(`  Home: ${mem.home}`)
+        console.log(`  Current room: ${creep.room.name}`)
+        console.log(`  Is in home room: ${creep.room.name === mem.home}`)
+        console.log(`  Preference: ${mem.preference}`)
+        console.log(`  Current task: ${mem.currentTask}`)
+        console.log(`  Task queue length: ${mem.tasks.length}`)
+        console.log(`  No suicide: ${mem.noSuicide}`)
+        console.log(`  No repair limit: ${mem.noRepairLimit}`)
+        console.log(
+            `  Energy: ${creep.store.getUsedCapacity(RESOURCE_ENERGY)}/${creep.store.getCapacity(
+                RESOURCE_ENERGY,
+            )}`,
+        )
+
+        // Check what construction sites exist
+        const buildManager = getBuildManager(room)
+        const nonWallSites = room
+            .find(FIND_CONSTRUCTION_SITES)
+            .filter(
+                (site) =>
+                    site.structureType !== STRUCTURE_WALL &&
+                    site.structureType !== STRUCTURE_RAMPART,
+            )
+        console.log(`  Non-wall construction sites in room: ${nonWallSites.length}`)
+        console.log(
+            `  Build manager has non-wall sites: ${
+                buildManager?.hasNonWallConstructionSites() ?? 'N/A'
+            }`,
+        )
+
+        // Check walls
+        const fragileWalls = room.find(FIND_STRUCTURES).filter((s) => {
+            if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) {
+                return s.hits < s.hitsMax
+            }
+            return false
+        })
+        console.log(`  Walls/ramparts needing repair: ${fragileWalls.length}`)
+
+        console.log('')
+    }
+}
+
+/**
  * Debug function to show what attackers are doing and what they see.
  */
 function debugAttackers(): void {
@@ -940,6 +1008,7 @@ export default function assignGlobals(): void {
     global.debugWorker = debugWorker
     global.debugRescue = debugRescue
     global.debugSavior = debugSavior
+    global.debugLogistics = debugLogistics
     global.fixStuckAttackers = fixStuckAttackers
     global.debugAttackers = debugAttackers
     global.checkFeatureConflicts = checkFeatureConflicts
@@ -1106,6 +1175,7 @@ declare global {
             debugWorker: (creepName: string) => void
             debugRescue: (roomName: string) => void
             debugSavior: (saviorName: string) => void
+            debugLogistics: (roomName: string) => void
             fixStuckAttackers: () => void
             debugAttackers: () => void
             checkFeatureConflicts: (roomName: string) => void

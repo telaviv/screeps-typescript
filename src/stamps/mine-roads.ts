@@ -61,15 +61,29 @@ export function calculateMineRoads(
         // Create cost callback that avoids base bunker structures
         const baseCost = createMultiRoomTerrainCost()
         const obstacles = new Set<string>()
+        const roadPositions = new Set<string>()
 
-        // Block base bunker structures (except roads and ramparts which don't block movement)
+        // First pass: collect all roads
+        const roads = baseBunkerBuildings.get('road') || []
+        for (const pos of roads) {
+            roadPositions.add(`${baseRoomName}:${pos.x},${pos.y}`)
+        }
+
+        // Second pass: block base bunker structures (except roads and ramparts which don't block movement)
+        // If a position has a road, don't add it as an obstacle even if other structures exist there
         for (const [structType, positions] of baseBunkerBuildings.entries()) {
             if (structType !== 'road' && structType !== 'rampart') {
                 for (const pos of positions) {
-                    obstacles.add(`${baseRoomName}:${pos.x},${pos.y}`)
+                    const posKey = `${baseRoomName}:${pos.x},${pos.y}`
+                    if (!roadPositions.has(posKey)) {
+                        obstacles.add(posKey)
+                    }
                 }
             }
         }
+
+        // Remove the start position from obstacles (storage shouldn't block itself)
+        obstacles.delete(`${baseRoomName}:${storage.x},${storage.y}`)
 
         const getCost: MultiRoomCostCallback = withMultiRoomObstacles(baseCost, obstacles)
 

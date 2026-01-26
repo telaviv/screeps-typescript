@@ -10,7 +10,10 @@ declare global {
     }
     namespace NodeJS {
         interface Global {
-            war: { save: (target: string, savior: string) => void }
+            war: {
+                save: (target: string, savior: string) => void
+                clearOwner: (target: string, attacker: string) => void
+            }
         }
     }
 }
@@ -25,12 +28,22 @@ global.war = {
         const war = new WarDepartment(saviorRoom)
         war.saveRoom(target)
     },
+    clearOwner: (target: string, attacker: string) => {
+        const attackerRoom = Game.rooms[attacker]
+        if (!attackerRoom) {
+            Logger.error(`war:clearOwner: room ${attacker} not found`)
+            return
+        }
+        const war = new WarDepartment(attackerRoom)
+        war.clearOwner(target)
+    },
 }
 
 /** Memory structure for tracking war operations */
 export interface WarMemory {
     status: WarStatus
     target: string
+    ownRoom?: boolean // Whether the goal is to own the room (true) or just clear it (false)
 }
 
 /** Extended war memory for spawn phase operations, optionally marking savior missions */
@@ -51,6 +64,8 @@ export enum WarStatus {
     CLAIM = 'claim',
     /** Spawning creeps to support a target room */
     SPAWN = 'spawn',
+    /** Clearing a hostile room for mining */
+    CLEAR_OWNER = 'clear_owner',
 }
 
 /**
@@ -65,7 +80,10 @@ export default class WarDepartment {
      */
     public constructor(room: Room) {
         this.room = room
-        if (!this.room.memory || !this.room.memory.war) {
+        if (!this.room.memory) {
+            this.room.memory = {} as RoomMemory
+        }
+        if (!this.room.memory.war) {
             this.room.memory.war = { status: WarStatus.NONE, target: '' }
         }
     }
@@ -234,9 +252,38 @@ export default class WarDepartment {
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
         } else if (this.status === WarStatus.ATTACK) {
-            if (this.targetRoom && this.targetRoom.controller && this.targetRoom.controller.my) {
+            const ownRoom = this.warMemory.ownRoom ?? true // default to true for backwards compatibility
+
+            if (ownRoom) {
+                if (
+                    this.targetRoom &&
+                    this.targetRoom.controller &&
+                    this.targetRoom.controller.my
+                ) {
+                    Logger.warning(
+                        `war-department:update: cancelling attack on ${this.target} from ${this.room.name}`,
+                    )
+                    this.warMemory = { status: WarStatus.NONE, target: '' }
+                }
+            } else {
+                if (
+                    this.targetRoom &&
+                    this.targetRoom.controller &&
+                    !this.targetRoom.controller.owner
+                ) {
+                    Logger.warning(
+                        `war-department:update: attack complete on ${this.target} from ${this.room.name} (room cleared)`,
+                    )
+                    this.warMemory = { status: WarStatus.NONE, target: '' }
+                }
+            }
+        } else if (this.status === WarStatus.CLEAR_OWNER) {
+            if (
+                this.targetRoom &&
+                (!this.targetRoom.controller?.owner || this.targetRoom.controller.my)
+            ) {
                 Logger.warning(
-                    `war-department:update: cancelling attack on ${this.target} from ${this.room.name}`,
+                    `war-department:update: owner cleared on ${this.target} from ${this.room.name} (room cleared)`,
                 )
                 this.warMemory = { status: WarStatus.NONE, target: '' }
             }
@@ -246,9 +293,11 @@ export default class WarDepartment {
     /**
      * Initiates an attack operation against a target room.
      * @param target - Name of the room to attack
+     * @param ownRoom - If true (default), attack ends when we control the room.
+     *                  If false, attack ends when room has no owner (for mine rooms)
      */
-    public declareWar(target: string): void {
-        this.warMemory = { status: WarStatus.ATTACK, target }
+    public declareWar(target: string, ownRoom = true): void {
+        this.warMemory = { status: WarStatus.ATTACK, target, ownRoom }
     }
 
     /** Cancels all war operations and resets to NONE status */
@@ -262,6 +311,14 @@ export default class WarDepartment {
      */
     public claimRoom(target: string): void {
         this.warMemory = { status: WarStatus.CLAIM, target }
+    }
+
+    /**
+     * Initiates a clear owner operation for a hostile room.
+     * @param target - Name of the room to clear owner
+     */
+    public clearOwner(target: string): void {
+        this.warMemory = { status: WarStatus.CLEAR_OWNER, target }
     }
 
     /**

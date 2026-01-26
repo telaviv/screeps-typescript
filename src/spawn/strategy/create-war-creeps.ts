@@ -101,7 +101,7 @@ export const createImportantWarCreeps = wrap((spawn: StructureSpawn, warDepartme
         return null
     }
 
-    if (status === WarStatus.CLAIM) {
+    if (status === WarStatus.CLAIM || status === WarStatus.CLEAR_OWNER) {
         if (warDepartment.hasStrongInvaderCore() && warDepartment.claimerSpotsAvailable() <= 1) {
             return null
         } else if (roomQuery.getCreepCount('claimer') === 0) {

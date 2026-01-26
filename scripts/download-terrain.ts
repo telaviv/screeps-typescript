@@ -56,7 +56,7 @@ async function downloadTerrain(roomName: string, shard: string) {
         for (let i = 0; i < terrainString.length; i++) {
             const x = i % 50
             const y = Math.floor(i / 50)
-            terrain[x][y] = parseInt(terrainString[i])
+            terrain[y][x] = parseInt(terrainString[i]) // Store as terrain[y][x] for row-major indexing
         }
     }
 

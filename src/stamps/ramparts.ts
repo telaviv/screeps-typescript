@@ -246,7 +246,6 @@ export function calculateRamparts(
     for (const pos of stationaryPositions) {
         // Add the position itself
         rampartSet.add(`${pos.x},${pos.y}`)
-
         // Add all 8 neighbors (excluding walls and blocking structures)
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
@@ -286,7 +285,7 @@ export function calculateRamparts(
                 const x = pos.x + dx
                 const y = pos.y + dy
                 if (x >= 0 && x < 50 && y >= 0 && y < 50) {
-                    if (terrain.get(x, y) !== TERRAIN_MASK_WALL && !hasBlockingStructure(x, y)) {
+                    if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
                         rampartSet.add(`${x},${y}`)
                     }
                 }

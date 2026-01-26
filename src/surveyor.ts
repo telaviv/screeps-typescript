@@ -270,12 +270,11 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
 
     // Calculate mine roads (from base to remote mines)
     const mines: Mine[] = roomMemory.mines ?? []
-    const mineRoadResults = calculateMineRoads(
-        roomName,
-        stationaryPoints.storageLink,
-        mines,
-        placementResult.buildings,
-    )
+
+    // Use storage link stationary point - it's always accessible and walkable
+    const startPos = stationaryPoints.storageLink
+
+    const mineRoadResults = calculateMineRoads(roomName, startPos, mines, placementResult.buildings)
 
     // Combine all roads
     const mineRoadsInBase: Position[] = []
@@ -535,6 +534,9 @@ function calculateBuildingDiff(room: Room, features: ConstructionFeatures): Cons
         }
     }
     for (const structureType of Object.keys(features)) {
+        if (!isObstacle(structureType as BuildableStructureConstant)) {
+            continue
+        }
         const positions = features[structureType as BuildableStructureConstant]
         if (positions === undefined) {
             continue
@@ -807,30 +809,6 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
         }
     }
 
-    // Get important structure positions (sources, mineral, controller)
-    const importantStructures: Position[] = []
-
-    // Add sources
-    iroom.getObstacles('source').forEach((source) => {
-        importantStructures.push({ x: source.x, y: source.y })
-    })
-
-    // Add mineral
-    iroom.getObstacles('mineral').forEach((mineral) => {
-        importantStructures.push({ x: mineral.x, y: mineral.y })
-    })
-
-    // Add controller
-    iroom.getObstacles('controller').forEach((controller) => {
-        importantStructures.push({ x: controller.x, y: controller.y })
-    })
-
-    // Add ramparts on important structures themselves
-    for (const pos of importantStructures) {
-        rampartSet.add(`${pos.x},${pos.y}`)
-    }
-
-    // Convert to array
     const allRamparts: Position[] = Array.from(rampartSet).map((key) => {
         const [x, y] = key.split(',').map(Number)
         return { x, y }
@@ -877,7 +855,7 @@ const assignRoomFeatures = Profiling.wrap(() => {
 
 /**
  * Checks if a room has sufficient workers to handle spawn relocation.
- * Requires at least 3 workers with more than 1000 ticks to live.
+ * Requires at least 1 workers with more than 1400 ticks to live.
  * @param room - The room to check for workers
  * @returns True if the room has sufficient workers, false otherwise
  */
@@ -937,7 +915,7 @@ const clearRooms = Profiling.wrap(() => {
                     Logger.warning(
                         'clearRooms:insufficient-workers',
                         room.name,
-                        'Waiting for 3 workers with >1000 TTL before relocating spawn',
+                        'Waiting for 1 workers with > 1400 TTL before relocating spawn',
                     )
                     continue
                 }
