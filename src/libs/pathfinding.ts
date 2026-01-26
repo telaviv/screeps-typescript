@@ -325,10 +325,10 @@ function createVerticalTranslator(
         return {
             gridWidth,
             gridHeight,
-            translateStart: (pos) => ({ x: pos.x, y: pos.y }),
-            translateGoal: (pos) => ({ x: pos.x, y: pos.y + roomSize }),
+            translateStart: (pos) => ({ x: pos.x, y: pos.y + roomSize }),
+            translateGoal: (pos) => ({ x: pos.x, y: pos.y }),
             translateBack: (gpos) => ({
-                roomName: gpos.y < roomSize ? startRoom : goalRoom,
+                roomName: gpos.y < roomSize ? goalRoom : startRoom,
                 x: gpos.x,
                 y: gpos.y % roomSize,
             }),

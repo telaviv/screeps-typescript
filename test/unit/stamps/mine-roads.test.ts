@@ -344,4 +344,107 @@ describe('calculateSingleMineRoads', () => {
         assert.isTrue(result!.baseRoads.length > 0, 'Should have base roads')
         assert.isTrue(result!.mineRoads.length > 0, 'Should have mine roads')
     })
+
+    it('should work with real terrain from E56S28 to E56S27 (North)', () => {
+        // Load real terrain from fixtures
+        const baseTerrainData = require('../../fixtures/terrain/E56S28.json')
+        const mineTerrainData = require('../../fixtures/terrain/E56S27.json')
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (roomName: string) => {
+                    if (roomName === 'E56S28') {
+                        return new MockRoomTerrain(baseTerrainData.terrain)
+                    } else if (roomName === 'E56S27') {
+                        return new MockRoomTerrain(mineTerrainData.terrain)
+                    }
+                    // Default to walls
+                    const terrain: number[][] = []
+                    for (let y = 0; y < 50; y++) {
+                        terrain[y] = []
+                        for (let x = 0; x < 50; x++) {
+                            terrain[y][x] = 1 // Wall
+                        }
+                    }
+                    return new MockRoomTerrain(terrain)
+                },
+            },
+        }
+
+        // Get sources from terrain data
+        const mineSources = mineTerrainData.sources
+
+        console.log(`Real mine sources in E56S27: ${JSON.stringify(mineSources)}`)
+
+        // From layout:bunker output: bunker origin at (5, 26), center at (12, 33)
+        // Storage link in stamp is at offset (22, 16) from anchor (11, 14)
+        // Bunker anchor = origin + stamp anchor offset = (5, 26) + (11, 14) = (16, 40)
+        // Storage link = bunker anchor + stamp storage link offset - stamp anchor
+        // = (16, 40) + (22, 16) - (11, 14) = (16, 40) + (11, 2) = (27, 42)
+        const storageLink = { x: 16, y: 32 } // Recalculated based on stamp
+
+        console.log(
+            `Testing pathfinding from E56S28(${storageLink.x},${storageLink.y}) to E56S27 sources`,
+        )
+        console.log(
+            `Start position terrain: ${(global.Game.map as any)
+                .getRoomTerrain('E56S28')
+                .get(storageLink.x, storageLink.y)}`,
+        )
+
+        const result = calculateSingleMineRoads({
+            baseRoomName: 'E56S28',
+            startPosition: storageLink,
+            mineRoomName: 'E56S27',
+            mineSources,
+            obstacles: new Set(),
+            roads: new Set(),
+        })
+
+        console.log(
+            `Real terrain test result: ${
+                result
+                    ? `${result.baseRoads.length} base roads, ${result.mineRoads.length} mine roads`
+                    : 'null'
+            }`,
+        )
+
+        if (!result) {
+            // Debug: Check if positions are walkable
+            const terrain = (global.Game.map as any).getRoomTerrain('E56S28')
+            console.log(`Checking neighbors of start position:`)
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue
+                    const x = storageLink.x + dx
+                    const y = storageLink.y + dy
+                    const t = terrain.get(x, y)
+                    console.log(
+                        `  (${x},${y}): terrain=${t} (${
+                            t === 0 ? 'plain' : t === 1 ? 'wall' : 'swamp'
+                        })`,
+                    )
+                }
+            }
+
+            // Check room boundary positions
+            console.log(`Checking north boundary (y=0):`)
+            for (let x = 0; x < 50; x++) {
+                const t1 = terrain.get(x, 0)
+                const t2 = (global.Game.map as any).getRoomTerrain('E56S27').get(x, 49)
+                if (t1 !== 1 && t2 !== 1) {
+                    console.log(
+                        `  x=${x}: E56S28(${x},0)=${t1}, E56S27(${x},49)=${t2} - WALKABLE CROSSING`,
+                    )
+                }
+            }
+        }
+
+        assert.isNotNull(result, 'Should find path with real terrain from E56S28 to E56S27')
+        if (result) {
+            assert.isTrue(result.baseRoads.length > 0, 'Should have base roads')
+            assert.isTrue(result.mineRoads.length > 0, 'Should have mine roads')
+        }
+    })
 })

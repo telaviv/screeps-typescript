@@ -18,7 +18,7 @@ import { findMyRooms } from 'utils/room'
 const MAX_BUNKER_DIMENSION = 13
 
 /** Types of room visualizations available */
-type VisualType = 'construction' | 'transform' | 'ramparts'
+type VisualType = 'construction' | 'transform' | 'ramparts' | 'roads'
 /** Types of map-level visualizations available */
 type MapVisualType = 'mining' | 'types'
 
@@ -47,6 +47,7 @@ declare global {
                     types: () => void
                 }
                 construction: (roomName: string, roads?: boolean) => void
+                roads: (roomName: string) => void
                 wallTransform: (roomName: string) => void
                 transformFromId: (roomName: string, id: Id<Source | StructureController>) => void
                 sumTransform: (roomName: string) => void
@@ -254,6 +255,10 @@ export default class RoomVisualizer {
             if (structureType === STRUCTURE_ROAD && !roads) {
                 continue
             }
+            // Skip ramparts since they have their own dedicated visualization mode
+            if (structureType === STRUCTURE_RAMPART) {
+                continue
+            }
             for (const pos of positions) {
                 const roomPos = new RoomPosition(pos.x, pos.y, this.room.name)
                 if (
@@ -271,6 +276,27 @@ export default class RoomVisualizer {
                     Logger.warning('room-visualizer:render:missing', structureType)
                 }
             }
+        }
+    }
+
+    /**
+     * Renders only planned road positions that aren't yet built.
+     * @param constructionFeatures - The planned structure positions
+     */
+    renderRoadsOnly(constructionFeatures: ConstructionFeatures): void {
+        const roadPositions = constructionFeatures[STRUCTURE_ROAD]
+        if (!roadPositions) {
+            return
+        }
+        for (const pos of roadPositions) {
+            const roomPos = new RoomPosition(pos.x, pos.y, this.room.name)
+            if (
+                hasStructureAt(STRUCTURE_ROAD, roomPos) ||
+                hasConstructionSiteAt(STRUCTURE_ROAD, roomPos)
+            ) {
+                continue
+            }
+            drawRoad(this.room.visual, roomPos)
         }
     }
 
@@ -335,6 +361,13 @@ function visualizeRoom(room: Room): void {
             return
         }
         roomVisual.renderConstructionFeatures(constructionFeatures, visuals.showRoads)
+    } else if (visuals.visualType === 'roads') {
+        const constructionFeatures = getConstructionFeatures(room)
+        if (!constructionFeatures) {
+            Logger.info('room-visualizer:visualizeRoom:missing-features', room.name)
+            return
+        }
+        roomVisual.renderRoadsOnly(constructionFeatures)
     } else if (visuals.visualType === 'transform') {
         roomVisual.renderTransform(visuals.transform as number[][])
     } else if (visuals.visualType === 'ramparts') {
@@ -375,6 +408,20 @@ function setRoomTypesMapVisuals(): void {
 function setConstructionVisuals(roomName: string, roads = false): void {
     const room = Game.rooms[roomName]
     room.memory.visuals = { visualType: 'construction', showRoads: roads }
+}
+
+/**
+ * Console command to enable road-only visualization for a room.
+ * @param roomName - Name of the room
+ */
+function setRoadsVisuals(roomName: string): void {
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log(`Room ${roomName} not visible`)
+        return
+    }
+    room.memory.visuals = { visualType: 'roads' }
+    console.log(`Roads-only visualization enabled for ${roomName}`)
 }
 
 /**
@@ -434,6 +481,7 @@ function cancelVisuals(): void {
 
 global.visuals = {
     construction: setConstructionVisuals,
+    roads: setRoadsVisuals,
     wallTransform: setWallTransformVisuals,
     transformFromId: setTransformFromId,
     sumTransform: setSumTransformVisuals,

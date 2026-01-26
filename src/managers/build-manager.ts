@@ -206,9 +206,11 @@ export default class BuildManager {
             return this.buildVirtualStorageContainer()
         }
 
+        /**
         if (this.canBuildVirtualControllerLinkContainer()) {
             return this.buildVirtualControllerLinkContainer()
         }
+        */
 
         if (this.canBuildImportantExtension()) {
             return this.buildNextStructure(STRUCTURE_EXTENSION)
@@ -309,7 +311,7 @@ export default class BuildManager {
             this.canBuildTower() ||
             this.canBuildSourceContainer() ||
             this.canBuildVirtualStorageContainer() ||
-            this.canBuildVirtualControllerLinkContainer() ||
+            // this.canBuildVirtualControllerLinkContainer() ||
             this.canBuildStorage() ||
             this.canBuildLinks() ||
             this.canBuildRoad()
