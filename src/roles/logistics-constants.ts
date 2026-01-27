@@ -10,6 +10,7 @@ export const TASK_COLLECTING = 'collecting'
 export const TASK_STORE = 'store'
 export const TASK_MINING = 'mining'
 export const TASK_TRAVELING = 'traveling'
+export const TASK_DISMANTLING = 'dismantling'
 export const NO_TASK = 'no-task'
 export const PREFERENCE_WORKER = 'worker'
 export const PREFERENCE_BASE_REPAIRER = 'base-repairer'
@@ -23,6 +24,7 @@ export type DeliveryTask =
     | typeof TASK_BASE_DEFENSE
     | typeof TASK_STORE
     | typeof TASK_TRAVELING
+    | typeof TASK_DISMANTLING
 export type LogisticsTask = typeof NO_TASK | DeliveryTask | typeof TASK_COLLECTING
 export type LogisticsPreference =
     | typeof TASK_HAULING

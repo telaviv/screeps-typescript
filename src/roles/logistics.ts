@@ -14,6 +14,7 @@ import {
     TASK_BASE_DEFENSE,
     TASK_BUILDING,
     TASK_COLLECTING,
+    TASK_DISMANTLING,
     TASK_HAULING,
     TASK_MINING,
     TASK_REPAIRING,
@@ -38,6 +39,7 @@ import RoomQuery from 'spawn/room-query'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { findTaskByType } from 'tasks/utils'
 import { getBuildManager } from 'managers/build-manager'
+import { getConstructionFeaturesV3 } from 'construction-features'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
 import { wander } from 'utils/creep'
@@ -64,6 +66,7 @@ const TASK_EMOJIS = {
     [TASK_WALL_REPAIRS]: '🧱',
     [TASK_BASE_DEFENSE]: '🛡️',
     [TASK_TRAVELING]: '🚎',
+    [TASK_DISMANTLING]: ',🚜',
     [NO_TASK]: '🤔',
 }
 
@@ -140,6 +143,8 @@ class RoleLogistics {
             this.getEnergy()
         } else if (currentTask === TASK_HAULING) {
             this.haulEnergy()
+        } else if (currentTask === TASK_DISMANTLING) {
+            this.dismantle()
         } else if (currentTask === TASK_BUILDING) {
             this.build()
         } else if (currentTask === TASK_UPGRADING) {
@@ -185,7 +190,12 @@ class RoleLogistics {
     private getEnergy(): void {
         const energyTask = addEnergyTask(this.creep, { includeMining: true })
         if (!energyTask) {
-            this.setToNoTask('no tasks could be made')
+            // No energy available - try dismantling as fallback (doesn't need energy)
+            if (this.needsDismantling()) {
+                this.creep.memory.currentTask = TASK_DISMANTLING
+            } else {
+                this.setToNoTask('no tasks could be made')
+            }
         }
     }
 
@@ -299,15 +309,19 @@ class RoleLogistics {
                 Logger.info('logistics:assignWorkerPreference:upgrading-owned', this.creep.name)
                 // Only upgrade if we own the controller
                 memory.currentTask = TASK_UPGRADING
+            } else if (this.needsDismantling()) {
+                Logger.info('logistics:assignWorkerPreference:dismantling', this.creep.name)
+                // Dismantling is lowest priority - only when no other work is available
+                memory.currentTask = TASK_DISMANTLING
             } else {
                 Logger.info('logistics:assignWorkerPreference:no-task', this.creep.name)
-                // No work available in mine room
+                // No work available
                 memory.currentTask = NO_TASK
             }
         }
     }
 
-    /** Displays emoji indicating current preference and task */
+    /** Checks if the room needs dismantling of misplaced structures */
     @profile
     say(): void {
         if (this.idleTime() > SLEEP_SAY_TIME) {
@@ -486,6 +500,91 @@ class RoleLogistics {
         }
     }
 
+    /** Checks if the room needs dismantling of misplaced structures */
+    @profile
+    private needsDismantling(): boolean {
+        const features = getConstructionFeaturesV3(this.creep.room)
+        if (!features || features.type === 'none' || !features.movement) {
+            return false
+        }
+
+        // Check if there are any structures to dismantle
+        const movement = features.movement
+        for (const structureType of Object.keys(movement)) {
+            const arrays = movement[structureType as BuildableStructureConstant]
+            if (arrays && arrays.moveFrom && arrays.moveFrom.length > 0) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /** Dismantles misplaced structures based on movement diff */
+    @profile
+    private dismantle(): void {
+        const features = getConstructionFeaturesV3(this.creep.room)
+        if (!features || features.type === 'none' || !features.movement) {
+            Logger.warning('logistics:dismantle:no-features', this.creep.name)
+            this.assignWorkerPreference()
+            return
+        }
+
+        // Find weakest structure to dismantle (lowest hits)
+        let weakestStructure: Structure | null = null
+        let lowestHits = Infinity
+
+        for (const [structureType, { moveFrom }] of Object.entries(features.movement)) {
+            for (const pos of moveFrom) {
+                // Skip structures on map edges - they cannot be destroyed
+                if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) {
+                    continue
+                }
+
+                const structures = this.creep.room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y)
+
+                for (const structure of structures) {
+                    if (structure.structureType === structureType) {
+                        if (structure.hits < lowestHits) {
+                            lowestHits = structure.hits
+                            weakestStructure = structure
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!weakestStructure) {
+            Logger.warning('logistics:dismantle:no-structure-found', this.creep.name)
+            this.assignWorkerPreference()
+            return
+        }
+
+        const err = this.creep.dismantle(weakestStructure)
+        if (err === ERR_NOT_IN_RANGE) {
+            moveWithinRoom(this.creep, { pos: weakestStructure.pos, range: 1 })
+        } else if (err === OK) {
+            Logger.info(
+                'logistics:dismantle:success',
+                this.creep.name,
+                weakestStructure.structureType,
+                weakestStructure.pos,
+            )
+            // Continue dismantling - don't change task
+            // The next tick will check if there are more structures to dismantle
+        } else if (err === ERR_INVALID_TARGET) {
+            // Structure was already destroyed or doesn't exist
+            Logger.warning(
+                'logistics:dismantle:invalid-target',
+                this.creep.name,
+                weakestStructure.pos,
+            )
+            // Don't change task - let next tick find another structure or reassign
+        } else {
+            Logger.warning('logistics:dismantle:failed', err, this.creep.name, weakestStructure.pos)
+        }
+    }
+
     /** Repairs damaged non-wall structures */
     @mprofile('logistics:repair')
     repair(): void {
@@ -512,10 +611,25 @@ class RoleLogistics {
     @mprofile('logistics:upgrade')
     upgrade(): void {
         const home = Game.rooms[this.creep.memory.home]
-        if (!home.controller || !home.controller.my) {
-            // Can't upgrade a controller we don't own - mark as no task
+        if (!home.controller) {
             Logger.warning(
-                'logistics:upgrade:failure:not-owned',
+                'logistics:upgrade:failure:no-controller',
+                this.creep.name,
+                this.creep.memory.home,
+            )
+            this.creep.memory.currentTask = NO_TASK
+            return
+        }
+
+        // Check if we can upgrade this controller
+        const canUpgrade =
+            home.controller.my ||
+            (home.controller.reservation &&
+                home.controller.reservation.username === global.USERNAME)
+
+        if (!canUpgrade) {
+            Logger.warning(
+                'logistics:upgrade:failure:cannot-upgrade',
                 this.creep.name,
                 this.creep.memory.home,
             )
@@ -527,6 +641,7 @@ class RoleLogistics {
         if (
             buildManager &&
             buildManager.hasNonWallConstructionSites() &&
+            home.controller.my &&
             home.controller.ticksToDowngrade >= MAX_TICKS_TO_DOWNGRADE &&
             this.creep.memory.preference !== TASK_UPGRADING
         ) {
@@ -573,6 +688,7 @@ class RoleLogistics {
     /** Travels back to home room */
     @profile
     travel(): void {
+        // Travel to home room
         if (
             this.creep.room.name === this.creep.memory.home &&
             this.creep.pos.inRangeTo(25, 25, 23)

@@ -85,10 +85,19 @@ export function calculateMineRoads(
         // Remove the start position from obstacles (storage shouldn't block itself)
         obstacles.delete(`${baseRoomName}:${storage.x},${storage.y}`)
 
-        // Build cost callback: base terrain + obstacles (255) + preferred roads (cost 1)
+        // Build cost callback: base terrain + preferred roads (cost 1) + obstacles (cost 20, not 255)
+        // We use cost 20 for obstacles instead of 255 so pathfinding can escape the bunker if needed
+        // but will strongly prefer using roads (cost 1)
         let getCost: MultiRoomCostCallback = createMultiRoomTerrainCost()
         getCost = withMultiRoomPreferredPaths(getCost, roadPositions, 1)
-        getCost = withMultiRoomObstacles(getCost, obstacles)
+        getCost = withMultiRoomObstacles(getCost, obstacles, 20)
+
+        // Mark sources as unwalkable (cost 255) since they're not passable
+        const sourceObstacles = new Set<string>()
+        for (const goal of goals) {
+            sourceObstacles.add(`${goal.roomName}:${goal.x},${goal.y}`)
+        }
+        getCost = withMultiRoomObstacles(getCost, sourceObstacles, 255)
 
         // Find path from storage to mine sources
         const path = findMultiRoomPath(

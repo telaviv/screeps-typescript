@@ -49,7 +49,14 @@ export function calculateSingleMineRoads(
 ): SingleMineRoadsResult | null {
     const { baseRoomName, startPosition, mineRoomName, mineSources, obstacles, roads } = options
 
-    // Build cost callback with terrain, obstacles, and preferred roads
+    console.log(`[calculateSingleMineRoads] ${baseRoomName} -> ${mineRoomName}`)
+    console.log(`  Start: ${startPosition.x},${startPosition.y}`)
+    console.log(`  Sources: ${mineSources.length}`)
+    console.log(`  Obstacles: ${obstacles?.size || 0}`)
+    console.log(`  Roads: ${roads?.size || 0}`)
+
+    // Build cost callback with terrain, obstacles (cost 20), and preferred roads (cost 1)
+    // We use cost 20 for obstacles instead of 255 so pathfinding can escape the bunker if needed
     let getCost = createMultiRoomTerrainCost()
 
     // Add existing roads as low-cost preferred paths (cost 1)
@@ -57,12 +64,19 @@ export function calculateSingleMineRoads(
         getCost = withMultiRoomPreferredPaths(getCost, roads, 1)
     }
 
-    // Add obstacles (buildings) as completely blocked (cost 255)
+    // Add obstacles (buildings) with cost 20 (expensive but passable)
     if (obstacles && obstacles.size > 0) {
-        getCost = withMultiRoomObstacles(getCost, obstacles)
+        getCost = withMultiRoomObstacles(getCost, obstacles, 20)
     }
 
-    // Create goals (mine sources)
+    // Mark sources as unwalkable (cost 255) since they're not passable
+    const sourceObstacles = new Set<string>()
+    for (const source of mineSources) {
+        sourceObstacles.add(`${mineRoomName}:${source.x},${source.y}`)
+    }
+    getCost = withMultiRoomObstacles(getCost, sourceObstacles, 255)
+
+    // Create goals (mine sources) - we'll path to range 1 of these
     const goals: FlatRoomPosition[] = mineSources.map((s) => ({
         roomName: mineRoomName,
         x: s.x,

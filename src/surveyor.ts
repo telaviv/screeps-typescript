@@ -487,15 +487,27 @@ function setMineConstructionFeaturesV3(
  * Used to identify structures that need to be moved or removed.
  * @param room - The room to analyze
  * @param features - The planned construction features
+ * @param existingMovement - Optional existing movement to check against (to avoid duplicate warnings)
  * @returns Movement instructions for misplaced structures
  */
 export function calculateBuildingDiff(
     room: Room,
     features: ConstructionFeatures,
+    existingMovement?: ConstructionMovement,
 ): ConstructionMovement {
     const diff = {} as ConstructionMovement
     const builtStructures = getBuildableStructures(room)
     for (const builtStructure of builtStructures) {
+        // Skip structures on map edges - they cannot be destroyed
+        if (
+            builtStructure.pos.x === 0 ||
+            builtStructure.pos.x === 49 ||
+            builtStructure.pos.y === 0 ||
+            builtStructure.pos.y === 49
+        ) {
+            continue
+        }
+
         const match = features[builtStructure.structureType]?.find(
             ({ x, y }) => x === builtStructure.pos.x && y === builtStructure.pos.y,
         )
@@ -522,11 +534,22 @@ export function calculateBuildingDiff(
                 }
             }
         }
-        Logger.warning(
-            'calculateBuildingDiff:moveFrom',
-            `📍 ${builtStructure.structureType} at (${builtStructure.pos.x},${builtStructure.pos.y}) in ${room.name} NOT in features at that position`,
-            `Will be added to moveFrom list (marked for destruction)`,
-        )
+
+        // Only warn if this is a NEW addition (not already in existing movement)
+        const isNewAddition =
+            !existingMovement ||
+            !existingMovement[builtStructure.structureType]?.moveFrom.some(
+                (pos) => pos.x === builtStructure.pos.x && pos.y === builtStructure.pos.y,
+            )
+
+        if (isNewAddition) {
+            Logger.warning(
+                'calculateBuildingDiff:moveFrom',
+                `📍 ${builtStructure.structureType} at (${builtStructure.pos.x},${builtStructure.pos.y}) in ${room.name} NOT in features at that position`,
+                `Will be added to moveFrom list (marked for destruction)`,
+            )
+        }
+
         if (!diff[builtStructure.structureType]) {
             diff[builtStructure.structureType] = {
                 moveTo: [],
@@ -558,12 +581,23 @@ export function calculateBuildingDiff(
             if (!match) {
                 continue
             }
-            Logger.warning(
-                'calculateBuildingDiff:moveTo',
-                `📍 Features want ${structureType} at (${pos.x},${pos.y}) in ${room.name}`,
-                `But found ${match.structureType} there instead`,
-                `Position added to ${structureType}'s moveTo list (will clear ${match.structureType})`,
-            )
+
+            // Only warn if this is a NEW addition (not already in existing movement)
+            const isNewAddition =
+                !existingMovement ||
+                !existingMovement[structureType as BuildableStructureConstant]?.moveTo.some(
+                    (p) => p.x === pos.x && p.y === pos.y,
+                )
+
+            if (isNewAddition) {
+                Logger.warning(
+                    'calculateBuildingDiff:moveTo',
+                    `📍 Features want ${structureType} at (${pos.x},${pos.y}) in ${room.name}`,
+                    `But found ${match.structureType} there instead`,
+                    `Position added to ${structureType}'s moveTo list (will clear ${match.structureType})`,
+                )
+            }
+
             if (!diff[structureType as BuildableStructureConstant]) {
                 diff[structureType as BuildableStructureConstant] = {
                     moveTo: [{ x: match.pos.x, y: match.pos.y }],
@@ -926,10 +960,14 @@ const clearRooms = Profiling.wrap(() => {
                     continue
                 }
             }
-            constructionFeatures.movement = calculateBuildingDiff(room, features)
+            constructionFeatures.movement = calculateBuildingDiff(
+                room,
+                features,
+                constructionFeatures.movement ?? undefined,
+            )
             clearInvalidConstructionSites(room, features)
             destroyMovementStructures(room)
-            constructionFeatures.movement = undefined
+            // Note: movement will be cleared by handleMovementEventLog when all structures are destroyed
         }
     }
 }, 'clearRooms')
@@ -964,7 +1002,11 @@ function calculateRoomMovement() {
         ) {
             continue
         }
-        constructionFeaturesV3.movement = calculateBuildingDiff(room, features)
+        constructionFeaturesV3.movement = calculateBuildingDiff(
+            room,
+            features,
+            constructionFeaturesV3.movement ?? undefined,
+        )
     }
 }
 

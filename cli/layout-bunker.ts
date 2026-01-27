@@ -554,6 +554,12 @@ async function main() {
             // Build pathfinding cost modifiers
             const { obstacles, roads } = buildPathfindingCosts(result.buildings, roomName)
 
+            const startKey = `${roomName}:${startPos.x},${startPos.y}`
+            console.log(chalk.gray(`  Debug: Start: ${startPos.x},${startPos.y}`))
+            console.log(chalk.gray(`  Debug: Obstacles: ${obstacles.size}, Roads: ${roads.size}`))
+            console.log(chalk.gray(`  Debug: Start is obstacle: ${obstacles.has(startKey)}`))
+            console.log(chalk.gray(`  Debug: Start is road: ${roads.has(startKey)}`))
+
             // Calculate roads for each mine room
             for (const mineRoom of mineRooms) {
                 const connection = calculateMineConnection(

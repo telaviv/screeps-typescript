@@ -130,17 +130,8 @@ export function assignMinesAndCalculateMovement(claimCandidates?: string[]): voi
 
         // Force recalculation of base room features (which will also recalculate mine features)
         Logger.info('assignMinesAndCalculateMovement:recalculating', room.name)
-        try {
-            setConstructionFeaturesV3(room.name)
-        } catch (error) {
-            Logger.error(
-                'assignMinesAndCalculateMovement:recalc-failed',
-                room.name,
-                error instanceof Error ? error.message : String(error),
-            )
-            continue
-        }
 
+        setConstructionFeaturesV3(room.name)
         // Now calculate movement diffs for visible mine rooms
         for (const mine of mines) {
             const mineRoom = Game.rooms[mine.name]
@@ -158,16 +149,45 @@ export function assignMinesAndCalculateMovement(claimCandidates?: string[]): voi
             if (constructionFeatures.movement === null) {
                 const features = getConstructionFeatures(mineRoom)
                 if (features) {
-                    const diff: ConstructionMovement = calculateBuildingDiff(mineRoom, features)
-                    constructionFeatures.movement = diff
-                    const movementKeys = Object.keys(diff)
-                    Logger.info(
-                        'assignMinesAndCalculateMovement:calculated-diff',
-                        mineRoom.name,
-                        `Found ${
-                            movementKeys.length
-                        } structure types with diffs: ${movementKeys.join(', ')}`,
+                    const diff: ConstructionMovement = calculateBuildingDiff(
+                        mineRoom,
+                        features,
+                        constructionFeatures.movement ?? undefined,
                     )
+                    const movementKeys = Object.keys(diff)
+
+                    // Only set movement if there are actual differences
+                    if (movementKeys.length > 0) {
+                        constructionFeatures.movement = diff
+                        Logger.info(
+                            'assignMinesAndCalculateMovement:calculated-diff',
+                            mineRoom.name,
+                            `Found ${
+                                movementKeys.length
+                            } structure types with diffs: ${movementKeys.join(', ')}`,
+                        )
+
+                        // Log details of each structure type
+                        for (const structureType of movementKeys) {
+                            const arrays = diff[structureType as BuildableStructureConstant]
+                            if (arrays) {
+                                Logger.info(
+                                    'assignMinesAndCalculateMovement:diff-details',
+                                    mineRoom.name,
+                                    structureType,
+                                    `moveTo: ${arrays.moveTo.length}, moveFrom: ${arrays.moveFrom.length}`,
+                                )
+                            }
+                        }
+                    } else {
+                        // No differences - set to undefined (nothing to do)
+                        constructionFeatures.movement = undefined
+                        Logger.info(
+                            'assignMinesAndCalculateMovement:no-diffs',
+                            mineRoom.name,
+                            'No structure differences found - room layout matches features',
+                        )
+                    }
                 } else {
                     Logger.warning(
                         'assignMinesAndCalculateMovement:no-features',
@@ -378,8 +398,31 @@ export class MineManager {
             (this.needsProtection() && !this.hasDefenders()) ||
             !this.hasEnoughConstructionParts() ||
             !this.hasEnoughHarvesters() ||
-            !this.hasEnoughHaulers()
+            !this.hasEnoughHaulers() ||
+            this.hasMovementDiff()
         )
+    }
+
+    hasMovementDiff(): boolean {
+        if (!this.room) {
+            return false
+        }
+
+        const features = getConstructionFeaturesV3(this.room)
+        if (!features || features.type === 'none' || !features.movement) {
+            return false
+        }
+
+        // Check if there are any structures to dismantle
+        const movement = features.movement
+        for (const structureType of Object.keys(movement)) {
+            const arrays = movement[structureType as BuildableStructureConstant]
+            if (arrays && arrays.moveFrom && arrays.moveFrom.length > 0) {
+                return true
+            }
+        }
+
+        return false
     }
 
     hasEnoughReservers(): boolean {

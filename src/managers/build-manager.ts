@@ -220,10 +220,6 @@ export default class BuildManager {
             return this.buildNextStructure(STRUCTURE_TOWER)
         }
 
-        if (this.canBuildSwampRoad()) {
-            return this.buildNextStructure(STRUCTURE_ROAD)
-        }
-
         if (this.canBuildStorage()) {
             const storage = (this.constructionFeatures[STRUCTURE_STORAGE] as Position[])[0]
             const container = this.room
@@ -234,6 +230,10 @@ export default class BuildManager {
                 container.destroy()
             }
             return this.buildNextStructure(STRUCTURE_STORAGE)
+        }
+
+        if (this.canBuildSwampRoad()) {
+            return this.buildNextStructure(STRUCTURE_ROAD)
         }
 
         if (this.canBuildLinks()) {
@@ -251,6 +251,17 @@ export default class BuildManager {
                 }
             }
             return this.buildNextStructure(STRUCTURE_LINK)
+        }
+        if (this.canBuildStorage()) {
+            const storage = (this.constructionFeatures[STRUCTURE_STORAGE] as Position[])[0]
+            const container = this.room
+                .lookForAt(LOOK_STRUCTURES, storage.x, storage.y)
+                .find((s) => s.structureType === STRUCTURE_CONTAINER)
+            if (container) {
+                Logger.warning('ensureNonWallSite:storage:container-exists', this.room.name)
+                container.destroy()
+            }
+            return this.buildNextStructure(STRUCTURE_STORAGE)
         }
 
         if (this.canBuildRoad()) {

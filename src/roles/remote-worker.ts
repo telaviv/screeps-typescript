@@ -15,6 +15,7 @@ import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveTo } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import { wander } from 'utils/creep'
+import { getConstructionFeaturesV3 } from 'construction-features'
 
 const ROLE = 'remote-worker'
 
@@ -138,8 +139,14 @@ class RemoteWorkerCreep {
     private collectEnergy(): void {
         this.creep.say('⚡')
         if (!addEnergyTask(this.creep)) {
-            this.creep.say('🤔')
-            wander(this.creep)
+            // No energy available - try dismantling as fallback (doesn't need energy)
+            if (this.needsDismantling()) {
+                this.creep.say('🔨')
+                this.dismantleMovementStructures()
+            } else {
+                this.creep.say('🤔')
+                wander(this.creep)
+            }
             return
         }
     }
@@ -152,12 +159,110 @@ class RemoteWorkerCreep {
         return isFullOfEnergy(this.creep)
     }
 
+    private needsDismantling(): boolean {
+        if (!this.destinationRoom) {
+            return false
+        }
+
+        const features = getConstructionFeaturesV3(this.destinationRoom)
+        if (!features || features.type === 'none' || !features.movement) {
+            return false
+        }
+
+        // Check if there are any structures to dismantle
+        const movement = features.movement
+        for (const structureType of Object.keys(movement)) {
+            const arrays = movement[structureType as BuildableStructureConstant]
+            if (arrays && arrays.moveFrom && arrays.moveFrom.length > 0) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private dismantleMovementStructures(): void {
+        this.creep.say('🔨')
+
+        const features = getConstructionFeaturesV3(this.destinationRoom)
+        if (!features || features.type === 'none' || !features.movement) {
+            return
+        }
+
+        // Find weakest structure to dismantle (lowest hits)
+        let weakestStructure: Structure | null = null
+        let lowestHits = Infinity
+
+        for (const [structureType, { moveFrom }] of Object.entries(features.movement)) {
+            for (const pos of moveFrom) {
+                // Skip structures on map edges - they cannot be destroyed
+                if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) {
+                    continue
+                }
+
+                const structures = this.destinationRoom.lookForAt(LOOK_STRUCTURES, pos.x, pos.y)
+
+                for (const structure of structures) {
+                    if (structure.structureType === structureType) {
+                        if (structure.hits < lowestHits) {
+                            lowestHits = structure.hits
+                            weakestStructure = structure
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!weakestStructure) {
+            Logger.warning('remote-worker:dismantle:no-structure-found', this.destination)
+            return
+        }
+
+        const err = this.creep.dismantle(weakestStructure)
+        if (err === ERR_NOT_IN_RANGE) {
+            moveTo(this.creep, { pos: weakestStructure.pos, range: 1 })
+        } else if (err === OK) {
+            Logger.info(
+                'remote-worker:dismantle:success',
+                this.creep.name,
+                weakestStructure.structureType,
+                weakestStructure.pos,
+            )
+        } else if (err === ERR_INVALID_TARGET) {
+            // Structure was already destroyed or doesn't exist
+            Logger.warning(
+                'remote-worker:dismantle:invalid-target',
+                this.creep.name,
+                weakestStructure.pos,
+            )
+        } else {
+            Logger.warning(
+                'remote-worker:dismantle:failed',
+                err,
+                this.creep.name,
+                weakestStructure.pos,
+            )
+        }
+    }
+
     private deliverEnergy() {
         const controller = this.destinationRoom.controller
         if (!controller) {
             Logger.error('remote-worker:deliver:no-controller', this.destination, this.creep.name)
             return
         }
+
+        // Check if controller needs urgent upgrading or if there are construction sites
+        const hasWork =
+            controller.ticksToDowngrade <= 5000 ||
+            getConstructionSites(this.destinationRoom).length > 0
+
+        if (!hasWork && this.needsDismantling()) {
+            // No work to do, but structures need dismantling
+            this.dismantleMovementStructures()
+            return
+        }
+
         if (controller.ticksToDowngrade > 5000) {
             this.build()
         } else {

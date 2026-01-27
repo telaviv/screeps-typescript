@@ -403,6 +403,7 @@ function getTargetPositions(
 
     const { gridWidth, gridHeight, translateBack } = translator
     const targetPositions: Position[] = []
+    const blockedCount = { total: 0, outOfBounds: 0, highCost: 0 }
 
     for (let ddx = -range; ddx <= range; ddx++) {
         for (let ddy = -range; ddy <= range; ddy++) {
@@ -416,6 +417,32 @@ function getTargetPositions(
 
                 if (dist <= range && cost < 255) {
                     targetPositions.push({ x: tx, y: ty })
+                } else if (dist <= range) {
+                    blockedCount.highCost++
+                }
+            } else {
+                blockedCount.outOfBounds++
+            }
+            blockedCount.total++
+        }
+    }
+
+    if (targetPositions.length < 3) {
+        console.log(
+            `[getTargetPositions] Goal(${goalGrid.x},${goalGrid.y}): ${targetPositions.length} walkable, ${blockedCount.highCost} blocked, ${blockedCount.outOfBounds} out of bounds`,
+        )
+        // Log each neighbor's cost
+        for (let ddx = -range; ddx <= range; ddx++) {
+            for (let ddy = -range; ddy <= range; ddy++) {
+                if (ddx === 0 && ddy === 0) continue
+                const tx = goalGrid.x + ddx
+                const ty = goalGrid.y + ddy
+                if (tx >= 0 && tx < gridWidth && ty >= 0 && ty < gridHeight) {
+                    const worldPos = translateBack({ x: tx, y: ty })
+                    const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+                    console.log(
+                        `  Neighbor grid(${tx},${ty}) = ${worldPos.roomName}(${worldPos.x},${worldPos.y}) cost=${cost}`,
+                    )
                 }
             }
         }
@@ -560,6 +587,10 @@ export function findMultiRoomPath(
     for (const goalGrid of goalsGrid) {
         const targetPositions = getTargetPositions(goalGrid, range, translator, getCost)
 
+        console.log(
+            `[findMultiRoomPath] Goal: ${goalGrid.x},${goalGrid.y} -> ${targetPositions.length} targets`,
+        )
+
         const result = findBestPath(startGrid, targetPositions, grid, translator, getCost, maxOps)
 
         if (result && (!bestResult || result.cost < bestResult.cost)) {
@@ -569,10 +600,20 @@ export function findMultiRoomPath(
 
     // Convert best path back to world coordinates
     if (bestResult) {
+        console.log(
+            `[findMultiRoomPath] Found path with cost ${bestResult.cost}, length ${bestResult.path.length}`,
+        )
         return bestResult.path
             .slice(1)
             .map(([gx, gy]) => translator.translateBack({ x: gx, y: gy }))
     }
+
+    console.log(`[findMultiRoomPath] NO PATH FOUND`)
+    console.log(
+        `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
+    )
+    console.log(`  Goals: ${goals.map((g) => `${g.roomName}(${g.x},${g.y})`).join(', ')}`)
+    console.log(`  Grid size: ${translator.gridWidth}x${translator.gridHeight}`)
 
     return undefined
 }
@@ -637,10 +678,11 @@ export function createMultiRoomTerrainCost(): MultiRoomCostCallback {
 export function withMultiRoomObstacles(
     baseCost: MultiRoomCostCallback,
     obstacles: Set<string>,
+    obstacleCost = 255,
 ): MultiRoomCostCallback {
     return (roomName: string, x: number, y: number): number => {
         if (obstacles.has(`${roomName}:${x},${y}`)) {
-            return 255
+            return obstacleCost
         }
         return baseCost(roomName, x, y)
     }

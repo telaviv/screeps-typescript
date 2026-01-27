@@ -484,6 +484,20 @@ const createMineWorkers = wrap(
             return
         }
 
+        if (mineManager.hasMovementDiff()) {
+            // Only spawn a dismantler if we don't already have enough workers
+            const workers = mineManager.getWorkers()
+            if (workers.length < 4) {
+                // Using MAX_BUILDER_COUNT (4) as the limit
+                console.log('creating dismantler for movement diff', mineManager.name)
+                RoleLogistics.createCreep(spawn, PREFERENCE_WORKER, {
+                    home: mineManager.name,
+                    capacity: effectiveCapacity,
+                })
+                return
+            }
+        }
+
         Logger.error(
             `createMineWorkers:reservers:${mineManager.name}`,
             mineManager.hasCapacityToReserve(),

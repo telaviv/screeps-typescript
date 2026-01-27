@@ -2,6 +2,7 @@ import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TimeCache from 'utils/time-cache'
 import assignGlobals, { findUsername } from 'utils/globals'
+import { handleMovementEventLog } from 'construction-movement'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
 import roleBaseRepairer, { BaseRepairerCreep } from 'roles/base-repairer'
@@ -168,6 +169,7 @@ const runMyRoom = wrap((room: Room) => {
     const defenseDepartment = new DefenseDepartment(room)
     defenseDepartment.updateBaseDefenseState()
     buildManager.ensureConstructionSites()
+    handleMovementEventLog(room)
     ensureSafeMode(room)
 
     const linkManager = LinkManager.createFromRoom(room)
@@ -211,6 +213,7 @@ const runMine = wrap((mineName: string) => {
     }
     buildManager.removeEnemyConstructionSites()
     buildManager.ensureMineConstructionSites()
+    handleMovementEventLog(room)
 }, 'main:runMine')
 
 /**
