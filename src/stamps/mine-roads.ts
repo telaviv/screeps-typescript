@@ -42,7 +42,8 @@ export function calculateMineRoads(
 
     for (const mine of mines) {
         // Get mine scout data
-        const mineScout = Memory.rooms[mine.name]?.scout
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mineScout = (Memory.rooms[mine.name] as any)?.scout
         if (!mineScout?.sourcePositions) {
             Logger.warning(
                 'calculateMineRoads:no-scout-data',
@@ -53,11 +54,13 @@ export function calculateMineRoads(
         }
 
         // Create goal positions (mine sources) - path to within range 1
-        const goals: FlatRoomPosition[] = Object.values(mineScout.sourcePositions).map((pos) => ({
-            roomName: mine.name,
-            x: pos.x,
-            y: pos.y,
-        }))
+        const goals: FlatRoomPosition[] = Object.values(mineScout.sourcePositions).map(
+            (pos: any) => ({
+                roomName: mine.name,
+                x: pos.x,
+                y: pos.y,
+            }),
+        )
 
         // Build obstacles and roads from bunker buildings
         const obstacles = new Set<string>()
@@ -70,14 +73,12 @@ export function calculateMineRoads(
         }
 
         // Second pass: block base bunker structures (except roads and ramparts which don't block movement)
-        // If a position has a road, don't add it as an obstacle even if other structures exist there
+        // Note: Even if a position has a road, we still mark it as an obstacle if it has another structure
+        // This ensures mine roads avoid structures like extensions, even if they're on road tiles
         for (const [structType, positions] of baseBunkerBuildings.entries()) {
             if (structType !== 'road' && structType !== 'rampart') {
                 for (const pos of positions) {
-                    const posKey = `${baseRoomName}:${pos.x},${pos.y}`
-                    if (!roadPositions.has(posKey)) {
-                        obstacles.add(posKey)
-                    }
+                    obstacles.add(`${baseRoomName}:${pos.x},${pos.y}`)
                 }
             }
         }
@@ -85,12 +86,11 @@ export function calculateMineRoads(
         // Remove the start position from obstacles (storage shouldn't block itself)
         obstacles.delete(`${baseRoomName}:${storage.x},${storage.y}`)
 
-        // Build cost callback: base terrain + preferred roads (cost 1) + obstacles (cost 20, not 255)
-        // We use cost 20 for obstacles instead of 255 so pathfinding can escape the bunker if needed
-        // but will strongly prefer using roads (cost 1)
+        // Build cost callback: base terrain + preferred roads (cost 1) + obstacles (cost 255)
+        // Obstacles are impassable - pathfinding should use existing roads to navigate around the bunker
         let getCost: MultiRoomCostCallback = createMultiRoomTerrainCost()
         getCost = withMultiRoomPreferredPaths(getCost, roadPositions, 1)
-        getCost = withMultiRoomObstacles(getCost, obstacles, 20)
+        getCost = withMultiRoomObstacles(getCost, obstacles, 255)
 
         // Mark sources as unwalkable (cost 255) since they're not passable
         const sourceObstacles = new Set<string>()

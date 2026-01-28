@@ -49,6 +49,7 @@
         "@rollup/plugin-node-resolve": "^13.0.4",
         "@types/chai": "^4.1.6",
         "@types/colormap": "^2.3.4",
+        "@types/easystarjs": "^0.3.4",
         "@types/lodash": "^4.14.202",
         "@types/lodash.times": "^4.3.9",
         "@types/mocha": "^5.2.5",
@@ -93,6 +94,7 @@
         "typescript-algorithms": "^0.0.10"
     },
     "dependencies": {
+        "easystarjs": "^0.4.4",
         "pathfinding": "^0.4.18",
         "precommit": "^1.2.2",
         "source-map": "~0.6.1",

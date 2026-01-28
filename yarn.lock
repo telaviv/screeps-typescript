@@ -222,6 +222,13 @@
   resolved "https://registry.yarnpkg.com/@types/deep-eql/-/deep-eql-4.0.2.tgz#334311971d3a07121e7eb91b684a605e7eea9cbd"
   integrity sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==
 
+"@types/easystarjs@^0.3.4":
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/@types/easystarjs/-/easystarjs-0.3.4.tgz#a721b9842943890d43a8009f66641dba9aa01c77"
+  integrity sha512-xivmG8jbjxVI0qPl8j4WutM2E1gxAMH258+Nb6iCFruKx6YsEpIwz+kV8wsroxqOLE1DyP7lIkkhWOhSPrAnlg==
+  dependencies:
+    easystarjs "*"
+
 "@types/estree@*":
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-1.0.6.tgz#628effeeae2064a1b4e79f78e81d87b7e5fc7b50"
@@ -1000,6 +1007,13 @@ each-async@^1.0.0:
     onetime "^1.0.0"
     set-immediate-shim "^1.0.0"
 
+easystarjs@*, easystarjs@^0.4.4:
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/easystarjs/-/easystarjs-0.4.4.tgz#8cec6d20d0d8660715da0301d1da440370a8f40a"
+  integrity sha512-ZSt0TkB8xuIXRIrKsM3jkmk1/cZUtyvf0DqOXf6wuKq9slx9UA5kkLtiaWhtmOQFJFKdabbvXwk6RO0znghArQ==
+  dependencies:
+    heap "0.2.6"
+
 emoji-regex@^8.0.0:
   version "8.0.0"
   resolved "https://registry.yarnpkg.com/emoji-regex/-/emoji-regex-8.0.0.tgz#e818fd69ce5ccfcb404594f842963bf53164cc37"
@@ -1695,6 +1709,11 @@ heap@0.2.5:
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/heap/-/heap-0.2.5.tgz#713b65590ebcc40fcbeeaf55e851694092b39af1"
   integrity sha512-G7HLD+WKcrOyJP5VQwYZNC3Z6FcQ7YYjEFiFoIj8PfEr73mu421o8B1N5DKUcc8K37EsJ2XXWA8DtrDz/2dReg==
+
+heap@0.2.6:
+  version "0.2.6"
+  resolved "https://registry.yarnpkg.com/heap/-/heap-0.2.6.tgz#087e1f10b046932fc8594dd9e6d378afc9d1e5ac"
+  integrity sha512-MzzWcnfB1e4EG2vHi3dXHoBupmuXNZzx6pY6HldVS55JKKBoq3xOyzfSaZRkJp37HIhEYC78knabHff3zc4dQQ==
 
 ieee754@^1.2.1:
   version "1.2.1"

@@ -1,4 +1,5 @@
 import * as PF from 'pathfinding'
+import * as EasyStar from 'easystarjs'
 import { FlatRoomPosition, Position } from '../types'
 
 /**
@@ -609,6 +610,350 @@ export function findMultiRoomPath(
     }
 
     console.log(`[findMultiRoomPath] NO PATH FOUND`)
+    console.log(
+        `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
+    )
+    console.log(`  Goals: ${goals.map((g) => `${g.roomName}(${g.x},${g.y})`).join(', ')}`)
+    console.log(`  Grid size: ${translator.gridWidth}x${translator.gridHeight}`)
+
+    return undefined
+}
+
+/**
+ * Finds a weighted path across two adjacent rooms using EasyStar
+ * This version properly respects tile costs for pathfinding decisions
+ *
+ * @param start Starting position with room name
+ * @param goal Goal position (or array of positions) with room name
+ * @param getCost Callback that returns cost for a position in any room
+ * @param options Pathfinding options (range, maxOps, roomSize)
+ * @returns Promise of array of positions with room names, or undefined if no path found
+ */
+export function findWeightedMultiRoomPath(
+    start: FlatRoomPosition,
+    goal: FlatRoomPosition | FlatRoomPosition[],
+    getCost: MultiRoomCostCallback,
+    options: FindPathOptions = {},
+): Promise<FlatRoomPosition[] | undefined> {
+    const { range = 0, roomSize = 50 } = options
+
+    const goals = Array.isArray(goal) ? goal : [goal]
+    const startRoom = start.roomName
+    const goalRoom = goals[0].roomName
+
+    if (startRoom === goalRoom) {
+        throw new Error('Use findPath for same-room pathfinding')
+    }
+
+    // Determine room direction and create coordinate translator
+    const { direction } = getAdjacentRoomDirection(startRoom, goalRoom)
+    const translator = createCoordinateTranslator(direction, startRoom, goalRoom, roomSize)
+
+    // Build cost grid for EasyStar
+    const costGrid: number[][] = []
+    for (let gy = 0; gy < translator.gridHeight; gy++) {
+        const row: number[] = []
+        for (let gx = 0; gx < translator.gridWidth; gx++) {
+            const worldPos = translator.translateBack({ x: gx, y: gy })
+            const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+            // EasyStar uses 0 for blocked, positive numbers for cost
+            row.push(cost >= 255 ? 0 : cost)
+        }
+        costGrid.push(row)
+    }
+
+    // Create EasyStar instance
+    const easystar = new EasyStar.js()
+    easystar.setGrid(costGrid)
+    easystar.enableDiagonals()
+    easystar.disableCornerCutting()
+
+    // Set acceptable tiles (anything that's not 0/blocked)
+    const acceptableTiles: number[] = []
+    for (let cost = 1; cost < 255; cost++) {
+        acceptableTiles.push(cost)
+    }
+    easystar.setAcceptableTiles(acceptableTiles)
+
+    // Set tile costs for EasyStar (it needs explicit cost mapping)
+    for (let cost = 1; cost < 255; cost++) {
+        easystar.setTileCost(cost, cost)
+    }
+
+    // Convert start and goals to grid coordinates
+    const startGrid = translator.translateStart(start)
+    const goalsGrid = goals.map((g) => translator.translateGoal(g))
+
+    // Find best path across all goals
+    return new Promise<FlatRoomPosition[] | undefined>((resolve) => {
+        let pathsCompleted = 0
+        let bestPath: { x: number; y: number }[] | undefined
+        let bestCost = Infinity
+
+        for (const goalGrid of goalsGrid) {
+            // Get target positions within range
+            const targetPositions = getTargetPositions(goalGrid, range, translator, getCost)
+
+            console.log(
+                `[findWeightedMultiRoomPath] Goal: ${goalGrid.x},${goalGrid.y} -> ${targetPositions.length} targets`,
+            )
+
+            if (targetPositions.length === 0) {
+                pathsCompleted++
+                if (pathsCompleted === goalsGrid.length) {
+                    if (bestPath) {
+                        console.log(
+                            `[findWeightedMultiRoomPath] Found path with cost ${bestCost}, length ${bestPath.length}`,
+                        )
+                        resolve(
+                            bestPath
+                                .slice(1)
+                                .map((pos) => translator.translateBack({ x: pos.x, y: pos.y })),
+                        )
+                    } else {
+                        console.log(`[findWeightedMultiRoomPath] NO PATH FOUND`)
+                        console.log(
+                            `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
+                        )
+                        console.log(
+                            `  Goals: ${goals.map((g) => `${g.roomName}(${g.x},${g.y})`).join(', ')}`,
+                        )
+                        console.log(`  Grid size: ${translator.gridWidth}x${translator.gridHeight}`)
+                        resolve(undefined)
+                    }
+                }
+                continue
+            }
+
+            // Try each target position
+            for (const target of targetPositions) {
+                easystar.findPath(
+                    startGrid.x,
+                    startGrid.y,
+                    target.x,
+                    target.y,
+                    (path: { x: number; y: number }[] | null) => {
+                        if (path && path.length > 0) {
+                            // Calculate actual cost
+                            let pathCost = 0
+                            for (let i = 1; i < path.length; i++) {
+                                const worldPos = translator.translateBack({
+                                    x: path[i].x,
+                                    y: path[i].y,
+                                })
+                                const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+                                const prevPos = path[i - 1]
+                                const isDiagonal =
+                                    Math.abs(path[i].x - prevPos.x) === 1 &&
+                                    Math.abs(path[i].y - prevPos.y) === 1
+                                pathCost += cost * (isDiagonal ? Math.SQRT2 : 1)
+                            }
+
+                            if (pathCost < bestCost) {
+                                bestPath = path
+                                bestCost = pathCost
+                            }
+                        }
+
+                        pathsCompleted++
+                        if (pathsCompleted === goalsGrid.length * targetPositions.length) {
+                            if (bestPath) {
+                                console.log(
+                                    `[findWeightedMultiRoomPath] Found path with cost ${bestCost}, length ${bestPath.length}`,
+                                )
+                                resolve(
+                                    bestPath
+                                        .slice(1)
+                                        .map((pos) =>
+                                            translator.translateBack({ x: pos.x, y: pos.y }),
+                                        ),
+                                )
+                            } else {
+                                console.log(`[findWeightedMultiRoomPath] NO PATH FOUND`)
+                                console.log(
+                                    `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
+                                )
+                                console.log(
+                                    `  Goals: ${goals.map((g) => `${g.roomName}(${g.x},${g.y})`).join(', ')}`,
+                                )
+                                console.log(
+                                    `  Grid size: ${translator.gridWidth}x${translator.gridHeight}`,
+                                )
+                                resolve(undefined)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+
+        easystar.calculate()
+    })
+}
+
+/**
+ * Finds a weighted path across two adjacent rooms using EasyStar (synchronous version)
+ * This version properly respects tile costs for pathfinding decisions
+ *
+ * @param start Starting position with room name
+ * @param goal Goal position (or array of positions) with room name
+ * @param getCost Callback that returns cost for a position in any room
+ * @param options Pathfinding options (range, maxOps, roomSize)
+ * @returns Array of positions with room names, or undefined if no path found
+ */
+export function findWeightedMultiRoomPathSync(
+    start: FlatRoomPosition,
+    goal: FlatRoomPosition | FlatRoomPosition[],
+    getCost: MultiRoomCostCallback,
+    options: FindPathOptions = {},
+): FlatRoomPosition[] | undefined {
+    const { range = 0, roomSize = 50 } = options
+
+    const goals = Array.isArray(goal) ? goal : [goal]
+    const startRoom = start.roomName
+    const goalRoom = goals[0].roomName
+
+    if (startRoom === goalRoom) {
+        throw new Error('Use findPath for same-room pathfinding')
+    }
+
+    // Determine room direction and create coordinate translator
+    const { direction } = getAdjacentRoomDirection(startRoom, goalRoom)
+    const translator = createCoordinateTranslator(direction, startRoom, goalRoom, roomSize)
+
+    // Build cost grid for EasyStar
+    const costGrid: number[][] = []
+    let minCost = Infinity
+    let maxCost = 0
+    let blockedCount = 0
+    for (let gy = 0; gy < translator.gridHeight; gy++) {
+        const row: number[] = []
+        for (let gx = 0; gx < translator.gridWidth; gx++) {
+            const worldPos = translator.translateBack({ x: gx, y: gy })
+            const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+            // EasyStar uses 0 for blocked, positive numbers for cost
+            const easyCost = cost >= 255 ? 0 : cost
+            row.push(easyCost)
+            if (easyCost === 0) {
+                blockedCount++
+            } else {
+                minCost = Math.min(minCost, easyCost)
+                maxCost = Math.max(maxCost, easyCost)
+            }
+        }
+        costGrid.push(row)
+    }
+
+    console.log(
+        `[findWeightedMultiRoomPathSync] Grid: ${translator.gridWidth}x${translator.gridHeight}, blocked=${blockedCount}, costs=${minCost}-${maxCost}`,
+    )
+
+    // Create EasyStar instance
+    const easystar = new EasyStar.js()
+    easystar.setGrid(costGrid)
+    easystar.enableDiagonals()
+    easystar.disableCornerCutting()
+    // Force synchronous calculation by setting high iterations
+    easystar.setIterationsPerCalculation(10000)
+
+    // Set acceptable tiles - EasyStar treats these as the VALUES that are walkable
+    // We need to tell it which tile values (costs) are acceptable
+    const uniqueCosts = new Set<number>()
+    for (const row of costGrid) {
+        for (const cost of row) {
+            if (cost > 0) {
+                uniqueCosts.add(cost)
+            }
+        }
+    }
+    const acceptableTiles = Array.from(uniqueCosts)
+    easystar.setAcceptableTiles(acceptableTiles)
+
+    // Set tile costs - map each tile value to its actual cost
+    for (const cost of uniqueCosts) {
+        easystar.setTileCost(cost, cost)
+    }
+
+    console.log(`[findWeightedMultiRoomPathSync] Acceptable tiles: [${acceptableTiles.sort((a, b) => a - b).join(', ')}]`)
+
+    // Convert start and goals to grid coordinates
+    const startGrid = translator.translateStart(start)
+    const goalsGrid = goals.map((g) => translator.translateGoal(g))
+
+    // Check if start is walkable
+    const startCost = costGrid[startGrid.y][startGrid.x]
+    console.log(`[findWeightedMultiRoomPathSync] Start grid(${startGrid.x},${startGrid.y}) cost=${startCost}`)
+    
+    if (startCost === 0) {
+        console.log(`[findWeightedMultiRoomPathSync] ERROR: Start position is blocked!`)
+        return undefined
+    }
+
+    // Find best path across all goals (synchronous collection)
+    let bestPath: { x: number; y: number }[] | undefined
+    let bestCost = Infinity
+
+    for (const goalGrid of goalsGrid) {
+        // Get target positions within range
+        const targetPositions = getTargetPositions(goalGrid, range, translator, getCost)
+
+        console.log(
+            `[findWeightedMultiRoomPathSync] Goal: ${goalGrid.x},${goalGrid.y} -> ${targetPositions.length} targets`,
+        )
+
+        if (targetPositions.length === 0) {
+            continue
+        }
+
+        // Try the first few target positions to find a path
+        for (let i = 0; i < Math.min(3, targetPositions.length); i++) {
+            const target = targetPositions[i]
+            let foundPath: { x: number; y: number }[] | null = null
+
+            easystar.findPath(
+                startGrid.x,
+                startGrid.y,
+                target.x,
+                target.y,
+                (path: { x: number; y: number }[] | null) => {
+                    foundPath = path
+                },
+            )
+
+            // Calculate this path
+            easystar.calculate()
+
+            if (foundPath) {
+                const validPath: { x: number; y: number }[] = foundPath
+                // Calculate actual cost
+                let pathCost = 0
+                for (let j = 1; j < validPath.length; j++) {
+                    const worldPos = translator.translateBack({ x: validPath[j].x, y: validPath[j].y })
+                    const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+                    const prevPos = validPath[j - 1]
+                    const isDiagonal =
+                        Math.abs(validPath[j].x - prevPos.x) === 1 &&
+                        Math.abs(validPath[j].y - prevPos.y) === 1
+                    pathCost += cost * (isDiagonal ? Math.SQRT2 : 1)
+                }
+
+                if (pathCost < bestCost) {
+                    bestPath = validPath
+                    bestCost = pathCost
+                }
+            }
+        }
+    }
+
+    // Convert best path back to world coordinates
+    if (bestPath) {
+        console.log(
+            `[findWeightedMultiRoomPathSync] Found path with cost ${bestCost}, length ${bestPath.length}`,
+        )
+        return bestPath.slice(1).map((pos) => translator.translateBack({ x: pos.x, y: pos.y }))
+    }
+
+    console.log(`[findWeightedMultiRoomPathSync] NO PATH FOUND`)
     console.log(
         `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
     )

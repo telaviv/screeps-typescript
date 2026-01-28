@@ -103,6 +103,11 @@ export function mprofile(key: string) {
 }
 
 function markProfileMemory(key: string, time: number) {
+    // Skip profiling if Memory is not available (e.g., in test environment)
+    if (typeof Memory === 'undefined') {
+        return
+    }
+
     if (!Memory.profiler) {
         init()
     }

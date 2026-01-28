@@ -55,8 +55,8 @@ export function calculateSingleMineRoads(
     console.log(`  Obstacles: ${obstacles?.size || 0}`)
     console.log(`  Roads: ${roads?.size || 0}`)
 
-    // Build cost callback with terrain, obstacles (cost 20), and preferred roads (cost 1)
-    // We use cost 20 for obstacles instead of 255 so pathfinding can escape the bunker if needed
+    // Build cost callback with terrain, obstacles, and preferred roads
+    // Use cost 255 (impassable) for obstacles since we have weighted pathfinding now
     let getCost = createMultiRoomTerrainCost()
 
     // Add existing roads as low-cost preferred paths (cost 1)
@@ -64,9 +64,10 @@ export function calculateSingleMineRoads(
         getCost = withMultiRoomPreferredPaths(getCost, roads, 1)
     }
 
-    // Add obstacles (buildings) with cost 20 (expensive but passable)
+    // Add obstacles (buildings) with cost 255 (impassable)
+    // The weighted pathfinder will respect these costs and avoid obstacles
     if (obstacles && obstacles.size > 0) {
-        getCost = withMultiRoomObstacles(getCost, obstacles, 20)
+        getCost = withMultiRoomObstacles(getCost, obstacles, 255)
     }
 
     // Mark sources as unwalkable (cost 255) since they're not passable
@@ -84,6 +85,8 @@ export function calculateSingleMineRoads(
     }))
 
     // Find path from start position to mine sources
+    // Note: Using standard A* pathfinder. With obstacles set to 255 (impassable),
+    // paths will only be found if bunker roads extend to room exits.
     let multiRoomPath
     try {
         multiRoomPath = findMultiRoomPath(
