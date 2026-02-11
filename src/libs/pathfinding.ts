@@ -716,7 +716,9 @@ export function findWeightedMultiRoomPath(
                             `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
                         )
                         console.log(
-                            `  Goals: ${goals.map((g) => `${g.roomName}(${g.x},${g.y})`).join(', ')}`,
+                            `  Goals: ${goals
+                                .map((g) => `${g.roomName}(${g.x},${g.y})`)
+                                .join(', ')}`,
                         )
                         console.log(`  Grid size: ${translator.gridWidth}x${translator.gridHeight}`)
                         resolve(undefined)
@@ -774,7 +776,9 @@ export function findWeightedMultiRoomPath(
                                     `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
                                 )
                                 console.log(
-                                    `  Goals: ${goals.map((g) => `${g.roomName}(${g.x},${g.y})`).join(', ')}`,
+                                    `  Goals: ${goals
+                                        .map((g) => `${g.roomName}(${g.x},${g.y})`)
+                                        .join(', ')}`,
                                 )
                                 console.log(
                                     `  Grid size: ${translator.gridWidth}x${translator.gridHeight}`,
@@ -874,7 +878,11 @@ export function findWeightedMultiRoomPathSync(
         easystar.setTileCost(cost, cost)
     }
 
-    console.log(`[findWeightedMultiRoomPathSync] Acceptable tiles: [${acceptableTiles.sort((a, b) => a - b).join(', ')}]`)
+    console.log(
+        `[findWeightedMultiRoomPathSync] Acceptable tiles: [${acceptableTiles
+            .sort((a, b) => a - b)
+            .join(', ')}]`,
+    )
 
     // Convert start and goals to grid coordinates
     const startGrid = translator.translateStart(start)
@@ -882,8 +890,10 @@ export function findWeightedMultiRoomPathSync(
 
     // Check if start is walkable
     const startCost = costGrid[startGrid.y][startGrid.x]
-    console.log(`[findWeightedMultiRoomPathSync] Start grid(${startGrid.x},${startGrid.y}) cost=${startCost}`)
-    
+    console.log(
+        `[findWeightedMultiRoomPathSync] Start grid(${startGrid.x},${startGrid.y}) cost=${startCost}`,
+    )
+
     if (startCost === 0) {
         console.log(`[findWeightedMultiRoomPathSync] ERROR: Start position is blocked!`)
         return undefined
@@ -928,7 +938,10 @@ export function findWeightedMultiRoomPathSync(
                 // Calculate actual cost
                 let pathCost = 0
                 for (let j = 1; j < validPath.length; j++) {
-                    const worldPos = translator.translateBack({ x: validPath[j].x, y: validPath[j].y })
+                    const worldPos = translator.translateBack({
+                        x: validPath[j].x,
+                        y: validPath[j].y,
+                    })
                     const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
                     const prevPos = validPath[j - 1]
                     const isDiagonal =

@@ -44,7 +44,7 @@ export function calculateBunkerRoads(
         rampartPositions.add(`${pos.x},${pos.y}`)
     }
 
-    // Build obstacle set from bunker structures (excluding roads, ramparts, storage, and structures under ramparts)
+    // Build obstacle set from bunker structures (excluding roads, ramparts, and storage)
     const obstacles = new Set<string>()
     for (const [structureType, positions] of bunkerBuildings.entries()) {
         // Roads, ramparts, and storage don't block pathfinding
@@ -55,12 +55,10 @@ export function calculateBunkerRoads(
         ) {
             continue
         }
+        // All other structures are obstacles (even with ramparts on them)
         for (const pos of positions) {
             const key = `${pos.x},${pos.y}`
-            // Structures under ramparts are walkable (ramparts don't block movement)
-            if (!rampartPositions.has(key)) {
-                obstacles.add(key)
-            }
+            obstacles.add(key)
         }
     }
 
@@ -108,8 +106,25 @@ export function calculateBunkerRoads(
 
     // Convert road positions to array, filtering out any that overlap with structures
     const roads: Position[] = []
+
+    // Build set of ALL structure positions (for road placement filtering)
+    // Unlike obstacles (for pathfinding), this includes structures under ramparts
+    const structurePositions = new Set<string>()
+    for (const [structureType, positions] of bunkerBuildings.entries()) {
+        // Only roads can overlap with roads, everything else blocks road placement
+        if (structureType !== 'road' && structureType !== 'rampart') {
+            for (const pos of positions) {
+                structurePositions.add(`${pos.x},${pos.y}`)
+            }
+        }
+    }
+
+    // Get existing road keys for duplicate filtering
+    const existingRoadKeys = new Set(existingRoads.map((r) => `${r.x},${r.y}`))
+
     for (const key of roadPositions) {
-        if (!obstacles.has(key)) {
+        // Skip roads that already exist in the stamp OR that overlap with ANY structure
+        if (!structurePositions.has(key) && !existingRoadKeys.has(key)) {
             const [x, y] = key.split(',').map(Number)
             roads.push({ x, y })
         }

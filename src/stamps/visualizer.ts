@@ -174,7 +174,6 @@ export function visualizeBunkerPlacement(
             const isController = key === controllerKey
             const isStationaryPoint = stationaryPointsSet.has(key)
             const stationaryType = stationaryPointTypes.get(key)
-            const isLink = linkPositions.has(key)
 
             line += renderCell(
                 buildingTypes,
@@ -184,7 +183,6 @@ export function visualizeBunkerPlacement(
                 isController,
                 isStationaryPoint,
                 stationaryType,
-                isLink,
             )
         }
 
@@ -246,7 +244,6 @@ function renderCell(
     isController: boolean,
     isStationaryPoint: boolean,
     stationaryType: string | undefined,
-    _isLink: boolean,
 ): string {
     // Natural objects (source, mineral, controller) get white background
     if (isSource || mineralType || isController) {

@@ -42,9 +42,8 @@ export function calculateMineRoads(
 
     for (const mine of mines) {
         // Get mine scout data
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mineScout = (Memory.rooms[mine.name] as any)?.scout
-        if (!mineScout?.sourcePositions) {
+        const roomMemory = Memory.rooms[mine.name]
+        if (!roomMemory?.scout?.sourcePositions) {
             Logger.warning(
                 'calculateMineRoads:no-scout-data',
                 mine.name,
@@ -54,13 +53,13 @@ export function calculateMineRoads(
         }
 
         // Create goal positions (mine sources) - path to within range 1
-        const goals: FlatRoomPosition[] = Object.values(mineScout.sourcePositions).map(
-            (pos: any) => ({
-                roomName: mine.name,
-                x: pos.x,
-                y: pos.y,
-            }),
-        )
+        const goals: FlatRoomPosition[] = Object.values(
+            roomMemory.scout.sourcePositions,
+        ).map((pos) => ({
+            roomName: mine.name,
+            x: pos.x,
+            y: pos.y,
+        }))
 
         // Build obstacles and roads from bunker buildings
         const obstacles = new Set<string>()
