@@ -1,20 +1,56 @@
 import { assert } from 'chai'
 import { calculateSingleMineRoads } from '../../../src/stamps/single-mine-roads'
+import { placeBunker } from '../../../src/stamps/placement'
+import { calculateBunkerRoads } from '../../../src/stamps/roads'
+import bunkerStamp from '../../../src/stamps/bunker'
+import {
+    createTerrainCostCallback,
+    findPath,
+    withPreferred,
+    withObstacles,
+} from '../../../src/libs/pathfinding'
 
 // Mock RoomTerrain for testing
-class MockRoomTerrain {
+class MockRoomTerrain implements RoomTerrain {
     private terrain: number[][]
 
     constructor(terrain: number[][]) {
         this.terrain = terrain
     }
 
-    get(x: number, y: number): number {
+    get(x: number, y: number): 0 | 1 | 2 {
         if (x < 0 || x >= 50 || y < 0 || y >= 50) {
             return 1 // Wall
         }
-        return this.terrain[y][x]
+        const value = this.terrain[y][x]
+        if (value === 0 || value === 1 || value === 2) {
+            return value
+        }
+        return 0 // Default to plain if invalid
     }
+}
+
+/**
+ * Build pathfinding obstacles from bunker buildings
+ * Roads and ramparts are NOT obstacles (ramparts are walkable by own creeps)
+ * Everything else blocks movement
+ */
+function buildObstacles(
+    buildings: Map<string, { x: number; y: number }[]>,
+    roomName: string,
+): Set<string> {
+    const obstacles = new Set<string>()
+
+    // Add all structures as obstacles except roads and ramparts
+    for (const [structType, positions] of buildings.entries()) {
+        if (structType !== 'road' && structType !== 'rampart') {
+            for (const pos of positions) {
+                obstacles.add(`${roomName}:${pos.x},${pos.y}`)
+            }
+        }
+    }
+
+    return obstacles
 }
 
 describe('calculateSingleMineRoads', () => {
@@ -598,7 +634,9 @@ describe('calculateSingleMineRoads', () => {
                 const dy = road.y - prevRoad.y
                 if (Math.abs(dx) === 1 && Math.abs(dy) === 1) {
                     hasDiagonalInFirstSteps = true
-                    console.log(`  Found diagonal move at step ${i}: (${prevRoad.x},${prevRoad.y}) -> (${road.x},${road.y})`)
+                    console.log(
+                        `  Found diagonal move at step ${i}: (${prevRoad.x},${prevRoad.y}) -> (${road.x},${road.y})`,
+                    )
                     break
                 }
             }
@@ -619,7 +657,7 @@ describe('calculateSingleMineRoads', () => {
     it('should reach north boundary (y=0) in W1N8 with real terrain', function () {
         // Test: Can we path from the start position (11, 30) to the north boundary (y=0) in W1N8?
         // Using the low-level single-room pathfinding API directly.
-        
+
         const baseTerrainData = require('../../fixtures/terrain/W1N8.json')
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -642,17 +680,18 @@ describe('calculateSingleMineRoads', () => {
         }
 
         const startPosition = { x: 11, y: 30 }
-        
+
         // Goal: reach north boundary at roughly the same x coordinate
         const northGoals = [
-            { x: 10, y: 1 },  // Just inside the room, not on boundary
+            { x: 10, y: 1 }, // Just inside the room, not on boundary
             { x: 11, y: 1 },
             { x: 12, y: 1 },
         ]
 
         console.log(`\n[W1N8 North Boundary Test - Single Room Pathfinding]`)
-        console.log(`  Start: W1N8(${startPosition.x}, ${startPosition.y})`)
+        console.log(`  Start: W1N8(${startPosition.x}, ${startPosition.y}) [ROAD ADJACENT TO STORAGE LINK]`)
         console.log(`  Goals: Near north boundary (y=1) at x=10,11,12`)
+        console.log(`  Note: This tests from an accessible road position, not the storage link itself`)
 
         // Check terrain along x=11 column
         const terrain = (global.Game.map as any).getRoomTerrain('W1N8')
@@ -665,16 +704,18 @@ describe('calculateSingleMineRoads', () => {
 
         // Use the single-room pathfinding API
         const { createTerrainCostCallback, findPath } = require('../../../src/libs/pathfinding')
-        
+
         const costFn = createTerrainCostCallback(terrain)
-        
+
         console.log(`  Calling findPath for single room...`)
         const path = findPath(startPosition, northGoals, costFn, {
             range: 1,
             roomSize: 50,
         })
 
-        console.log(`  Result: ${path ? `Found path with ${path.length} steps` : 'NULL - NO PATH FOUND'}`)
+        console.log(
+            `  Result: ${path ? `Found path with ${path.length} steps` : 'NULL - NO PATH FOUND'}`,
+        )
 
         if (path && path.length > 0) {
             console.log(`  First 5 positions:`)
@@ -695,22 +736,666 @@ describe('calculateSingleMineRoads', () => {
         assert.isTrue(path!.length > 0, 'Path should have at least one step')
     })
 
-    it.skip('W1N8 -> W1N7 is IMPOSSIBLE - rooms not connected by walkable boundary', function () {
-        // ROOT CAUSE IDENTIFIED:
-        // 1. We CAN path within W1N8 to the north boundary (y=0) - confirmed by single-room test above
-        // 2. W1N7's entire south boundary (y=49) is solid walls
-        // 3. W1N8's north boundary (y=0) has openings but W1N7 is completely sealed on the south side
-        // 4. Result: ZERO walkable room boundary crossings between W1N8 and W1N7
-        // 
-        // These rooms are physically disconnected in the terrain data.
-        // The integration test failure is expected - pathfinding correctly returns null.
-        // The fixture data represents an impossible real-world scenario.
-        
-        console.log('\n[W1N8 <-> W1N7 Connectivity Analysis]')
-        console.log('  W1N8 can path to north boundary (y=0): YES (confirmed above)')
-        console.log('  W1N7 south boundary (y=49): All walls - room is sealed')
-        console.log('  W1N8 north boundary (y=0): Has openings')
-        console.log('  Walkable crossings: 0')
-        console.log('  Conclusion: Rooms are NOT connected, pathfinding correctly returns null')
+    it.skip('W1N8 -> W1N7 is IMPOSSIBLE - not a mine room', function () {
+        // W1N7 is NOT a mine room for W1N8 on the private server.
+        // The actual mine rooms are W1N9 (west) and W2N8 (east).
+        //
+        // Additionally, W1N7's entire south boundary (y=49) is solid walls,
+        // making it physically impossible to enter from W1N8 even if it were a mine room.
+        //
+        // This test is kept for documentation purposes only.
+    })
+
+    it('should reach north boundary with W1N8 bunker roads (no obstacles)', function () {
+        // Test: Verify pathfinding works with bunker roads but WITHOUT obstacles
+        // This establishes the baseline - roads alone should not break pathfinding
+
+        const roomName = 'W1N8'
+        const baseTerrainData = require('../../fixtures/terrain/W1N8.json')
+
+        // Load fixture data
+        const baseFixture = baseTerrainData as {
+            terrain: number[][]
+            sources: { x: number; y: number }[]
+            controller: { x: number; y: number }
+            minerals: { x: number; y: number; mineralType: string }[]
+        }
+
+        const mockTerrain = new MockRoomTerrain(baseFixture.terrain)
+
+        // Setup global Game mock
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (rName: string) => {
+                    if (rName === roomName) {
+                        return mockTerrain
+                    }
+                    // Return walls for other rooms
+                    const terrain: number[][] = []
+                    for (let y = 0; y < 50; y++) {
+                        terrain[y] = []
+                        for (let x = 0; x < 50; x++) {
+                            terrain[y][x] = 1
+                        }
+                    }
+                    return new MockRoomTerrain(terrain)
+                },
+            },
+        }
+
+        // Place bunker
+        const placementResult = placeBunker({
+            terrain: mockTerrain,
+            roomName,
+            sources: baseFixture.sources,
+            controller: baseFixture.controller,
+            stamp: bunkerStamp,
+        })
+
+        assert.isTrue(placementResult.success, 'Bunker placement should succeed')
+
+        // Calculate bunker roads
+        const bunkerRoads = calculateBunkerRoads(
+            mockTerrain,
+            placementResult.buildings,
+            baseFixture.sources,
+            baseFixture.controller,
+            baseFixture.minerals[0],
+        )
+
+        const existingRoads = placementResult.buildings.get('road') || []
+        const allRoads = [...existingRoads, ...bunkerRoads]
+
+        console.log(`\n[W1N8 Bunker Roads Test - NO OBSTACLES]`)
+        console.log(`  Total roads: ${allRoads.length}`)
+
+        // Build roads set for pathfinding
+        const roads = new Map<string, number>()
+        for (const road of allRoads) {
+            roads.set(`${road.x},${road.y}`, 1) // Roads have cost 1
+        }
+
+        // Use storage link position as start (stationary point from bunker stamp)
+        const stampMetadata = placementResult.metadata?.stampMetadata
+        if (!stampMetadata) {
+            throw new Error('No stamp metadata available')
+        }
+        const { top, left } = stampMetadata.extants
+        const storageLinkStamp = bunkerStamp.stationaryPoints.storageLink
+        const storageLinkWorld = {
+            x: placementResult.origin!.x + (storageLinkStamp.x - left) + 1,
+            y: placementResult.origin!.y + (storageLinkStamp.y - top) + 1,
+        }
+
+        const startPosition = storageLinkWorld
+        const northGoals = [
+            { x: 10, y: 1 },
+            { x: 11, y: 1 },
+            { x: 12, y: 1 },
+        ]
+
+        console.log(`  Start: Storage Link at (${startPosition.x}, ${startPosition.y})`)
+        console.log(`  Goals: North boundary (y=1)`)
+
+        // Create cost function with roads preferred
+        const baseCost = createTerrainCostCallback(mockTerrain)
+        const costFnWithRoads = withPreferred(baseCost, roads)
+
+        const path = findPath(startPosition, northGoals, costFnWithRoads, {
+            range: 1,
+            roomSize: 50,
+        })
+
+        console.log(
+            `  Result: ${path ? `Found path with ${path.length} steps` : 'NULL - NO PATH FOUND'}`,
+        )
+
+        // Cleanup
+        delete (global as any).Game
+
+        // This should PASS - roads alone don't block pathfinding
+        assert.isNotNull(path, 'Should find path to north with bunker roads (no obstacles)')
+        assert.isTrue(path!.length > 0, 'Path should have at least one step')
+    })
+
+    it.skip('should identify minimal obstacles that block W1N8 north pathfinding', function () {
+        // NOTE: This test is obsolete - it was based on ramparts being incorrectly treated as obstacles
+        // The bug has been fixed: ramparts are now correctly excluded from obstacles
+        // Keeping this skipped as historical reference for the debugging process
+
+        this.timeout(60000) // Increase timeout for iterative search
+
+        const roomName = 'W1N8'
+        const baseTerrainData = require('../../fixtures/terrain/W1N8.json')
+
+        const baseFixture = baseTerrainData as {
+            terrain: number[][]
+            sources: { x: number; y: number }[]
+            controller: { x: number; y: number }
+            minerals: { x: number; y: number; mineralType: string }[]
+        }
+
+        const mockTerrain = new MockRoomTerrain(baseFixture.terrain)
+
+        // Setup global Game mock
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (rName: string) => {
+                    if (rName === roomName) {
+                        return mockTerrain
+                    }
+                    const terrain: number[][] = []
+                    for (let y = 0; y < 50; y++) {
+                        terrain[y] = []
+                        for (let x = 0; x < 50; x++) {
+                            terrain[y][x] = 1
+                        }
+                    }
+                    return new MockRoomTerrain(terrain)
+                },
+            },
+        }
+
+        // Place bunker and get all obstacles
+        const placementResult = placeBunker({
+            terrain: mockTerrain,
+            roomName,
+            sources: baseFixture.sources,
+            controller: baseFixture.controller,
+            stamp: bunkerStamp,
+        })
+
+        const bunkerRoads = calculateBunkerRoads(
+            mockTerrain,
+            placementResult.buildings,
+            baseFixture.sources,
+            baseFixture.controller,
+            baseFixture.minerals[0],
+        )
+
+        const existingRoads = placementResult.buildings.get('road') || []
+        const allRoads = [...existingRoads, ...bunkerRoads]
+
+        // Build roads set
+        const roads = new Map<string, number>()
+        for (const road of allRoads) {
+            roads.set(`${road.x},${road.y}`, 1)
+        }
+
+        // Get all obstacles from bunker
+        const allObstacles = buildObstacles(placementResult.buildings, roomName)
+        // Convert to Set without room prefix for single-room pathfinding
+        const obstacleArray = Array.from(allObstacles).map((obs) => {
+            const match = obs.match(/:(\d+),(\d+)/)
+            return match ? `${match[1]},${match[2]}` : obs
+        })
+
+        console.log(`\n[W1N8 Minimal Obstacle Search]`)
+        console.log(`  Total obstacles: ${obstacleArray.length}`)
+        console.log(`  Total roads: ${allRoads.length}`)
+
+        // Use storage link position as start (stationary point from bunker stamp)
+        const stampMetadata = placementResult.metadata?.stampMetadata
+        if (!stampMetadata) {
+            throw new Error('No stamp metadata available')
+        }
+        const { top, left } = stampMetadata.extants
+        const storageLinkStamp = bunkerStamp.stationaryPoints.storageLink
+        const storageLinkWorld = {
+            x: placementResult.origin!.x + (storageLinkStamp.x - left) + 1,
+            y: placementResult.origin!.y + (storageLinkStamp.y - top) + 1,
+        }
+
+        const startPosition = storageLinkWorld
+        const northGoals = [
+            { x: 10, y: 1 },
+            { x: 11, y: 1 },
+            { x: 12, y: 1 },
+        ]
+
+        console.log(`  Start: Storage Link Hauler at (${startPosition.x}, ${startPosition.y})`)
+        console.log(`  Goal: North boundary (y=1)`)
+
+        // Helper function to test pathfinding with a set of obstacles
+        const testPathfinding = (obstacles: Set<string>): boolean => {
+            const baseCost = createTerrainCostCallback(mockTerrain)
+            const costWithRoads = withPreferred(baseCost, roads)
+            const costWithObstacles = withObstacles(costWithRoads, obstacles)
+
+            const path = findPath(startPosition, northGoals, costWithObstacles, {
+                range: 1,
+                roomSize: 50,
+            })
+
+            return path !== undefined && path.length > 0
+        }
+
+        // Shuffle obstacles randomly
+        for (let i = obstacleArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[obstacleArray[i], obstacleArray[j]] = [obstacleArray[j], obstacleArray[i]]
+        }
+
+        // Binary search for minimal set: add obstacles one by one until it breaks
+        console.log(`  Adding obstacles until pathfinding breaks...`)
+        const breakingObstacles: string[] = []
+
+        for (const obstacle of obstacleArray) {
+            breakingObstacles.push(obstacle)
+            const testSet = new Set(breakingObstacles)
+
+            if (!testPathfinding(testSet)) {
+                console.log(
+                    `  Pathfinding broke after adding ${breakingObstacles.length} obstacles`,
+                )
+                break
+            }
+        }
+
+        // Now find minimal subset - remove obstacles one by one and see if it still breaks
+        console.log(`  Finding minimal subset...`)
+        let minimalObstacles = [...breakingObstacles]
+        let iteration = 1
+
+        // Keep iterating until we can't reduce the set anymore
+        while (true) {
+            console.log(`  Iteration ${iteration}: Testing ${minimalObstacles.length} obstacles`)
+            let removedCount = 0
+
+            for (let i = minimalObstacles.length - 1; i >= 0; i--) {
+                const testObstacles = minimalObstacles.filter((_, idx) => idx !== i)
+                const testSet = new Set(testObstacles)
+
+                if (!testPathfinding(testSet)) {
+                    // Still broken without this obstacle, so it's not needed
+                    minimalObstacles = testObstacles
+                    removedCount++
+                }
+            }
+
+            console.log(`  Iteration ${iteration}: Removed ${removedCount} obstacles`)
+
+            if (removedCount === 0) {
+                // No more obstacles can be removed
+                console.log(`  Converged to minimal set after ${iteration} iteration(s)`)
+                break
+            }
+
+            iteration++
+        }
+
+        console.log(`\n  MINIMAL OBSTACLE SET (${minimalObstacles.length} obstacles):`)
+        for (const obs of minimalObstacles) {
+            const match = obs.match(/(\d+),(\d+)/)
+            if (match) {
+                const x = parseInt(match[1])
+                const y = parseInt(match[2])
+                // Find what building type this is
+                let type = 'unknown'
+                for (const [buildingType, positions] of placementResult.buildings.entries()) {
+                    if (positions.some((p) => p.x === x && p.y === y)) {
+                        type = buildingType
+                        break
+                    }
+                }
+                console.log(`    (${x}, ${y}) - ${type}`)
+            }
+        }
+
+        // Cleanup
+        delete (global as any).Game
+
+        // Verify the minimal set actually breaks pathfinding
+        const finalTest = new Set(minimalObstacles)
+        const baseCost = createTerrainCostCallback(mockTerrain)
+        const costWithRoads = withPreferred(baseCost, roads)
+        const costWithMinimalObstacles = withObstacles(costWithRoads, finalTest)
+        const finalPath = findPath(startPosition, northGoals, costWithMinimalObstacles, {
+            range: 1,
+            roomSize: 50,
+        })
+
+        assert.isTrue(
+            finalPath === undefined || finalPath.length === 0,
+            `Minimal obstacle set should block pathfinding (found ${minimalObstacles.length} obstacles)`,
+        )
+    })
+
+    it.skip('should fail with minimal W1N8 obstacle set (regression test)', function () {
+        // NOTE: This test is obsolete - it was based on ramparts being incorrectly treated as obstacles
+        // The hardcoded 40 obstacles included ramparts, which should not block movement
+        // Keeping this skipped as historical reference for the debugging process
+
+        const roomName = 'W1N8'
+        const baseTerrainData = require('../../fixtures/terrain/W1N8.json')
+
+        const baseFixture = baseTerrainData as {
+            terrain: number[][]
+            sources: { x: number; y: number }[]
+            controller: { x: number; y: number }
+            minerals: { x: number; y: number; mineralType: string }[]
+        }
+
+        const mockTerrain = new MockRoomTerrain(baseFixture.terrain)
+
+        // Setup global Game mock
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (rName: string) => {
+                    if (rName === roomName) {
+                        return mockTerrain
+                    }
+                    const terrain: number[][] = []
+                    for (let y = 0; y < 50; y++) {
+                        terrain[y] = []
+                        for (let x = 0; x < 50; x++) {
+                            terrain[y][x] = 1
+                        }
+                    }
+                    return new MockRoomTerrain(terrain)
+                },
+            },
+        }
+
+        // Minimal obstacle set (40 obstacles) that blocks north pathfinding
+        // Format: [x, y]
+        const minimalObstacles = [
+            [16, 34],
+            [13, 35],
+            [11, 25],
+            [14, 35],
+            [13, 26],
+            [9, 31],
+            [10, 32],
+            [15, 27],
+            [15, 29],
+            [8, 29],
+            [9, 29],
+            [11, 34],
+            [11, 33],
+            [10, 33],
+            [16, 29],
+            [9, 25],
+            [8, 30],
+            [13, 36],
+            [11, 35],
+            [9, 28],
+            [9, 27],
+            [16, 33],
+            [10, 31],
+            [16, 30],
+            [15, 28],
+            [15, 33],
+            [15, 32],
+            [14, 26],
+            [10, 25],
+            [15, 31],
+            [12, 36],
+            [16, 35],
+            [11, 36],
+            [14, 27],
+            [15, 35],
+            [16, 31],
+            [9, 26],
+            [8, 31],
+            [11, 26],
+            [12, 26],
+        ]
+
+        console.log(`\n[W1N8 Minimal Obstacle Regression Test]`)
+        console.log(`  Testing with ${minimalObstacles.length} minimal obstacles`)
+
+        // Visualize the obstacle layout
+        const renderGrid = (
+            obstacles: number[][],
+            start: { x: number; y: number },
+            goals: Array<{ x: number; y: number }>,
+        ) => {
+            const minX = 7
+            const maxX = 17
+            const minY = 24
+            const maxY = 37
+
+            console.log(`\n  Grid visualization (x: ${minX}-${maxX}, y: ${minY}-${maxY}):`)
+            console.log(`  Legend: S=Start(${start.x},${start.y}) X=Obstacle .=Open G=Goal\n`)
+
+            // Build obstacle lookup
+            const obstacleSet = new Set<string>()
+            for (const obs of obstacles) {
+                obstacleSet.add(`${obs[0]},${obs[1]}`)
+            }
+
+            // Build goal lookup
+            const goalSet = new Set<string>()
+            for (const g of goals) {
+                goalSet.add(`${g.x},${g.y}`)
+            }
+
+            // Header with x coordinates
+            let header = '     '
+            for (let x = minX; x <= maxX; x++) {
+                header += x.toString().padStart(2, ' ')
+            }
+            console.log(header)
+
+            // Render each row
+            for (let y = minY; y <= maxY; y++) {
+                let row = `y=${y.toString().padStart(2, ' ')} `
+                for (let x = minX; x <= maxX; x++) {
+                    const key = `${x},${y}`
+                    if (x === start.x && y === start.y) {
+                        row += ' S'
+                    } else if (goalSet.has(key)) {
+                        row += ' G'
+                    } else if (obstacleSet.has(key)) {
+                        row += ' X'
+                    } else {
+                        row += ' .'
+                    }
+                }
+                console.log(row)
+            }
+            console.log('')
+        }
+
+        // Storage link hauler position from W1N8 bunker placement
+        const startPosition = { x: 12, y: 29 }
+        const northGoals = [
+            { x: 10, y: 1 },
+            { x: 11, y: 1 },
+            { x: 12, y: 1 },
+        ]
+
+        // Render the grid
+        renderGrid(minimalObstacles, startPosition, northGoals)
+
+        // Convert to obstacle set
+        const obstacles = new Set<string>()
+        for (const [x, y] of minimalObstacles) {
+            obstacles.add(`${x},${y}`)
+        }
+
+        // Create roads map (empty for this simplified test)
+        const roads = new Map<string, number>()
+
+        const baseCost = createTerrainCostCallback(mockTerrain)
+        const costWithRoads = withPreferred(baseCost, roads)
+        const costWithObstacles = withObstacles(costWithRoads, obstacles)
+
+        const path = findPath(startPosition, northGoals, costWithObstacles, {
+            range: 1,
+            roomSize: 50,
+        })
+
+        console.log(
+            `  Result: ${path ? `Found path with ${path.length} steps` : 'NULL - NO PATH FOUND'}`,
+        )
+
+        // Cleanup
+        delete (global as any).Game
+
+        // This test documents the pathfinding failure with minimal obstacles
+        // The bunker placement creates a situation where diagonal corner-crossing is blocked
+        assert.isTrue(
+            path === undefined || path.length === 0,
+            'Pathfinding should fail with minimal obstacle set (demonstrates bunker layout issue)',
+        )
+    })
+
+    it.skip('should verify each obstacle in minimal set is necessary', function () {
+        // NOTE: This test is obsolete - it was validating a minimal set that included ramparts
+        // Ramparts should not be obstacles, so this validation is no longer meaningful
+        // Keeping this skipped as historical reference for the debugging process
+
+        this.timeout(30000) // Increase timeout for 40 pathfinding tests
+
+        const roomName = 'W1N8'
+        const baseTerrainData = require('../../fixtures/terrain/W1N8.json')
+
+        const baseFixture = baseTerrainData as {
+            terrain: number[][]
+            sources: { x: number; y: number }[]
+            controller: { x: number; y: number }
+            minerals: { x: number; y: number; mineralType: string }[]
+        }
+
+        const mockTerrain = new MockRoomTerrain(baseFixture.terrain)
+
+        // Setup global Game mock
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (rName: string) => {
+                    if (rName === roomName) {
+                        return mockTerrain
+                    }
+                    const terrain: number[][] = []
+                    for (let y = 0; y < 50; y++) {
+                        terrain[y] = []
+                        for (let x = 0; x < 50; x++) {
+                            terrain[y][x] = 1
+                        }
+                    }
+                    return new MockRoomTerrain(terrain)
+                },
+            },
+        }
+
+        // Minimal obstacle set (same as regression test)
+        const minimalObstacles = [
+            [16, 34],
+            [13, 35],
+            [11, 25],
+            [14, 35],
+            [13, 26],
+            [9, 31],
+            [10, 32],
+            [15, 27],
+            [15, 29],
+            [8, 29],
+            [9, 29],
+            [11, 34],
+            [11, 33],
+            [10, 33],
+            [16, 29],
+            [9, 25],
+            [8, 30],
+            [13, 36],
+            [11, 35],
+            [9, 28],
+            [9, 27],
+            [16, 33],
+            [10, 31],
+            [16, 30],
+            [15, 28],
+            [15, 33],
+            [15, 32],
+            [14, 26],
+            [10, 25],
+            [15, 31],
+            [12, 36],
+            [16, 35],
+            [11, 36],
+            [14, 27],
+            [15, 35],
+            [16, 31],
+            [9, 26],
+            [8, 31],
+            [11, 26],
+            [12, 26],
+        ]
+
+        console.log(`\n[W1N8 Minimal Set Validation]`)
+        console.log(`  Testing that removing any of ${minimalObstacles.length} obstacles allows pathfinding...`)
+
+        // Storage link hauler position from W1N8 bunker placement
+        const startPosition = { x: 12, y: 29 }
+        const northGoals = [
+            { x: 10, y: 1 },
+            { x: 11, y: 1 },
+            { x: 12, y: 1 },
+        ]
+
+        console.log(`  Start: Storage Link Hauler at (${startPosition.x}, ${startPosition.y})`)
+        console.log(`  Goal: North boundary (y=1)`)
+
+        const roads = new Map<string, number>()
+
+        let necessaryCount = 0
+        const redundantObstacles: Array<{ index: number; position: [number, number] }> = []
+
+        for (let i = 0; i < minimalObstacles.length; i++) {
+            // Remove obstacle i from the set
+            const testObstacles = minimalObstacles.filter((_, idx) => idx !== i)
+            const obstacles = new Set<string>()
+            for (const [x, y] of testObstacles) {
+                obstacles.add(`${x},${y}`)
+            }
+
+            // Test pathfinding with obstacle i removed
+            const baseCost = createTerrainCostCallback(mockTerrain)
+            const costWithRoads = withPreferred(baseCost, roads)
+            const costWithObstacles = withObstacles(costWithRoads, obstacles)
+
+            const path = findPath(startPosition, northGoals, costWithObstacles, {
+                range: 1,
+                roomSize: 50,
+            })
+
+            if (path && path.length > 0) {
+                // Pathfinding succeeded - obstacle i was necessary
+                necessaryCount++
+            } else {
+                // Pathfinding still failed - obstacle i is redundant
+                redundantObstacles.push({
+                    index: i,
+                    position: minimalObstacles[i] as [number, number],
+                })
+            }
+        }
+
+        console.log(`  Results: ${necessaryCount}/${minimalObstacles.length} obstacles are necessary`)
+
+        if (redundantObstacles.length > 0) {
+            console.log(`  Found ${redundantObstacles.length} redundant obstacle(s):`)
+            for (const obs of redundantObstacles) {
+                console.log(`    Index ${obs.index}: (${obs.position[0]}, ${obs.position[1]})`)
+            }
+        } else {
+            console.log(`  All obstacles are necessary - set is truly minimal!`)
+        }
+
+        // Cleanup
+        delete (global as any).Game
+
+        // All obstacles should be necessary for a truly minimal set
+        assert.equal(
+            necessaryCount,
+            minimalObstacles.length,
+            `All ${minimalObstacles.length} obstacles should be necessary. Found ${redundantObstacles.length} redundant obstacles at indices: ${redundantObstacles.map((o) => o.index).join(', ')}`,
+        )
     })
 })

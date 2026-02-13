@@ -57,7 +57,8 @@ function loadRoomFixture(roomName: string): RoomFixture | null {
 
 /**
  * Build pathfinding obstacles from bunker buildings
- * All non-road structures are obstacles (can't build roads on them)
+ * Roads and ramparts are NOT obstacles (ramparts are walkable by own creeps)
+ * Everything else blocks movement
  */
 function buildObstacles(
     buildings: Map<string, { x: number; y: number }[]>,
@@ -65,9 +66,9 @@ function buildObstacles(
 ): Set<string> {
     const obstacles = new Set<string>()
 
-    // Add all non-road structures as obstacles
+    // Add all structures as obstacles except roads and ramparts
     for (const [structType, positions] of buildings.entries()) {
-        if (structType !== 'road') {
+        if (structType !== 'road' && structType !== 'rampart') {
             for (const pos of positions) {
                 obstacles.add(`${roomName}:${pos.x},${pos.y}`)
             }
@@ -385,7 +386,7 @@ describe('PServer Mine Roads - W1N8', function () {
 
         // Load neighboring room fixtures (known mine rooms for W1N8)
         console.log(`\n  📍 Loading neighboring room fixtures for mines...`)
-        const mineRoomNames = ['W1N7', 'W1N9', 'W2N8']
+        const mineRoomNames = ['W1N9', 'W2N8']
         const mineRooms: {
             name: string
             sources: { x: number; y: number }[]
@@ -440,53 +441,26 @@ describe('PServer Mine Roads - W1N8', function () {
         // The storage link itself is surrounded by obstacles, so we need to start
         // from a position that a creep can actually stand on
         console.log(`\n  🔍 Finding accessible start position adjacent to storage link...`)
-        const adjacentPositions = [
-            { dir: 'SW', x: storageLinkWorld.x - 1, y: storageLinkWorld.y + 1 },
-            { dir: 'SE', x: storageLinkWorld.x + 1, y: storageLinkWorld.y + 1 },
-            { dir: 'NW', x: storageLinkWorld.x - 1, y: storageLinkWorld.y - 1 },
-            { dir: 'NE', x: storageLinkWorld.x + 1, y: storageLinkWorld.y - 1 },
-            { dir: 'W', x: storageLinkWorld.x - 1, y: storageLinkWorld.y },
-            { dir: 'E', x: storageLinkWorld.x + 1, y: storageLinkWorld.y },
-            { dir: 'N', x: storageLinkWorld.x, y: storageLinkWorld.y - 1 },
-            { dir: 'S', x: storageLinkWorld.x, y: storageLinkWorld.y + 1 },
+        // The storage link position IS the stationary point where the hauler stands
+        // This is the correct starting position for pathfinding
+        const startPosition = storageLinkWorld
+
+        console.log(`  ✓ Using storage link hauler position: (${startPosition.x}, ${startPosition.y})`)
+
+        // Check all 8 neighbors of the start position
+        console.log(`\n  🔍 Checking all 8 neighbors of start position (${startPosition.x}, ${startPosition.y}):`)
+        const startNeighbors = [
+            { dir: 'N', x: startPosition.x, y: startPosition.y - 1, dx: 0, dy: -1 },
+            { dir: 'NE', x: startPosition.x + 1, y: startPosition.y - 1, dx: 1, dy: -1 },
+            { dir: 'E', x: startPosition.x + 1, y: startPosition.y, dx: 1, dy: 0 },
+            { dir: 'SE', x: startPosition.x + 1, y: startPosition.y + 1, dx: 1, dy: 1 },
+            { dir: 'S', x: startPosition.x, y: startPosition.y + 1, dx: 0, dy: 1 },
+            { dir: 'SW', x: startPosition.x - 1, y: startPosition.y + 1, dx: -1, dy: 1 },
+            { dir: 'W', x: startPosition.x - 1, y: startPosition.y, dx: -1, dy: 0 },
+            { dir: 'NW', x: startPosition.x - 1, y: startPosition.y - 1, dx: -1, dy: -1 },
         ]
 
-        let startPosition: { x: number; y: number } | null = null
-        for (const pos of adjacentPositions) {
-            const key = `${roomName}:${pos.x},${pos.y}`
-            if (!obstacles.has(key) && roads.has(key)) {
-                console.log(
-                    `  ✓ Found accessible start: ${pos.dir} at (${pos.x}, ${pos.y}) - is a road`,
-                )
-                startPosition = { x: pos.x, y: pos.y }
-                break
-            }
-        }
-
-        if (!startPosition) {
-            // Fall back to any non-obstacle position
-            for (const pos of adjacentPositions) {
-                const key = `${roomName}:${pos.x},${pos.y}`
-                if (!obstacles.has(key)) {
-                    console.log(`  ✓ Found accessible start: ${pos.dir} at (${pos.x}, ${pos.y})`)
-                    startPosition = { x: pos.x, y: pos.y }
-                    break
-                }
-            }
-        }
-
-        if (!startPosition) {
-            throw new Error(
-                `Storage link at (${storageLinkWorld.x}, ${storageLinkWorld.y}) has no accessible adjacent positions!`,
-            )
-        }
-
-        console.log(
-            `  ℹ️  Using accessible start position: (${startPosition.x}, ${startPosition.y}) ` +
-                `(adjacent to storage link at ${storageLinkWorld.x}, ${storageLinkWorld.y})`,
-        )
-
-        // Compare per-tile costs for candidate corridors using the same cost function as pathfinding
+        // Log detailed info about each neighbor
         let getCost = createMultiRoomTerrainCost()
         if (roads.size > 0) {
             getCost = withMultiRoomPreferredPaths(getCost, roads, 1)
@@ -494,6 +468,33 @@ describe('PServer Mine Roads - W1N8', function () {
         if (obstacles.size > 0) {
             getCost = withMultiRoomObstacles(getCost, obstacles, 255)
         }
+
+        for (const n of startNeighbors) {
+            const cost = getCost(roomName, n.x, n.y)
+            const key = `${roomName}:${n.x},${n.y}`
+            const isObstacle = obstacles.has(key)
+            const isRoad = roads.has(key)
+            const terrainVal = mockTerrain.get(n.x, n.y)
+            const terrainLabel = terrainVal === 1 ? 'wall' : terrainVal === 2 ? 'swamp' : 'plain'
+            
+            const types: string[] = []
+            if (isObstacle) {
+                // Find what obstacle types are here
+                for (const [type, positions] of placementResult.buildings.entries()) {
+                    if (positions.some((pos) => pos.x === n.x && pos.y === n.y)) {
+                        types.push(type)
+                    }
+                }
+            }
+            if (isRoad) types.push('road')
+            
+            console.log(
+                `    ${n.dir.padEnd(2)}: (${n.x},${n.y}) terrain=${terrainLabel} cost=${cost} ` +
+                `walkable=${cost < 255} ${types.length > 0 ? '[' + types.join(', ') + ']' : ''}`
+            )
+        }
+
+        // Compare per-tile costs for candidate corridors using the same cost function as pathfinding
 
         const logCostPath = (label: string, steps: { x: number; y: number }[]) => {
             let total = 0
@@ -1379,7 +1380,7 @@ describe('PServer Mine Roads - W1N8', function () {
     it('should use fixtures instead of live API calls', function () {
         // This test verifies that all required fixtures are present
         const fixtureDir = path.join(__dirname, '../fixtures/terrain')
-        const requiredFixtures = ['W1N8.json', 'W1N7.json', 'W1N9.json', 'W2N8.json']
+        const requiredFixtures = ['W1N8.json', 'W1N9.json', 'W2N8.json']
 
         for (const fixture of requiredFixtures) {
             const fixturePath = path.join(fixtureDir, fixture)

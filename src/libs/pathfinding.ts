@@ -40,12 +40,6 @@ export function findPath(
 ): Position[] | undefined {
     const { range = 0, maxOps = 20000, roomSize = 50 } = options
 
-    console.log(
-        `[DEBUG] findPath entry: start=(${start.x},${start.y}) goal=${JSON.stringify(
-            Array.isArray(goal) ? goal[0] : goal,
-        )} range=${range} roomSize=${roomSize}`,
-    )
-
     // Normalize goal to array
     const goals = Array.isArray(goal) ? goal : [goal]
 
@@ -61,8 +55,6 @@ export function findPath(
         matrix.push(row)
     }
 
-    console.log(`[DEBUG] Grid created: ${roomSize}x${roomSize}`)
-
     // Create AStarFinder instance
     const finder = new AStarFinder({
         grid: {
@@ -75,10 +67,6 @@ export function findPath(
         heuristic: 'Manhattan',
         weight: 1.0,
     })
-
-    console.log(
-        `[findPath] Start: (${start.x},${start.y}) Goal: (${goals[0].x},${goals[0].y})`,
-    )
 
     let bestPath: number[][] | undefined
     let bestPathCost = Infinity
@@ -107,17 +95,11 @@ export function findPath(
 
         // Try each target position
         for (const target of targetPositions) {
-            console.log(
-                `[DEBUG] Attempting path from (${start.x},${start.y}) to target (${target.x},${target.y})`,
-            )
-
             try {
                 const path = finder.findPath(
                     { x: start.x, y: start.y },
                     { x: target.x, y: target.y },
-                ) as number[][]
-
-                console.log(`[DEBUG] AStarFinder returned path length: ${path.length}`)
+                )
 
                 if (path.length > 0) {
                     // path is already in number[][] format: [[x1, y1], [x2, y2], ...]
@@ -513,7 +495,7 @@ function findBestPathWithAstar(
     let walkableNeighbors = 0
     const startY = startGrid.y
     const startX = startGrid.x
-    
+
     for (let gy = 0; gy < gridHeight; gy++) {
         const row: number[] = []
         for (let gx = 0; gx < gridWidth; gx++) {
@@ -523,7 +505,7 @@ function findBestPathWithAstar(
             // This preserves the cost model: plains=2, swamp=5, roads=1, walls=255
             const mappedCost = Math.min(cost, maxCost)
             row.push(mappedCost)
-            
+
             // Count walkable neighbors around start
             const dx = Math.abs(gx - startX)
             const dy = Math.abs(gy - startY)
@@ -535,10 +517,8 @@ function findBestPathWithAstar(
     }
 
     if (walkableNeighbors === 0) {
-        console.log(`[findBestPathWithAstar] WARNING: Start has NO walkable neighbors!`)
         return null
     }
-    console.log(`[findBestPathWithAstar] Start has ${walkableNeighbors} walkable neighbors`)
 
     // Create AStarFinder instance with cost support
     const aStarInstance = new AStarFinder({
@@ -557,11 +537,10 @@ function findBestPathWithAstar(
     let bestPathCost = Infinity
 
     for (const target of targetPositions) {
-        
         const path = aStarInstance.findPath(
             { x: startGrid.x, y: startGrid.y },
             { x: target.x, y: target.y },
-        ) as number[][]
+        )
 
         if (path.length > 0) {
             // Path is already in number[][] format [x, y]
@@ -655,7 +634,13 @@ export function findMultiRoomPath(
             `[findMultiRoomPath] Goal: ${goalGrid.x},${goalGrid.y} -> ${targetPositions.length} targets`,
         )
 
-        const result = findBestPathWithAstar(startGrid, targetPositions, translator, getCost, maxOps)
+        const result = findBestPathWithAstar(
+            startGrid,
+            targetPositions,
+            translator,
+            getCost,
+            maxOps,
+        )
 
         if (result && (!bestResult || result.cost < bestResult.cost)) {
             bestResult = result
@@ -671,13 +656,6 @@ export function findMultiRoomPath(
             .slice(1)
             .map(([gx, gy]) => translator.translateBack({ x: gx, y: gy }))
     }
-
-    console.log(`[findMultiRoomPath] NO PATH FOUND`)
-    console.log(
-        `  Start: ${start.roomName}(${start.x},${start.y}) -> grid(${startGrid.x},${startGrid.y})`,
-    )
-    console.log(`  Goals: ${goals.map((g) => `${g.roomName}(${g.x},${g.y})`).join(', ')}`)
-    console.log(`  Grid size: ${translator.gridWidth}x${translator.gridHeight}`)
 
     return undefined
 }
