@@ -95,6 +95,7 @@
         "typescript-algorithms": "^0.0.10"
     },
     "dependencies": {
+        "astar-typescript-cost": "^1.3.0",
         "easystarjs": "^0.4.4",
         "pathfinding": "^0.4.18",
         "precommit": "^1.2.2",

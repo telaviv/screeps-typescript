@@ -1,5 +1,5 @@
-import * as PF from 'pathfinding'
 import * as EasyStar from 'easystarjs'
+import { AStarFinder } from 'astar-typescript-cost'
 import { FlatRoomPosition, Position } from '../types'
 
 /**
@@ -40,28 +40,45 @@ export function findPath(
 ): Position[] | undefined {
     const { range = 0, maxOps = 20000, roomSize = 50 } = options
 
+    console.log(
+        `[DEBUG] findPath entry: start=(${start.x},${start.y}) goal=${JSON.stringify(
+            Array.isArray(goal) ? goal[0] : goal,
+        )} range=${range} roomSize=${roomSize}`,
+    )
+
     // Normalize goal to array
     const goals = Array.isArray(goal) ? goal : [goal]
 
-    // Create grid where 0 = walkable, 1 = blocked
-    const grid = new PF.Grid(roomSize, roomSize)
-
-    // Fill grid based on cost callback
-    for (let x = 0; x < roomSize; x++) {
-        for (let y = 0; y < roomSize; y++) {
+    // Create cost matrix for astar-typescript-cost
+    const matrix: number[][] = []
+    for (let y = 0; y < roomSize; y++) {
+        const row: number[] = []
+        for (let x = 0; x < roomSize; x++) {
             const cost = getCost(x, y)
-            // 255 = unwalkable, everything else is walkable
-            if (cost >= 255) {
-                grid.setWalkableAt(x, y, false)
-            }
+            // Use cost directly, maxCost (255) means impassable
+            row.push(cost)
         }
+        matrix.push(row)
     }
 
-    // Use A* for reliable pathfinding with obstacles
-    const finder = new PF.AStarFinder({
-        allowDiagonal: true,
-        dontCrossCorners: true,
+    console.log(`[DEBUG] Grid created: ${roomSize}x${roomSize}`)
+
+    // Create AStarFinder instance
+    const finder = new AStarFinder({
+        grid: {
+            matrix,
+            maxCost: 255,
+        },
+        diagonalAllowed: true,
+        includeStartNode: false,
+        includeEndNode: true,
+        heuristic: 'Manhattan',
+        weight: 1.0,
     })
+
+    console.log(
+        `[findPath] Start: (${start.x},${start.y}) Goal: (${goals[0].x},${goals[0].y})`,
+    )
 
     let bestPath: number[][] | undefined
     let bestPathCost = Infinity
@@ -90,26 +107,35 @@ export function findPath(
 
         // Try each target position
         for (const target of targetPositions) {
-            // Clone grid for this search (JPS modifies it)
-            const gridClone = grid.clone()
+            console.log(
+                `[DEBUG] Attempting path from (${start.x},${start.y}) to target (${target.x},${target.y})`,
+            )
 
             try {
-                const path = finder.findPath(start.x, start.y, target.x, target.y, gridClone)
+                const path = finder.findPath(
+                    { x: start.x, y: start.y },
+                    { x: target.x, y: target.y },
+                ) as unknown as Array<{ x: number; y: number }>
+
+                console.log(`[DEBUG] AStarFinder returned path length: ${path.length}`)
 
                 if (path.length > 0) {
+                    // Convert to number[][] format
+                    const pathArray: number[][] = path.map((pos) => [pos.x, pos.y])
+
                     // Calculate actual path cost using the cost callback
                     let pathCost = 0
-                    for (let i = 1; i < path.length; i++) {
-                        const [x, y] = path[i]
+                    for (let i = 1; i < pathArray.length; i++) {
+                        const [x, y] = pathArray[i]
                         const cost = getCost(x, y)
-                        const [px, py] = path[i - 1]
+                        const [px, py] = pathArray[i - 1]
                         // Diagonal moves cost sqrt(2) times the terrain cost
                         const isDiagonal = Math.abs(x - px) === 1 && Math.abs(y - py) === 1
                         pathCost += cost * (isDiagonal ? Math.SQRT2 : 1)
                     }
 
                     if (pathCost < bestPathCost) {
-                        bestPath = path
+                        bestPath = pathArray
                         bestPathCost = pathCost
                     }
                 }
@@ -366,30 +392,6 @@ function createCoordinateTranslator(
 }
 
 /**
- * Populates pathfinding grid with costs from the world
- */
-function populateGrid(
-    grid: PF.Grid,
-    translator: CoordinateTranslator,
-    getCost: MultiRoomCostCallback,
-): void {
-    const { gridWidth, gridHeight, translateBack } = translator
-
-    for (let gx = 0; gx < gridWidth; gx++) {
-        for (let gy = 0; gy < gridHeight; gy++) {
-            const worldPos = translateBack({ x: gx, y: gy })
-            const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
-            // Explicitly set walkable state for ALL tiles
-            if (cost >= 255) {
-                grid.setWalkableAt(gx, gy, false)
-            } else {
-                grid.setWalkableAt(gx, gy, true)
-            }
-        }
-    }
-}
-
-/**
  * Gets all target positions within range of a goal
  */
 function getTargetPositions(
@@ -482,43 +484,108 @@ function calculatePathCost(
 }
 
 /**
- * Finds the best path to any of the given target positions
+ * Finds the best path to any of the given target positions using astar-typescript-cost
+ * This version supports proper cost-based pathfinding and handles diagonal-only scenarios better
+ *
+ * NOTE: Currently unused due to compatibility issues with basic pathfinding scenarios.
+ * The astar-typescript-cost library fails to find paths in some cases where PathFinding.js succeeds.
+ * Keeping this implementation for future investigation and potential alternative pathfinder.
+ *
+ * @experimental
  */
-function findBestPath(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function findBestPathWithAstar(
     startGrid: Position,
     targetPositions: Position[],
-    grid: PF.Grid,
     translator: CoordinateTranslator,
     getCost: MultiRoomCostCallback,
     maxOps: number,
 ): { path: number[][]; cost: number } | null {
-    // Use Dijkstra which properly handles weighted grids
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const finder = new (PF as any).DijkstraFinder({
-        allowDiagonal: true,
-        dontCrossCorners: true,
+    const { gridWidth, gridHeight, translateBack } = translator
+
+    // Build cost matrix for astar-typescript-cost
+    // Library uses positive numbers for terrain cost, with maxCost as the impassable threshold
+    // Tiles with cost >= maxCost are treated as walls
+    const matrix: number[][] = []
+    const maxCost = 255 // Tiles with cost >= 255 are impassable
+
+    // Count walkable neighbors around start for debugging
+    let walkableNeighbors = 0
+    const startY = startGrid.y
+    const startX = startGrid.x
+    
+    for (let gy = 0; gy < gridHeight; gy++) {
+        const row: number[] = []
+        for (let gx = 0; gx < gridWidth; gx++) {
+            const worldPos = translateBack({ x: gx, y: gy })
+            const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+            // Pass through cost as-is, clamping only at maxCost for impassable tiles
+            // This preserves the cost model: plains=2, swamp=5, roads=1, walls=255
+            const mappedCost = Math.min(cost, maxCost)
+            row.push(mappedCost)
+            
+            // Count walkable neighbors around start
+            const dx = Math.abs(gx - startX)
+            const dy = Math.abs(gy - startY)
+            if (dx <= 1 && dy <= 1 && !(dx === 0 && dy === 0) && mappedCost < 255) {
+                walkableNeighbors++
+            }
+        }
+        matrix.push(row)
+    }
+
+    if (walkableNeighbors === 0) {
+        console.log(`[findBestPathWithAstar] WARNING: Start has NO walkable neighbors!`)
+        return null
+    }
+    console.log(`[findBestPathWithAstar] Start has ${walkableNeighbors} walkable neighbors`)
+
+    // Create AStarFinder instance with cost support
+    const aStarInstance = new AStarFinder({
+        grid: {
+            matrix,
+            maxCost, // Tiles with this cost or higher are impassable
+        },
+        diagonalAllowed: true,
+        includeStartNode: false,
+        includeEndNode: true,
+        heuristic: 'Manhattan',
+        weight: 1.0, // Standard A* (not Dijkstra)
     })
 
     let bestPath: number[][] | null = null
     let bestPathCost = Infinity
 
     for (const target of targetPositions) {
-        const gridClone = grid.clone()
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        const path: number[][] = finder.findPath(
-            startGrid.x,
-            startGrid.y,
-            target.x,
-            target.y,
-            gridClone,
-        )
+        
+        const path = aStarInstance.findPath(
+            { x: startGrid.x, y: startGrid.y },
+            { x: target.x, y: target.y },
+        ) as number[][]
 
         if (path.length > 0) {
-            const pathCost = calculatePathCost(path, translator, getCost)
+            // Path is already in number[][] format [x, y]
+            const pathArray: number[][] = path
+
+            // Calculate actual path cost using our cost function
+            let pathCost = 0
+            let prevPos = [startGrid.x, startGrid.y]
+
+            for (const posArray of pathArray) {
+                const worldPos = translateBack({ x: posArray[0], y: posArray[1] })
+                const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
+
+                // Check if diagonal
+                const isDiagonal =
+                    Math.abs(posArray[0] - prevPos[0]) === 1 &&
+                    Math.abs(posArray[1] - prevPos[1]) === 1
+                pathCost += cost * (isDiagonal ? Math.SQRT2 : 1)
+
+                prevPos = posArray
+            }
 
             if (pathCost < bestPathCost) {
-                bestPath = path
+                bestPath = pathArray
                 bestPathCost = pathCost
             }
         }
@@ -574,10 +641,6 @@ export function findMultiRoomPath(
     const { direction } = getAdjacentRoomDirection(startRoom, goalRoom)
     const translator = createCoordinateTranslator(direction, startRoom, goalRoom, roomSize)
 
-    // Create and populate pathfinding grid
-    const grid = new PF.Grid(translator.gridWidth, translator.gridHeight)
-    populateGrid(grid, translator, getCost)
-
     // Convert start and goals to grid coordinates
     const startGrid = translator.translateStart(start)
     const goalsGrid = goals.map((g) => translator.translateGoal(g))
@@ -592,7 +655,7 @@ export function findMultiRoomPath(
             `[findMultiRoomPath] Goal: ${goalGrid.x},${goalGrid.y} -> ${targetPositions.length} targets`,
         )
 
-        const result = findBestPath(startGrid, targetPositions, grid, translator, getCost, maxOps)
+        const result = findBestPathWithAstar(startGrid, targetPositions, translator, getCost, maxOps)
 
         if (result && (!bestResult || result.cost < bestResult.cost)) {
             bestResult = result
