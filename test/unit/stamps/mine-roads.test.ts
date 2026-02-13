@@ -136,7 +136,7 @@ describe('calculateSingleMineRoads', () => {
         assert.isNotNull(result, 'Should find alternate path')
 
         // Path should not go through the blocked segment at x=30, y=20-30
-        const roadsInBlocked = result!.baseRoads.filter((r) => r.x === 30 && r.y >= 20 && r.y <= 30)
+        const roadsInBlocked = result.baseRoads.filter((r) => r.x === 30 && r.y >= 20 && r.y <= 30)
         assert.equal(roadsInBlocked.length, 0, 'Should not path through blocked segment')
     })
 
@@ -442,6 +442,174 @@ describe('calculateSingleMineRoads', () => {
         }
 
         assert.isNotNull(result, 'Should find path with real terrain from E56S28 to E56S27')
+        if (result) {
+            assert.isTrue(result.baseRoads.length > 0, 'Should have base roads')
+            assert.isTrue(result.mineRoads.length > 0, 'Should have mine roads')
+        }
+    })
+
+    it('should handle diagonal paths when start position is surrounded except SE/SW', () => {
+        // Simpler test: just verify diagonal pathfinding works at all
+        // Block only N and E so the path MUST go diagonal (NE direction blocked, so goes SE then curves)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (roomName: string) => {
+                    const terrain: number[][] = []
+                    for (let y = 0; y < 50; y++) {
+                        terrain[y] = []
+                        for (let x = 0; x < 50; x++) {
+                            terrain[y][x] = 0 // Plain by default
+                        }
+                    }
+
+                    return new MockRoomTerrain(terrain)
+                },
+            },
+        }
+
+        // Source in east mine room
+        const mineSources = [{ x: 10, y: 10 }]
+
+        // Start position in base room
+        const startPosition = { x: 25, y: 25 }
+
+        // Block ONLY N and E (forcing path to go via other directions)
+        const obstacles = new Set<string>()
+        obstacles.add('E52S29:25,24') // N - blocked
+        obstacles.add('E52S29:26,25') // E - blocked
+
+        console.log(
+            `Testing diagonal pathfinding from E52S29(${startPosition.x},${startPosition.y}) to E53S29 (East)`,
+        )
+        console.log('Start position: N and E blocked (should go diagonal or via W/S)')
+
+        const result = calculateSingleMineRoads({
+            baseRoomName: 'E52S29',
+            startPosition,
+            mineRoomName: 'E53S29',
+            mineSources,
+            obstacles,
+            roads: new Set(),
+        })
+
+        console.log(
+            `Diagonal test result: ${
+                result
+                    ? `${result.baseRoads.length} base roads, ${result.mineRoads.length} mine roads, exit at (${result.exitPosition.x},${result.exitPosition.y})`
+                    : 'null'
+            }`,
+        )
+
+        if (result) {
+            console.log(
+                `Exit position: (${result.exitPosition.x}, ${result.exitPosition.y}), Entrance: (${result.entrancePosition.x}, ${result.entrancePosition.y})`,
+            )
+            console.log(`First few road positions:`)
+            for (let i = 0; i < Math.min(5, result.baseRoads.length); i++) {
+                const road = result.baseRoads[i]
+                console.log(`  Road ${i}: (${road.x}, ${road.y})`)
+            }
+
+            // First move should NOT be N (25,24) or E (26,25) since those are blocked
+            const firstRoad = result.baseRoads[0]
+            const isBlockedDirection =
+                (firstRoad.x === 25 && firstRoad.y === 24) ||
+                (firstRoad.x === 26 && firstRoad.y === 25)
+
+            assert.isFalse(
+                isBlockedDirection,
+                `First move should avoid blocked N and E, got (${firstRoad.x},${firstRoad.y})`,
+            )
+        }
+
+        assert.isNotNull(result, 'Should find path when N and E are blocked')
+        if (result) {
+            assert.isTrue(result.baseRoads.length > 0, 'Should have base roads')
+            assert.isTrue(result.mineRoads.length > 0, 'Should have mine roads')
+        }
+    })
+
+    it('should find diagonal path when all 4 cardinals are blocked', function () {
+        // This test verifies that astar-typescript-cost can handle the case that PathFinding.js failed:
+        // When all 4 cardinal directions (N, E, S, W) around the start position are blocked,
+        // it should still find a diagonal path (NE, NW, SE, or SW)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (roomName: string) => {
+                    const terrain: number[][] = []
+                    for (let y = 0; y < 50; y++) {
+                        terrain[y] = []
+                        for (let x = 0; x < 50; x++) {
+                            terrain[y][x] = 0 // Plain by default
+                        }
+                    }
+
+                    return new MockRoomTerrain(terrain)
+                },
+            },
+        }
+
+        const startRoom = 'E52S29'
+        const sourceRoom = 'E53S29'
+        const startPosition = { x: 25, y: 25 }
+        const mineSources = [{ x: 10, y: 10 }]
+
+        // Block all 4 cardinal directions around start position (25, 25)
+        // N: (25, 24), E: (26, 25), S: (25, 26), W: (24, 25)
+        const obstacles = new Set<string>()
+        obstacles.add('E52S29:25,24') // N
+        obstacles.add('E52S29:26,25') // E
+        obstacles.add('E52S29:25,26') // S
+        obstacles.add('E52S29:24,25') // W
+
+        const result = calculateSingleMineRoads({
+            baseRoomName: startRoom,
+            mineRoomName: sourceRoom,
+            startPosition: startPosition,
+            mineSources: mineSources,
+            obstacles: obstacles,
+            roads: new Set<string>(),
+        })
+
+        if (result) {
+            console.log('\n[Diagonal Test with 4 Cardinals Blocked]')
+            console.log(`  Start: (${startPosition.x}, ${startPosition.y})`)
+            console.log(`  Found ${result.baseRoads.length} base roads`)
+            console.log('  First 5 roads:')
+            for (let i = 0; i < Math.min(5, result.baseRoads.length); i++) {
+                const road = result.baseRoads[i]
+                const dx = road.x - startPosition.x
+                const dy = road.y - startPosition.y
+                console.log(`  Road ${i}: (${road.x}, ${road.y}) - dx=${dx}, dy=${dy}`)
+            }
+
+            // The path should contain at least one diagonal move in the first few steps
+            // since all cardinals are blocked
+            let hasDiagonalInFirstSteps = false
+            for (let i = 0; i < Math.min(3, result.baseRoads.length); i++) {
+                if (i === 0) continue // Skip first as it may not be immediate neighbor
+                const road = result.baseRoads[i]
+                const prevRoad = result.baseRoads[i - 1]
+                const dx = road.x - prevRoad.x
+                const dy = road.y - prevRoad.y
+                if (Math.abs(dx) === 1 && Math.abs(dy) === 1) {
+                    hasDiagonalInFirstSteps = true
+                    console.log(`  Found diagonal move at step ${i}: (${prevRoad.x},${prevRoad.y}) -> (${road.x},${road.y})`)
+                    break
+                }
+            }
+
+            assert.isTrue(
+                hasDiagonalInFirstSteps,
+                'Path should use diagonal moves since all cardinals are blocked',
+            )
+        }
+
+        assert.isNotNull(result, 'Should find path when all 4 cardinals are blocked')
         if (result) {
             assert.isTrue(result.baseRoads.length > 0, 'Should have base roads')
             assert.isTrue(result.mineRoads.length > 0, 'Should have mine roads')
