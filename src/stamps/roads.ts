@@ -34,7 +34,13 @@ export function calculateBunkerRoads(
     }
     const storage = storagePositions[0]
 
-    // Create base terrain cost callback
+    // Find an adjacent walkable position to start pathfinding from
+    // Storage itself may be surrounded by obstacles
+    console.log(
+        `[calculateBunkerRoads] Finding accessible position near storage (${storage.x}, ${storage.y})...`,
+    )
+
+    // Create base terrain cost callback first to check accessibility
     const baseCost = createTerrainCostCallback(terrain)
 
     // Build rampart position set first (ramparts allow movement through structures)
@@ -62,6 +68,54 @@ export function calculateBunkerRoads(
         }
     }
 
+    // Get existing bunker roads
+    const existingRoads = bunkerBuildings.get('road') || []
+    const roadSet = new Set<string>()
+    for (const road of existingRoads) {
+        roadSet.add(`${road.x},${road.y}`)
+    }
+
+    // Find accessible starting position (prefer roads adjacent to storage)
+    const adjacentPositions = [
+        { x: storage.x - 1, y: storage.y + 1 }, // SW
+        { x: storage.x + 1, y: storage.y + 1 }, // SE
+        { x: storage.x - 1, y: storage.y - 1 }, // NW
+        { x: storage.x + 1, y: storage.y - 1 }, // NE
+        { x: storage.x - 1, y: storage.y }, // W
+        { x: storage.x + 1, y: storage.y }, // E
+        { x: storage.x, y: storage.y - 1 }, // N
+        { x: storage.x, y: storage.y + 1 }, // S
+    ]
+
+    let startPos: Position | null = null
+    for (const pos of adjacentPositions) {
+        const key = `${pos.x},${pos.y}`
+        if (!obstacles.has(key) && roadSet.has(key)) {
+            console.log(
+                `[calculateBunkerRoads] Found accessible start on road: (${pos.x}, ${pos.y})`,
+            )
+            startPos = pos
+            break
+        }
+    }
+
+    if (!startPos) {
+        // Fall back to any non-obstacle position
+        for (const pos of adjacentPositions) {
+            const key = `${pos.x},${pos.y}`
+            if (!obstacles.has(key)) {
+                console.log(`[calculateBunkerRoads] Found accessible start: (${pos.x}, ${pos.y})`)
+                startPos = pos
+                break
+            }
+        }
+    }
+
+    if (!startPos) {
+        console.log(`[calculateBunkerRoads] WARNING: Storage has no accessible adjacent positions!`)
+        return []
+    }
+
     // Track road positions and their preferences
     const roadPositions = new Set<string>()
     const preferredCosts = new Map<string, number>()
@@ -78,8 +132,7 @@ export function calculateBunkerRoads(
         }
     }
 
-    // Get existing bunker roads and make them preferred (cost=1)
-    const existingRoads = bunkerBuildings.get('road') || []
+    // Make existing roads preferred (cost=1)
     for (const road of existingRoads) {
         preferredCosts.set(`${road.x},${road.y}`, 1)
     }
@@ -87,21 +140,21 @@ export function calculateBunkerRoads(
     // Create initial cost callback with obstacles and existing roads
     let costCallback = withPreferred(withObstacles(baseCost, obstacles), preferredCosts)
 
-    // Path to each source from storage (range: 1 for adjacent)
+    // Path to each source from accessible start (range: 1 for adjacent)
     for (const source of sources) {
-        const path = findPath(storage, source, costCallback, { range: 1 })
+        const path = findPath(startPos, source, costCallback, { range: 1 })
         addPath(path)
         // Update cost callback to prefer newly added roads
         costCallback = withPreferred(withObstacles(baseCost, obstacles), preferredCosts)
     }
 
-    // Path to controller from storage (range: 1 for adjacent)
-    const controllerPath = findPath(storage, controller, costCallback, { range: 1 })
+    // Path to controller from accessible start (range: 1 for adjacent)
+    const controllerPath = findPath(startPos, controller, costCallback, { range: 1 })
     addPath(controllerPath)
     costCallback = withPreferred(withObstacles(baseCost, obstacles), preferredCosts)
 
-    // Path to mineral from storage (range: 1 for adjacent)
-    const mineralPath = findPath(storage, mineral, costCallback, { range: 1 })
+    // Path to mineral from accessible start (range: 1 for adjacent)
+    const mineralPath = findPath(startPos, mineral, costCallback, { range: 1 })
     addPath(mineralPath)
 
     // Convert road positions to array, filtering out any that overlap with structures

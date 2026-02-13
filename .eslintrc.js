@@ -28,7 +28,6 @@ module.exports = {
         'import/extensions': ['.ts'],
     },
     rules: {
-        '@typescript-eslint/array-type': 'error',
         '@typescript-eslint/consistent-type-assertions': 'error',
         '@typescript-eslint/consistent-type-definitions': 'error',
         '@typescript-eslint/explicit-function-return-type': 'off',

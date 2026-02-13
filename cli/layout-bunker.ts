@@ -40,12 +40,7 @@ import { calculateLinks } from '../src/stamps/links'
 import { calculateRamparts } from '../src/stamps/ramparts'
 import { visualizeBunkerPlacement } from '../src/stamps/visualizer'
 import { calculateSingleMineRoads } from '../src/stamps/single-mine-roads'
-import {
-    findMultiRoomPath,
-    parseRoomName,
-    getRoomNameFromCoords,
-    createMultiRoomTerrainCost,
-} from '../src/libs/pathfinding'
+import { parseRoomName, getRoomNameFromCoords } from '../src/libs/pathfinding'
 
 // Mock RoomTerrain for standalone use
 class MockRoomTerrain implements RoomTerrain {
@@ -61,7 +56,7 @@ class MockRoomTerrain implements RoomTerrain {
         }
         const value = this.terrain[y][x] // Row-major indexing: terrain[y][x]
         if (value === 0 || value === 1 || value === 2) {
-            return value as 0 | 1 | 2
+            return value
         }
         return 0
     }

@@ -115,13 +115,13 @@ export function findPath(
                 const path = finder.findPath(
                     { x: start.x, y: start.y },
                     { x: target.x, y: target.y },
-                ) as unknown as Array<{ x: number; y: number }>
+                ) as number[][]
 
                 console.log(`[DEBUG] AStarFinder returned path length: ${path.length}`)
 
                 if (path.length > 0) {
-                    // Convert to number[][] format
-                    const pathArray: number[][] = path.map((pos) => [pos.x, pos.y])
+                    // path is already in number[][] format: [[x1, y1], [x2, y2], ...]
+                    const pathArray: number[][] = path
 
                     // Calculate actual path cost using the cost callback
                     let pathCost = 0

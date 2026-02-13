@@ -53,13 +53,13 @@ export function calculateMineRoads(
         }
 
         // Create goal positions (mine sources) - path to within range 1
-        const goals: FlatRoomPosition[] = Object.values(
-            roomMemory.scout.sourcePositions,
-        ).map((pos) => ({
-            roomName: mine.name,
-            x: pos.x,
-            y: pos.y,
-        }))
+        const goals: FlatRoomPosition[] = Object.values(roomMemory.scout.sourcePositions).map(
+            (pos) => ({
+                roomName: mine.name,
+                x: pos.x,
+                y: pos.y,
+            }),
+        )
 
         // Build obstacles and roads from bunker buildings
         const obstacles = new Set<string>()
