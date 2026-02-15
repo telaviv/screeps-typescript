@@ -11,6 +11,7 @@ import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 import { moveToRandomNearbyPosition, updatePositionTracking } from './deadlock'
+import * as Logger from './logger'
 
 const MAX_ROOM_RANGE = 20
 
@@ -49,18 +50,18 @@ function routeCallback(fromRoom: string, toRoom: string): number | undefined {
 }
 
 const moveToRoomRouteCallback =
-    (room: string) =>
+    (room: string, currentRoom: string) =>
     (fromRoom: string, toRoom: string): number | undefined => {
-        if (toRoom === room || fromRoom === room) {
+        if (toRoom === room || fromRoom === room || toRoom === currentRoom || fromRoom === currentRoom) {
             return undefined
         }
         return routeCallback(fromRoom, toRoom)
     }
 
 const moveToRoomRoomCallback =
-    (room: string) =>
+    (room: string, currentRoom: string) =>
     (roomName: string): CostMatrix | boolean => {
-        if (roomName === room) {
+        if (roomName === room || roomName === currentRoom) {
             return roomCallback(roomName, true)
         }
         return roomCallback(roomName)
@@ -70,7 +71,8 @@ const moveToRoomRoomCallback =
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
     typeof moveToCartographer
 > => {
-    // const startCPU = Game.cpu.getUsed()
+    const startCPU = Game.cpu.getUsed()
+    Logger.info('moveToRoom:starting', creep.name, creep.room.name, roomName, startCPU)
     if (creep.fatigue > 0) {
         return ERR_TIRED
     }
@@ -84,14 +86,26 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
     // Store position before move attempt
     const previousPos = creep.pos
 
+    const moveToCartographerStartCPU = Game.cpu.getUsed()
     const err = moveToCartographer(
         creep,
         { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
         {
-            roomCallback: moveToRoomRoomCallback(roomName),
-            routeCallback: moveToRoomRouteCallback(roomName),
+            roomCallback: moveToRoomRoomCallback(roomName, creep.room.name),
+            routeCallback: moveToRoomRouteCallback(roomName, creep.room.name),
             ...opts,
         },
+    )
+    if (err === ERR_NO_PATH) {
+        Logger.error('moveToCartographer:no-path', creep.name, creep.room.name, roomName)
+    }
+    const moveToCartographerEndCPU = Game.cpu.getUsed()
+    Logger.info(
+        `moveToCartographer: ${moveToCartographerEndCPU - moveToCartographerStartCPU}`,
+        creep.name,
+        creep.room.name,
+        roomName,
+        err,
     )
 
     // Only track deadlock if move was attempted (not already at target)
@@ -103,7 +117,13 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
         creep.memory._dlWait = 0
     }
 
-    // Logger.error(`moveToRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, roomName, err)
+    Logger.info(
+        `moveToRoom: ${Game.cpu.getUsed() - startCPU}`,
+        creep.name,
+        creep.room.name,
+        roomName,
+        err,
+    )
     return err
 }, 'travel:moveToRoom')
 
