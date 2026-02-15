@@ -6,7 +6,6 @@ import * as Profiling from 'utils/profiling'
 import {
     CONSTRUCTION_FEATURES_V3_VERSION,
     CONSTRUCTION_FEATURES_VERSION,
-    LINKS_VERSION,
     STATIONARY_POINTS_VERSION,
     ConstructionFeatures,
     ConstructionFeaturesV3,
@@ -20,13 +19,7 @@ import {
     constructionFeaturesV3NeedsUpdate,
     MinerInformation,
 } from 'construction-features'
-import { ImmutableRoom, fromScoutData } from 'utils/immutable-room'
 import {
-    calculateMineConstructionFeaturesV3,
-    calculateRoadPositions,
-} from 'room-analysis/calculate-road-positions'
-import {
-    findMyRooms,
     findSpawnlessRooms,
     findSpawnRooms,
     getBuildableStructures,
@@ -63,7 +56,9 @@ declare global {
          */
         calculateConstructionFeaturesV3?: void
         constructionFeaturesV3?: ConstructionFeaturesV3
-        /** Opt-in flag to use new stamp-based bunker system */
+        /**
+         * @deprecated All code now uses the new stamp-based bunker system
+         */
         useNewBunkerSystem?: boolean
     }
 
@@ -125,43 +120,6 @@ export function setConstructionFeaturesV3(roomName: string): void {
     Logger.warning('setConstructionFeaturesV3:setting', roomName)
     roomMemory.constructionFeaturesV3 = calculateConstructionFeaturesV3(roomName)
     publishConstructionFeatureChange(roomName)
-}
-
-/**
- * Calculates link positions for sources, controller, and storage.
- * @param roomName - Name of the room
- * @param sourcePositions - Map of source IDs to positions
- * @param iroom - Immutable room data structure
- * @returns Link configuration for the room
- */
-function calculateLinks(
-    roomName: string,
-    sourcePositions: Record<Id<Source>, Position>,
-    iroom: ImmutableRoom,
-): Links {
-    const linkTypes = iroom.linkTypes()
-    const sourceTypes = [] as { source: Id<Source>; container: Position; link: Position }[]
-    for (const { source, container, link } of linkTypes.sourceContainers) {
-        const sourceIds = Object.keys(sourcePositions).filter(
-            (id) =>
-                source.x === sourcePositions[id as Id<Source>].x &&
-                source.y === sourcePositions[id as Id<Source>].y,
-        )
-        if (sourceIds.length === 0) {
-            throw new Error(`No source found at ${source.x}, ${source.y} @ room ${roomName}`)
-        }
-        sourceTypes.push({
-            source: sourceIds[0] as Id<Source>,
-            container: { x: container.x, y: container.y },
-            link: { x: link.x, y: link.y },
-        })
-    }
-    return {
-        version: LINKS_VERSION,
-        controller: linkTypes.controller,
-        storage: linkTypes.storage,
-        sourceContainers: sourceTypes,
-    }
 }
 
 /**
@@ -350,96 +308,18 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
 
 /**
  * Calculates complete construction features for a room including bunker layout and roads.
- *
- * ⚠️ IMPORTANT: The new stamp-based system calculates different structure positions
- * than the old ImmutableRoom system. Switching systems will cause the build manager
- * to destroy existing structures and rebuild them in new locations!
- *
- * Safe usage:
- *   - Enable for NEW rooms: Memory.rooms['ROOMNAME'].useNewBunkerSystem = true
- *   - Enable for EXISTING rooms: Only if you can afford a full rebuild
- *   - All other rooms: Leave flag unset (defaults to false, uses old system)
+ * Uses the new stamp-based bunker system.
  *
  * @param roomName - Name of the room
  * @returns Construction features v3 data structure
  */
 function calculateConstructionFeaturesV3(roomName: string): ConstructionFeaturesV3 {
-    // Check if room should use new system (defaults to false - SAFE by default)
-    const useNewSystem = Memory.rooms[roomName]?.useNewBunkerSystem ?? false
-
-    if (useNewSystem) {
-        Logger.warning('calculateConstructionFeaturesV3:using-new-system', roomName)
-        return calculateConstructionFeaturesV3New(roomName)
-    }
-
-    // Original implementation
-    if (getRoomType(roomName) !== RoomType.ROOM) {
-        return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'none' }
-    }
-    const iroom = calculateBunkerImmutableRoom(roomName)
-    if (!iroom) {
-        return { version: CONSTRUCTION_FEATURES_V3_VERSION, type: 'mine' }
-    }
-    const features = {
-        [STRUCTURE_EXTENSION]: iroom.sortedExtensionPositions(),
-        [STRUCTURE_TOWER]: iroom.sortedTowerPositions(),
-        [STRUCTURE_STORAGE]: iroom.getObstacles('storage').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_TERMINAL]: iroom.getObstacles('terminal').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_NUKER]: iroom.getObstacles('nuker').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_LAB]: iroom.getObstacles('lab').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_OBSERVER]: iroom.getObstacles('observer').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_FACTORY]: iroom.getObstacles('factory').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_LINK]: iroom.sortedLinkPositions(),
-        [STRUCTURE_CONTAINER]: iroom.sortedContainerPositions(),
-        [STRUCTURE_SPAWN]: iroom.getObstacles('spawn').map((pos) => ({ x: pos.x, y: pos.y })),
-        [STRUCTURE_RAMPART]: [] as Position[],
-        [STRUCTURE_ROAD]: iroom.getNonObstacles('road').map((pos) => ({ x: pos.x, y: pos.y })),
-    }
-    features[STRUCTURE_RAMPART] = getRampartPositions(iroom)
-    const points = iroom.stationaryPoints
-    if (
-        !points ||
-        !points.controllerLink ||
-        !points.sources ||
-        !points.storageLink ||
-        !points.mineral
-    ) {
-        throw new Error(`no stationary points: ${roomName}`)
-    }
-    const stationaryPoints: StationaryPointsBase = {
-        type: 'base',
-        version: STATIONARY_POINTS_VERSION,
-        sources: points.sources,
-        mineral: points.mineral,
-        controllerLink: points.controllerLink,
-        storageLink: points.storageLink,
-    }
-    const sourcePositions = Memory.rooms[roomName]?.scout?.sourcePositions
-    if (!sourcePositions) {
-        throw new Error('no scouted source positions')
-    }
-    const mines: Mine[] = Memory.rooms[roomName].mines ?? []
-    const { roads, exitInfo } = calculateRoadPositions(roomName, features, stationaryPoints, mines)
-    features[STRUCTURE_ROAD] = roads
-    const miner: MinerInformation = {}
-    for (const { name, exitPosition, entrancePosition } of exitInfo) {
-        miner[name] = { exitPosition }
-        setMineConstructionFeaturesV3(name, roomName, entrancePosition)
-    }
-    return {
-        version: CONSTRUCTION_FEATURES_V3_VERSION,
-        type: 'base',
-        features,
-        points: stationaryPoints,
-        links: calculateLinks(roomName, sourcePositions, iroom),
-        miner,
-        movement: null, // let's calculate movement at a later time
-    }
+    return calculateConstructionFeaturesV3New(roomName)
 }
 
 /**
  * Calculates and stores construction features for a remote mining room.
- * Uses the new stamp system if the miner room is using it, otherwise uses the old system.
+ * Uses the new stamp-based system for mine calculations.
  * @param mineName - Name of the mining room
  * @param miner - Name of the home room that will mine this
  * @param entrancePosition - Position where the road enters the mining room
@@ -450,20 +330,12 @@ function setMineConstructionFeaturesV3(
     entrancePosition: Position,
 ): void {
     const flatPos = { x: entrancePosition.x, y: entrancePosition.y, roomName: mineName }
-    const useNewSystem = Memory.rooms[miner]?.useNewBunkerSystem ?? false
 
-    let ret: { features: ConstructionFeatures; points: { [id: Id<Source>]: Position } } | null
-
-    if (useNewSystem) {
-        // Use new stamp-based mine calculation
-        ret = calculateMineInternal(mineName, flatPos)
-    } else {
-        // Use old ImmutableRoom-based mine calculation
-        ret = calculateMineConstructionFeaturesV3(mineName, flatPos)
-    }
+    // Use new stamp-based mine calculation
+    const ret = calculateMineInternal(mineName, flatPos)
 
     if (!ret) {
-        Logger.error('setMineConstructionFeaturesV3:failed', mineName, useNewSystem ? 'new' : 'old')
+        Logger.error('setMineConstructionFeaturesV3:failed', mineName)
         return
     }
 
@@ -615,264 +487,6 @@ export function calculateBuildingDiff(
 }
 
 /**
- * Creates an ImmutableRoom with bunker layout applied from scout data.
- * @param roomName - Name of the room
- * @returns ImmutableRoom with bunker applied, or null if invalid
- */
-function calculateBunkerImmutableRoom(roomName: string): ImmutableRoom | null {
-    const roomMemory = Memory.rooms[roomName]
-    const scout = roomMemory.scout
-    if (
-        !scout ||
-        !scout.sourcePositions ||
-        !scout.controllerPosition ||
-        !scout.mineralPosition ||
-        Object.keys(scout.sourcePositions).length !== 2
-    ) {
-        return null
-    }
-    const sourcePositions = scout.sourcePositions
-    const controllerPosition = scout.controllerPosition
-    const mineralPosition = scout.mineralPosition
-    const scoutData = { sourcePositions, controllerPosition, mineralPosition }
-    let iroom: ImmutableRoom | null = fromScoutData(roomName, scoutData)
-    if (!iroom) {
-        return null
-    }
-    iroom = iroom.setSourceValues()
-    iroom = iroom.setControllerValues()
-    iroom = iroom.setMineralValues()
-    iroom = iroom.setBunker(BUNKER)
-    if (!iroom) {
-        return null
-    }
-    return iroom
-}
-
-/**
- * Gets rampart positions that are on the edges of the bunker.
- * Edge ramparts have the most extreme x or y coordinates.
- * @param bunkerRamparts - Rampart positions from the bunker stamp
- * @returns Set of position keys for edge ramparts
- */
-function getBunkerEdgeRamparts(bunkerRamparts: Position[]): Set<string> {
-    const edges = new Set<string>()
-
-    // Group by y-coordinate (rows) and find min/max x values
-    const rowMap = new Map<number, { minX: number; maxX: number; positions: Position[] }>()
-    for (const pos of bunkerRamparts) {
-        if (!rowMap.has(pos.y)) {
-            rowMap.set(pos.y, { minX: pos.x, maxX: pos.x, positions: [pos] })
-        } else {
-            const row = rowMap.get(pos.y)
-            if (row) {
-                row.minX = Math.min(row.minX, pos.x)
-                row.maxX = Math.max(row.maxX, pos.x)
-                row.positions.push(pos)
-            }
-        }
-    }
-
-    // Add ramparts with extreme x values in each row
-    for (const row of rowMap.values()) {
-        for (const pos of row.positions) {
-            if (pos.x === row.minX || pos.x === row.maxX) {
-                edges.add(`${pos.x},${pos.y}`)
-            }
-        }
-    }
-
-    // Group by x-coordinate (columns) and find min/max y values
-    const colMap = new Map<number, { minY: number; maxY: number; positions: Position[] }>()
-    for (const pos of bunkerRamparts) {
-        if (!colMap.has(pos.x)) {
-            colMap.set(pos.x, { minY: pos.y, maxY: pos.y, positions: [pos] })
-        } else {
-            const col = colMap.get(pos.x)
-            if (col) {
-                col.minY = Math.min(col.minY, pos.y)
-                col.maxY = Math.max(col.maxY, pos.y)
-                col.positions.push(pos)
-            }
-        }
-    }
-
-    // Add ramparts with extreme y values in each column
-    for (const col of colMap.values()) {
-        for (const pos of col.positions) {
-            if (pos.y === col.minY || pos.y === col.maxY) {
-                edges.add(`${pos.x},${pos.y}`)
-            }
-        }
-    }
-
-    return edges
-}
-
-/**
- * Gets rampart positions that protect important structures.
- * @param iroom - The immutable room data
- * @param allRamparts - Set of all rampart position keys
- * @returns Set of position keys for structure protection ramparts
- */
-function getStructureProtectionRamparts(
-    iroom: ImmutableRoom,
-    allRamparts: Set<string>,
-): Set<string> {
-    const structureProtection = new Set<string>()
-    const structurePositions: Position[] = []
-
-    // Collect all important structure positions
-    // Note: Sources and minerals are NOT included because they cannot be ramparted
-    const structureTypes: (
-        | 'link'
-        | 'controller'
-        | 'storage'
-        | 'spawn'
-        | 'tower'
-        | 'terminal'
-        | 'factory'
-        | 'lab'
-        | 'nuker'
-        | 'observer'
-    )[] = [
-        'link',
-        'controller',
-        'storage',
-        'spawn',
-        'tower',
-        'terminal',
-        'factory',
-        'lab',
-        'nuker',
-        'observer',
-    ]
-
-    for (const structureType of structureTypes) {
-        iroom.getObstacles(structureType).forEach((obstacle) => {
-            structurePositions.push({ x: obstacle.x, y: obstacle.y })
-        })
-    }
-
-    // Find ramparts that match structure positions
-    for (const pos of structurePositions) {
-        const key = `${pos.x},${pos.y}`
-        if (allRamparts.has(key)) {
-            structureProtection.add(key)
-        }
-    }
-
-    return structureProtection
-}
-
-/**
- * Categorizes ramparts into priority groups.
- * @param iroom - The immutable room data
- * @param bunkerRamparts - Rampart positions from the bunker stamp
- * @param allRamparts - All rampart positions
- * @returns Ramparts categorized by priority
- */
-function categorizeRamparts(
-    iroom: ImmutableRoom,
-    bunkerRamparts: Position[],
-    allRamparts: Position[],
-): { edges: Position[]; structures: Position[]; others: Position[] } {
-    const allRampartsSet = new Set<string>()
-    allRamparts.forEach((pos) => allRampartsSet.add(`${pos.x},${pos.y}`))
-
-    const edgeKeys = getBunkerEdgeRamparts(bunkerRamparts)
-    const structureKeys = getStructureProtectionRamparts(iroom, allRampartsSet)
-
-    const edges: Position[] = []
-    const structures: Position[] = []
-    const others: Position[] = []
-
-    for (const pos of allRamparts) {
-        const key = `${pos.x},${pos.y}`
-        if (edgeKeys.has(key)) {
-            edges.push(pos)
-        } else if (structureKeys.has(key)) {
-            structures.push(pos)
-        } else {
-            others.push(pos)
-        }
-    }
-
-    return { edges, structures, others }
-}
-
-/**
- * Calculates rampart positions using bunker stamp and stationaryPoints heuristic.
- * @param iroom - The immutable room data
- * @returns Array of positions for rampart placement in priority order
- */
-function getRampartPositions(iroom: ImmutableRoom): Position[] {
-    // Start with bunker stamp ramparts
-    const bunkerRamparts = iroom.getNonObstacles('rampart')
-    const rampartSet = new Set<string>()
-
-    // Add bunker ramparts
-    bunkerRamparts.forEach((pos) => rampartSet.add(`${pos.x},${pos.y}`))
-
-    // Get stationaryPoints
-    const points = iroom.stationaryPoints
-    const stationaryPositions: Position[] = []
-
-    if (points.controllerLink) stationaryPositions.push(points.controllerLink)
-    if (points.storageLink) stationaryPositions.push(points.storageLink)
-    if (points.mineral) stationaryPositions.push(points.mineral)
-    if (points.sources) {
-        Object.values(points.sources).forEach((pos) => stationaryPositions.push(pos))
-    }
-
-    // Add ramparts at stationaryPoints and their neighbors
-    for (const pos of stationaryPositions) {
-        // Add the position itself (excluding walls)
-        if (iroom.get(pos.x, pos.y).terrain !== TERRAIN_MASK_WALL) {
-            rampartSet.add(`${pos.x},${pos.y}`)
-        }
-
-        // Add all 8 neighbors (excluding walls)
-        for (let dx = -1; dx <= 1; dx++) {
-            for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue
-                const x = pos.x + dx
-                const y = pos.y + dy
-                if (x >= 0 && x < 50 && y >= 0 && y < 50) {
-                    // Don't add ramparts on walls
-                    if (iroom.get(x, y).terrain !== TERRAIN_MASK_WALL) {
-                        rampartSet.add(`${x},${y}`)
-                    }
-                }
-            }
-        }
-    }
-
-    const allRamparts: Position[] = Array.from(rampartSet).map((key) => {
-        const [x, y] = key.split(',').map(Number)
-        return { x, y }
-    })
-
-    // Categorize ramparts by priority
-    const { edges, structures, others } = categorizeRamparts(iroom, bunkerRamparts, allRamparts)
-
-    // Debug logging
-    if (iroom.name === 'E56S29') {
-        Logger.info(
-            `getRampartPositions: final counts - edges: ${edges.length}, structures: ${
-                structures.length
-            }, others: ${others.length}, total: ${
-                edges.length + structures.length + others.length
-            }`,
-        )
-        Logger.info(`getRampartPositions: allRamparts before categorization: ${allRamparts.length}`)
-    }
-
-    // Return in priority order: edges first, then structure protection, then everything else
-    return [...edges, ...structures, ...others]
-}
-
-/**
  * Assigns construction features to rooms that need updates.
  * Only runs when CPU bucket is sufficient.
  */
@@ -907,67 +521,74 @@ function hasSufficientWorkersForSpawnRelocation(room: Room): boolean {
 /**
  * Clears invalid structures and construction sites from rooms.
  * Handles structure movement when features don't match built structures.
+ * Only processes rooms that have pending movement to minimize CPU usage.
  */
 const clearRooms = Profiling.wrap(() => {
-    const myRooms = findMyRooms()
-    for (const room of myRooms) {
-        const constructionFeatures = getConstructionFeaturesV3(room)
-        if (constructionFeatures === null) {
-            // wipeRoom(room)
-            Logger.error('wiping room', room.name, constructionFeatures)
-            return
-        }
-    }
-    // Process both owned rooms and reserved mine rooms
-    const roomsToProcess = Object.values(Game.rooms).filter((room) => {
+    // Filter rooms to only those with pending movement (owned or reserved with movement defined)
+    const roomsWithMovement = Object.values(Game.rooms).filter((room) => {
         if (!room.controller) {
             return false
         }
-        // Include owned rooms
-        if (room.controller.my) {
-            return true
+        // Check if room is owned or reserved by us
+        const isOwnedOrReserved =
+            room.controller.my || room.controller.reservation?.username === global.USERNAME
+
+        if (!isOwnedOrReserved) {
+            return false
         }
-        // Include reserved mine rooms
-        if (
-            room.controller.reservation &&
-            room.controller.reservation.username === global.USERNAME
-        ) {
-            return true
+
+        // Only include rooms that have pending movement
+        const constructionFeatures = getConstructionFeaturesV3(room)
+        // Type narrowing: only base and mine types have movement property
+        if (!constructionFeatures || constructionFeatures.type === 'none') {
+            return false
         }
-        return false
+        return constructionFeatures.movement !== undefined
     })
-    for (const room of roomsToProcess) {
+
+    // Early exit if no rooms need processing
+    if (roomsWithMovement.length === 0) {
+        return
+    }
+
+    // Process rooms with pending movement
+    for (const room of roomsWithMovement) {
         const constructionFeatures = getConstructionFeaturesV3(room)
         const features = getConstructionFeatures(room)
-        if (!constructionFeatures || !features) {
+
+        if (!constructionFeatures || !features || constructionFeatures.type === 'none') {
             continue
         }
-        if (constructionFeatures.type !== 'none' && constructionFeatures.movement) {
-            // Check if we have sufficient workers before destroying spawn
-            const movementHasSpawn = constructionFeatures.movement.spawn !== undefined
-            // Only apply spawn safety checks if this room's movement involves spawn
-            if (movementHasSpawn) {
-                if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
-                    continue
-                }
-                if (!hasSufficientWorkersForSpawnRelocation(room)) {
-                    Logger.warning(
-                        'clearRooms:insufficient-workers',
-                        room.name,
-                        'Waiting for 1 workers with > 1400 TTL before relocating spawn',
-                    )
-                    continue
-                }
-            }
-            constructionFeatures.movement = calculateBuildingDiff(
-                room,
-                features,
-                constructionFeatures.movement ?? undefined,
-            )
-            clearInvalidConstructionSites(room, features)
-            destroyMovementStructures(room)
-            // Note: movement will be cleared by handleMovementEventLog when all structures are destroyed
+
+        if (!constructionFeatures.movement) {
+            continue // Should not happen due to filter above, but be safe
         }
+
+        // Check if we have sufficient workers before destroying spawn
+        const movementHasSpawn = constructionFeatures.movement.spawn !== undefined
+        // Only apply spawn safety checks if this room's movement involves spawn
+        if (movementHasSpawn) {
+            if (findSpawnlessRooms().length > 0 || findSpawnRooms().length === 1) {
+                continue
+            }
+            if (!hasSufficientWorkersForSpawnRelocation(room)) {
+                Logger.warning(
+                    'clearRooms:insufficient-workers',
+                    room.name,
+                    'Waiting for 1 workers with > 1400 TTL before relocating spawn',
+                )
+                continue
+            }
+        }
+
+        constructionFeatures.movement = calculateBuildingDiff(
+            room,
+            features,
+            constructionFeatures.movement ?? undefined,
+        )
+        clearInvalidConstructionSites(room, features)
+        destroyMovementStructures(room)
+        // Note: movement will be cleared by handleMovementEventLog when all structures are destroyed
     }
 }, 'clearRooms')
 
