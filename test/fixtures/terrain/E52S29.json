@@ -215,5 +215,12 @@
     "controller": {
         "x": 41,
         "y": 29
-    }
+    },
+    "minerals": [
+        {
+            "x": 43,
+            "y": 9,
+            "mineralType": "K"
+        }
+    ]
 }

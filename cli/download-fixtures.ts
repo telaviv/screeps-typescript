@@ -78,6 +78,13 @@ async function downloadRoomFixture(
     try {
         // Download terrain
         const terrainResponse: any = await api.raw.game.roomTerrain(roomName, shard)
+
+        // Check for API error response
+        if (terrainResponse.error) {
+            console.error(chalk.red(`  ✗ API error: ${terrainResponse.error}`))
+            return null
+        }
+
         const terrain = Array.from({ length: 50 }, () => Array.from({ length: 50 }, () => 0))
 
         if (terrainResponse.terrain && terrainResponse.terrain[0]) {
@@ -88,11 +95,18 @@ async function downloadRoomFixture(
                 terrain[y][x] = parseInt(terrainString[i], 10)
             }
         } else {
+            console.error(chalk.red(`  ✗ No terrain data in response`))
             return null
         }
 
         // Download room objects
         const roomDetailsResponse = await api.raw.game.roomObjects(roomName, shard)
+
+        // Check for API error response
+        if (roomDetailsResponse.error) {
+            console.error(chalk.red(`  ✗ API error: ${roomDetailsResponse.error}`))
+            return null
+        }
 
         const sources: { x: number; y: number }[] = []
         const minerals: { x: number; y: number; mineralType: string }[] = []
@@ -123,7 +137,7 @@ async function downloadRoomFixture(
             minerals,
         }
     } catch (error) {
-        console.error(chalk.red(`  ✗ Error downloading ${roomName}: ${(error as Error).message}`))
+        console.error(chalk.red(`  ✗ Exception: ${(error as Error).message}`))
         return null
     }
 }

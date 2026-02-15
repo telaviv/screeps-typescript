@@ -95,6 +95,7 @@ function getStructureProtectionRamparts(
     const structurePositions: Position[] = []
 
     // Collect all important structure positions from bunker
+    // Note: Sources and minerals are NOT included because they cannot be ramparted
     const structureTypes: BuildableStructureConstant[] = [
         STRUCTURE_LINK,
         STRUCTURE_STORAGE,
@@ -112,10 +113,8 @@ function getStructureProtectionRamparts(
         structurePositions.push(...positions)
     }
 
-    // Add natural structures
-    structurePositions.push(...sources)
+    // Add controller (controllers CAN be ramparted, unlike sources/minerals)
     structurePositions.push(controller)
-    structurePositions.push(mineral)
 
     // Find ramparts that match structure positions
     for (const pos of structurePositions) {
@@ -244,8 +243,10 @@ export function calculateRamparts(
     }
 
     for (const pos of stationaryPositions) {
-        // Add the position itself
-        rampartSet.add(`${pos.x},${pos.y}`)
+        // Add the position itself (excluding walls)
+        if (terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
+            rampartSet.add(`${pos.x},${pos.y}`)
+        }
         // Add all 8 neighbors (excluding walls and blocking structures)
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
@@ -262,32 +263,49 @@ export function calculateRamparts(
         }
     }
 
-    // Get important structure positions (sources, mineral, controller)
-    const importantStructures: Position[] = []
-
-    // Add sources
-    importantStructures.push(...sources)
-
-    // Add mineral
-    importantStructures.push(mineral)
-
-    // Add controller
-    importantStructures.push(controller)
-
-    // Add ramparts on important structures themselves and their neighbors
-    for (const pos of importantStructures) {
-        rampartSet.add(`${pos.x},${pos.y}`)
-
-        // Add neighbors (excluding walls and blocking structures)
+    // Add ramparts around sources (NOT on the source itself - sources cannot be ramparted)
+    for (const pos of sources) {
+        // Add all 8 neighbors (excluding walls)
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue
+                if (dx === 0 && dy === 0) continue // Skip the source position itself
                 const x = pos.x + dx
                 const y = pos.y + dy
                 if (x >= 0 && x < 50 && y >= 0 && y < 50) {
                     if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
                         rampartSet.add(`${x},${y}`)
                     }
+                }
+            }
+        }
+    }
+
+    // Add ramparts around mineral (NOT on the mineral itself - minerals cannot be ramparted)
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue // Skip the mineral position itself
+            const x = mineral.x + dx
+            const y = mineral.y + dy
+            if (x >= 0 && x < 50 && y >= 0 && y < 50) {
+                if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
+                    rampartSet.add(`${x},${y}`)
+                }
+            }
+        }
+    }
+
+    // Add rampart on controller and its neighbors (controllers CAN be ramparted)
+    if (terrain.get(controller.x, controller.y) !== TERRAIN_MASK_WALL) {
+        rampartSet.add(`${controller.x},${controller.y}`)
+    }
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue
+            const x = controller.x + dx
+            const y = controller.y + dy
+            if (x >= 0 && x < 50 && y >= 0 && y < 50) {
+                if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
+                    rampartSet.add(`${x},${y}`)
                 }
             }
         }

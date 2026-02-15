@@ -723,11 +723,10 @@ function getStructureProtectionRamparts(
     const structurePositions: Position[] = []
 
     // Collect all important structure positions
+    // Note: Sources and minerals are NOT included because they cannot be ramparted
     const structureTypes: (
         | 'link'
         | 'controller'
-        | 'source'
-        | 'mineral'
         | 'storage'
         | 'spawn'
         | 'tower'
@@ -739,8 +738,6 @@ function getStructureProtectionRamparts(
     )[] = [
         'link',
         'controller',
-        'source',
-        'mineral',
         'storage',
         'spawn',
         'tower',
@@ -830,8 +827,10 @@ function getRampartPositions(iroom: ImmutableRoom): Position[] {
 
     // Add ramparts at stationaryPoints and their neighbors
     for (const pos of stationaryPositions) {
-        // Add the position itself
-        rampartSet.add(`${pos.x},${pos.y}`)
+        // Add the position itself (excluding walls)
+        if (iroom.get(pos.x, pos.y).terrain !== TERRAIN_MASK_WALL) {
+            rampartSet.add(`${pos.x},${pos.y}`)
+        }
 
         // Add all 8 neighbors (excluding walls)
         for (let dx = -1; dx <= 1; dx++) {

@@ -104,18 +104,26 @@ function visualizeFixture(fixture: RoomFixture): string {
 
     // Room info
     lines.push(chalk.bold('\n📍 Room Objects:'))
-    lines.push(`  ${chalk.yellow.bold('◉')} Sources: ${chalk.white(fixture.sources.length.toString())}`)
+    lines.push(
+        `  ${chalk.yellow.bold('◉')} Sources: ${chalk.white(fixture.sources.length.toString())}`,
+    )
     for (let i = 0; i < fixture.sources.length; i++) {
         const src = fixture.sources[i]
-        
+
         // Count walkable neighbors
         let walkable = 0
         let blocked = 0
         const neighbors = [
-            { dx: 0, dy: -1 }, { dx: 1, dy: -1 }, { dx: 1, dy: 0 }, { dx: 1, dy: 1 },
-            { dx: 0, dy: 1 }, { dx: -1, dy: 1 }, { dx: -1, dy: 0 }, { dx: -1, dy: -1 },
+            { dx: 0, dy: -1 },
+            { dx: 1, dy: -1 },
+            { dx: 1, dy: 0 },
+            { dx: 1, dy: 1 },
+            { dx: 0, dy: 1 },
+            { dx: -1, dy: 1 },
+            { dx: -1, dy: 0 },
+            { dx: -1, dy: -1 },
         ]
-        
+
         for (const { dx, dy } of neighbors) {
             const nx = src.x + dx
             const ny = src.y + dy
@@ -130,23 +138,27 @@ function visualizeFixture(fixture: RoomFixture): string {
                 walkable++
             }
         }
-        
+
         lines.push(
-            `    Source ${i + 1}: (${src.x}, ${src.y}) - ${walkable} walkable, ${blocked} blocked neighbors`,
+            `    Source ${i + 1}: (${src.x}, ${
+                src.y
+            }) - ${walkable} walkable, ${blocked} blocked neighbors`,
         )
     }
 
     if (fixture.controller) {
         lines.push(
-            `  ${chalk.magenta.bold('⚙')} Controller: ${chalk.white(`(${fixture.controller.x}, ${fixture.controller.y})`)}`,
+            `  ${chalk.magenta.bold('⚙')} Controller: ${chalk.white(
+                `(${fixture.controller.x}, ${fixture.controller.y})`,
+            )}`,
         )
     }
 
-    lines.push(`  ${chalk.cyan.bold('M')} Minerals: ${chalk.white(fixture.minerals.length.toString())}`)
+    lines.push(
+        `  ${chalk.cyan.bold('M')} Minerals: ${chalk.white(fixture.minerals.length.toString())}`,
+    )
     for (const mineral of fixture.minerals) {
-        lines.push(
-            `    ${chalk.cyan(mineral.mineralType)}: (${mineral.x}, ${mineral.y})`,
-        )
+        lines.push(`    ${chalk.cyan(mineral.mineralType)}: (${mineral.x}, ${mineral.y})`)
     }
 
     // Terrain analysis
@@ -163,19 +175,29 @@ function visualizeFixture(fixture: RoomFixture): string {
         }
     }
     lines.push(
-        `  ${chalk.bgRgb(50, 50, 50)('  ')} Walls: ${chalk.yellow(wallCount.toString())} tiles (${((wallCount / 2500) * 100).toFixed(1)}%)`,
+        `  ${chalk.bgRgb(50, 50, 50)('  ')} Walls: ${chalk.yellow(wallCount.toString())} tiles (${(
+            (wallCount / 2500) *
+            100
+        ).toFixed(1)}%)`,
     )
     lines.push(
-        `  ${chalk.bgRgb(40, 60, 40)('  ')} Swamps: ${chalk.yellow(swampCount.toString())} tiles (${((swampCount / 2500) * 100).toFixed(1)}%)`,
+        `  ${chalk.bgRgb(40, 60, 40)('  ')} Swamps: ${chalk.yellow(
+            swampCount.toString(),
+        )} tiles (${((swampCount / 2500) * 100).toFixed(1)}%)`,
     )
     lines.push(
-        `  Plains: ${chalk.yellow(plainCount.toString())} tiles (${((plainCount / 2500) * 100).toFixed(1)}%)`,
+        `  Plains: ${chalk.yellow(plainCount.toString())} tiles (${(
+            (plainCount / 2500) *
+            100
+        ).toFixed(1)}%)`,
     )
 
     // Build lookup sets for natural objects
     const sourcePositions = new Set(fixture.sources.map((s) => `${s.x},${s.y}`))
     const mineralMap = new Map(fixture.minerals.map((m) => [`${m.x},${m.y}`, m.mineralType]))
-    const controllerKey = fixture.controller ? `${fixture.controller.x},${fixture.controller.y}` : null
+    const controllerKey = fixture.controller
+        ? `${fixture.controller.x},${fixture.controller.y}`
+        : null
 
     // Render room grid
     lines.push(chalk.bold('\n🗺️  Room Layout:'))
@@ -230,7 +252,11 @@ function visualizeFixture(fixture: RoomFixture): string {
     // Legend
     lines.push(chalk.bold('\n🔑 Legend:'))
     lines.push(
-        `  Terrain: ${chalk.bgRgb(50, 50, 50)('  ')} Wall   ${chalk.bgRgb(40, 60, 40)('  ')} Swamp   ${chalk.dim('··')} Plain`,
+        `  Terrain: ${chalk.bgRgb(50, 50, 50)('  ')} Wall   ${chalk.bgRgb(
+            40,
+            60,
+            40,
+        )('  ')} Swamp   ${chalk.dim('··')} Plain`,
     )
     lines.push(
         `  Natural: ${chalk.bgWhite(chalk.yellow.bold('◉'))} Source   ${chalk.bgWhite(
@@ -266,9 +292,7 @@ async function main() {
     if (!fs.existsSync(fixturePath)) {
         console.error(chalk.red(`✗ Fixture not found: ${roomName}.json`))
         console.error(chalk.gray(`  Path: ${fixturePath}`))
-        console.error(
-            chalk.gray(`  Run: yarn download:fixtures ${roomName} --neighbors`),
-        )
+        console.error(chalk.gray(`  Run: yarn download:fixtures ${roomName} --neighbors`))
         process.exit(1)
     }
 
