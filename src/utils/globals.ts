@@ -21,6 +21,8 @@ import { AttackerMemory } from 'roles/attacker'
 import hash from './hash'
 import { getTotalDroppedResources } from 'tasks/pickup'
 import { getBuildManager } from 'managers/build-manager'
+import LinkManager from 'managers/link-manager'
+import type { Links } from 'construction-features'
 
 import ErrorMapper from './ErrorMapper'
 import Empire from 'empire'
@@ -1326,6 +1328,249 @@ function checkFeatureConflicts(roomName: string): void {
 }
 
 /**
+ * Debugs link energy transfer issues
+ * @param roomName - The room to debug link operations for
+ */
+function debugLinks(roomName: string): void {
+    console.log(`=== Debug Links: ${roomName} ===\n`)
+
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log('❌ ERROR: Room not visible')
+        return
+    }
+
+    // Get link manager
+    const linkManager = LinkManager.createFromRoom(room)
+
+    if (!linkManager) {
+        console.log('❌ No link manager for this room')
+        console.log('This could mean:')
+        console.log('  - No calculated link positions in construction features')
+        console.log('  - Room has not completed surveying')
+        return
+    }
+
+    console.log(`--- Link Manager Configuration ---`)
+    console.log(`Storage link: ${linkManager.storageLink ? linkManager.storageLink.id : 'NONE'}`)
+    console.log(
+        `Controller link: ${linkManager.controllerLink ? linkManager.controllerLink.id : 'NONE'}`,
+    )
+    console.log(`Source links: ${linkManager.sourceLinks.length}`)
+
+    for (const link of linkManager.sourceLinks) {
+        console.log(`  - ${link.id} at ${link.pos}`)
+    }
+
+    console.log(`\n--- Current Link States ---`)
+
+    // Source links (senders)
+    console.log(`\nSource Links (energy senders):`)
+    for (const link of linkManager.sources) {
+        const energy = link.store.getUsedCapacity(RESOURCE_ENERGY)
+        const capacity = link.store.getCapacity(RESOURCE_ENERGY)
+        const cooldown = link.cooldown
+        console.log(`  ${link.id} at ${link.pos}:`)
+        console.log(
+            `    Energy: ${energy}/${capacity} (${((energy / capacity) * 100).toFixed(1)}%)`,
+        )
+        console.log(`    Cooldown: ${cooldown} ticks`)
+        console.log(`    Can send: ${energy > 0 && cooldown === 0 ? 'YES' : 'NO'}`)
+    }
+
+    // Sink links (receivers)
+    console.log(`\nSink Links (energy receivers):`)
+    for (const link of linkManager.sinks) {
+        const energy = link.store.getUsedCapacity(RESOURCE_ENERGY)
+        const capacity = link.store.getCapacity(RESOURCE_ENERGY)
+        const freeCapacity = link.store.getFreeCapacity(RESOURCE_ENERGY)
+        const isStorage = link.id === linkManager.storageLink?.id
+        console.log(`  ${link.id} at ${link.pos} (${isStorage ? 'STORAGE' : 'CONTROLLER'}):`)
+        console.log(
+            `    Energy: ${energy}/${capacity} (${((energy / capacity) * 100).toFixed(1)}%)`,
+        )
+        console.log(`    Free capacity: ${freeCapacity}`)
+        console.log(`    Can receive: ${freeCapacity > 0 ? 'YES' : 'NO'}`)
+    }
+
+    console.log(`\n--- Transfer Logic Simulation ---`)
+
+    const sinkTracker = linkManager.sinks.map((link) => ({
+        amount: link.store.getFreeCapacity(RESOURCE_ENERGY),
+        link,
+    }))
+
+    for (const source of linkManager.sources) {
+        const amount = source.store.getUsedCapacity(RESOURCE_ENERGY)
+        console.log(`\nSource ${source.id}:`)
+        console.log(`  Energy to send: ${amount}`)
+
+        if (amount === 0) {
+            console.log(`  ❌ No energy to send`)
+            continue
+        }
+
+        if (source.cooldown > 0) {
+            console.log(`  ❌ On cooldown (${source.cooldown} ticks)`)
+            continue
+        }
+
+        const emptySinks = sinkTracker.filter((sink) => sink.amount >= amount)
+        if (emptySinks.length > 0) {
+            const sink = emptySinks[0]
+            console.log(`  ✅ Would send ${amount} energy to ${sink.link.id}`)
+            console.log(`     Sink free capacity: ${sink.amount}`)
+            continue
+        }
+
+        const fillableSinks = sinkTracker.filter((sink) => sink.amount > 0)
+        if (fillableSinks.length > 0) {
+            const sink = fillableSinks[0]
+            console.log(`  ⚠️  Would partially fill ${sink.link.id}`)
+            console.log(`     Sink free capacity: ${sink.amount} (less than ${amount})`)
+            continue
+        }
+
+        console.log(`  ❌ No available sinks (all full)`)
+    }
+
+    console.log(`\n=== End Debug ===`)
+}
+
+/**
+ * Debugs link position mismatches between construction features and actual links
+ * @param roomName - The room to check link positions
+ */
+function debugLinkPositions(roomName: string): void {
+    console.log(`=== Debug Link Positions: ${roomName} ===\n`)
+
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log('❌ ERROR: Room not visible')
+        return
+    }
+
+    // Get all actual links in the room
+    const actualLinks = room.find<StructureLink>(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_LINK },
+    })
+
+    console.log(`--- Actual Links in Room (${actualLinks.length}) ---`)
+    for (const link of actualLinks) {
+        console.log(`  ${link.id} at (${link.pos.x}, ${link.pos.y})`)
+    }
+
+    // Get calculated link positions from construction features
+    const featuresV3 = getConstructionFeaturesV3(roomName)
+    const storedLinks: Links | null =
+        featuresV3 && featuresV3.type === 'base' ? featuresV3.links : null
+    if (!storedLinks) {
+        console.log('\n❌ No calculated link positions in construction features')
+        return
+    }
+
+    console.log(`\n--- Calculated Link Positions ---`)
+    console.log(`Storage link expected at: (${storedLinks.storage.x}, ${storedLinks.storage.y})`)
+    console.log(
+        `Controller link expected at: (${storedLinks.controller.x}, ${storedLinks.controller.y})`,
+    )
+    console.log(`Source links: ${storedLinks.sourceContainers.length}`)
+    for (let i = 0; i < storedLinks.sourceContainers.length; i++) {
+        const sc = storedLinks.sourceContainers[i]
+        console.log(`  Source ${i + 1} link at: (${sc.link.x}, ${sc.link.y})`)
+    }
+
+    console.log(`\n--- Position Match Check ---`)
+
+    // Check storage link
+    const storagePos = storedLinks.storage
+    const storageLinkAtPos = actualLinks.find(
+        (link) => link.pos.x === storagePos.x && link.pos.y === storagePos.y,
+    )
+    if (storageLinkAtPos) {
+        console.log(`✅ Storage link found at expected position (${storagePos.x}, ${storagePos.y})`)
+        console.log(`   ID: ${storageLinkAtPos.id}`)
+    } else {
+        console.log(`❌ No storage link at expected position (${storagePos.x}, ${storagePos.y})`)
+        const closest = actualLinks
+            .map((link) => ({
+                link,
+                distance: Math.abs(link.pos.x - storagePos.x) + Math.abs(link.pos.y - storagePos.y),
+            }))
+            .sort((a, b) => a.distance - b.distance)[0]
+        if (closest) {
+            console.log(
+                `   Closest actual link is at (${closest.link.pos.x}, ${closest.link.pos.y}) - distance ${closest.distance}`,
+            )
+        }
+    }
+
+    // Check controller link
+    const controllerPos = storedLinks.controller
+    const controllerLinkAtPos = actualLinks.find(
+        (link) => link.pos.x === controllerPos.x && link.pos.y === controllerPos.y,
+    )
+    if (controllerLinkAtPos) {
+        console.log(
+            `✅ Controller link found at expected position (${controllerPos.x}, ${controllerPos.y})`,
+        )
+        console.log(`   ID: ${controllerLinkAtPos.id}`)
+    } else {
+        console.log(
+            `❌ No controller link at expected position (${controllerPos.x}, ${controllerPos.y})`,
+        )
+        const closest = actualLinks
+            .map((link) => ({
+                link,
+                distance:
+                    Math.abs(link.pos.x - controllerPos.x) + Math.abs(link.pos.y - controllerPos.y),
+            }))
+            .sort((a, b) => a.distance - b.distance)[0]
+        if (closest) {
+            console.log(
+                `   Closest actual link is at (${closest.link.pos.x}, ${closest.link.pos.y}) - distance ${closest.distance}`,
+            )
+        }
+    }
+
+    // Check source links
+    for (let i = 0; i < storedLinks.sourceContainers.length; i++) {
+        const sc = storedLinks.sourceContainers[i]
+        const sourceLinkAtPos = actualLinks.find(
+            (link) => link.pos.x === sc.link.x && link.pos.y === sc.link.y,
+        )
+        if (sourceLinkAtPos) {
+            console.log(
+                `✅ Source ${i + 1} link found at expected position (${sc.link.x}, ${sc.link.y})`,
+            )
+            console.log(`   ID: ${sourceLinkAtPos.id}`)
+        } else {
+            console.log(
+                `❌ No source ${i + 1} link at expected position (${sc.link.x}, ${sc.link.y})`,
+            )
+        }
+    }
+
+    console.log(`\n--- Recommendation ---`)
+    if (!storageLinkAtPos || !controllerLinkAtPos) {
+        console.log(`The calculated link positions don't match actual links.`)
+        console.log(`This usually means:`)
+        console.log(`  1. Links were built in wrong positions`)
+        console.log(`  2. Construction features are out of date`)
+        console.log(`\nTo fix, you can:`)
+        console.log(
+            `  - Delete construction features: delete Memory.rooms['${roomName}'].constructionFeaturesV3`,
+        )
+        console.log(`  - Wait for surveyor to recalculate on next tick`)
+        console.log(`  - Or manually rebuild links in the correct positions`)
+    } else {
+        console.log(`All links are in expected positions - the issue is elsewhere!`)
+    }
+
+    console.log(`\n=== End Debug ===`)
+}
+
+/**
  * Checks if a specific position is in the rampart construction features.
  * @param roomName - The room to check
  * @param x - X coordinate
@@ -1485,141 +1730,10 @@ export default function assignGlobals(): void {
     global.checkFeatureConflicts = checkFeatureConflicts
     global.fixMineFeatures = fixMineFeatures
     global.debugRampartPosition = debugRampartPosition
-    global.compareOldVsNewBunker = compareOldVsNewBunker
     global.debugSpawn = debugSpawn
     global.debugMineWorkerSpawn = debugMineWorkerSpawn
-}
-
-/**
- * Compares bunker layouts calculated by old vs new systems
- * @param roomName - Name of the room to compare
- */
-function compareOldVsNewBunker(roomName: string) {
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
-    const room = Game.rooms[roomName]
-    if (!room) {
-        Logger.warning('compareOldVsNewBunker:no-room', roomName)
-        return
-    }
-
-    // Save old state
-    const oldFlag = Memory.rooms[roomName]?.useNewBunkerSystem ?? false
-    const oldFeatures = Memory.rooms[roomName]?.constructionFeaturesV3
-
-    // Calculate with old system (temporarily)
-    Memory.rooms[roomName].useNewBunkerSystem = false
-    Memory.rooms[roomName].constructionFeaturesV3 = undefined
-    const oldSystemFeatures = getConstructionFeaturesV3(roomName)
-
-    // Calculate with new system (temporarily)
-    Memory.rooms[roomName].useNewBunkerSystem = true
-    Memory.rooms[roomName].constructionFeaturesV3 = undefined
-    const newSystemFeatures = getConstructionFeaturesV3(roomName)
-
-    // CRITICAL: Restore original state exactly as it was
-    Memory.rooms[roomName].useNewBunkerSystem = oldFlag
-    Memory.rooms[roomName].constructionFeaturesV3 = oldFeatures
-
-    Logger.info('compareOldVsNewBunker:results', roomName)
-
-    if (!oldSystemFeatures || !newSystemFeatures) {
-        Logger.warning('compareOldVsNewBunker:features-null')
-        return
-    }
-
-    if (oldSystemFeatures.type !== 'base' || newSystemFeatures.type !== 'base') {
-        Logger.warning('compareOldVsNewBunker:type-mismatch', {
-            old: oldSystemFeatures.type,
-            new: newSystemFeatures.type,
-        })
-        return
-    }
-
-    // Compare structure counts
-    Logger.info('Structure Counts:')
-    const allStructureTypes = new Set([
-        ...Object.keys(oldSystemFeatures.features),
-        ...Object.keys(newSystemFeatures.features),
-    ])
-
-    for (const structureType of allStructureTypes) {
-        const oldCount =
-            oldSystemFeatures.features[structureType as BuildableStructureConstant]?.length || 0
-        const newCount =
-            newSystemFeatures.features[structureType as BuildableStructureConstant]?.length || 0
-        const diff = newCount - oldCount
-        const diffStr = diff > 0 ? `+${diff}` : diff.toString()
-        Logger.info(`  ${structureType}: old=${oldCount}, new=${newCount}, diff=${diffStr}`)
-    }
-
-    // Compare stationary points
-    Logger.info('Stationary Points:')
-    const oldPoints = oldSystemFeatures.points
-    const newPoints = newSystemFeatures.points
-    Logger.info('  Sources:')
-    const allSourceIds = new Set([
-        ...Object.keys(oldPoints?.sources || {}),
-        ...Object.keys(newPoints?.sources || {}),
-    ])
-    for (const sourceId of allSourceIds) {
-        const oldPos = oldPoints?.sources?.[sourceId]
-        const newPos = newPoints?.sources?.[sourceId]
-        if (oldPos && newPos) {
-            const distance = Math.max(Math.abs(oldPos.x - newPos.x), Math.abs(oldPos.y - newPos.y))
-            Logger.info(
-                `    ${sourceId}: old=(${oldPos.x},${oldPos.y}), new=(${newPos.x},${newPos.y}), distance=${distance}`,
-            )
-        } else {
-            Logger.warning(`    ${sourceId}: ${oldPos ? 'old only' : 'new only'}`)
-        }
-    }
-
-    if (oldPoints?.mineral && newPoints?.mineral) {
-        const distance = Math.max(
-            Math.abs(oldPoints.mineral.x - newPoints.mineral.x),
-            Math.abs(oldPoints.mineral.y - newPoints.mineral.y),
-        )
-        Logger.info(
-            `  Mineral: old=(${oldPoints.mineral.x},${oldPoints.mineral.y}), new=(${newPoints.mineral.x},${newPoints.mineral.y}), distance=${distance}`,
-        )
-    }
-
-    if (oldPoints?.controllerLink && newPoints?.controllerLink) {
-        const distance = Math.max(
-            Math.abs(oldPoints.controllerLink.x - newPoints.controllerLink.x),
-            Math.abs(oldPoints.controllerLink.y - newPoints.controllerLink.y),
-        )
-        Logger.info(
-            `  ControllerLink: old=(${oldPoints.controllerLink.x},${oldPoints.controllerLink.y}), new=(${newPoints.controllerLink.x},${newPoints.controllerLink.y}), distance=${distance}`,
-        )
-    }
-
-    if (oldPoints?.storageLink && newPoints?.storageLink) {
-        const distance = Math.max(
-            Math.abs(oldPoints.storageLink.x - newPoints.storageLink.x),
-            Math.abs(oldPoints.storageLink.y - newPoints.storageLink.y),
-        )
-        Logger.info(
-            `  StorageLink: old=(${oldPoints.storageLink.x},${oldPoints.storageLink.y}), new=(${newPoints.storageLink.x},${newPoints.storageLink.y}), distance=${distance}`,
-        )
-    }
-
-    // Compare links
-    Logger.info('Links:')
-    Logger.info(
-        `  Controller: old=(${oldSystemFeatures.links?.controller.x},${oldSystemFeatures.links?.controller.y}), new=(${newSystemFeatures.links?.controller.x},${newSystemFeatures.links?.controller.y})`,
-    )
-    Logger.info(
-        `  Storage: old=(${oldSystemFeatures.links?.storage.x},${oldSystemFeatures.links?.storage.y}), new=(${newSystemFeatures.links?.storage.x},${newSystemFeatures.links?.storage.y})`,
-    )
-    Logger.info(
-        `  Source containers: old=${oldSystemFeatures.links?.sourceContainers.length || 0}, new=${
-            newSystemFeatures.links?.sourceContainers.length || 0
-        }`,
-    )
-
-    Logger.info('compareOldVsNewBunker:complete')
-    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
+    global.debugLinks = debugLinks
+    global.debugLinkPositions = debugLinkPositions
 }
 
 declare global {
@@ -1654,9 +1768,10 @@ declare global {
             checkFeatureConflicts: (roomName: string) => void
             fixMineFeatures: (mineName: string, baseRoomName?: string) => void
             debugRampartPosition: (roomName: string, x: number, y: number) => void
-            compareOldVsNewBunker: (roomName: string) => void
             debugSpawn: (roomName: string) => void
             debugMineWorkerSpawn: (mineName: string, baseRoomName: string) => void
+            debugLinks: (roomName: string) => void
+            debugLinkPositions: (roomName: string) => void
         }
     }
 }

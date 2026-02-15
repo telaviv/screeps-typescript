@@ -5,6 +5,8 @@ import { calculateSingleMineRoads } from '../../src/stamps/single-mine-roads'
 import bunkerStamp from '../../src/stamps/bunker'
 import { placeBunker } from '../../src/stamps/placement'
 import { calculateBunkerRoads } from '../../src/stamps/roads'
+import { calculateStationaryPoints } from '../../src/stamps/stationary-points'
+import { calculateLinks } from '../../src/stamps/links'
 import {
     createMultiRoomTerrainCost,
     withMultiRoomObstacles,
@@ -1632,5 +1634,117 @@ describe('PServer Mine Roads - W8N3 to W8N2', function () {
         }
 
         console.log(`  ✓ All required fixtures are present`)
+    })
+
+    it('should place storage link 2 north of storage (matching bunker stamp)', function () {
+        const roomName = 'W1N8'
+
+        // Load base room fixture
+        console.log(`\n  📥 Loading fixture for ${roomName}...`)
+        const baseFixture = loadRoomFixture(roomName) as RoomFixture
+        assert.isNotNull(baseFixture, `Failed to load fixture for ${roomName}`)
+
+        assert.isNotNull(baseFixture.controller, `No controller found in ${roomName}`)
+        assert.isAbove(baseFixture.sources.length, 0, `No sources found in ${roomName}`)
+
+        // Create mock terrain
+        const mockTerrain = new MockRoomTerrain(baseFixture.terrain)
+
+        // Prepare sources array with IDs
+        const sourcesArray = baseFixture.sources.map((s, idx) => ({
+            id: `source-${idx}` as Id<Source>,
+            x: s.x,
+            y: s.y,
+        }))
+
+        // Place bunker
+        console.log(`\n  🏗️  Placing bunker...`)
+        const placementResult = placeBunker({
+            terrain: mockTerrain,
+            roomName,
+            stamp: bunkerStamp,
+            sources: baseFixture.sources,
+            controller: baseFixture.controller,
+        })
+
+        assert.isTrue(placementResult.success, 'Bunker placement failed')
+        assert.isNotNull(placementResult.buildings, 'Bunker buildings not returned')
+
+        // Calculate stationary points
+        console.log(`\n  📍 Calculating stationary points...`)
+        const stationaryPoints = calculateStationaryPoints(
+            mockTerrain,
+            placementResult.buildings,
+            sourcesArray,
+            baseFixture.controller,
+            baseFixture.minerals[0],
+        )
+
+        // Calculate links
+        console.log(`\n  🔗 Calculating links...`)
+        const linksResult = calculateLinks(
+            mockTerrain,
+            placementResult.buildings,
+            stationaryPoints,
+            sourcesArray,
+            baseFixture.controller,
+        )
+
+        // Get storage position from bunker
+        const storagePositions = placementResult.buildings.get('storage')
+        assert.isDefined(storagePositions, 'Storage not found in bunker')
+        assert.equal(storagePositions!.length, 1, 'Should have exactly one storage')
+        const storage = storagePositions![0]
+
+        console.log(`\n  📦 Storage position: (${storage.x}, ${storage.y})`)
+        console.log(
+            `  🔗 Storage link calculated: (${linksResult.storage.x}, ${linksResult.storage.y})`,
+        )
+        console.log(
+            `  👤 Storage link hauler position: (${stationaryPoints.storageLink.x}, ${stationaryPoints.storageLink.y})`,
+        )
+
+        // In bunker stamp, link is at (22, 15), storage is at (22, 17)
+        // So link should be 2 north of storage (y - 2)
+        const expectedLinkX = storage.x
+        const expectedLinkY = storage.y - 2 // 2 north means y is smaller
+
+        console.log(`\n  🎯 Expected storage link position: (${expectedLinkX}, ${expectedLinkY})`)
+
+        // Assert that storage link is 2 north of storage
+        assert.equal(
+            linksResult.storage.x,
+            expectedLinkX,
+            `Storage link X should be ${expectedLinkX} (same as storage X=${storage.x})`,
+        )
+        assert.equal(
+            linksResult.storage.y,
+            expectedLinkY,
+            `Storage link Y should be ${expectedLinkY} (2 north of storage Y=${storage.y})`,
+        )
+
+        // Also verify it matches the bunker stamp's link position
+        const bunkerLinks = placementResult.buildings.get('link')
+        assert.isDefined(bunkerLinks, 'Links not found in bunker buildings')
+        assert.isAbove(bunkerLinks!.length, 0, 'Should have at least one link in bunker')
+
+        // The first link in bunker stamp should be the storage link
+        const firstBunkerLink = bunkerLinks![0]
+        console.log(
+            `\n  📍 First link from bunker stamp: (${firstBunkerLink.x}, ${firstBunkerLink.y})`,
+        )
+
+        assert.equal(
+            linksResult.storage.x,
+            firstBunkerLink.x,
+            `Storage link should match bunker stamp link X=${firstBunkerLink.x}`,
+        )
+        assert.equal(
+            linksResult.storage.y,
+            firstBunkerLink.y,
+            `Storage link should match bunker stamp link Y=${firstBunkerLink.y}`,
+        )
+
+        console.log(`\n  ✅ Storage link correctly placed 2 north of storage`)
     })
 })

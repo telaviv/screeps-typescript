@@ -172,15 +172,17 @@ export function calculateLinks(
     const controllerLink = availableControllerPositions[0]
     placedLinks.push(controllerLink)
 
-    // Storage link should already be in bunker buildings
-    const storageNeighbors = getNeighbors(storagePos.x, storagePos.y)
-    let storageLink = bunkerBuildings
-        .get('link')
-        ?.find((link) => storageNeighbors.some((n) => positionsEqual(n, link)))
+    // Storage link should already be in bunker buildings from the stamp
+    // Note: The bunker stamp places the storage link 2 positions north of storage,
+    // not immediately adjacent, so we can't use neighbor checking.
+    // Instead, we use the link from the bunker stamp directly.
+    const bunkerLinks = bunkerBuildings.get('link') || []
+    let storageLink = bunkerLinks.length > 0 ? bunkerLinks[0] : null
 
     // If not in bunker, place it adjacent to storage link hauler position
     if (!storageLink) {
         const storageLinkHaulerPos = stationaryPoints.storageLink
+        const storageNeighbors = getNeighbors(storagePos.x, storagePos.y)
         const storageLinkNeighbors = getNeighbors(storageLinkHaulerPos.x, storageLinkHaulerPos.y)
         const availableStoragePositions = storageLinkNeighbors.filter((pos) => {
             return (
