@@ -689,9 +689,13 @@ describe('calculateSingleMineRoads', () => {
         ]
 
         console.log(`\n[W1N8 North Boundary Test - Single Room Pathfinding]`)
-        console.log(`  Start: W1N8(${startPosition.x}, ${startPosition.y}) [ROAD ADJACENT TO STORAGE LINK]`)
+        console.log(
+            `  Start: W1N8(${startPosition.x}, ${startPosition.y}) [ROAD ADJACENT TO STORAGE LINK]`,
+        )
         console.log(`  Goals: Near north boundary (y=1) at x=10,11,12`)
-        console.log(`  Note: This tests from an accessible road position, not the storage link itself`)
+        console.log(
+            `  Note: This tests from an accessible road position, not the storage link itself`,
+        )
 
         // Check terrain along x=11 column
         const terrain = (global.Game.map as any).getRoomTerrain('W1N8')
@@ -1329,7 +1333,9 @@ describe('calculateSingleMineRoads', () => {
         ]
 
         console.log(`\n[W1N8 Minimal Set Validation]`)
-        console.log(`  Testing that removing any of ${minimalObstacles.length} obstacles allows pathfinding...`)
+        console.log(
+            `  Testing that removing any of ${minimalObstacles.length} obstacles allows pathfinding...`,
+        )
 
         // Storage link hauler position from W1N8 bunker placement
         const startPosition = { x: 12, y: 29 }
@@ -1377,7 +1383,9 @@ describe('calculateSingleMineRoads', () => {
             }
         }
 
-        console.log(`  Results: ${necessaryCount}/${minimalObstacles.length} obstacles are necessary`)
+        console.log(
+            `  Results: ${necessaryCount}/${minimalObstacles.length} obstacles are necessary`,
+        )
 
         if (redundantObstacles.length > 0) {
             console.log(`  Found ${redundantObstacles.length} redundant obstacle(s):`)
@@ -1395,7 +1403,9 @@ describe('calculateSingleMineRoads', () => {
         assert.equal(
             necessaryCount,
             minimalObstacles.length,
-            `All ${minimalObstacles.length} obstacles should be necessary. Found ${redundantObstacles.length} redundant obstacles at indices: ${redundantObstacles.map((o) => o.index).join(', ')}`,
+            `All ${minimalObstacles.length} obstacles should be necessary. Found ${
+                redundantObstacles.length
+            } redundant obstacles at indices: ${redundantObstacles.map((o) => o.index).join(', ')}`,
         )
     })
 })

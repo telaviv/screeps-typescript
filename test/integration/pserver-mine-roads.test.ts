@@ -36,10 +36,15 @@ class MockRoomTerrain implements RoomTerrain {
             return 1 // Wall for out of bounds
         }
         const value = this.terrain[y][x]
-        if (value === 0 || value === 1 || value === 2) {
-            return value
+        // Terrain is bitwise encoded: 0=plain, 1=wall, 2=swamp, 3=wall+swamp
+        // For pathfinding purposes, wall takes precedence (can't walk on walls)
+        if (value & 1) {
+            return 1 // Wall (includes wall+swamp)
         }
-        return 0
+        if (value & 2) {
+            return 2 // Swamp
+        }
+        return 0 // Plain
     }
 }
 
@@ -445,10 +450,14 @@ describe('PServer Mine Roads - W1N8', function () {
         // This is the correct starting position for pathfinding
         const startPosition = storageLinkWorld
 
-        console.log(`  ✓ Using storage link hauler position: (${startPosition.x}, ${startPosition.y})`)
+        console.log(
+            `  ✓ Using storage link hauler position: (${startPosition.x}, ${startPosition.y})`,
+        )
 
         // Check all 8 neighbors of the start position
-        console.log(`\n  🔍 Checking all 8 neighbors of start position (${startPosition.x}, ${startPosition.y}):`)
+        console.log(
+            `\n  🔍 Checking all 8 neighbors of start position (${startPosition.x}, ${startPosition.y}):`,
+        )
         const startNeighbors = [
             { dir: 'N', x: startPosition.x, y: startPosition.y - 1, dx: 0, dy: -1 },
             { dir: 'NE', x: startPosition.x + 1, y: startPosition.y - 1, dx: 1, dy: -1 },
@@ -476,7 +485,7 @@ describe('PServer Mine Roads - W1N8', function () {
             const isRoad = roads.has(key)
             const terrainVal = mockTerrain.get(n.x, n.y)
             const terrainLabel = terrainVal === 1 ? 'wall' : terrainVal === 2 ? 'swamp' : 'plain'
-            
+
             const types: string[] = []
             if (isObstacle) {
                 // Find what obstacle types are here
@@ -487,10 +496,12 @@ describe('PServer Mine Roads - W1N8', function () {
                 }
             }
             if (isRoad) types.push('road')
-            
+
             console.log(
                 `    ${n.dir.padEnd(2)}: (${n.x},${n.y}) terrain=${terrainLabel} cost=${cost} ` +
-                `walkable=${cost < 255} ${types.length > 0 ? '[' + types.join(', ') + ']' : ''}`
+                    `walkable=${cost < 255} ${
+                        types.length > 0 ? '[' + types.join(', ') + ']' : ''
+                    }`,
             )
         }
 
@@ -1387,6 +1398,236 @@ describe('PServer Mine Roads - W1N8', function () {
             assert.isTrue(
                 fs.existsSync(fixturePath),
                 `Fixture ${fixture} should exist. Run: yarn download:fixtures W1N8 --neighbors`,
+            )
+        }
+
+        console.log(`  ✓ All required fixtures are present`)
+    })
+})
+
+describe('PServer Mine Roads - W8N3 to W8N2', function () {
+    it('should calculate mine roads from W8N3 base to W8N2 mine', function () {
+        const baseRoomName = 'W8N3'
+        const mineRoomName = 'W8N2'
+
+        // Load base room fixture
+        console.log(`\n  📥 Loading fixture for ${baseRoomName}...`)
+        const baseFixture = loadRoomFixture(baseRoomName) as RoomFixture
+        assert.isNotNull(baseFixture, `Failed to load fixture for ${baseRoomName}`)
+        assert.isNotNull(baseFixture.controller, `No controller found in ${baseRoomName}`)
+        assert.isAbove(baseFixture.sources.length, 0, `No sources found in ${baseRoomName}`)
+
+        console.log(`  ✓ Base room data loaded:`)
+        console.log(`    Sources: ${baseFixture.sources.length}`)
+        console.log(`    Controller: (${baseFixture.controller.x}, ${baseFixture.controller.y})`)
+
+        // Load mine room fixture
+        console.log(`\n  📥 Loading fixture for ${mineRoomName}...`)
+        const mineFixture = loadRoomFixture(mineRoomName) as RoomFixture
+        assert.isNotNull(mineFixture, `Failed to load fixture for ${mineRoomName}`)
+        assert.isAbove(mineFixture.sources.length, 0, `No sources found in ${mineRoomName}`)
+
+        console.log(`  ✓ Mine room data loaded:`)
+        console.log(`    Sources: ${mineFixture.sources.length}`)
+        for (let i = 0; i < mineFixture.sources.length; i++) {
+            const src = mineFixture.sources[i]
+            console.log(`      Source ${i + 1}: (${src.x}, ${src.y})`)
+        }
+
+        // Calculate bunker placement
+        console.log(`\n  🧮 Calculating bunker placement for ${baseRoomName}...`)
+        const mockBaseTerrain = new MockRoomTerrain(baseFixture.terrain)
+        const placementResult = placeBunker({
+            terrain: mockBaseTerrain,
+            roomName: baseRoomName,
+            sources: baseFixture.sources,
+            controller: baseFixture.controller,
+            stamp: bunkerStamp,
+        })
+
+        assert.isNotNull(placementResult.origin, 'Bunker origin should not be null')
+        assert.isTrue(placementResult.success, 'Bunker placement should succeed')
+        console.log(
+            `  ✓ Bunker placed at origin (${placementResult.origin.x}, ${placementResult.origin.y})`,
+        )
+
+        // Extract storage link stationary point
+        const stampMetadata = placementResult.metadata?.stampMetadata
+        if (!stampMetadata) {
+            throw new Error('No stamp metadata available')
+        }
+
+        const { top, left } = stampMetadata.extants
+        const storageLinkStamp = bunkerStamp.stationaryPoints.storageLink
+        const storageLinkWorld = {
+            x: placementResult.origin.x + (storageLinkStamp.x - left) + 1,
+            y: placementResult.origin.y + (storageLinkStamp.y - top) + 1,
+        }
+
+        console.log(
+            `  ✓ Storage link hauler position: (${storageLinkWorld.x}, ${storageLinkWorld.y})`,
+        )
+
+        // Calculate bunker roads
+        console.log(`\n  🛣️  Calculating bunker roads...`)
+        const bunkerRoads = calculateBunkerRoads(
+            mockBaseTerrain,
+            placementResult.buildings,
+            baseFixture.sources,
+            baseFixture.controller,
+            baseFixture.minerals[0],
+        )
+
+        const existingRoads = placementResult.buildings.get('road') || []
+        const allBunkerRoads = [...existingRoads, ...bunkerRoads]
+        placementResult.buildings.set('road', allBunkerRoads)
+        console.log(`  ✓ Total bunker roads: ${allBunkerRoads.length}`)
+
+        // Build obstacles and roads for pathfinding
+        const obstacles = buildObstacles(placementResult.buildings, baseRoomName)
+        obstacles.delete(`${baseRoomName}:${storageLinkWorld.x},${storageLinkWorld.y}`)
+
+        const roads = new Set<string>()
+        for (const road of allBunkerRoads) {
+            const roadKey = `${baseRoomName}:${road.x},${road.y}`
+            if (!obstacles.has(roadKey)) {
+                roads.add(roadKey)
+            }
+        }
+        console.log(`  ✓ Built ${obstacles.size} obstacles, ${roads.size} roads`)
+
+        // Setup Game.map.getRoomTerrain for multi-room pathfinding
+        const mockMineTerrain = new MockRoomTerrain(mineFixture.terrain)
+        ;(global as any).Game = {
+            map: {
+                getRoomTerrain: (rName: string) => {
+                    if (rName === baseRoomName) {
+                        return mockBaseTerrain
+                    }
+                    if (rName === mineRoomName) {
+                        return mockMineTerrain
+                    }
+                    throw new Error(`Unknown room: ${rName}`)
+                },
+            },
+        }
+
+        // Analyze mine room terrain around sources
+        console.log(`\n  🔍 Analyzing ${mineRoomName} source accessibility...`)
+        for (let i = 0; i < mineFixture.sources.length; i++) {
+            const src = mineFixture.sources[i]
+            console.log(`\n    Source ${i + 1} at (${src.x}, ${src.y}):`)
+
+            let walkableNeighbors = 0
+            let blockedNeighbors = 0
+
+            const neighbors = [
+                { dir: 'N', dx: 0, dy: -1 },
+                { dir: 'NE', dx: 1, dy: -1 },
+                { dir: 'E', dx: 1, dy: 0 },
+                { dir: 'SE', dx: 1, dy: 1 },
+                { dir: 'S', dx: 0, dy: 1 },
+                { dir: 'SW', dx: -1, dy: 1 },
+                { dir: 'W', dx: -1, dy: 0 },
+                { dir: 'NW', dx: -1, dy: -1 },
+            ]
+
+            for (const { dir, dx, dy } of neighbors) {
+                const nx = src.x + dx
+                const ny = src.y + dy
+                const terrainVal = mockMineTerrain.get(nx, ny)
+                const terrainLabel =
+                    terrainVal === 1 ? 'wall' : terrainVal === 2 ? 'swamp' : 'plain'
+
+                if (terrainVal === 1) {
+                    blockedNeighbors++
+                    console.log(`      ${dir.padEnd(2)}: (${nx}, ${ny}) = ${terrainLabel} ❌`)
+                } else {
+                    walkableNeighbors++
+                    console.log(`      ${dir.padEnd(2)}: (${nx}, ${ny}) = ${terrainLabel} ✓`)
+                }
+            }
+
+            console.log(
+                `    Summary: ${walkableNeighbors} walkable, ${blockedNeighbors} blocked out of 8 neighbors`,
+            )
+
+            if (walkableNeighbors < 3) {
+                console.log(
+                    `    ⚠️  WARNING: Source has very limited access (only ${walkableNeighbors} walkable neighbors)`,
+                )
+            }
+        }
+
+        // Calculate mine roads
+        console.log(`\n  🛣️  Calculating mine roads from ${baseRoomName} to ${mineRoomName}...`)
+        const result = calculateSingleMineRoads({
+            baseRoomName,
+            startPosition: storageLinkWorld,
+            mineRoomName,
+            mineSources: mineFixture.sources,
+            obstacles,
+            roads,
+        })
+
+        if (!result) {
+            console.log(`\n  ❌ FAILED: No path found from ${baseRoomName} to ${mineRoomName}`)
+            console.log(`\n  🔍 Debugging information:`)
+            console.log(`     Start position: (${storageLinkWorld.x}, ${storageLinkWorld.y})`)
+            console.log(`     Mine sources:`)
+            for (let i = 0; i < mineFixture.sources.length; i++) {
+                const src = mineFixture.sources[i]
+                console.log(`       Source ${i + 1}: (${src.x}, ${src.y})`)
+            }
+
+            assert.fail(
+                `Could not find path from ${baseRoomName} to ${mineRoomName}. ` +
+                    `This reproduces the issue seen in the live game.`,
+            )
+        }
+
+        console.log(`\n  ✅ SUCCESS: Path found!`)
+        console.log(`     Exit: (${result.exitPosition.x}, ${result.exitPosition.y})`)
+        console.log(`     Entrance: (${result.entrancePosition.x}, ${result.entrancePosition.y})`)
+        console.log(`     Base roads: ${result.baseRoads.length}`)
+        console.log(`     Mine roads: ${result.mineRoads.length}`)
+
+        // Check for intersections with obstacles
+        console.log(`\n  🔍 Checking for obstacle intersections...`)
+        const intersections: string[] = []
+
+        for (const road of result.baseRoads) {
+            const roadKey = `${baseRoomName}:${road.x},${road.y}`
+            if (obstacles.has(roadKey)) {
+                intersections.push(roadKey)
+            }
+        }
+
+        if (intersections.length > 0) {
+            console.log(`  ❌ Found ${intersections.length} obstacle intersections:`)
+            for (const intersection of intersections) {
+                console.log(`    - ${intersection}`)
+            }
+            assert.fail(`Mine roads intersected ${intersections.length} obstacles`)
+        } else {
+            console.log(`  ✓ No obstacle intersections found`)
+        }
+
+        console.log(`\n  ✅ Test passed: Mine roads calculated successfully`)
+
+        // Cleanup
+        delete (global as any).Game
+    })
+
+    it('should verify W8N3 and W8N2 fixtures exist', function () {
+        const fixtureDir = path.join(__dirname, '../fixtures/terrain')
+        const requiredFixtures = ['W8N3.json', 'W8N2.json']
+
+        for (const fixture of requiredFixtures) {
+            const fixturePath = path.join(fixtureDir, fixture)
+            assert.isTrue(
+                fs.existsSync(fixturePath),
+                `Fixture ${fixture} should exist. Run: yarn download:fixtures W8N3 --neighbors`,
             )
         }
 

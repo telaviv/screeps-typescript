@@ -23,7 +23,8 @@
         "hook-install": "precommit install",
         "hook-remove": "precommit remove",
         "layout:bunker": "ts-node -r tsconfig-paths/register --project cli/tsconfig.json cli/layout-bunker.ts",
-        "download:fixtures": "ts-node -r tsconfig-paths/register --project cli/tsconfig.json cli/download-fixtures.ts"
+        "download:fixtures": "ts-node -r tsconfig-paths/register --project cli/tsconfig.json cli/download-fixtures.ts",
+        "print:fixture": "ts-node -r tsconfig-paths/register --project cli/tsconfig.json cli/print-fixture.ts"
     },
     "precommit": {
         "tasks": [
