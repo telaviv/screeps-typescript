@@ -361,15 +361,21 @@ class ScoutManager {
             const roomType = getRoomType(roomName)
             const hasFeatures = !!this.featureRoomData[roomName]
             const hasValidScout = this.hasValidScoutData(roomName)
+            const isManuallyDenied = Memory.rooms[roomName]?.scout?.manuallyDenied ?? false
 
             Logger.debug('scout-manager:checking', roomName, {
                 distance,
                 roomType,
                 hasFeatures,
                 hasValidScout,
+                isManuallyDenied,
             })
 
             if (roomType !== RoomType.ROOM) {
+                continue
+            }
+            // Skip manually denied rooms
+            if (isManuallyDenied) {
                 continue
             }
             if (roomType === RoomType.ROOM && (!hasFeatures || !hasValidScout)) {
