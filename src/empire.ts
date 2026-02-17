@@ -25,6 +25,7 @@ declare global {
     namespace NodeJS {
         interface Global {
             findClaimCandidates: () => void
+            checkControllerBlocked: (roomName: string) => void
             nextScoutRoom: () => void
             enableAutoClaim: () => void
             disableAutoClaim: () => void
@@ -41,6 +42,7 @@ if (Memory.autoclaim === undefined) Memory.autoclaim = false
 function findClaimCandidates(): void {
     const empire = new Empire()
     const candidates = empire.findClaimCandidates()
+    console.log(`Found ${candidates.length} candidates: ${candidates.join(', ')}`)
     const match = empire.findBestClaimPair(candidates)
     if (!match) {
         console.log('no match')
@@ -48,6 +50,34 @@ function findClaimCandidates(): void {
     }
     const { candidate, claimer, distance } = match
     console.log(`candidate: ${candidate} claimer: ${claimer} distance: ${distance}`)
+}
+
+/**
+ * Console command to check if a room's controller is blocked and show why.
+ * Useful for debugging claim candidate filtering.
+ */
+function checkControllerBlocked(roomName: string): void {
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log(`No vision for ${roomName}`)
+        return
+    }
+    if (!room.controller) {
+        console.log(`${roomName} has no controller`)
+        return
+    }
+
+    const scoutMemory = Memory.rooms[roomName]?.scout
+    console.log(`=== Controller Accessibility for ${roomName} ===`)
+    console.log(`Scout memory exists: ${!!scoutMemory}`)
+    console.log(`Scout says blocked: ${scoutMemory?.controllerBlocked ?? 'unknown'}`)
+    console.log(`Controller at: (${room.controller.pos.x}, ${room.controller.pos.y})`)
+
+    // Force re-scan with current code
+    ScoutManager.create().run()
+
+    const updatedMemory = Memory.rooms[roomName]?.scout
+    console.log(`After rescan - blocked: ${updatedMemory?.controllerBlocked ?? 'unknown'}`)
 }
 
 /**
@@ -77,6 +107,7 @@ function disableAutoClaim(): void {
 }
 
 global.findClaimCandidates = findClaimCandidates
+global.checkControllerBlocked = checkControllerBlocked
 global.nextScoutRoom = nextScoutRoom
 global.enableAutoClaim = enableAutoClaim
 global.disableAutoClaim = disableAutoClaim

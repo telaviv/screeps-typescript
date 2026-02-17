@@ -32,7 +32,6 @@ import RoleLogistics from 'roles/logistics'
 import { ScoutManager } from 'managers/scout-manager'
 import { World } from 'utils/world'
 import { assignMines } from 'managers/mine-manager'
-import { clearImmutableRoomCache } from 'utils/immutable-room'
 import { ensureSlidingWindow } from 'room-window'
 import { getBuildManager } from 'managers/build-manager'
 import { hasHostileCreeps } from 'utils/room'
@@ -292,7 +291,6 @@ const initialize = wrap(() => {
 
     clearCreepMemory()
     ScoutManager.create().run()
-    clearImmutableRoomCache()
     addSubscriptions()
     const empire = new Empire()
     empire.run()

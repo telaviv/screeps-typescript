@@ -799,10 +799,23 @@ describe('calculateSingleMineRoads', () => {
 
         assert.isTrue(placementResult.success, 'Bunker placement should succeed')
 
-        // Calculate bunker roads
+        // Get storage link position (stationary point from bunker stamp)
+        const stampMetadata = placementResult.metadata?.stampMetadata
+        if (!stampMetadata) {
+            throw new Error('No stamp metadata available')
+        }
+        const { top, left } = stampMetadata.extants
+        const storageLinkStamp = bunkerStamp.stationaryPoints.storageLink
+        const storageLinkWorld = {
+            x: placementResult.origin!.x + (storageLinkStamp.x - left) + 1,
+            y: placementResult.origin!.y + (storageLinkStamp.y - top) + 1,
+        }
+
+        // Calculate bunker roads using storage link stationary point
         const bunkerRoads = calculateBunkerRoads(
             mockTerrain,
             placementResult.buildings,
+            storageLinkWorld,
             baseFixture.sources,
             baseFixture.controller,
             baseFixture.minerals[0],
@@ -818,18 +831,6 @@ describe('calculateSingleMineRoads', () => {
         const roads = new Map<string, number>()
         for (const road of allRoads) {
             roads.set(`${road.x},${road.y}`, 1) // Roads have cost 1
-        }
-
-        // Use storage link position as start (stationary point from bunker stamp)
-        const stampMetadata = placementResult.metadata?.stampMetadata
-        if (!stampMetadata) {
-            throw new Error('No stamp metadata available')
-        }
-        const { top, left } = stampMetadata.extants
-        const storageLinkStamp = bunkerStamp.stationaryPoints.storageLink
-        const storageLinkWorld = {
-            x: placementResult.origin!.x + (storageLinkStamp.x - left) + 1,
-            y: placementResult.origin!.y + (storageLinkStamp.y - top) + 1,
         }
 
         const startPosition = storageLinkWorld
@@ -911,9 +912,23 @@ describe('calculateSingleMineRoads', () => {
             stamp: bunkerStamp,
         })
 
+        // Get storage link position (stationary point from bunker stamp)
+        const stampMetadata = placementResult.metadata?.stampMetadata
+        if (!stampMetadata) {
+            throw new Error('No stamp metadata available')
+        }
+        const { top, left } = stampMetadata.extants
+        const storageLinkStamp = bunkerStamp.stationaryPoints.storageLink
+        const storageLinkWorld = {
+            x: placementResult.origin!.x + (storageLinkStamp.x - left) + 1,
+            y: placementResult.origin!.y + (storageLinkStamp.y - top) + 1,
+        }
+
+        // Calculate bunker roads using storage link stationary point
         const bunkerRoads = calculateBunkerRoads(
             mockTerrain,
             placementResult.buildings,
+            storageLinkWorld,
             baseFixture.sources,
             baseFixture.controller,
             baseFixture.minerals[0],
@@ -939,18 +954,6 @@ describe('calculateSingleMineRoads', () => {
         console.log(`\n[W1N8 Minimal Obstacle Search]`)
         console.log(`  Total obstacles: ${obstacleArray.length}`)
         console.log(`  Total roads: ${allRoads.length}`)
-
-        // Use storage link position as start (stationary point from bunker stamp)
-        const stampMetadata = placementResult.metadata?.stampMetadata
-        if (!stampMetadata) {
-            throw new Error('No stamp metadata available')
-        }
-        const { top, left } = stampMetadata.extants
-        const storageLinkStamp = bunkerStamp.stationaryPoints.storageLink
-        const storageLinkWorld = {
-            x: placementResult.origin!.x + (storageLinkStamp.x - left) + 1,
-            y: placementResult.origin!.y + (storageLinkStamp.y - top) + 1,
-        }
 
         const startPosition = storageLinkWorld
         const northGoals = [

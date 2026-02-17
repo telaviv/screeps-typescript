@@ -7,37 +7,30 @@ import {
 import { Position } from '../types'
 
 /**
- * Calculates road positions for a bunker layout
+ * Calculates additional road positions from bunker to external features
  *
- * Paths from storage to sources, controller, and mineral
+ * Paths from storage link stationary point to sources, controller, and mineral
  * Avoids placing roads on bunker structures
  * Prefers existing road positions for subsequent paths
  *
  * @param terrain Room terrain data
- * @param bunkerBuildings Map of structure type to positions
+ * @param bunkerBuildings Map of structure type to positions (must include existing roads from stamp)
+ * @param startPos Storage link stationary point position (where the hauler stands)
  * @param sources Array of source positions
  * @param controller Controller position
  * @param mineral Mineral position
- * @returns Array of positions where roads should be placed
+ * @returns Array of NEW road positions to add (does not include existing stamp roads)
  */
 export function calculateBunkerRoads(
     terrain: RoomTerrain,
     bunkerBuildings: Map<string, Position[]>,
+    startPos: Position,
     sources: Position[],
     controller: Position,
     mineral: Position,
 ): Position[] {
-    // Get storage position (origin of all paths)
-    const storagePositions = bunkerBuildings.get('storage')
-    if (!storagePositions || storagePositions.length === 0) {
-        return []
-    }
-    const storage = storagePositions[0]
-
-    // Find an adjacent walkable position to start pathfinding from
-    // Storage itself may be surrounded by obstacles
     console.log(
-        `[calculateBunkerRoads] Finding accessible position near storage (${storage.x}, ${storage.y})...`,
+        `[calculateBunkerRoads] Starting from storage link position (${startPos.x}, ${startPos.y})`,
     )
 
     // Create base terrain cost callback first to check accessibility
@@ -68,52 +61,11 @@ export function calculateBunkerRoads(
         }
     }
 
-    // Get existing bunker roads
+    // Get existing bunker roads from stamp
     const existingRoads = bunkerBuildings.get('road') || []
     const roadSet = new Set<string>()
     for (const road of existingRoads) {
         roadSet.add(`${road.x},${road.y}`)
-    }
-
-    // Find accessible starting position (prefer roads adjacent to storage)
-    const adjacentPositions = [
-        { x: storage.x - 1, y: storage.y + 1 }, // SW
-        { x: storage.x + 1, y: storage.y + 1 }, // SE
-        { x: storage.x - 1, y: storage.y - 1 }, // NW
-        { x: storage.x + 1, y: storage.y - 1 }, // NE
-        { x: storage.x - 1, y: storage.y }, // W
-        { x: storage.x + 1, y: storage.y }, // E
-        { x: storage.x, y: storage.y - 1 }, // N
-        { x: storage.x, y: storage.y + 1 }, // S
-    ]
-
-    let startPos: Position | null = null
-    for (const pos of adjacentPositions) {
-        const key = `${pos.x},${pos.y}`
-        if (!obstacles.has(key) && roadSet.has(key)) {
-            console.log(
-                `[calculateBunkerRoads] Found accessible start on road: (${pos.x}, ${pos.y})`,
-            )
-            startPos = pos
-            break
-        }
-    }
-
-    if (!startPos) {
-        // Fall back to any non-obstacle position
-        for (const pos of adjacentPositions) {
-            const key = `${pos.x},${pos.y}`
-            if (!obstacles.has(key)) {
-                console.log(`[calculateBunkerRoads] Found accessible start: (${pos.x}, ${pos.y})`)
-                startPos = pos
-                break
-            }
-        }
-    }
-
-    if (!startPos) {
-        console.log(`[calculateBunkerRoads] WARNING: Storage has no accessible adjacent positions!`)
-        return []
     }
 
     // Track road positions and their preferences
@@ -179,6 +131,10 @@ export function calculateBunkerRoads(
         // Skip roads that already exist in the stamp OR that overlap with ANY structure
         if (!structurePositions.has(key) && !existingRoadKeys.has(key)) {
             const [x, y] = key.split(',').map(Number)
+            // Skip roads on room edges (x=0, x=49, y=0, y=49) - these are walls
+            if (x === 0 || x === 49 || y === 0 || y === 49) {
+                continue
+            }
             roads.push({ x, y })
         }
     }

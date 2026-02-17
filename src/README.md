@@ -207,14 +207,12 @@ Handles military operations with status tracking:
 
 **Room surveying and construction feature calculation**.
 
-| Function                              | Description                                         |
-| ------------------------------------- | --------------------------------------------------- |
-| `survey()`                            | Main survey function (profiled)                     |
-| `isSurveyComplete(room)`              | Check if room has all construction features         |
-| `setConstructionFeaturesV3(roomName)` | Calculate and store construction features           |
-| `calculateConstructionFeaturesV3()`   | Generate full construction plan for room            |
-| `calculateBunkerImmutableRoom()`      | Create immutable room with bunker stamp             |
-| `getRampartPositions()`               | Calculate rampart positions using min-cut algorithm |
+| Function                              | Description                                 |
+| ------------------------------------- | ------------------------------------------- |
+| `survey()`                            | Main survey function (profiled)             |
+| `isSurveyComplete(room)`              | Check if room has all construction features |
+| `setConstructionFeaturesV3(roomName)` | Calculate and store construction features   |
+| `calculateConstructionFeaturesV3()`   | Generate full construction plan for room    |
 
 ### construction-features.ts
 

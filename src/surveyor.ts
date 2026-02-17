@@ -217,16 +217,24 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
         mineralPosition,
     )
 
-    // Calculate bunker roads (within base room)
-    const bunkerRoads = calculateBunkerRoads(
+    // Get static roads from bunker stamp
+    const stampRoads = placementResult.buildings.get('road') || []
+
+    // Calculate additional roads from bunker to external features (controller, sources, mineral)
+    // Uses storage link stationary point as the start position (where the hauler stands)
+    const additionalRoads = calculateBunkerRoads(
         terrain,
         placementResult.buildings,
+        stationaryPoints.storageLink,
         sourcesArray.map((s) => ({ x: s.x, y: s.y })),
         controllerPosition,
         mineralPosition,
     )
 
-    // Add bunker roads to buildings map so mine road pathfinding can use them
+    // Combine stamp roads with additional calculated roads
+    const bunkerRoads = stampRoads.concat(additionalRoads)
+
+    // Update buildings map with all roads (for mine road pathfinding)
     placementResult.buildings.set('road', bunkerRoads)
 
     // Calculate mine roads (from base to remote mines)
@@ -604,6 +612,33 @@ function clearInvalidConstructionSites(room: Room, features: ConstructionFeature
         if (buildings?.some((pos) => pos.x === site.pos.x && pos.y === site.pos.y)) {
             continue
         }
+
+        // Special case: allow virtual storage containers (before RCL 4)
+        if (site.structureType === STRUCTURE_CONTAINER) {
+            const storagePos = features[STRUCTURE_STORAGE]?.[0]
+            if (
+                storagePos &&
+                (room.controller?.level ?? 0) < 4 &&
+                site.pos.x === storagePos.x &&
+                site.pos.y === storagePos.y
+            ) {
+                continue // This is a valid virtual storage container
+            }
+
+            // Special case: allow virtual controller link containers (before RCL 5)
+            const links = getCalculatedLinks(room)
+            if (links && (room.controller?.level ?? 0) < 5) {
+                const controllerLink = links.controller
+                if (
+                    controllerLink &&
+                    site.pos.x === controllerLink.x &&
+                    site.pos.y === controllerLink.y
+                ) {
+                    continue // This is a valid virtual controller link container
+                }
+            }
+        }
+
         Logger.warning('clearInvalidConstructionSites:removed', site.structureType, site.pos)
         site.remove()
     }

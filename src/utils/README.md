@@ -73,17 +73,6 @@ Key features:
 -   `getContainerAt(pos)`: Find container at position
 -   Position comparison and validation
 
-#### immutable-room.ts
-
-**Purpose**: Cached immutable room data.
-
-Key features:
-
--   Large file (~44KB) with comprehensive room caching
--   Caches terrain, structures, and other room data
--   `clearImmutableRoomCache()`: Clears cache each tick
--   Improves performance by avoiding repeated lookups
-
 ### Creep Utilities
 
 #### creep.ts

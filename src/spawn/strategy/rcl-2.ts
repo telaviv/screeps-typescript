@@ -475,7 +475,7 @@ const createMineWorkers = wrap(
         }
 
         if (mineManager.needsRepairs()) {
-            console.log('creating repairer', mineManager.name)
+            Logger.info('creating repairer', mineManager.name)
             RoleLogistics.createCreep(spawn, TASK_REPAIRING, {
                 home: mineManager.name,
                 capacity,

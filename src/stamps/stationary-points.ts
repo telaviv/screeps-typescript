@@ -40,7 +40,9 @@ function isWalkable(terrain: RoomTerrain, x: number, y: number): boolean {
 }
 
 /**
- * Check if a position has a structure that blocks placement
+ * Check if a position has a structure that blocks container placement
+ * Roads block container placement (containers shouldn't replace roads from the stamp)
+ * Ramparts and containers don't block (they can coexist with other structures)
  */
 function hasBlockingStructure(
     bunkerBuildings: Map<string, Position[]>,
@@ -49,11 +51,7 @@ function hasBlockingStructure(
 ): boolean {
     const key = `${x},${y}`
     for (const [structureType, positions] of bunkerBuildings.entries()) {
-        if (
-            structureType === 'road' ||
-            structureType === 'rampart' ||
-            structureType === 'container'
-        ) {
+        if (structureType === 'rampart' || structureType === 'container') {
             continue // These don't block
         }
         if (positions.some((pos) => `${pos.x},${pos.y}` === key)) {

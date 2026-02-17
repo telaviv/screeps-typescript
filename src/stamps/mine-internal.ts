@@ -95,10 +95,14 @@ export function calculateMineInternal(
         }
     }
 
-    // Deduplicate roads
+    // Deduplicate roads and filter out edge positions (walls)
     const uniqueRoads: Position[] = []
     const seenRoads = new Set<string>()
     for (const road of roads) {
+        // Skip roads on room edges (x=0, x=49, y=0, y=49) - these are walls
+        if (road.x === 0 || road.x === 49 || road.y === 0 || road.y === 49) {
+            continue
+        }
         const key = `${road.x},${road.y}`
         if (!seenRoads.has(key)) {
             seenRoads.add(key)

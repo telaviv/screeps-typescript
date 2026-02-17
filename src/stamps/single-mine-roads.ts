@@ -117,7 +117,10 @@ export function calculateSingleMineRoads(
 
     // Extract road positions (excluding exit position as it's on room edge)
     const baseRoads = basePath.slice(0, -1).map((p) => ({ x: p.x, y: p.y }))
-    const mineRoads = minePath.map((p) => ({ x: p.x, y: p.y }))
+    // Filter out edge positions (x=0, x=49, y=0, y=49) from mine roads - these are walls
+    const mineRoads = minePath
+        .filter((p) => p.x !== 0 && p.x !== 49 && p.y !== 0 && p.y !== 49)
+        .map((p) => ({ x: p.x, y: p.y }))
 
     return {
         exitPosition: { x: exitPosition.x, y: exitPosition.y },

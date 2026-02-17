@@ -18,7 +18,7 @@ import { Position } from 'types'
 import { RoomManager } from './room-manager'
 import { assignMines } from './mine-manager'
 import { createTravelTask } from 'tasks/travel'
-import { getNonObstacleNeighbors } from 'utils/room-position'
+import { getNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
 
@@ -56,6 +56,8 @@ export interface ScoutMemory {
     version: string
     /** Game tick when data was recorded */
     updatedAt: number
+    /** Whether this room has been manually denied */
+    manuallyDenied?: boolean
     /** Username of controller owner, if any */
     controllerOwner?: string
     /** Controller progress total */
@@ -106,6 +108,12 @@ declare global {
                 clearCache: () => void
                 /** Debug room status and memory */
                 debug: (roomName: string) => void
+                /** Manually deny a room from being visited */
+                deny: (roomName: string) => void
+                /** Remove manual denial from a room */
+                removeDenial: (roomName: string) => void
+                /** List all manually denied rooms */
+                listDenied: () => void
             }
         }
     }
@@ -151,6 +159,46 @@ global.scout = {
         }
         const exits = Game.map.describeExits(roomName)
         console.log(`Adjacent rooms:`, JSON.stringify(exits))
+    },
+    /** Manually deny a room from being visited */
+    deny: (roomName: string): void => {
+        const roomMemory = Memory.rooms[roomName]
+        if (!roomMemory) {
+            console.log(`Error: Room ${roomName} not found in memory`)
+            return
+        }
+        if (!roomMemory.scout) {
+            roomMemory.scout = {
+                version: SCOUT_VERSION,
+                updatedAt: Game.time,
+            }
+        }
+        roomMemory.scout.manuallyDenied = true
+        World.clearClosestRoomCache()
+        console.log(`Room ${roomName} has been denied`)
+    },
+    /** Remove manual denial from a room */
+    removeDenial: (roomName: string): void => {
+        const scout = Memory.rooms[roomName]?.scout
+        if (scout?.manuallyDenied) {
+            delete scout.manuallyDenied
+            World.clearClosestRoomCache()
+            console.log(`Manual denial removed from ${roomName}`)
+        } else {
+            console.log(`Room ${roomName} was not manually denied`)
+        }
+    },
+    /** List all manually denied rooms */
+    listDenied: (): void => {
+        const deniedRooms = Object.keys(Memory.rooms).filter(
+            (roomName) => Memory.rooms[roomName]?.scout?.manuallyDenied,
+        )
+        if (deniedRooms.length === 0) {
+            console.log('No rooms are manually denied')
+        } else {
+            console.log(`Manually denied rooms (${deniedRooms.length}):`)
+            deniedRooms.forEach((room) => console.log(`  - ${room}`))
+        }
     },
 }
 
@@ -370,6 +418,66 @@ class ScoutManager {
     }
 
     /**
+     * Checks if the controller has at least one accessible neighbor position.
+     * A position is accessible if it's not a wall, not an obstacle, and not blocked by hostile ramparts.
+     * @param room - The room containing the controller
+     * @param controllerPos - The position of the controller
+     * @returns True if at least one neighbor is accessible for claiming
+     */
+    private static hasAccessibleControllerNeighbors(
+        room: Room,
+        controllerPos: RoomPosition,
+    ): boolean {
+        const neighbors = getNeighbors(controllerPos)
+        const terrain = room.getTerrain()
+
+        for (const pos of neighbors) {
+            // Check if position is a wall
+            if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
+                continue
+            }
+
+            // Check for obstacle structures (walls, spawns, etc.)
+            const structures = pos.lookFor(LOOK_STRUCTURES)
+            const hasObstacleStructure = structures.some((s) => {
+                // Check standard obstacles
+                if (s.structureType === STRUCTURE_WALL) return true
+                if (s.structureType === STRUCTURE_SPAWN) return true
+                if (s.structureType === STRUCTURE_EXTENSION) return true
+                if (s.structureType === STRUCTURE_LINK) return true
+                if (s.structureType === STRUCTURE_STORAGE) return true
+                if (s.structureType === STRUCTURE_TOWER) return true
+                if (s.structureType === STRUCTURE_OBSERVER) return true
+                if (s.structureType === STRUCTURE_POWER_SPAWN) return true
+                if (s.structureType === STRUCTURE_LAB) return true
+                if (s.structureType === STRUCTURE_TERMINAL) return true
+                if (s.structureType === STRUCTURE_NUKER) return true
+                if (s.structureType === STRUCTURE_FACTORY) return true
+                return false
+            })
+
+            if (hasObstacleStructure) {
+                continue
+            }
+
+            // Check for hostile ramparts
+            const hasHostileRampart = structures.some(
+                (s) => s.structureType === STRUCTURE_RAMPART && !(s as StructureRampart).my,
+            )
+
+            if (hasHostileRampart) {
+                continue
+            }
+
+            // This position is accessible
+            return true
+        }
+
+        // No accessible positions found
+        return false
+    }
+
+    /**
      * Records scout data for a visible room.
      * @param room - The room to record data for
      */
@@ -393,7 +501,10 @@ class ScoutManager {
         scoutMemory.wallTerrain = getWallTerrainCount(room)
         if (controller) {
             scoutMemory.controllerPosition = { x: controller.pos.x, y: controller.pos.y }
-            scoutMemory.controllerBlocked = getNonObstacleNeighbors(controller.pos).length === 0
+            scoutMemory.controllerBlocked = !ScoutManager.hasAccessibleControllerNeighbors(
+                room,
+                controller.pos,
+            )
         }
         const mineral = room.find(FIND_MINERALS)[0]
         if (mineral) {

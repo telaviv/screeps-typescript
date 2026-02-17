@@ -30,6 +30,14 @@ function isInRespawnArea(): boolean {
 
 /** Checks if room should be avoided: SK rooms, enemy-owned, wrong status, etc. */
 function isRoomUnsafe(roomName: string): boolean {
+    const scout = Memory.rooms[roomName]?.scout
+
+    // Check manual denial first
+    if (scout?.manuallyDenied) {
+        Logger.debug(`isRoomUnsafe(${roomName}): manually denied`)
+        return true
+    }
+
     // Block highway rooms when in respawn area (highway rules differ in respawn)
     if (isInRespawnArea() && getRoomType(roomName) === RoomType.HIGHWAY) {
         Logger.debug(`isRoomUnsafe(${roomName}): highway room while in respawn area`)
@@ -57,8 +65,6 @@ function isRoomUnsafe(roomName: string): boolean {
         )
         return true
     }
-
-    const scout = Memory.rooms[roomName]?.scout
 
     if (!scout) {
         return false
