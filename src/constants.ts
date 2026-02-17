@@ -31,7 +31,7 @@ export function isBuildableStructureConstant(
 /** Maximum room distance for sending savior creeps to rebuild a lost room */
 export const MAX_SAVIOR_DISTANCE = 5
 /** Maximum room distance for claiming a new room */
-export const MAX_CLAIM_DISTANCE = 3
+export const MAX_CLAIM_DISTANCE = 5
 /** Minimum distance buffer from enemy rooms when selecting claim targets */
 export const ENEMY_DISTANCE_BUFFER = 1
 /** Number of ticks a creep must be stuck before triggering deadlock resolution */

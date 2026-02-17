@@ -36,6 +36,8 @@ export const DistanceTTL: Record<number, number> = {
     3: (60 * 60 * 36) / TIME_PER_TICK,
     4: (60 * 60 * 36) / TIME_PER_TICK,
     5: (60 * 60 * 48) / TIME_PER_TICK,
+    6: (60 * 60 * 48) / TIME_PER_TICK,
+    7: (60 * 60 * 60) / TIME_PER_TICK,
 }
 
 if (Object.keys(DistanceTTL).length < MAX_SCOUT_DISTANCE) {

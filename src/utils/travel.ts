@@ -52,7 +52,12 @@ function routeCallback(fromRoom: string, toRoom: string): number | undefined {
 const moveToRoomRouteCallback =
     (room: string, currentRoom: string) =>
     (fromRoom: string, toRoom: string): number | undefined => {
-        if (toRoom === room || fromRoom === room || toRoom === currentRoom || fromRoom === currentRoom) {
+        if (
+            toRoom === room ||
+            fromRoom === room ||
+            toRoom === currentRoom ||
+            fromRoom === currentRoom
+        ) {
             return undefined
         }
         return routeCallback(fromRoom, toRoom)

@@ -81,6 +81,8 @@ export class RebalancerCreep {
             this.creep.suicide()
         }
         this.creep.say('🟰⚡')
+
+        // Phase 1: Try to collect from non-storage sources (pickup or containers)
         let success = PickupTask.makeRequest(this.creep)
         if (success) {
             return
@@ -94,16 +96,59 @@ export class RebalancerCreep {
             return
         }
 
-        success = WithdrawTask.makeRequest(this.creep, { sortBy: 'amount' })
-        if (!success) {
-            this.rebalance()
-            return
+        // Phase 2: No non-storage sources available, check if there are transfer tasks that need filling
+        // If so, withdraw from storage to service those tasks
+        const hasTransferTasks = this.hasAvailableTransferTasks()
+        if (hasTransferTasks) {
+            success = WithdrawTask.makeRequest(this.creep, {
+                sortBy: 'amount',
+            })
+            if (success) {
+                return
+            }
         }
+
+        // Nothing to do
+        this.rebalance()
+    }
+
+    @profile
+    hasAvailableTransferTasks(): boolean {
+        // Check if there are structures that need energy (excluding virtual storage)
+        const virtualStorage = getVirtualStorage(this.creep.memory.home)
+        const extensions = this.creep.room
+            .find(FIND_MY_STRUCTURES)
+            .filter(
+                (s) =>
+                    (s.structureType === STRUCTURE_EXTENSION ||
+                        s.structureType === STRUCTURE_SPAWN ||
+                        s.structureType === STRUCTURE_TOWER) &&
+                    s.store &&
+                    s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+            )
+
+        if (extensions.length > 0) {
+            return true
+        }
+
+        // Check virtual controller link container
+        const virtualControllerLink = getVirtualControllerLink(this.creep.memory.home)
+        if (
+            virtualControllerLink &&
+            virtualControllerLink.structureType === STRUCTURE_CONTAINER &&
+            virtualControllerLink.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        ) {
+            return true
+        }
+
+        return false
     }
 
     @profile
     rebalance(): void {
         this.creep.say('🟰🟰')
+
+        // Phase 1 behavior: deposit to storage
         const virtualStorage = getVirtualStorage(this.creep.memory.home)
         if (virtualStorage) {
             const structure = TransferTask.makeRequest(this.creep, { structure: virtualStorage })
@@ -111,6 +156,8 @@ export class RebalancerCreep {
                 return
             }
         }
+
+        // Phase 2 behavior: deposit to other structures that need energy
         const virtualControllerLink = getVirtualControllerLink(this.creep.memory.home)
         if (virtualControllerLink && virtualControllerLink.structureType === STRUCTURE_CONTAINER) {
             const structure = TransferTask.makeRequest(this.creep, {
