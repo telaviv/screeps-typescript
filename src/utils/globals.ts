@@ -15,6 +15,8 @@ import {
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { World } from './world'
 import SourcesManager from 'managers/sources-manager'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import MineralManager, { getMineralManager } from 'managers/mineral-manager'
 import WarDepartment, { SpawnWarMemory, WarStatus } from 'war-department'
 import DefenseDepartment from 'defense-department'
 import { AttackerMemory } from 'roles/attacker'
@@ -1698,6 +1700,128 @@ function fixMineFeatures(mineName: string, baseRoomName?: string): void {
     console.log(`Current CPU bucket: ${Game.cpu.bucket}`)
 }
 
+/**
+ * Debug mineral manager for a room.
+ * Shows mineral info, stationary points, and container position.
+ */
+function debugMineral(roomName: string): void {
+    const room = Game.rooms[roomName]
+    if (!room) {
+        console.log(`❌ Room ${roomName} not visible`)
+        return
+    }
+
+    console.log(`\n=== Mineral Debug: ${roomName} ===`)
+
+    const mineralManager = getMineralManager(room)
+    if (!mineralManager) {
+        console.log(`❌ No mineral manager (missing stationary points or mineral)`)
+        return
+    }
+
+    console.log(`\n✓ Mineral Manager Created`)
+    console.log(`  Mineral ID: ${mineralManager.id}`)
+    console.log(`  Mineral Type: ${mineralManager.mineralType}`)
+    console.log(`  Current Amount: ${mineralManager.mineralAmount}`)
+    console.log(`  Ticks to Regen: ${mineralManager.ticksToRegeneration ?? 'N/A'}`)
+    console.log(
+        `  Container Position: (${mineralManager.containerPosition.x}, ${mineralManager.containerPosition.y})`,
+    )
+
+    // Check for extractor
+    const extractor = room.find(FIND_MY_STRUCTURES, {
+        filter: { structureType: STRUCTURE_EXTRACTOR },
+    })
+    console.log(`\nExtractor: ${extractor.length > 0 ? '✓ Built' : '❌ Not built'}`)
+
+    // Check for container
+    const containers = room.lookForAt(
+        LOOK_STRUCTURES,
+        mineralManager.containerPosition.x,
+        mineralManager.containerPosition.y,
+    )
+    const container = containers.find(
+        (s): s is StructureContainer => s.structureType === STRUCTURE_CONTAINER,
+    )
+    console.log(`Container: ${container ? '✓ Built' : '❌ Not built'}`)
+    if (container) {
+        const used = container.store.getUsedCapacity(mineralManager.mineralType)
+        const total = container.store.getCapacity()
+        console.log(`  Storage: ${used}/${total} ${mineralManager.mineralType}`)
+    }
+
+    // Check storage
+    console.log(`\nStorage: ${room.storage ? '✓ Built' : '❌ Not built'}`)
+
+    // Check mineral harvester creeps
+    const harvesters = mineralManager.mineralHarvesters
+    console.log(`\nMineral Harvesters: ${harvesters.length}`)
+    for (const harvester of harvesters) {
+        const pos = harvester.pos
+        const targetPos = mineralManager.containerPosition
+        const atPosition =
+            pos.x === targetPos.x && pos.y === targetPos.y && pos.roomName === targetPos.roomName
+        console.log(`  ${harvester.name}:`)
+        console.log(
+            `    Position: (${pos.x}, ${pos.y}) ${atPosition ? '✓ AT TARGET' : '❌ MOVING'}`,
+        )
+        console.log(`    TTL: ${harvester.ticksToLive ?? 'N/A'}`)
+        console.log(
+            `    Store: ${harvester.store.getUsedCapacity()}/${harvester.store.getCapacity()}`,
+        )
+        console.log(
+            `    Body: ${harvester.body.length} parts (${harvester.getActiveBodyparts(
+                WORK,
+            )} WORK, ${harvester.getActiveBodyparts(MOVE)} MOVE)`,
+        )
+
+        // Check if can harvest
+        const mineral = Game.getObjectById(mineralManager.id)
+        if (mineral) {
+            const canHarvest =
+                mineral.mineralAmount > 0 &&
+                !(mineral.ticksToRegeneration !== undefined && mineral.ticksToRegeneration > 0)
+            console.log(`    Can harvest: ${canHarvest ? '✓ YES' : '❌ NO'}`)
+            if (!canHarvest) {
+                if (mineral.mineralAmount <= 0) {
+                    console.log(`      Reason: Mineral depleted`)
+                }
+                if (mineral.ticksToRegeneration !== undefined && mineral.ticksToRegeneration > 0) {
+                    console.log(`      Reason: Cooldown (${mineral.ticksToRegeneration} ticks)`)
+                }
+            }
+            if (container && container.store.getFreeCapacity() === 0) {
+                console.log(`      Container full!`)
+            }
+        }
+    }
+
+    // Check shouldBuildMineralHarvester
+    console.log(
+        `\nShould build harvester: ${
+            mineralManager.shouldBuildMineralHarvester() ? '✓ YES' : '❌ NO'
+        }`,
+    )
+
+    // Check construction features
+    const features = getConstructionFeaturesV3(room)
+    if (features && features.type === 'base' && features.features) {
+        const extractorPositions = features.features[STRUCTURE_EXTRACTOR] || []
+        const containerPositions = features.features[STRUCTURE_CONTAINER] || []
+        console.log(`\nConstruction Features:`)
+        console.log(`  Extractor planned: ${extractorPositions.length > 0 ? '✓' : '❌'}`)
+        if (extractorPositions.length > 0) {
+            console.log(`    Position: (${extractorPositions[0].x}, ${extractorPositions[0].y})`)
+        }
+        const mineralContainer = containerPositions.find(
+            (p) =>
+                p.x === mineralManager.containerPosition.x &&
+                p.y === mineralManager.containerPosition.y,
+        )
+        console.log(`  Mineral container planned: ${mineralContainer ? '✓' : '❌'}`)
+    }
+}
+
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
@@ -1734,6 +1858,7 @@ export default function assignGlobals(): void {
     global.debugMineWorkerSpawn = debugMineWorkerSpawn
     global.debugLinks = debugLinks
     global.debugLinkPositions = debugLinkPositions
+    global.debugMineral = debugMineral
 }
 
 declare global {
@@ -1772,6 +1897,7 @@ declare global {
             debugMineWorkerSpawn: (mineName: string, baseRoomName: string) => void
             debugLinks: (roomName: string) => void
             debugLinkPositions: (roomName: string) => void
+            debugMineral: (roomName: string) => void
         }
     }
 }

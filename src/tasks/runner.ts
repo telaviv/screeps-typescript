@@ -1,5 +1,6 @@
 import * as Logger from 'utils/logger'
 import { ResourceCreep, Runner, Task } from 'tasks/types'
+import MineralWithdrawRunner from 'tasks/mineral-withdraw'
 import MiningRunner from 'tasks/mining'
 import PickupRunner from 'tasks/pickup'
 import SignRunner from 'tasks/sign'
@@ -12,6 +13,7 @@ import { wrap } from 'utils/profiling'
 const runners: Runner<any>[] = [
     TransferRunner,
     WithdrawRunner,
+    MineralWithdrawRunner,
     PickupRunner,
     MiningRunner,
     SignRunner,

@@ -267,6 +267,7 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
             .map((s) => stationaryPoints.sources[s.id])
             .concat([stationaryPoints.mineral]),
         [STRUCTURE_SPAWN]: placementResult.buildings.get('spawn') || [],
+        [STRUCTURE_EXTRACTOR]: [mineralPosition],
         [STRUCTURE_RAMPART]: rampartPositions,
         [STRUCTURE_ROAD]: allRoads,
     }

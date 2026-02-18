@@ -62,7 +62,7 @@ export function destroyMovementStructures(room: Room): void {
 
     const isOwnedRoom = room.controller?.my === true
 
-    Logger.info(
+    Logger.debug(
         'destroyMovementStructures:start',
         room.name,
         `Processing ${Object.keys(movement).length} structure types`,
@@ -135,7 +135,7 @@ export function destroyMovementStructures(room: Room): void {
                         )
                     }
                 } else {
-                    Logger.info(
+                    Logger.debug(
                         'construction-movement:destroyMovementStructures:moveFrom:needs-dismantling',
                         `${building.structureType} at (${x},${y}) in ${room.name} needs to be dismantled`,
                         `Will be dismantled by workers`,

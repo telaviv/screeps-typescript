@@ -16,6 +16,8 @@ import {
     TASK_COLLECTING,
     TASK_DISMANTLING,
     TASK_HAULING,
+    TASK_MINERAL_DEPOSIT,
+    TASK_MINERAL_WITHDRAW,
     TASK_MINING,
     TASK_REPAIRING,
     TASK_STORE,
@@ -26,6 +28,7 @@ import {
 import { fromBodyPlan, fromBodyPlanSafe } from 'utils/parts'
 import {
     getConstructionSites,
+    getMineral,
     hasHostileCreeps,
     hasNoSpawns,
     hasOwnFragileWall,
@@ -43,6 +46,7 @@ import { getConstructionFeaturesV3 } from 'construction-features'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
 import { wander } from 'utils/creep'
+import { addMineralWithdrawTask } from 'tasks/mineral-withdraw'
 
 export const ROLE = 'logistics'
 /** Ticks of idle time before a worker logistics creep suicides */
@@ -67,6 +71,8 @@ const TASK_EMOJIS = {
     [TASK_BASE_DEFENSE]: '🛡️',
     [TASK_TRAVELING]: '🚎',
     [TASK_DISMANTLING]: ',🚜',
+    [TASK_MINERAL_WITHDRAW]: '❌',
+    [TASK_MINERAL_DEPOSIT]: '💰',
     [NO_TASK]: '🤔',
 }
 
@@ -140,7 +146,7 @@ class RoleLogistics {
         } else if (this.canSign()) {
             SignTask.makeRequest(this.creep)
         } else if (currentTask === TASK_COLLECTING) {
-            this.getEnergy()
+            this.getResources()
         } else if (currentTask === TASK_HAULING) {
             this.haulEnergy()
         } else if (currentTask === TASK_DISMANTLING) {
@@ -159,6 +165,8 @@ class RoleLogistics {
             this.travel()
         } else if (currentTask === NO_TASK) {
             this.assignWorkerPreference()
+        } else if (currentTask === TASK_MINERAL_DEPOSIT) {
+            this.mineralDeposit()
         }
         if (tasks.length > 0) {
             this.runTask()
@@ -187,7 +195,12 @@ class RoleLogistics {
 
     /** Attempts to find and collect energy from available sources */
     @profile
-    private getEnergy(): void {
+    private getResources(): void {
+        const mineralWithdrawTask = addMineralWithdrawTask(this.creep)
+        if (mineralWithdrawTask) {
+            this.creep.memory.currentTask = TASK_MINERAL_WITHDRAW
+            return
+        }
         const energyTask = addEnergyTask(this.creep, { includeMining: true })
         if (!energyTask) {
             // No energy available - try dismantling as fallback (doesn't need energy)
@@ -242,6 +255,11 @@ class RoleLogistics {
             } else {
                 memory.currentTask = memory.preference
             }
+        } else if (
+            currentTask === TASK_MINERAL_WITHDRAW &&
+            this.creep.store.getUsedCapacity() > 0
+        ) {
+            memory.currentTask = TASK_MINERAL_DEPOSIT
         } else if (currentTask !== TASK_COLLECTING && hasNoEnergy(this.creep)) {
             memory.currentTask = TASK_COLLECTING
         }
@@ -677,6 +695,50 @@ class RoleLogistics {
         } else {
             this.assignWorkerPreference()
         }
+    }
+
+    /** Deposits all minerals to storage */
+    @profile
+    private mineralDeposit(): void {
+        // note cross room deposits are not supported yet
+        const home = Game.rooms[this.creep.memory.home]
+        if (!home) {
+            Logger.error('logistics:mineral-deposit:no-home', this.creep.name)
+            this.assignWorkerPreference()
+            return
+        }
+
+        const mineral = getMineral(this.creep.room)
+        if (mineral === null) {
+            Logger.error('logistics:mineral-deposit:no-mineral')
+            return
+        }
+        const mineralType = mineral.mineralType
+        const storage = home.storage
+        if (!storage) {
+            this.creep.drop(mineralType)
+            Logger.error('logistics:mineral-deposit:no-storage', this.creep.name)
+            return
+        }
+        const err = this.creep.transfer(storage, mineralType)
+        if (err === ERR_NOT_IN_RANGE) {
+            moveWithinRoom(
+                this.creep,
+                { pos: storage.pos, range: 1 },
+                { visualizePathStyle: { stroke: '#ffaa00' } },
+            )
+            return
+        } else if (err !== OK) {
+            Logger.warning(
+                'logistics:mineral-deposit:transfer:failure',
+                this.creep.name,
+                mineralType,
+                err,
+            )
+            return
+        }
+        // All resources deposited, switch back to collecting
+        this.creep.memory.currentTask = TASK_COLLECTING
     }
 
     /** Moves randomly when idle */

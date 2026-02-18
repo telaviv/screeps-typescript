@@ -39,6 +39,7 @@ import migrate from 'migrations'
 import { runSpawn } from './spawn'
 import { runTower } from './tower'
 import { visualize } from 'room-visualizer'
+import roleMineralHarvester, { MineralHarvester } from 'roles/mineral-harvester'
 
 // thunder force iv
 console.log(String.raw`
@@ -277,6 +278,8 @@ const runCreep = wrap((creepName: string) => {
         roleEnergyHauler.run(creep as EnergyHauler)
     } else if (creep.memory.role === 'remote-hauler') {
         roleRemoteHauler.run(creep as RemoteHauler)
+    } else if (creep.memory.role === 'mineral-harvester') {
+        roleMineralHarvester.run(creep as MineralHarvester)
     }
 }, 'main:runCreep')
 

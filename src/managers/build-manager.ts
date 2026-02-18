@@ -19,6 +19,7 @@ import {
     getConstructionSites,
     getContainers,
     getExtensions,
+    getExtractor,
     getFactory,
     getLabs,
     getLinks,
@@ -507,8 +508,6 @@ export default class BuildManager {
 
     /** Checks if a mineral container needs to be built (disabled) */
     private canBuildMineralContainer(): boolean {
-        return false
-        /**
         if (this.controllerLevel < 6) {
             return false
         }
@@ -520,7 +519,6 @@ export default class BuildManager {
         return !existingContainers.some(
             (container) => container.pos.x === mineral.x && container.pos.y === mineral.y,
         )
-        */
     }
 
     /** Builds a container at the mineral position */
@@ -681,11 +679,8 @@ export default class BuildManager {
 
     /** Checks if extractor can be built (disabled) */
     private canBuildExtractor = wrap((): boolean => {
-        return false
-        /**
         const extractor = getExtractor(this.room)
         return Boolean(!extractor && this.controllerLevel >= 6)
-        */
     }, 'BuildManager:canBuildExtractor')
 
     /** Checks if factory can be built (RCL 7+) */

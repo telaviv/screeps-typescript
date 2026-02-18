@@ -76,6 +76,7 @@ const STRUCTURE_VISUALS = new Map<StructureConstant, DrawFunction>([
     [STRUCTURE_OBSERVER, drawObserver],
     [STRUCTURE_NUKER, drawNuker],
     [STRUCTURE_FACTORY, drawFactory],
+    [STRUCTURE_EXTRACTOR, drawExtractor],
 ])
 
 /**
@@ -169,6 +170,10 @@ function drawNuker(visual: RoomVisual, pos: RoomPosition): void {
 
 function drawFactory(visual: RoomVisual, pos: RoomPosition): void {
     visual.text('🧪', pos.x, pos.y + 0.25, { color: 'white', font: 0.95 })
+}
+
+function drawExtractor(visual: RoomVisual, pos: RoomPosition): void {
+    visual.text('❌', pos.x, pos.y + 0.25, { color: 'white', font: 0.95 })
 }
 
 /**
@@ -407,6 +412,10 @@ function setRoomTypesMapVisuals(): void {
  */
 function setConstructionVisuals(roomName: string, roads = false): void {
     const room = Game.rooms[roomName]
+    if (!room) {
+        Logger.debug('setConstructionVisuals:noVision', roomName)
+        return
+    }
     room.memory.visuals = { visualType: 'construction', showRoads: roads }
 }
 
@@ -417,11 +426,11 @@ function setConstructionVisuals(roomName: string, roads = false): void {
 function setRoadsVisuals(roomName: string): void {
     const room = Game.rooms[roomName]
     if (!room) {
-        console.log(`Room ${roomName} not visible`)
+        Logger.debug('setRoadsVisuals:noVision', roomName)
         return
     }
     room.memory.visuals = { visualType: 'roads' }
-    console.log(`Roads-only visualization enabled for ${roomName}`)
+    Logger.debug('setRoadsVisuals:enabled', roomName)
 }
 
 /**
@@ -430,6 +439,10 @@ function setRoadsVisuals(roomName: string): void {
  */
 function setWallTransformVisuals(roomName: string): void {
     const room = Game.rooms[roomName]
+    if (!room) {
+        Logger.debug('setWallTransformVisuals:noVision', roomName)
+        return
+    }
     const wallTransform = getWallTransform(room.getTerrain(), room.name)
     room.memory.visuals = { visualType: 'transform', transform: wallTransform }
 }
@@ -441,6 +454,10 @@ function setWallTransformVisuals(roomName: string): void {
  */
 function setTransformFromId(roomName: string, id: Id<Source | StructureController>): void {
     const room = Game.rooms[roomName]
+    if (!room) {
+        Logger.debug('setTransformFromId:noVision', roomName)
+        return
+    }
     const transform = getTransformFromId(room, id)
     room.memory.visuals = { visualType: 'transform', transform }
 }
@@ -451,6 +468,10 @@ function setTransformFromId(roomName: string, id: Id<Source | StructureControlle
  */
 function setSumTransformVisuals(roomName: string): void {
     const room = Game.rooms[roomName]
+    if (!room) {
+        Logger.debug('setSumTransformVisuals:noVision', roomName)
+        return
+    }
     const transform = getSumTransform(room)
     room.memory.visuals = { visualType: 'transform', transform }
 }
@@ -463,12 +484,11 @@ function setSumTransformVisuals(roomName: string): void {
 function setRampartPriorityVisuals(roomName: string): void {
     const room = Game.rooms[roomName]
     if (!room) {
-        console.log(`Room ${roomName} not visible`)
+        Logger.debug('setRampartPriorityVisuals:noVision', roomName)
         return
     }
     room.memory.visuals = { visualType: 'ramparts' }
-    console.log(`Rampart priority visualization enabled for ${roomName}`)
-    console.log(`Green = high priority (bunker edges), Red = low priority (interior)`)
+    Logger.debug('setRampartPriorityVisuals:enabled', roomName)
 }
 
 /** Console command to clear all visualizations. */

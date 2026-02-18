@@ -30,7 +30,7 @@ import RoleLogistics from 'roles/logistics'
 import { RoomManager } from 'managers/room-manager'
 import RoomQuery from 'spawn/room-query'
 import SourcesManager from 'managers/sources-manager'
-import { getConstructionSites, getEnergyCapacityForRCL } from 'utils/room'
+import { getConstructionSites, getEnergyCapacityForRCL, getMineral } from 'utils/room'
 import { getStationaryPoints } from 'construction-features'
 import { getVirtualControllerLink, getVirtualStorage } from 'utils/virtual-storage'
 import hash from 'utils/hash'
@@ -43,6 +43,7 @@ import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
 import { wrap } from 'utils/profiling'
+import MineralManager, { createMineralHarvester } from 'managers/mineral-manager'
 
 declare global {
     interface RoomMemory {
@@ -355,6 +356,19 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
                 return
             }
         }
+    }
+
+    const mineral = getMineral(room)
+    if (mineral) {
+        const mineralManager = MineralManager.createFromMineral(mineral)
+        if (mineralManager.shouldBuildMineralHarvester()) {
+            createMineralHarvester(spawn, mineral.id, {
+                capacity,
+                roadsBuilt: roomQuery.allRoadsBuilt(),
+            })
+            return
+        }
+        return
     }
 
     if (createLatentSpawnWorkers(spawn, warDepartment) === OK) {
