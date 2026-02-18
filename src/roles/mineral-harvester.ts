@@ -21,6 +21,7 @@ interface MineralHarvesterMemory extends ResourceCreepMemory {
     role: 'mineral-harvester'
     pos: FlatRoomPosition
     mineral: Id<Mineral>
+    lastHarvest: number | undefined
 }
 
 /**
@@ -124,11 +125,12 @@ export class MineralHarvesterCreep {
         if (!mineral) {
             return false
         }
-        // Don't harvest if mineral needs cooldown (ticksToRegeneration is 1-5 when in cooldown)
-        if (mineral.ticksToRegeneration !== undefined && mineral.ticksToRegeneration > 0) {
+
+        if (this.creep.memory.lastHarvest && Game.time - this.creep.memory.lastHarvest < 5) {
             return false
         }
-        if (mineral.mineralAmount <= 0) {
+
+        if (mineral.mineralAmount === 0) {
             return false
         }
 
@@ -197,6 +199,8 @@ export class MineralHarvesterCreep {
                 "couldn't harvest",
                 err,
             )
+        } else if (err === OK) {
+            this.creep.memory.lastHarvest = Game.time
         }
     }
 }
@@ -268,6 +272,7 @@ const roleMineralHarvester = {
                 },
                 mineral: mineralId,
                 idleTimestamp: 0,
+                lastHarvest: undefined,
             } as MineralHarvesterMemory,
         })
         return err

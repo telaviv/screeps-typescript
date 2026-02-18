@@ -15,6 +15,7 @@ import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { moveToRoom, moveTo } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 import { wander } from 'utils/creep'
+import { pruneStaleMoveFromPositions } from 'construction-movement'
 import { getConstructionFeaturesV3 } from 'construction-features'
 
 const ROLE = 'remote-worker'
@@ -214,7 +215,7 @@ class RemoteWorkerCreep {
         }
 
         if (!weakestStructure) {
-            Logger.warning('remote-worker:dismantle:no-structure-found', this.destination)
+            pruneStaleMoveFromPositions(this.destinationRoom)
             return
         }
 

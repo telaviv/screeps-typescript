@@ -42,6 +42,7 @@ import RoomQuery from 'spawn/room-query'
 import { addEnergyTask } from 'tasks/usage-utils'
 import { findTaskByType } from 'tasks/utils'
 import { getBuildManager } from 'managers/build-manager'
+import { pruneStaleMoveFromPositions } from 'construction-movement'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
@@ -573,7 +574,7 @@ class RoleLogistics {
         }
 
         if (!weakestStructure) {
-            Logger.warning('logistics:dismantle:no-structure-found', this.creep.name)
+            pruneStaleMoveFromPositions(this.creep.room)
             this.assignWorkerPreference()
             return
         }

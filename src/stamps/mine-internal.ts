@@ -36,6 +36,17 @@ export function calculateMineInternal(
 
     const terrain = Game.map.getRoomTerrain(mineName)
     const baseCost: CostCallback = createTerrainCostCallback(terrain)
+
+    // Block edge positions (we can't build roads on edges). Only the entrance is allowed on an edge.
+    const getCost: CostCallback = (x: number, y: number): number => {
+        const onEdge = x === 0 || x === 49 || y === 0 || y === 49
+        const isEntrance = x === entrancePosition.x && y === entrancePosition.y
+        if (onEdge && !isEntrance) {
+            return 255
+        }
+        return baseCost(x, y)
+    }
+
     const obstacles = new Set<string>()
 
     // Build features map
@@ -52,7 +63,7 @@ export function calculateMineInternal(
         const sourcePath = findPath(
             { x: entrancePosition.x, y: entrancePosition.y },
             { x: sourcePos.x, y: sourcePos.y },
-            baseCost,
+            getCost,
             { range: 1 },
         )
 
@@ -77,11 +88,11 @@ export function calculateMineInternal(
 
     // Path to controller if it exists
     if (scout.controllerPosition) {
-        const getCost: CostCallback = withObstacles(baseCost, obstacles)
+        const getCostWithObstacles: CostCallback = withObstacles(getCost, obstacles)
         const controllerPath = findPath(
             { x: entrancePosition.x, y: entrancePosition.y },
             { x: scout.controllerPosition.x, y: scout.controllerPosition.y },
-            getCost,
+            getCostWithObstacles,
             { range: 3 },
         )
 
@@ -95,14 +106,10 @@ export function calculateMineInternal(
         }
     }
 
-    // Deduplicate roads and filter out edge positions (walls)
+    // Deduplicate roads (pathfinding already avoids edges except entrance via cost callback)
     const uniqueRoads: Position[] = []
     const seenRoads = new Set<string>()
     for (const road of roads) {
-        // Skip roads on room edges (x=0, x=49, y=0, y=49) - these are walls
-        if (road.x === 0 || road.x === 49 || road.y === 0 || road.y === 49) {
-            continue
-        }
         const key = `${road.x},${road.y}`
         if (!seenRoads.has(key)) {
             seenRoads.add(key)

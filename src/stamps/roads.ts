@@ -9,7 +9,7 @@ import { Position } from '../types'
 /**
  * Calculates additional road positions from bunker to external features
  *
- * Paths from storage link stationary point to sources, controller, and mineral
+ * Paths from storage link stationary point to sources, controller, and mineral stationary point
  * Avoids placing roads on bunker structures
  * Prefers existing road positions for subsequent paths
  *
@@ -18,7 +18,7 @@ import { Position } from '../types'
  * @param startPos Storage link stationary point position (where the hauler stands)
  * @param sources Array of source positions
  * @param controller Controller position
- * @param mineral Mineral position
+ * @param mineralStationaryPoint Mineral stationary point (container position where harvester/hauler stands)
  * @returns Array of NEW road positions to add (does not include existing stamp roads)
  */
 export function calculateBunkerRoads(
@@ -27,7 +27,7 @@ export function calculateBunkerRoads(
     startPos: Position,
     sources: Position[],
     controller: Position,
-    mineral: Position,
+    mineralStationaryPoint: Position,
 ): Position[] {
     console.log(
         `[calculateBunkerRoads] Starting from storage link position (${startPos.x}, ${startPos.y})`,
@@ -105,8 +105,8 @@ export function calculateBunkerRoads(
     addPath(controllerPath)
     costCallback = withPreferred(withObstacles(baseCost, obstacles), preferredCosts)
 
-    // Path to mineral from accessible start (range: 1 for adjacent)
-    const mineralPath = findPath(startPos, mineral, costCallback, { range: 1 })
+    // Path to mineral stationary point (container position); road ends on that tile
+    const mineralPath = findPath(startPos, mineralStationaryPoint, costCallback, { range: 0 })
     addPath(mineralPath)
 
     // Convert road positions to array, filtering out any that overlap with structures

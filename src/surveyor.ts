@@ -228,7 +228,7 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
         stationaryPoints.storageLink,
         sourcesArray.map((s) => ({ x: s.x, y: s.y })),
         controllerPosition,
-        mineralPosition,
+        stationaryPoints.mineral,
     )
 
     // Combine stamp roads with additional calculated roads

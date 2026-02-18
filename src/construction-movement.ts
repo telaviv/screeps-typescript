@@ -272,3 +272,40 @@ interface EventObjectDestroyedData {
     x: number
     y: number
 }
+
+/**
+ * Removes moveFrom positions where the structure no longer exists (dismantled, decayed, etc).
+ * Syncs movement data with reality when EVENT_OBJECT_DESTROYED wasn't processed.
+ * Clears movement when all positions are pruned.
+ */
+export function pruneStaleMoveFromPositions(room: Room): void {
+    const features = getConstructionFeaturesV3(room)
+    if (!features || features.type === 'none' || !features.movement) {
+        return
+    }
+
+    const movement = features.movement
+    let totalPruned = 0
+
+    for (const [structureType, arrays] of Object.entries(movement)) {
+        const before = arrays.moveFrom.length
+        arrays.moveFrom = arrays.moveFrom.filter(
+            (pos) => getBuildingAt(room, structureType as StructureConstant, pos.x, pos.y) !== null,
+        )
+        totalPruned += before - arrays.moveFrom.length
+    }
+
+    if (totalPruned === 0) {
+        return
+    }
+
+    Logger.info(
+        'pruneStaleMoveFromPositions:pruned',
+        room.name,
+        `${totalPruned} stale position(s) removed from moveFrom`,
+    )
+
+    if (isMovementComplete(movement)) {
+        clearMovement(room, features)
+    }
+}
