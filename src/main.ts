@@ -297,7 +297,9 @@ const initialize = wrap(() => {
     addSubscriptions()
     const empire = new Empire()
     empire.run()
-    survey()
+    if (Game.time % 11 === 0) {
+        survey()
+    }
     TaskRunner.cleanup()
 }, 'main:initialize')
 

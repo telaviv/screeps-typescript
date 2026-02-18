@@ -1859,6 +1859,20 @@ export default function assignGlobals(): void {
     global.debugLinks = debugLinks
     global.debugLinkPositions = debugLinkPositions
     global.debugMineral = debugMineral
+    global.enableDebugCartographer = enableDebugCartographer
+    global.disableDebugCartographer = disableDebugCartographer
+}
+
+function enableDebugCartographer(): void {
+    Memory.cartographerDebugEnabled = true
+    console.log(
+        'Cartographer debug enabled: moveToCartographer will log creep, args, and CPU per call.',
+    )
+}
+
+function disableDebugCartographer(): void {
+    Memory.cartographerDebugEnabled = false
+    console.log('Cartographer debug disabled.')
 }
 
 declare global {
@@ -1898,6 +1912,8 @@ declare global {
             debugLinks: (roomName: string) => void
             debugLinkPositions: (roomName: string) => void
             debugMineral: (roomName: string) => void
+            enableDebugCartographer: () => void
+            disableDebugCartographer: () => void
         }
     }
 }

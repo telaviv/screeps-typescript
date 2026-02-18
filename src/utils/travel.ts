@@ -13,9 +13,31 @@ import { wrap } from './profiling'
 import { moveToRandomNearbyPosition, updatePositionTracking } from './deadlock'
 import * as Logger from './logger'
 
+declare global {
+    interface Memory {
+        cartographerDebugEnabled?: boolean
+    }
+}
+
 const MAX_ROOM_RANGE = 20
 
 type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
+
+function formatTargetForLog(target: MoveToTarget): string {
+    if (Array.isArray(target)) {
+        return JSON.stringify(target.map((t) => formatTargetForLog(t)))
+    }
+    if (typeof (target as RoomPosition).roomName === 'string') {
+        const p = target as RoomPosition
+        return `${p.roomName}:(${p.x},${p.y})`
+    }
+    if (typeof (target as _HasRoomPosition).pos !== 'undefined') {
+        const t = target as _HasRoomPosition
+        return `{pos:${formatTargetForLog(t.pos)}}`
+    }
+    const m = target as MoveTarget
+    return JSON.stringify({ pos: m.pos, range: (m as { range?: number }).range })
+}
 
 export const moveToCartographer = wrap(
     (
@@ -23,6 +45,30 @@ export const moveToCartographer = wrap(
         target: MoveToTarget,
         opts: MoveOpts = {},
     ): ReturnType<typeof moveToCartographerUnwrapped> => {
+        if (Memory.cartographerDebugEnabled) {
+            const start = Game.cpu.getUsed()
+            const result = moveToCartographerUnwrapped(creep, target, opts)
+            const cpu = Game.cpu.getUsed() - start
+            if (cpu > 1) {
+                const pos = creep.pos
+                console.log(
+                    '[cartographer]',
+                    'creep:',
+                    creep.name,
+                    'pos:',
+                    `${pos.roomName}:(${pos.x},${pos.y})`,
+                    'target:',
+                    formatTargetForLog(target),
+                    'opts:',
+                    JSON.stringify(opts),
+                    'err:',
+                    result,
+                    'cpu:',
+                    cpu.toFixed(2),
+                )
+            }
+            return result
+        }
         return moveToCartographerUnwrapped(creep, target, opts)
     },
     'travel:moveToCartographer',
@@ -49,9 +95,8 @@ function routeCallback(fromRoom: string, toRoom: string): number | undefined {
     return undefined
 }
 
-const moveToRoomRouteCallback =
-    (room: string, currentRoom: string) =>
-    (fromRoom: string, toRoom: string): number | undefined => {
+const moveToRoomRouteCallback = (room: string, currentRoom: string) =>
+    wrap((fromRoom: string, toRoom: string): number | undefined => {
         if (
             toRoom === room ||
             fromRoom === room ||
@@ -61,16 +106,15 @@ const moveToRoomRouteCallback =
             return undefined
         }
         return routeCallback(fromRoom, toRoom)
-    }
+    }, 'travel:moveToRoomRouteCallback')
 
-const moveToRoomRoomCallback =
-    (room: string, currentRoom: string) =>
-    (roomName: string): CostMatrix | boolean => {
+const moveToRoomRoomCallback = (room: string, currentRoom: string) =>
+    wrap((roomName: string): CostMatrix | boolean => {
         if (roomName === room || roomName === currentRoom) {
             return roomCallback(roomName, true)
         }
         return roomCallback(roomName)
-    }
+    }, 'travel:moveToRoomRoomCallback')
 
 /** Moves creep to center of a room, avoiding unsafe rooms */
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
