@@ -1,7 +1,11 @@
 /* eslint-disable no-bitwise */
 
+import {
+    getConstructionFeaturesV3,
+    getStationaryPoints,
+    isStationaryBase,
+} from 'construction-features'
 import * as Logger from 'utils/logger'
-import { getStationaryPoints, isStationaryBase } from 'construction-features'
 import { mprofile, profile, wrap } from 'utils/profiling'
 import { SubscriptionEvent } from 'pub-sub/constants'
 import { getObstacles } from 'utils/room'
@@ -180,6 +184,30 @@ export class MatrixCacheManager {
     }
 
     /**
+     * Gets a mine-travel cost matrix: roads and entrance/exit positions at cost 1, everything else 255.
+     * Bypasses the tag system since this is a standalone matrix not built incrementally from other layers.
+     * @param roomName - Name of the room to get the matrix for
+     * @returns Cost matrix for mine travel pathfinding
+     */
+    @mprofile('MatrixCacheManager.getMineTravelMatrix')
+    public static getMineTravelMatrix(roomName: string): CostMatrix {
+        const manager = new MatrixCacheManager(roomName)
+        const key = 'mine-travel'
+
+        if (!manager.matrixCache[key]) {
+            const matrix = manager.generateMineTravelMatrix()
+            manager.matrixCache[key] = {
+                matrix: JSON.stringify(matrix.serialize()),
+                time: Game.time,
+            }
+        }
+
+        return PathFinder.CostMatrix.deserialize(
+            JSON.parse(manager.matrixCache[key].matrix) as number[],
+        )
+    }
+
+    /**
      * Gets a default empty cost matrix for a room.
      * @param roomName - Name of the room
      */
@@ -346,7 +374,7 @@ export class MatrixCacheManager {
                     ].includes(key)
                 ) {
                     continue
-                } else if (keyToTags(key).includes('no-obstacles')) {
+                } else if (keyToTags(key).includes('no-obstacles') || key === 'mine-travel') {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
                 } else if (hash(`${roomName}:${key}`) % 100 === 0) {
                     delete roomMemory.matrixCache[key as keyof MatrixCache]
@@ -431,6 +459,67 @@ export class MatrixCacheManager {
             matrix: JSON.stringify(prefixMatrix.serialize()),
             time: Game.time,
         }
+    }
+
+    /**
+     * Generates a mine-travel matrix: roads and entrance/exit positions at cost 1, everything else 255.
+     */
+    @profile
+    private generateMineTravelMatrix(): CostMatrix {
+        const matrix = new PathFinder.CostMatrix()
+
+        // Start with default: everything 255 (road-only: only roads/entrance will be 1)
+        for (let x = 0; x < 50; x++) {
+            for (let y = 0; y < 50; y++) {
+                matrix.set(x, y, WALL_COST)
+            }
+        }
+
+        // Add built roads and road construction sites as cost 1
+        if (this.room) {
+            const roads = this.room.find(FIND_STRUCTURES, {
+                filter: (s) => s.structureType === STRUCTURE_ROAD,
+            })
+            for (const road of roads) {
+                matrix.set(road.pos.x, road.pos.y, ROAD_COST)
+            }
+        }
+
+        // Add entrance/exit positions as cost 1
+        const entranceExitPositions = this.getMineTravelEntranceExitPositions()
+        for (const pos of entranceExitPositions) {
+            matrix.set(pos.x, pos.y, ROAD_COST)
+        }
+
+        return matrix
+    }
+
+    /** Gets entrance/exit positions for mine travel in this room. */
+    private getMineTravelEntranceExitPositions(): Array<{ x: number; y: number }> {
+        const constructionFeatures = getConstructionFeaturesV3(this.roomName)
+        if (!constructionFeatures) {
+            return []
+        }
+
+        const positions: Array<{ x: number; y: number }> = []
+
+        if (constructionFeatures.type === 'base' && constructionFeatures.miner) {
+            for (const { exitPosition } of Object.values(constructionFeatures.miner)) {
+                if (exitPosition.roomName === this.roomName) {
+                    positions.push({ x: exitPosition.x, y: exitPosition.y })
+                }
+            }
+        } else if (
+            constructionFeatures.type === 'mine' &&
+            constructionFeatures.minee?.entrancePosition
+        ) {
+            const entrance = constructionFeatures.minee.entrancePosition
+            if (entrance.roomName === this.roomName) {
+                positions.push({ x: entrance.x, y: entrance.y })
+            }
+        }
+
+        return positions
     }
 
     /**

@@ -6,7 +6,9 @@ import {
 } from 'screeps-cartographer'
 
 import { DEADLOCK_THRESHOLD } from '../constants'
+import { getConstructionFeaturesV3 } from 'construction-features'
 import { MatrixCacheManager } from 'matrix-cache'
+import BuildManager from 'managers/build-manager'
 import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
@@ -175,6 +177,119 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
     )
     return err
 }, 'travel:moveToRoom')
+
+/**
+ * Returns true when currentRoom and targetRoom are a base/mine pair with matching
+ * entrance/exit positions and all roads built in both rooms.
+ */
+function isMineTravel(currentRoom: string, targetRoom: string): boolean {
+    const currentFeatures = getConstructionFeaturesV3(currentRoom)
+    const targetFeatures = getConstructionFeaturesV3(targetRoom)
+
+    if (!currentFeatures || !targetFeatures) {
+        return false
+    }
+
+    let baseRoom: string
+    let mineRoom: string
+
+    if (currentFeatures.type === 'base' && targetFeatures.type === 'mine') {
+        baseRoom = currentRoom
+        mineRoom = targetRoom
+    } else if (currentFeatures.type === 'mine' && targetFeatures.type === 'base') {
+        baseRoom = targetRoom
+        mineRoom = currentRoom
+    } else {
+        return false
+    }
+
+    const baseFeatures = getConstructionFeaturesV3(baseRoom)
+    const mineFeatures = getConstructionFeaturesV3(mineRoom)
+
+    if (
+        !baseFeatures ||
+        baseFeatures.type !== 'base' ||
+        !mineFeatures ||
+        mineFeatures.type !== 'mine'
+    ) {
+        return false
+    }
+
+    if (!baseFeatures.miner[mineRoom]?.exitPosition) {
+        return false
+    }
+
+    if (
+        !mineFeatures.minee ||
+        mineFeatures.minee.miner !== baseRoom ||
+        !mineFeatures.minee.entrancePosition
+    ) {
+        return false
+    }
+
+    const baseRoomObj = Game.rooms[baseRoom]
+    const mineRoomObj = Game.rooms[mineRoom]
+
+    if (!baseRoomObj || !mineRoomObj) {
+        return false
+    }
+
+    return BuildManager.allRoadsBuilt(baseRoomObj) && BuildManager.allRoadsBuilt(mineRoomObj)
+}
+
+/** roomCallback for mine travel: uses getMineTravelMatrix for both rooms, blocks all others. */
+const mineTravelRoomCallback =
+    (room: string, currentRoom: string) =>
+    (roomName: string): CostMatrix | boolean => {
+        if (roomName === room || roomName === currentRoom) {
+            return MatrixCacheManager.getMineTravelMatrix(roomName)
+        }
+        return false
+    }
+
+/** Moves a creep toward a room, using road-only matrices when traveling between a base and its mine. */
+export const moveToRoomForMineTravel = wrap(
+    (
+        creep: Creep,
+        roomName: string,
+        opts: MoveOpts = {},
+    ): ReturnType<typeof moveToCartographer> => {
+        if (!isMineTravel(creep.room.name, roomName)) {
+            return moveToRoom(creep, roomName, opts)
+        }
+
+        if (creep.fatigue > 0) {
+            return ERR_TIRED
+        }
+
+        // eslint-disable-next-line no-underscore-dangle
+        if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
+            return moveToRandomNearbyPosition(creep)
+        }
+
+        const previousPos = creep.pos
+
+        const err = moveToCartographer(
+            creep,
+            { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
+            {
+                roomCallback: mineTravelRoomCallback(roomName, creep.room.name),
+                routeCallback: moveToRoomRouteCallback(roomName, creep.room.name),
+                ...opts,
+            },
+        )
+
+        if (err !== OK && err !== ERR_TIRED) {
+            updatePositionTracking(creep, previousPos)
+        } else {
+            // eslint-disable-next-line no-underscore-dangle
+            creep.memory._dlWait = 0
+        }
+
+        return err
+    },
+    'travel:moveToRoomForMineTravel',
+)
 
 export function generatePathToRoom(
     from: RoomPosition,

@@ -109,7 +109,8 @@ export function destroyMovementStructures(room: Room): void {
                 }
             }
         }
-        for (const { x, y } of moveFrom) {
+        for (let i = moveFrom.length - 1; i >= 0; i--) {
+            const { x, y } = moveFrom[i]
             const building = getBuildingAt(room, structureType as StructureConstant, x, y)
             if (building) {
                 if (isOwnedRoom) {
@@ -142,12 +143,19 @@ export function destroyMovementStructures(room: Room): void {
                     )
                 }
             } else {
+                // Structure no longer exists — remove the stale entry so it doesn't
+                // block dismantle task assignment indefinitely
+                moveFrom.splice(i, 1)
                 Logger.warning(
                     'construction-movement:destroyMovementStructures:moveFrom:not-found',
-                    `No ${structureType} found at (${x},${y}) in ${room.name} to destroy`,
+                    `No ${structureType} found at (${x},${y}) in ${room.name} — removing stale moveFrom entry`,
                 )
             }
         }
+    }
+
+    if (isMovementComplete(movement)) {
+        clearMovement(room, features)
     }
 }
 

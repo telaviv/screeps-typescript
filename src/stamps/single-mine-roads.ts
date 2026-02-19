@@ -111,13 +111,37 @@ export function calculateSingleMineRoads(
         return null
     }
 
-    // Exit is last position in base room, entrance is first in mine room
-    const exitPosition = basePath[basePath.length - 1]
-    const entrancePosition = minePath[0]
+    // With the 99-wide combined grid, the border tile is always the first mine segment tile.
+    const rawEntrancePosition = minePath[0]
+    const lastBaseTile = basePath[basePath.length - 1]
 
-    // Extract road positions (excluding exit position as it's on room edge)
-    const baseRoads = basePath.slice(0, -1).map((p) => ({ x: p.x, y: p.y }))
-    // Filter out edge positions (x=0, x=49, y=0, y=49) from mine roads - these are walls
+    // Correct diagonal border crossings using the last base tile's parallel coordinate.
+    const entrancePosition =
+        rawEntrancePosition.x === 0 || rawEntrancePosition.x === 49
+            ? {
+                  roomName: rawEntrancePosition.roomName,
+                  x: rawEntrancePosition.x,
+                  y: lastBaseTile.y,
+              }
+            : {
+                  roomName: rawEntrancePosition.roomName,
+                  x: lastBaseTile.x,
+                  y: rawEntrancePosition.y,
+              }
+
+    // Derive the base-side exit tile from the corrected mine entrance.
+    const exitPosition =
+        entrancePosition.x === 0
+            ? { x: 49, y: entrancePosition.y }
+            : entrancePosition.x === 49
+            ? { x: 0, y: entrancePosition.y }
+            : entrancePosition.y === 0
+            ? { x: entrancePosition.x, y: 49 }
+            : { x: entrancePosition.x, y: 0 }
+
+    // Base roads: all base segment tiles (border edge tile is in mine segment with 99-wide grid).
+    const baseRoads = basePath.map((p) => ({ x: p.x, y: p.y }))
+    // Mine roads: filter out edge positions (can't build structures on x/y=0 or x/y=49).
     const mineRoads = minePath
         .filter((p) => p.x !== 0 && p.x !== 49 && p.y !== 0 && p.y !== 49)
         .map((p) => ({ x: p.x, y: p.y }))

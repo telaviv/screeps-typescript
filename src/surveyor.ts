@@ -27,7 +27,7 @@ import {
     getRoomType,
     RoomType,
 } from 'utils/room'
-import { isObstacle, Position } from 'types'
+import { FlatRoomPosition, isObstacle, Position } from 'types'
 import BUNKER from 'stamps/bunker'
 import { Mine } from 'managers/mine-manager'
 import { SubscriptionEvent } from 'pub-sub/constants'
@@ -297,11 +297,16 @@ function calculateConstructionFeaturesV3New(roomName: string): ConstructionFeatu
     // Build miner information from mine road results
     const miner: MinerInformation = {}
     for (const result of mineRoadResults) {
-        // Store exit position for this mine
         miner[result.name] = { exitPosition: result.exitPosition }
 
-        // Calculate mine's internal features using the entrance position
-        setMineConstructionFeaturesV3(result.name, roomName, result.entrancePosition)
+        setMineConstructionFeaturesV3(
+            result.name,
+            roomName,
+            result.entrancePosition,
+            result.sourcePaths,
+            result.sourceToSourcePath,
+            result.controllerPath,
+        )
     }
 
     return {
@@ -327,20 +332,33 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
 }
 
 /**
+ * Converts a FlatRoomPosition to the serialized string form used in minePaths values.
+ */
+function flatPosToString(pos: FlatRoomPosition): string {
+    return `${pos.roomName}:${pos.x}:${pos.y}`
+}
+
+/**
  * Calculates and stores construction features for a remote mining room.
- * Uses the new stamp-based system for mine calculations.
+ * Uses the new stamp-based system for mine calculations and stores pre-calculated
+ * hauler paths in minePaths.
  * @param mineName - Name of the mining room
  * @param miner - Name of the home room that will mine this
  * @param entrancePosition - Position where the road enters the mining room
+ * @param sourcePaths - Pre-calculated multi-room paths from base storageLink to each source
+ * @param sourceToSourcePath - Pre-calculated path between the two source containers (or null)
+ * @param controllerPath - Pre-calculated multi-room path from base storageLink to controller (or null)
  */
 function setMineConstructionFeaturesV3(
     mineName: string,
     miner: string,
     entrancePosition: Position,
+    sourcePaths: Record<string, FlatRoomPosition[]>,
+    sourceToSourcePath: FlatRoomPosition[] | null,
+    controllerPath: FlatRoomPosition[] | null,
 ): void {
     const flatPos = { x: entrancePosition.x, y: entrancePosition.y, roomName: mineName }
 
-    // Use new stamp-based mine calculation
     const ret = calculateMineInternal(mineName, flatPos)
 
     if (!ret) {
@@ -349,6 +367,27 @@ function setMineConstructionFeaturesV3(
     }
 
     const { features, points } = ret
+
+    // Assemble minePaths lookup table
+    const minePaths: Record<string, string[]> = {}
+
+    for (const [sourceId, path] of Object.entries(sourcePaths)) {
+        // Exclude the last position (the container tile itself); the hauler stops adjacent to it
+        minePaths[`storage:source-${mineName}-${sourceId}`] = path.slice(0, -1).map(flatPosToString)
+    }
+
+    if (sourceToSourcePath && sourceToSourcePath.length > 0) {
+        const sortedIds = Object.keys(sourcePaths).sort()
+        if (sortedIds.length === 2) {
+            const key = `source-${mineName}-${sortedIds[0]}:source-${mineName}-${sortedIds[1]}`
+            minePaths[key] = sourceToSourcePath.map(flatPosToString)
+        }
+    }
+
+    if (controllerPath && controllerPath.length > 0) {
+        minePaths[`storage:controller-${mineName}`] = controllerPath.map(flatPosToString)
+    }
+
     const constructionFeaturesV3: ConstructionFeaturesV3 = {
         version: CONSTRUCTION_FEATURES_V3_VERSION,
         type: 'mine',
@@ -359,6 +398,7 @@ function setMineConstructionFeaturesV3(
             entrancePosition: flatPos,
         },
         movement: null,
+        minePaths,
     }
     Memory.rooms[mineName].constructionFeaturesV3 = constructionFeaturesV3
 }

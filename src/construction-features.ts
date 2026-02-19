@@ -6,9 +6,9 @@ import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
 /** Minimum version of construction features v3 considered valid */
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.11'
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.15'
 /** Current version of construction features v3 data structure */
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.11'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.15'
 
 /** Current version of construction features data structure */
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
@@ -63,6 +63,15 @@ export interface ConstructionFeaturesV3Mine {
     points?: StationaryPointsMine
     minee?: MineeInformation
     movement?: ConstructionMovement | null
+    /**
+     * Pre-calculated paths for remote hauler navigation.
+     * Keys:
+     *   `storage:source-<room>-<sourceId>` — base storageLink → mine source container
+     *   `source-<room>-<id1>:source-<room>-<id2>` — container A → container B (ids sorted)
+     *   `storage:controller-<room>` — base storageLink → mine controller (range 1)
+     * Values: `"<roomName>:<x>:<y>"` strings forming the path.
+     */
+    minePaths?: Record<string, string[]>
 }
 
 /** Construction features for rooms not used (e.g., highways, SK rooms) */
@@ -362,9 +371,22 @@ export function willBeDestroyedByMovement(
 }
 
 /**
+ * Gets pre-calculated mine paths from a mine room's construction features.
+ * @param room - The mine room or room name
+ * @returns The minePaths map, or null if unavailable
+ */
+export function getMinePaths(room: Room | string): Record<string, string[]> | null {
+    const features = getConstructionFeaturesV3(room)
+    if (!features || features.type !== 'mine') {
+        return null
+    }
+    return features.minePaths ?? null
+}
+
+/**
  * Validates construction features for duplicate positions.
  * Only checks for conflicts between OBSTACLE structures, since ramparts/roads can overlap.
- * @param features - Construction features to validate
+ * @param features - Construction fealtures to validate
  * @returns Array of conflicts found (only obstacle structure conflicts)
  */
 export function validateConstructionFeatures(
