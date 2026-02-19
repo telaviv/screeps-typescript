@@ -35,4 +35,5 @@ export const MAX_CLAIM_DISTANCE = 5
 /** Minimum distance buffer from enemy rooms when selecting claim targets */
 export const ENEMY_DISTANCE_BUFFER = 1
 /** Number of ticks a creep must be stuck before triggering deadlock resolution */
-export const DEADLOCK_THRESHOLD = 10
+// export const DEADLOCK_THRESHOLD = 10
+export const DEADLOCK_THRESHOLD = Infinity

@@ -133,9 +133,9 @@ export function findPath(
         }
     }
 
-    // Convert path to Position array, excluding the start position
+    // Convert path to Position array (start node already excluded by includeStartNode: false)
     if (bestPath && bestPath.length > 0) {
-        return bestPath.slice(1).map(([x, y]) => ({ x, y }))
+        return bestPath.map(([x, y]) => ({ x, y }))
     }
 
     return undefined
@@ -281,6 +281,11 @@ function getAdjacentRoomDirection(
 
 /**
  * Creates coordinate translators for horizontal adjacency (East/West)
+ *
+ * The combined grid is (roomSize*2 - 1) wide. The room border tile is shared:
+ * - East: base x=49 = mine x=0 → grid x=(roomSize-1). Decodes as goalRoom (mine).
+ * - West: mine x=49 = base x=0 → grid x=(roomSize-1). Decodes as goalRoom (mine).
+ * This means the border tile always lands in the mine (goal) segment when splitting paths.
  */
 function createHorizontalTranslator(
     direction: RoomDirection.East | RoomDirection.West,
@@ -288,30 +293,36 @@ function createHorizontalTranslator(
     goalRoom: string,
     roomSize: number,
 ): CoordinateTranslator {
-    const gridWidth = roomSize * 2
+    const gridWidth = roomSize * 2 - 1
     const gridHeight = roomSize
 
     if (direction === RoomDirection.East) {
+        // start=base(west), goal=mine(east)
+        // base x=0..48 → grid x=0..48; border base(49)=mine(0) → grid 49 → goalRoom(mine,0)
+        // mine x=1..49 → grid x=50..98
         return {
             gridWidth,
             gridHeight,
             translateStart: (pos) => ({ x: pos.x, y: pos.y }),
-            translateGoal: (pos) => ({ x: pos.x + roomSize, y: pos.y }),
+            translateGoal: (pos) => ({ x: pos.x + roomSize - 1, y: pos.y }),
             translateBack: (gpos) => ({
-                roomName: gpos.x < roomSize ? startRoom : goalRoom,
-                x: gpos.x % roomSize,
+                roomName: gpos.x < roomSize - 1 ? startRoom : goalRoom,
+                x: gpos.x < roomSize - 1 ? gpos.x : gpos.x - (roomSize - 1),
                 y: gpos.y,
             }),
         }
     } else {
+        // start=base(east), goal=mine(west)
+        // mine x=0..49 → grid x=0..49; border mine(49)=base(0) → grid 49 → goalRoom(mine,49)
+        // base x=1..49 → grid x=50..98
         return {
             gridWidth,
             gridHeight,
-            translateStart: (pos) => ({ x: pos.x + roomSize, y: pos.y }),
+            translateStart: (pos) => ({ x: pos.x + roomSize - 1, y: pos.y }),
             translateGoal: (pos) => ({ x: pos.x, y: pos.y }),
             translateBack: (gpos) => ({
                 roomName: gpos.x >= roomSize ? startRoom : goalRoom,
-                x: gpos.x % roomSize,
+                x: gpos.x >= roomSize ? gpos.x - (roomSize - 1) : gpos.x,
                 y: gpos.y,
             }),
         }
@@ -320,6 +331,10 @@ function createHorizontalTranslator(
 
 /**
  * Creates coordinate translators for vertical adjacency (North/South)
+ *
+ * The combined grid is (roomSize*2 - 1) tall. The room border tile is shared:
+ * - North: base y=0 = mine y=49 → grid y=(roomSize-1). Decodes as goalRoom (mine).
+ * - South: base y=49 = mine y=0 → grid y=(roomSize-1). Decodes as goalRoom (mine).
  */
 function createVerticalTranslator(
     direction: RoomDirection.North | RoomDirection.South,
@@ -328,31 +343,36 @@ function createVerticalTranslator(
     roomSize: number,
 ): CoordinateTranslator {
     const gridWidth = roomSize
-    const gridHeight = roomSize * 2
+    const gridHeight = roomSize * 2 - 1
 
     if (direction === RoomDirection.North) {
+        // start=base(south), goal=mine(north)
+        // mine y=0..49 → grid y=0..49; border mine(49)=base(0) → grid 49 → goalRoom(mine,49)
+        // base y=1..49 → grid y=50..98
         return {
             gridWidth,
             gridHeight,
-            translateStart: (pos) => ({ x: pos.x, y: pos.y + roomSize }),
+            translateStart: (pos) => ({ x: pos.x, y: pos.y + roomSize - 1 }),
             translateGoal: (pos) => ({ x: pos.x, y: pos.y }),
             translateBack: (gpos) => ({
-                roomName: gpos.y < roomSize ? goalRoom : startRoom,
+                roomName: gpos.y >= roomSize ? startRoom : goalRoom,
                 x: gpos.x,
-                y: gpos.y % roomSize,
+                y: gpos.y >= roomSize ? gpos.y - (roomSize - 1) : gpos.y,
             }),
         }
     } else {
-        // South: start room is NORTH (top of grid), goal room is SOUTH (bottom of grid)
+        // South: start=base(north/top), goal=mine(south/bottom)
+        // base y=0..48 → grid y=0..48; border base(49)=mine(0) → grid 49 → goalRoom(mine,0)
+        // mine y=1..49 → grid y=50..98
         return {
             gridWidth,
             gridHeight,
-            translateStart: (pos) => ({ x: pos.x, y: pos.y }), // Start stays in top half (0-49)
-            translateGoal: (pos) => ({ x: pos.x, y: pos.y + roomSize }), // Goal goes to bottom half (50-99)
+            translateStart: (pos) => ({ x: pos.x, y: pos.y }),
+            translateGoal: (pos) => ({ x: pos.x, y: pos.y + roomSize - 1 }),
             translateBack: (gpos) => ({
-                roomName: gpos.y < roomSize ? startRoom : goalRoom, // Top half is start, bottom is goal
+                roomName: gpos.y < roomSize - 1 ? startRoom : goalRoom,
                 x: gpos.x,
-                y: gpos.y % roomSize,
+                y: gpos.y < roomSize - 1 ? gpos.y : gpos.y - (roomSize - 1),
             }),
         }
     }
@@ -401,9 +421,9 @@ function getTargetPositions(
                 const worldPos = translateBack({ x: tx, y: ty })
                 const cost = getCost(worldPos.roomName, worldPos.x, worldPos.y)
 
-                if (dist <= range && cost < 255) {
+                if (dist > 0 && dist <= range && cost < 255) {
                     targetPositions.push({ x: tx, y: ty })
-                } else if (dist <= range) {
+                } else if (dist > 0 && dist <= range) {
                     blockedCount.highCost++
                 }
             } else {
@@ -654,9 +674,7 @@ export function findMultiRoomPath(
         console.log(
             `[findMultiRoomPath] Found path with cost ${bestResult.cost}, length ${bestResult.path.length}`,
         )
-        return bestResult.path
-            .slice(1)
-            .map(([gx, gy]) => translator.translateBack({ x: gx, y: gy }))
+        return bestResult.path.map(([gx, gy]) => translator.translateBack({ x: gx, y: gy }))
     }
 
     return undefined

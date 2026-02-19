@@ -14,6 +14,7 @@ import {
     TASK_HAULING,
 } from './logistics-constants'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
+// import { moveToRoomForMineTravel, moveWithinRoom } from 'utils/travel'
 import { profile, wrap } from 'utils/profiling'
 
 const ROLE = 'remote-hauler'
@@ -329,10 +330,12 @@ export class RemoteHaulerCreep {
 
     goToRemote(): void {
         moveToRoom(this.creep, this.memory.remote)
+        // moveToRoomForMineTravel(this.creep, this.memory.remote)
     }
 
     goToHome(): void {
         moveToRoom(this.creep, this.memory.home)
+        // moveToRoomForMineTravel(this.creep, this.memory.home)
     }
 }
 
