@@ -60,7 +60,7 @@ declare global {
 export const moveToStationaryPoint = wrap((pos: RoomPosition, creep: Creep): MoveToReturnCode => {
     const moveCount = creep.getActiveBodyparts(MOVE)
     const totalCount = creep.body.length
-    const roadPreferred = moveCount / totalCount >= 0.5
+    const roadPreferred = moveCount / totalCount < 0.5
 
     const matrix = MatrixCacheManager.getTravelMatrix(creep.room.name, roadPreferred).clone()
     matrix.set(pos.x, pos.y, 0)

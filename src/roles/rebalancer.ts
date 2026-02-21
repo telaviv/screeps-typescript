@@ -115,7 +115,6 @@ export class RebalancerCreep {
     @profile
     hasAvailableTransferTasks(): boolean {
         // Check if there are structures that need energy (excluding virtual storage)
-        const virtualStorage = getVirtualStorage(this.creep.memory.home)
         const extensions = this.creep.room
             .find(FIND_MY_STRUCTURES)
             .filter(

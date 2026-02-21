@@ -95,6 +95,7 @@ export class EnergyHaulerCreep {
         }
     }
 
+    @profile
     nothingToDo(): boolean {
         const towers = getTowers(this.creep.room)
         const towersFilled = towers.every(

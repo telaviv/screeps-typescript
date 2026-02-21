@@ -2,7 +2,12 @@ import * as Logger from 'utils/logger'
 import * as Logistics from './logistics'
 import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { fromBodyPlan } from 'utils/parts'
-import { getConstructionFeatures, getStationaryPointsMine } from 'construction-features'
+import {
+    MinePathEntry,
+    getConstructionFeatures,
+    getMinePaths,
+    getStationaryPointsMine,
+} from 'construction-features'
 import { getVirtualStorage } from '../utils/virtual-storage'
 import { hasNoEnergy } from 'utils/energy-harvesting'
 import { hasNoSpawns } from 'utils/room'
@@ -13,8 +18,14 @@ import {
     TASK_COLLECTING,
     TASK_HAULING,
 } from './logistics-constants'
-import { moveToRoom, moveWithinRoom } from 'utils/travel'
-// import { moveToRoomForMineTravel, moveWithinRoom } from 'utils/travel'
+import { isMineTravel, moveToRoom, moveToRoomForMineTravel, moveWithinRoom } from 'utils/travel'
+import {
+    followMinePath,
+    getSourcePathKey,
+    getSourceToSourceKey,
+    isSourceToSourceReversed,
+    reverseMinePath,
+} from 'utils/mine-travel'
 import { profile, wrap } from 'utils/profiling'
 
 const ROLE = 'remote-hauler'
@@ -90,15 +101,16 @@ export class RemoteHaulerCreep {
             return
         }
 
-        // If stationary points are missing for the remote room, suicide
+        // If stationary points are missing for the remote room, mark and bail
         const points = getStationaryPointsMine(this.memory.remote)
         if (!points) {
-            Logger.error(
-                'remote-hauler:run:no-stationary-points-suiciding',
+            Logger.debug(
+                'remote-hauler:run:no-stationary-points (would suicide)',
                 this.creep.name,
+                this.creep.pos,
                 this.memory.remote,
             )
-            this.creep.suicide()
+            this.creep.say('no-pts')
             return
         }
 
@@ -107,9 +119,27 @@ export class RemoteHaulerCreep {
         const isRemote = this.creep.room.name === this.memory.remote
         const target = this.memory.target
 
+        Logger.info(
+            'remote-hauler:debug',
+            this.creep.name,
+            this.creep.pos,
+            `isHome=${isHome}`,
+            `isRemote=${isRemote}`,
+            `freeCapacity=${freeCapacity}`,
+            `target=${target}`,
+            `allPickupsFree=${this.allPickupsFree()}`,
+            `allPickupsComplete=${this.allPickupsComplete()}`,
+        )
+
         if (isHome && this.allPickupsFree()) {
             if (this.creep.ticksToLive && this.creep.ticksToLive < 75) {
-                this.creep.suicide()
+                Logger.error(
+                    'remote-hauler:run:ttl-low (would suicide)',
+                    this.creep.name,
+                    this.creep.pos,
+                    `ttl=${this.creep.ticksToLive}`,
+                )
+                this.creep.say(`ttl:${this.creep.ticksToLive}`)
             }
             this.goToRemote()
             return
@@ -117,6 +147,9 @@ export class RemoteHaulerCreep {
             this.dropOff()
         } else if (isRemote && (this.allPickupsComplete() || freeCapacity === 0)) {
             this.goToHome()
+        } else if (isHome && target) {
+            // Creep drifted back to home with partial pickups and a remote target — head back.
+            this.goToRemote()
         } else if (!target) {
             this.getTarget()
         } else if (this.canPickup()) {
@@ -315,6 +348,13 @@ export class RemoteHaulerCreep {
             .find((s) => s.structureType === STRUCTURE_CONTAINER) as StructureContainer | null
     }
 
+    getLastPickedSourceId(): Id<Source> | null {
+        const picked = Object.entries(this.memory.pickupTracker).filter(([, done]) => done)
+        if (picked.length === 0) return null
+        return picked[picked.length - 1][0] as Id<Source>
+    }
+
+    @profile
     moveToTarget(): void {
         if (!this.targetPos) {
             Logger.error(
@@ -325,17 +365,111 @@ export class RemoteHaulerCreep {
             )
             return
         }
+
+        const target = this.target
+        if (isMineTravel(this.memory.home, this.memory.remote) && target) {
+            const minePaths = getMinePaths(this.memory.remote)
+
+            // Try source-to-source path if we already picked up from another source
+            const lastPicked = this.getLastPickedSourceId()
+            if (lastPicked && lastPicked !== target) {
+                const key = getSourceToSourceKey(this.memory.remote, lastPicked, target)
+                const s2sPath = minePaths?.[key]
+                if (s2sPath && s2sPath.length > 0) {
+                    const ordered = isSourceToSourceReversed(lastPicked, target)
+                        ? reverseMinePath(s2sPath)
+                        : s2sPath
+                    const result = followMinePath(this.creep, ordered, 's2s')
+                    if (result === OK || result === ERR_TIRED) return
+                }
+            }
+
+            // Use the pre-calculated storage→source path (mine room segment)
+            const fullPath = minePaths?.[getSourcePathKey(this.memory.remote, target)]
+            if (fullPath && fullPath.length > 0) {
+                const result = followMinePath(this.creep, fullPath, 'moveToTarget')
+                if (result === OK || result === ERR_TIRED) return
+            }
+        }
+
+        Logger.debug(
+            'remote-hauler:moveToTarget:fallback',
+            this.creep.name,
+            this.creep.pos,
+            this.targetPos,
+        )
         moveWithinRoom(this.creep, { pos: this.targetPos, range: 1 })
     }
 
-    goToRemote(): void {
-        moveToRoom(this.creep, this.memory.remote)
-        // moveToRoomForMineTravel(this.creep, this.memory.remote)
+    /** Moves toward the nearest step of `path` that lies in the creep's current room. */
+    moveTowardPath(path: MinePathEntry[]): void {
+        const roomName = this.creep.room.name
+        const firstInRoom = path.find((s) => s.roomName === roomName)
+        if (firstInRoom) {
+            Logger.debug(
+                'remote-hauler:moveTowardPath',
+                this.creep.name,
+                this.creep.pos,
+                `→(${firstInRoom.x},${firstInRoom.y},${firstInRoom.roomName})`,
+            )
+            moveWithinRoom(this.creep, {
+                pos: new RoomPosition(firstInRoom.x, firstInRoom.y, roomName),
+                range: 0,
+            })
+        }
     }
 
+    @profile
+    goToRemote(): void {
+        if (isMineTravel(this.memory.home, this.memory.remote)) {
+            const sourceId = Object.keys(this.memory.pickupTracker)[0] as Id<Source> | undefined
+            if (sourceId) {
+                const fullPath = getMinePaths(this.memory.remote)?.[
+                    getSourcePathKey(this.memory.remote, sourceId)
+                ]
+                if (fullPath && fullPath.length > 0) {
+                    const result = followMinePath(this.creep, fullPath, 'goToRemote')
+                    if (result === OK || result === ERR_TIRED) return
+                    // Not on path — walk to the nearest road tile in this room
+                    Logger.debug(
+                        'remote-hauler:goToRemote:fallback',
+                        this.creep.name,
+                        this.creep.pos,
+                    )
+                    this.moveTowardPath(fullPath)
+                    return
+                }
+            }
+            moveToRoomForMineTravel(this.creep, this.memory.remote)
+        } else {
+            moveToRoom(this.creep, this.memory.remote)
+        }
+    }
+
+    @profile
     goToHome(): void {
-        moveToRoom(this.creep, this.memory.home)
-        // moveToRoomForMineTravel(this.creep, this.memory.home)
+        if (isMineTravel(this.memory.home, this.memory.remote)) {
+            const sourceId =
+                this.getLastPickedSourceId() ??
+                (Object.keys(this.memory.pickupTracker)[0] as Id<Source> | undefined)
+            if (sourceId) {
+                const fullPath = getMinePaths(this.memory.remote)?.[
+                    getSourcePathKey(this.memory.remote, sourceId)
+                ]
+                if (fullPath && fullPath.length > 0) {
+                    const reversed = reverseMinePath(fullPath)
+                    const result = followMinePath(this.creep, reversed, 'goToHome')
+                    if (result === OK || result === ERR_TIRED) return
+                    // Not on path — walk to the nearest road tile in this room
+                    Logger.debug('remote-hauler:goToHome:fallback', this.creep.name, this.creep.pos)
+                    this.moveTowardPath(reversed)
+                    return
+                }
+            }
+            moveToRoomForMineTravel(this.creep, this.memory.home)
+        } else {
+            moveToRoom(this.creep, this.memory.home)
+        }
     }
 }
 

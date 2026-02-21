@@ -154,18 +154,18 @@ const fillableExtensions = wrap((room: Room): AnyStoreStructure[] => {
     return filterFillableStructures(extensions)
 }, 'transfer:fillableExtensions')
 
-function fillableTowers(room: Room): AnyStoreStructure[] {
+const fillableTowers = wrap((room: Room): AnyStoreStructure[] => {
     const towers = getTowers(room)
     return towers.filter((structure) => {
         const transfer = TransferStructure.get(structure.id)
         return transfer.remainingCapacity(RESOURCE_ENERGY) >= CARRY_CAPACITY
     })
-}
+}, 'transfer:fillableTowers')
 
-function fillableSpawns(room: Room): AnyStoreStructure[] {
+const fillableSpawns = wrap((room: Room): AnyStoreStructure[] => {
     const spawns = getSpawns(room)
     return filterFillableStructures(spawns)
-}
+}, 'transfer:fillableSpawns')
 
 /** Filters structures that have free capacity not already claimed by pending tasks */
 function filterFillableStructures(

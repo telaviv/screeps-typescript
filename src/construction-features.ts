@@ -6,9 +6,9 @@ import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
 /** Minimum version of construction features v3 considered valid */
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.15'
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.17'
 /** Current version of construction features v3 data structure */
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.15'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.17'
 
 /** Current version of construction features data structure */
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
@@ -55,6 +55,19 @@ export interface ConstructionFeaturesV3Base {
     movement?: ConstructionMovement | null
 }
 
+/**
+ * A single step in a pre-calculated hauler path.
+ * Extends the Screeps PathStep format with roomName for multi-room paths.
+ */
+export interface MinePathEntry {
+    roomName: string
+    x: number
+    y: number
+    dx: number
+    dy: number
+    direction: DirectionConstant
+}
+
 /** Construction features for a remote mining room */
 export interface ConstructionFeaturesV3Mine {
     version: string
@@ -69,9 +82,13 @@ export interface ConstructionFeaturesV3Mine {
      *   `storage:source-<room>-<sourceId>` — base storageLink → mine source container
      *   `source-<room>-<id1>:source-<room>-<id2>` — container A → container B (ids sorted)
      *   `storage:controller-<room>` — base storageLink → mine controller (range 1)
-     * Values: `"<roomName>:<x>:<y>"` strings forming the path.
+     * Values: MinePathEntry[] with pre-computed dx/dy/direction for direct use with moveByPath.
+     *
+     * Memory optimization note: the two `storage:source-<room>-<id>` paths share an identical
+     * base-room prefix (storageLink → mine entrance). If memory becomes a concern they could be
+     * collapsed into a single `storage:mine-<room>` path plus the existing source-to-source path.
      */
-    minePaths?: Record<string, string[]>
+    minePaths?: Record<string, MinePathEntry[]>
 }
 
 /** Construction features for rooms not used (e.g., highways, SK rooms) */
@@ -375,7 +392,7 @@ export function willBeDestroyedByMovement(
  * @param room - The mine room or room name
  * @returns The minePaths map, or null if unavailable
  */
-export function getMinePaths(room: Room | string): Record<string, string[]> | null {
+export function getMinePaths(room: Room | string): Record<string, MinePathEntry[]> | null {
     const features = getConstructionFeaturesV3(room)
     if (!features || features.type !== 'mine') {
         return null

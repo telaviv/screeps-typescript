@@ -16,11 +16,13 @@ import {
 import { mprofile, profile } from 'utils/profiling'
 import { Position } from 'types'
 import { RoomManager } from './room-manager'
+import { SubscriptionEvent } from 'pub-sub/constants'
 import { assignMines } from './mine-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
 import { isTravelTask } from 'tasks/travel/utils'
+import { subscribe } from 'pub-sub/pub-sub'
 
 /** Current version of scout data format */
 const SCOUT_VERSION = '1.2.0'
@@ -48,6 +50,16 @@ if (Object.keys(DistanceTTL).length < MAX_SCOUT_DISTANCE) {
 export const EXPIRATION_TTL = !Game.cpu.generatePixel
     ? (60 * 60 * 48) / 0.2
     : (60 * 60 * 48) / TIME_PER_TICK
+
+/** Subscriber ID for the construction feature cache */
+const FEATURE_CACHE_SUBSCRIPTION_ID = 'scout-manager-feature-cache'
+
+/**
+ * Module-level cache of construction features by room.
+ * Null means not yet initialized; rebuilt once on first create() call,
+ * then kept up-to-date via CONSTRUCTION_FEATURES_UPDATES subscriptions.
+ */
+let featureRoomCache: Record<string, ConstructionFeaturesV3> | null = null
 
 /** Memory structure for storing scout data about a room */
 /** Memory structure for storing scout data about a room */
@@ -239,23 +251,60 @@ class ScoutManager {
     static create(): ScoutManager {
         const world = new World()
         const ownedRoomProgress = new Map<string, number>()
-        const scoutRoomData: Record<string, ScoutMemory> = {}
-        const featureRoomData: Record<string, ConstructionFeaturesV3> = {}
         for (const room of findSpawnRooms()) {
             if (room.controller?.my) {
                 ownedRoomProgress.set(room.name, room.controller.progressTotal)
             }
         }
-        for (const [name, memory] of Object.entries(Memory.rooms)) {
-            if (memory.scout) {
-                scoutRoomData[name] = memory.scout
-            }
-            const features = getConstructionFeaturesV3(name)
-            if (features) {
-                featureRoomData[name] = features
+
+        if (!featureRoomCache) {
+            featureRoomCache = {}
+            for (const [name, memory] of Object.entries(Memory.rooms)) {
+                if (!memory.constructionFeaturesV3) continue
+                const features = getConstructionFeaturesV3(name)
+                if (features) {
+                    featureRoomCache[name] = features
+                }
             }
         }
-        return new ScoutManager(world, ownedRoomProgress, featureRoomData)
+
+        return new ScoutManager(world, ownedRoomProgress, featureRoomCache)
+    }
+
+    /**
+     * Subscribes to construction feature updates to keep the module-level cache
+     * current. Should be called each tick via main's addSubscriptions.
+     * Also picks up any rooms that gained features since the last call.
+     */
+    static addSubscriptions(): void {
+        if (!featureRoomCache) return
+
+        for (const [name, memory] of Object.entries(Memory.rooms)) {
+            if (!memory.constructionFeaturesV3) continue
+
+            // Pick up rooms that gained features after the cache was initialized
+            if (!featureRoomCache[name]) {
+                const features = getConstructionFeaturesV3(name)
+                if (features) {
+                    featureRoomCache[name] = features
+                }
+            }
+
+            subscribe(
+                SubscriptionEvent.CONSTRUCTION_FEATURES_UPDATES,
+                name,
+                FEATURE_CACHE_SUBSCRIPTION_ID,
+                () => {
+                    if (!featureRoomCache) return
+                    const updated = getConstructionFeaturesV3(name)
+                    if (updated) {
+                        featureRoomCache[name] = updated
+                    } else {
+                        delete featureRoomCache[name]
+                    }
+                },
+            )
+        }
     }
 
     /** Gets list of owned room names */

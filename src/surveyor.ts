@@ -11,6 +11,7 @@ import {
     ConstructionFeaturesV3,
     ConstructionMovement,
     Links,
+    MinePathEntry,
     StationaryPointsBase,
     getCalculatedLinks,
     getConstructionFeatures,
@@ -19,6 +20,7 @@ import {
     constructionFeaturesV3NeedsUpdate,
     MinerInformation,
 } from 'construction-features'
+import { deltaToDirection } from 'utils/mine-travel'
 import {
     findSpawnlessRooms,
     findSpawnRooms,
@@ -92,6 +94,7 @@ export const isSurveyComplete = Profiling.wrap((room: Room): boolean => {
  */
 function clearConstructionFeatures(roomName: string) {
     Memory.rooms[roomName].constructionFeaturesV3 = undefined
+    publishConstructionFeatureChange(roomName)
 }
 
 /**
@@ -332,10 +335,38 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
 }
 
 /**
- * Converts a FlatRoomPosition to the serialized string form used in minePaths values.
+ * Converts a FlatRoomPosition[] to MinePathEntry[] with pre-computed dx/dy/direction.
+ * For same-room consecutive steps dx/dy are ±1.
+ * For cross-room boundary steps the direction is derived from the room exit axis
+ * (entrance x/y = 0 or 49 determines the axis; sign determined by step order).
  */
-function flatPosToString(pos: FlatRoomPosition): string {
-    return `${pos.roomName}:${pos.x}:${pos.y}`
+function pathToMinePathEntries(path: FlatRoomPosition[]): MinePathEntry[] {
+    return path.map((pos, i) => {
+        const next = path[i + 1]
+        if (!next) {
+            return { roomName: pos.roomName, x: pos.x, y: pos.y, dx: 0, dy: 0, direction: TOP }
+        }
+        let dx: number
+        let dy: number
+        if (pos.roomName === next.roomName) {
+            dx = next.x - pos.x
+            dy = next.y - pos.y
+        } else {
+            // Cross-room step: coordinate deltas are unreliable across room boundaries
+            // (e.g. going south gives dy = 0 - 49 = -49, sign = -1, but direction is BOTTOM).
+            // Derive exit direction purely from which edge the current tile sits on.
+            dx = pos.x === 49 ? 1 : pos.x === 0 ? -1 : 0
+            dy = pos.y === 49 ? 1 : pos.y === 0 ? -1 : 0
+        }
+        return {
+            roomName: pos.roomName,
+            x: pos.x,
+            y: pos.y,
+            dx,
+            dy,
+            direction: deltaToDirection(dx, dy),
+        }
+    })
 }
 
 /**
@@ -369,23 +400,25 @@ function setMineConstructionFeaturesV3(
     const { features, points } = ret
 
     // Assemble minePaths lookup table
-    const minePaths: Record<string, string[]> = {}
+    const minePaths: Record<string, MinePathEntry[]> = {}
 
     for (const [sourceId, path] of Object.entries(sourcePaths)) {
         // Exclude the last position (the container tile itself); the hauler stops adjacent to it
-        minePaths[`storage:source-${mineName}-${sourceId}`] = path.slice(0, -1).map(flatPosToString)
+        minePaths[`storage:source-${mineName}-${sourceId}`] = pathToMinePathEntries(
+            path.slice(0, -1),
+        )
     }
 
     if (sourceToSourcePath && sourceToSourcePath.length > 0) {
         const sortedIds = Object.keys(sourcePaths).sort()
         if (sortedIds.length === 2) {
             const key = `source-${mineName}-${sortedIds[0]}:source-${mineName}-${sortedIds[1]}`
-            minePaths[key] = sourceToSourcePath.map(flatPosToString)
+            minePaths[key] = pathToMinePathEntries(sourceToSourcePath)
         }
     }
 
     if (controllerPath && controllerPath.length > 0) {
-        minePaths[`storage:controller-${mineName}`] = controllerPath.map(flatPosToString)
+        minePaths[`storage:controller-${mineName}`] = pathToMinePathEntries(controllerPath)
     }
 
     const constructionFeaturesV3: ConstructionFeaturesV3 = {
@@ -401,6 +434,7 @@ function setMineConstructionFeaturesV3(
         minePaths,
     }
     Memory.rooms[mineName].constructionFeaturesV3 = constructionFeaturesV3
+    publishConstructionFeatureChange(mineName)
 }
 
 /**

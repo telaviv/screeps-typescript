@@ -91,8 +91,9 @@ declare global {
       Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
     */
     // Memory extension samples
-    // eslint-disable-next-line @typescript-eslint/no-empty-interface
-    interface Memory {}
+    interface Memory {
+        creepRunDebugEnabled?: boolean
+    }
 
     interface FlatRoomPosition {
         x: number
@@ -248,6 +249,7 @@ const ensureSafeMode = wrap((room: Room) => {
  */
 const runCreep = wrap((creepName: string) => {
     const creep = Game.creeps[creepName]
+    const debugStart = Memory.creepRunDebugEnabled ? Game.cpu.getUsed() : 0
     if (creep.memory.role === 'harvester') {
         roleHarvester.run(creep as unknown as Harvester)
     } else if (creep.memory.role === 'logistics') {
@@ -281,7 +283,26 @@ const runCreep = wrap((creepName: string) => {
     } else if (creep.memory.role === 'mineral-harvester') {
         roleMineralHarvester.run(creep as MineralHarvester)
     }
+    const cpu = Game.cpu.getUsed() - debugStart
+    if (Memory.creepRunDebugEnabled && cpu > 2) {
+        const pos = creep.pos
+        console.log(
+            '[creepRun]',
+            'name:',
+            creep.name,
+            'pos:',
+            `${pos.roomName}:(${pos.x},${pos.y})`,
+            'memory:',
+            JSON.stringify(creep.memory),
+            'cpu:',
+            cpu.toFixed(2),
+        )
+    }
 }, 'main:runCreep')
+
+const runScoutManager = wrap(() => ScoutManager.create().run(), 'main:runScoutManager')
+const runEmpire = wrap(() => new Empire().run(), 'main:runEmpire')
+const runTaskRunnerCleanup = wrap(() => TaskRunner.cleanup(), 'main:taskRunnerCleanup')
 
 /**
  * Performs per-tick initialization tasks.
@@ -293,14 +314,13 @@ const initialize = wrap(() => {
     }
 
     clearCreepMemory()
-    ScoutManager.create().run()
+    runScoutManager()
     addSubscriptions()
-    const empire = new Empire()
-    empire.run()
+    runEmpire()
     if (Game.time % 11 === 0) {
         survey()
     }
-    TaskRunner.cleanup()
+    runTaskRunnerCleanup()
 }, 'main:initialize')
 
 /**
@@ -308,6 +328,7 @@ const initialize = wrap(() => {
  */
 const addSubscriptions = wrap(() => {
     MatrixCacheManager.addSubscriptions()
+    ScoutManager.addSubscriptions()
 }, 'main:addSubscriptions')
 
 /**

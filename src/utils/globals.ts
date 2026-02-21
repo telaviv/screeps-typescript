@@ -1861,6 +1861,8 @@ export default function assignGlobals(): void {
     global.debugMineral = debugMineral
     global.enableDebugCartographer = enableDebugCartographer
     global.disableDebugCartographer = disableDebugCartographer
+    global.enableDebugCreepRun = enableDebugCreepRun
+    global.disableDebugCreepRun = disableDebugCreepRun
 }
 
 function enableDebugCartographer(): void {
@@ -1873,6 +1875,18 @@ function enableDebugCartographer(): void {
 function disableDebugCartographer(): void {
     Memory.cartographerDebugEnabled = false
     console.log('Cartographer debug disabled.')
+}
+
+function enableDebugCreepRun(): void {
+    Memory.creepRunDebugEnabled = true
+    console.log(
+        'Creep run debug enabled: runCreep will log name, position, memory, and CPU per creep.',
+    )
+}
+
+function disableDebugCreepRun(): void {
+    Memory.creepRunDebugEnabled = false
+    console.log('Creep run debug disabled.')
 }
 
 declare global {
@@ -1914,6 +1928,8 @@ declare global {
             debugMineral: (roomName: string) => void
             enableDebugCartographer: () => void
             disableDebugCartographer: () => void
+            enableDebugCreepRun: () => void
+            disableDebugCreepRun: () => void
         }
     }
 }

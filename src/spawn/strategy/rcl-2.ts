@@ -20,7 +20,12 @@ import {
 import WarDepartment, { WarStatus } from 'war-department'
 import { createImportantWarCreeps, createLatentSpawnWorkers } from './create-war-creeps'
 import { getCreeps, getLogisticsCreeps, getScouts } from 'utils/creep'
-import { getLatentWorkerInterval, isEnergyRestricted } from './utils'
+import {
+    getLatentWorkerInterval,
+    getLimitedCapacity,
+    isEnergyRestricted,
+    shouldOperateAtLimitedCapacity,
+} from './utils'
 import { isTravelTask } from 'tasks/travel/utils'
 import roleEnergyHauler, { EnergyHauler } from 'roles/energy-hauler'
 import roleMason, { MasonCreep } from 'roles/mason'
@@ -131,9 +136,6 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     }
 
     const room = spawn.room
-    const capacity = isEnergyRestricted(room)
-        ? Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
-        : room.energyCapacityAvailable
     const constructionSites = getConstructionSites(room).filter(
         (site) => site.structureType !== STRUCTURE_RAMPART,
     )
@@ -142,6 +144,9 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     const sourcesManager = new SourcesManager(room)
     const virtualStorage = getVirtualStorage(room.name)
     const roomQuery = new RoomQuery(room)
+    const capacity = shouldOperateAtLimitedCapacity(room, roomQuery)
+        ? getLimitedCapacity(room)
+        : room.energyCapacityAvailable
 
     if (!sourcesManager.hasAllContainerHarvesters()) {
         sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt(), capacity })
@@ -187,6 +192,14 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
 
     if (roomQuery.getCreepCount('rebalancer') < 1 && virtualStorage) {
         roleRebalancer.create(spawn, capacity)
+        return
+    }
+
+    if (
+        roomQuery.getCreepCount('energy-hauler') < 2 &&
+        (!isEnergyRestricted(room) || roomQuery.getCreepCount('rebalancer') === 0)
+    ) {
+        roleEnergyHauler.create(spawn, capacity, roomQuery.allRoadsBuilt())
         return
     }
 
@@ -263,10 +276,10 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     const sourcesManager = new SourcesManager(room)
     const haulers = getCreeps('energy-hauler', room)
     const virtualStorage = getVirtualStorage(room.name)
-    const capacity = isEnergyRestricted(room)
-        ? Math.min(MAX_USEFUL_ENERGY, room.energyCapacityAvailable)
-        : room.energyCapacityAvailable
     const roomQuery = new RoomQuery(room)
+    const capacity = shouldOperateAtLimitedCapacity(room, roomQuery)
+        ? getLimitedCapacity(room)
+        : room.energyCapacityAvailable
 
     if (!sourcesManager.hasAllContainerHarvesters()) {
         sourcesManager.createHarvester(spawn, { capacity, roadsBuilt: roomQuery.allRoadsBuilt() })
@@ -296,10 +309,11 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     ) {
         roleRebalancer.create(spawn, capacity)
         return
-    } else if (
+    }
+
+    if (
         roomQuery.getCreepCount('energy-hauler') < 2 &&
-        roomQuery.getCreepCount('rebalancer') === 0 &&
-        !isEnergyRestricted(room)
+        (!isEnergyRestricted(room) || roomQuery.getCreepCount('rebalancer') === 0)
     ) {
         roleEnergyHauler.create(spawn, capacity, roomQuery.allRoadsBuilt())
         return

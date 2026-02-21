@@ -35,6 +35,10 @@ function formatTargetForLog(target: MoveToTarget): string {
     }
     if (typeof (target as _HasRoomPosition).pos !== 'undefined') {
         const t = target as _HasRoomPosition
+        const range = (target as { range?: number }).range
+        if (range !== undefined) {
+            return `{pos:${formatTargetForLog(t.pos)},range:${range}}`
+        }
         return `{pos:${formatTargetForLog(t.pos)}}`
     }
     const m = target as MoveTarget
@@ -51,7 +55,7 @@ export const moveToCartographer = wrap(
             const start = Game.cpu.getUsed()
             const result = moveToCartographerUnwrapped(creep, target, opts)
             const cpu = Game.cpu.getUsed() - start
-            if (cpu > 1) {
+            if (cpu > 2) {
                 const pos = creep.pos
                 console.log(
                     '[cartographer]',
@@ -182,7 +186,7 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
  * Returns true when currentRoom and targetRoom are a base/mine pair with matching
  * entrance/exit positions and all roads built in both rooms.
  */
-function isMineTravel(currentRoom: string, targetRoom: string): boolean {
+export function isMineTravel(currentRoom: string, targetRoom: string): boolean {
     const currentFeatures = getConstructionFeaturesV3(currentRoom)
     const targetFeatures = getConstructionFeaturesV3(targetRoom)
 
@@ -255,7 +259,33 @@ export const moveToRoomForMineTravel = wrap(
         opts: MoveOpts = {},
     ): ReturnType<typeof moveToCartographer> => {
         if (!isMineTravel(creep.room.name, roomName)) {
-            return moveToRoom(creep, roomName, opts)
+            // Mine travel not available — use terrain-only pathfinding (no roomCallback) so that
+            // creep congestion near room exits doesn't produce an impassable obstacle matrix and
+            // an expensive 4000-op ERR_NO_PATH search.
+            if (creep.fatigue > 0) {
+                return ERR_TIRED
+            }
+            const fallbackPos = creep.pos
+            const fallbackHomeRoom = creep.room.name
+            const fallbackErr = moveToCartographer(
+                creep,
+                { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
+                {
+                    swampCost: 5,
+                    plainCost: 2,
+                    roomCallback: (room: string) =>
+                        room === fallbackHomeRoom || room === roomName ? true : false,
+                    routeCallback: moveToRoomRouteCallback(roomName, fallbackHomeRoom),
+                    ...opts,
+                },
+            )
+            if (fallbackErr !== OK && fallbackErr !== ERR_TIRED) {
+                updatePositionTracking(creep, fallbackPos)
+            } else {
+                // eslint-disable-next-line no-underscore-dangle
+                creep.memory._dlWait = 0
+            }
+            return fallbackErr
         }
 
         if (creep.fatigue > 0) {
@@ -268,16 +298,28 @@ export const moveToRoomForMineTravel = wrap(
         }
 
         const previousPos = creep.pos
+        const target = { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE }
 
-        const err = moveToCartographer(
-            creep,
-            { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
-            {
-                roomCallback: mineTravelRoomCallback(roomName, creep.room.name),
-                routeCallback: moveToRoomRouteCallback(roomName, creep.room.name),
+        let err = moveToCartographer(creep, target, {
+            roomCallback: mineTravelRoomCallback(roomName, creep.room.name),
+            routeCallback: moveToRoomRouteCallback(roomName, creep.room.name),
+            ...opts,
+        })
+
+        if (err === ERR_NO_PATH) {
+            // Creep is off the mine-road network (e.g. near spawn after drop-off).
+            // Use terrain-only pathfinding restricted to just the two rooms so cartographer
+            // doesn't floodfill up to 64 rooms and blow the CPU budget.
+            const homeRoom = creep.room.name
+            err = moveToCartographer(creep, target, {
+                swampCost: 5,
+                plainCost: 2,
+                roomCallback: (room: string) =>
+                    room === homeRoom || room === roomName ? true : false,
+                routeCallback: moveToRoomRouteCallback(roomName, homeRoom),
                 ...opts,
-            },
-        )
+            })
+        }
 
         if (err !== OK && err !== ERR_TIRED) {
             updatePositionTracking(creep, previousPos)
@@ -373,7 +415,7 @@ export const moveWithinRoom = wrap(
 
         const moveCount = creep.getActiveBodyparts(MOVE)
         const totalCount = creep.body.length
-        const roadPreferred = moveCount / totalCount >= 0.5
+        const roadPreferred = moveCount / totalCount < 0.5
         const matrix = MatrixCacheManager.getRoomMatrix(creep.room.name, roadPreferred)
         const nRoomCallback = (roomName: string): CostMatrix | boolean => {
             if (roomName === target.pos.roomName) {
