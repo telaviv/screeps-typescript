@@ -5,7 +5,6 @@ declare global {
         remoteHaulerDebugEnabled?: boolean
     }
 }
-import * as Logger from 'utils/logger'
 
 /**
  * Converts a (dx, dy) delta between adjacent grid tiles to a Screeps DirectionConstant.

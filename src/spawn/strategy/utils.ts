@@ -1,7 +1,7 @@
 import * as Logger from 'utils/logger'
 
 import { DataPoint, exponential, logarithmic, polynomial, Result } from 'regression'
-import { LATENT_WORKER_INTERVAL_MULTIPLIER, MAX_USEFUL_ENERGY } from './constants'
+import { LATENT_WORKER_INTERVAL_MULTIPLIER } from './constants'
 import { getSlidingEnergy } from 'room-window'
 import { wrap } from 'utils/profiling'
 import RoomQuery from '../room-query'
@@ -54,31 +54,36 @@ const WORKER_MIN = 2 * BODYPART_COST[MOVE] + BODYPART_COST[CARRY] + BODYPART_COS
 
 /**
  * Returns the energy capacity to use when operating in limited mode.
- * Targets half of energyCapacityAvailable, bounded below by the cheapest useful creep:
+ * Uses the cheapest useful creep as the floor:
  * - claim+move (650) if the room can afford it, otherwise move×2+carry+work (250)
- * and bounded above by MAX_USEFUL_ENERGY.
  */
 export function getLimitedCapacity(room: Room): number {
     const cap = room.energyCapacityAvailable
     const minFloor = cap >= CLAIMER_MIN ? CLAIMER_MIN : WORKER_MIN
-    const limitedCap = Math.max(minFloor, Math.min(MAX_USEFUL_ENERGY, cap / 2))
-    return Math.min(cap, Math.max(limitedCap, room.energyAvailable))
+    return Math.min(cap, Math.max(minFloor, room.energyAvailable))
 }
 
 /**
  * Returns true if the room should spawn all creeps at limited capacity.
  * Combines energy restriction with the mine lower-capacity condition: any mine that
- * needs attention and has low reservation (≤1000 ticks) or fewer than 1 hauler per
- * source causes the whole strategy to operate at reduced capacity so mine roles fill faster.
+ * needs attention triggers limited capacity if it has low reservation (≤1000 ticks) and
+ * still has claimer spots available (skipped below RCL 3 where claimers can't be spawned),
+ * or has fewer than 1 hauler per source. Mine logic is only checked when roads are built,
+ * matching the gate used in the spawn strategy.
  */
 export function shouldOperateAtLimitedCapacity(room: Room, roomQuery: RoomQuery): boolean {
     if (isEnergyRestricted(room)) return true
-    if (Memory.miningEnabled) {
+    if (Memory.miningEnabled && roomQuery.allRoadsBuilt()) {
+        const canAffordClaimer = (room.controller?.level ?? 0) >= 3
         for (const mm of roomQuery.getMineManagers()) {
             if (!mm.needsAttention() || !mm.room) continue
-            const reservationTicks = mm.controllerReservationTicksLeft()
             const hasHaulerPerSource = mm.getHaulers().length >= mm.sourceCount()
-            if (reservationTicks <= 1000 || !hasHaulerPerSource) {
+            const claimerSpotAvailable = mm.hasClaimSpotAvailable()
+            const reservationTicks = mm.controllerReservationTicksLeft()
+            if (
+                (canAffordClaimer && reservationTicks <= 1000 && claimerSpotAvailable) ||
+                !hasHaulerPerSource
+            ) {
                 return true
             }
         }

@@ -10,6 +10,7 @@ import {
     SPAWN_CHECK_MOD,
     MAX_USEFUL_ENERGY,
     MAX_DROPPED_RESOURCES,
+    MAX_LIMITED_HARVESTER_CAPACITY,
     MIN_USEFUL_LINK_ENERGY,
     ATTACKERS_COUNT,
     BUILDERS_COUNT,
@@ -144,12 +145,17 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     const sourcesManager = new SourcesManager(room)
     const virtualStorage = getVirtualStorage(room.name)
     const roomQuery = new RoomQuery(room)
-    const capacity = shouldOperateAtLimitedCapacity(room, roomQuery)
-        ? getLimitedCapacity(room)
-        : room.energyCapacityAvailable
+    const isLimited = shouldOperateAtLimitedCapacity(room, roomQuery)
+    const capacity = isLimited ? getLimitedCapacity(room) : room.energyCapacityAvailable
+    const harvesterCapacity = isLimited
+        ? Math.min(capacity, MAX_LIMITED_HARVESTER_CAPACITY)
+        : capacity
 
     if (!sourcesManager.hasAllContainerHarvesters()) {
-        sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt(), capacity })
+        sourcesManager.createHarvester(spawn, {
+            roadsBuilt: roomQuery.allRoadsBuilt(),
+            capacity: harvesterCapacity,
+        })
         return
     }
     if (roomQuery.getCreepCount('energy-hauler') > 0) {
@@ -173,7 +179,10 @@ const swarmStrategy = wrap((spawn: StructureSpawn): void => {
     }
 
     if (!sourcesManager.hasEnoughHarvesters()) {
-        sourcesManager.createHarvester(spawn, { roadsBuilt: roomQuery.allRoadsBuilt(), capacity })
+        sourcesManager.createHarvester(spawn, {
+            roadsBuilt: roomQuery.allRoadsBuilt(),
+            capacity: harvesterCapacity,
+        })
         return
     }
 
@@ -277,12 +286,17 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     const haulers = getCreeps('energy-hauler', room)
     const virtualStorage = getVirtualStorage(room.name)
     const roomQuery = new RoomQuery(room)
-    const capacity = shouldOperateAtLimitedCapacity(room, roomQuery)
-        ? getLimitedCapacity(room)
-        : room.energyCapacityAvailable
+    const isLimited = shouldOperateAtLimitedCapacity(room, roomQuery)
+    const capacity = isLimited ? getLimitedCapacity(room) : room.energyCapacityAvailable
+    const harvesterCapacity = isLimited
+        ? Math.min(capacity, MAX_LIMITED_HARVESTER_CAPACITY)
+        : capacity
 
     if (!sourcesManager.hasAllContainerHarvesters()) {
-        sourcesManager.createHarvester(spawn, { capacity, roadsBuilt: roomQuery.allRoadsBuilt() })
+        sourcesManager.createHarvester(spawn, {
+            capacity: harvesterCapacity,
+            roadsBuilt: roomQuery.allRoadsBuilt(),
+        })
         return
     }
 
@@ -354,7 +368,10 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
     }
 
     if (!sourcesManager.hasEnoughHarvesters()) {
-        sourcesManager.createHarvester(spawn, { capacity, roadsBuilt: roomQuery.allRoadsBuilt() })
+        sourcesManager.createHarvester(spawn, {
+            capacity: harvesterCapacity,
+            roadsBuilt: roomQuery.allRoadsBuilt(),
+        })
         return
     }
 
@@ -382,7 +399,6 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
             })
             return
         }
-        return
     }
 
     if (createLatentSpawnWorkers(spawn, warDepartment) === OK) {
