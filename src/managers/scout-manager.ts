@@ -31,6 +31,8 @@ const SCOUT_VERSION = '1.2.0'
 const MAX_SCOUT_DISTANCE = MAX_CLAIM_DISTANCE + ENEMY_DISTANCE_BUFFER
 /** Average seconds per tick on shard 0 */
 const TIME_PER_TICK = 4.7 // seconds on shard 0
+/** How long a path-blocked room stays blacklisted (24 hours in ticks) */
+const PATH_BLOCK_TTL = (60 * 60 * 24) / TIME_PER_TICK
 /** Time-to-live for scout data by room distance (in ticks) */
 export const DistanceTTL: Record<number, number> = {
     1: (60 * 60 * 24) / TIME_PER_TICK,
@@ -99,6 +101,11 @@ export interface ScoutMemory {
 }
 
 declare global {
+    interface Memory {
+        /** Rooms where pathfinding recently failed, keyed by room name to timestamp */
+        pathBlockedRooms?: Record<string, number>
+    }
+
     interface RoomMemory {
         /** Scout data for this room */
         scout?: ScoutMemory
@@ -411,6 +418,10 @@ class ScoutManager {
             const hasFeatures = !!this.featureRoomData[roomName]
             const hasValidScout = this.hasValidScoutData(roomName)
             const isManuallyDenied = Memory.rooms[roomName]?.scout?.manuallyDenied ?? false
+            const pathBlockedRooms = Memory.pathBlockedRooms
+            const blockedAt = pathBlockedRooms?.[roomName]
+            const isPathBlocked =
+                blockedAt !== undefined && this.gameTime - blockedAt < PATH_BLOCK_TTL
 
             Logger.debug('scout-manager:checking', roomName, {
                 distance,
@@ -418,6 +429,7 @@ class ScoutManager {
                 hasFeatures,
                 hasValidScout,
                 isManuallyDenied,
+                isPathBlocked,
             })
 
             if (roomType !== RoomType.ROOM) {
@@ -425,6 +437,10 @@ class ScoutManager {
             }
             // Skip manually denied rooms
             if (isManuallyDenied) {
+                continue
+            }
+            // Skip rooms where pathfinding recently failed
+            if (isPathBlocked) {
                 continue
             }
             if (roomType === RoomType.ROOM && (!hasFeatures || !hasValidScout)) {
@@ -468,6 +484,14 @@ class ScoutManager {
         for (const name of Object.keys(Memory.rooms)) {
             if (!this.hasValidScoutData(name)) {
                 delete Memory.rooms[name]
+            }
+        }
+        const pathBlockedRooms = Memory.pathBlockedRooms
+        if (pathBlockedRooms) {
+            for (const [room, timestamp] of Object.entries(pathBlockedRooms)) {
+                if (this.gameTime - timestamp >= PATH_BLOCK_TTL) {
+                    delete pathBlockedRooms[room]
+                }
             }
         }
     }

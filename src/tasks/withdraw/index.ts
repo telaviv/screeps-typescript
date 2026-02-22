@@ -193,34 +193,36 @@ export function isVirtualStorage(structure: Withdrawable): boolean {
 const getEligibleTargets = wrap(
     (room: Room, capacity: number, opts?: RequestOpts): Withdrawable[] => {
         const withdrawObjects = WithdrawObject.getTargetsInRoom(room, opts)
-        const nonEmpties = withdrawObjects.filter(
-            (target) =>
-                target.resourcesAvailable(RESOURCE_ENERGY) >= 50 ||
-                (target.resourcesAvailable(RESOURCE_ENERGY) > 0 && isTemporary(target)),
+        const candidates = withdrawObjects.map((target) => ({
+            target,
+            available: target.resourcesAvailable(RESOURCE_ENERGY),
+            temporary: isTemporary(target),
+        }))
+
+        const nonEmpties = candidates.filter(
+            ({ available, temporary }) => available >= 50 || (available > 0 && temporary),
         )
 
-        const temporaries = nonEmpties.filter(isTemporary)
+        const temporaries = nonEmpties.filter(({ temporary }) => temporary)
 
         if (temporaries.length > 0) {
-            return temporaries.map((eligible) => eligible.withdrawable)
+            return temporaries.map(({ target }) => target.withdrawable)
         }
 
-        const eligibles = nonEmpties.filter(
-            (target) => target.resourcesAvailable(RESOURCE_ENERGY) >= capacity,
-        )
+        const eligibles = nonEmpties.filter(({ available }) => available >= capacity)
 
         if (eligibles.length > 0) {
-            return eligibles.map((eligible) => eligible.withdrawable)
+            return eligibles.map(({ target }) => target.withdrawable)
         }
 
         if (nonEmpties.length === 0) {
             return []
         }
-        const bestTarget = maxBy(nonEmpties, (t) => t.resourcesAvailable(RESOURCE_ENERGY))
-        if (!bestTarget) {
+        const best = maxBy(nonEmpties, ({ available }) => available)
+        if (!best) {
             return []
         }
-        return [bestTarget.withdrawable]
+        return [best.target.withdrawable]
     },
     'withdraw:getEligibleTargets',
 )

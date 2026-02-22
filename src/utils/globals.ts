@@ -1863,6 +1863,8 @@ export default function assignGlobals(): void {
     global.disableDebugCartographer = disableDebugCartographer
     global.enableDebugCreepRun = enableDebugCreepRun
     global.disableDebugCreepRun = disableDebugCreepRun
+    global.enableDebugRemoteHauler = enableDebugRemoteHauler
+    global.disableDebugRemoteHauler = disableDebugRemoteHauler
 }
 
 function enableDebugCartographer(): void {
@@ -1875,6 +1877,16 @@ function enableDebugCartographer(): void {
 function disableDebugCartographer(): void {
     Memory.cartographerDebugEnabled = false
     console.log('Cartographer debug disabled.')
+}
+
+function enableDebugRemoteHauler(): void {
+    Memory.remoteHaulerDebugEnabled = true
+    console.log('Remote hauler debug enabled: followMinePath and run state will log per tick.')
+}
+
+function disableDebugRemoteHauler(): void {
+    Memory.remoteHaulerDebugEnabled = false
+    console.log('Remote hauler debug disabled.')
 }
 
 function enableDebugCreepRun(): void {
@@ -1930,6 +1942,8 @@ declare global {
             disableDebugCartographer: () => void
             enableDebugCreepRun: () => void
             disableDebugCreepRun: () => void
+            enableDebugRemoteHauler: () => void
+            disableDebugRemoteHauler: () => void
         }
     }
 }

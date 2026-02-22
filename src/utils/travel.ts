@@ -55,7 +55,7 @@ export const moveToCartographer = wrap(
             const start = Game.cpu.getUsed()
             const result = moveToCartographerUnwrapped(creep, target, opts)
             const cpu = Game.cpu.getUsed() - start
-            if (cpu > 2) {
+            if (cpu > 1) {
                 const pos = creep.pos
                 console.log(
                     '[cartographer]',
@@ -101,8 +101,9 @@ function routeCallback(fromRoom: string, toRoom: string): number | undefined {
     return undefined
 }
 
-const moveToRoomRouteCallback = (room: string, currentRoom: string) =>
-    wrap((fromRoom: string, toRoom: string): number | undefined => {
+const moveToRoomRouteCallback =
+    (room: string, currentRoom: string) =>
+    (fromRoom: string, toRoom: string): number | undefined => {
         if (
             toRoom === room ||
             fromRoom === room ||
@@ -112,15 +113,16 @@ const moveToRoomRouteCallback = (room: string, currentRoom: string) =>
             return undefined
         }
         return routeCallback(fromRoom, toRoom)
-    }, 'travel:moveToRoomRouteCallback')
+    }
 
-const moveToRoomRoomCallback = (room: string, currentRoom: string) =>
-    wrap((roomName: string): CostMatrix | boolean => {
+const moveToRoomRoomCallback =
+    (room: string, currentRoom: string) =>
+    (roomName: string): CostMatrix | boolean => {
         if (roomName === room || roomName === currentRoom) {
             return roomCallback(roomName, true)
         }
         return roomCallback(roomName)
-    }, 'travel:moveToRoomRoomCallback')
+    }
 
 /** Moves creep to center of a room, avoiding unsafe rooms */
 export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
@@ -349,9 +351,11 @@ export function generatePathToRoom(
     )
 }
 
-export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts = {}): ReturnType<
-    typeof moveToCartographer
-> => {
+export const moveTo = (
+    creep: Creep,
+    target: MoveToTarget,
+    opts: MoveOpts = {},
+): ReturnType<typeof moveToCartographer> => {
     // const startCPU = Game.cpu.getUsed()
     if (creep.fatigue > 0) {
         return ERR_TIRED
@@ -397,7 +401,7 @@ export const moveTo = wrap((creep: Creep, target: MoveToTarget, opts: MoveOpts =
     }
 
     return err
-}, 'travel:moveTo')
+}
 
 /** Moves within current room using per-room cost matrix (respects roads based on MOVE ratio) */
 export const moveWithinRoom = wrap(

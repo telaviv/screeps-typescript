@@ -1,4 +1,10 @@
 import { MinePathEntry } from 'construction-features'
+
+declare global {
+    interface Memory {
+        remoteHaulerDebugEnabled?: boolean
+    }
+}
 import * as Logger from 'utils/logger'
 
 /**
@@ -38,7 +44,9 @@ export function followMinePath(
     label: string,
 ): ScreepsReturnCode {
     if (path.length === 0) {
-        Logger.debug('followMinePath', label, creep.name, creep.pos, 'empty-path')
+        if (Memory.remoteHaulerDebugEnabled) {
+            console.log('followMinePath', label, creep.name, creep.pos, 'empty-path')
+        }
         return ERR_NOT_FOUND
     }
 
@@ -46,13 +54,17 @@ export function followMinePath(
 
     const idx = path.findIndex((step) => step.roomName === roomName && step.x === x && step.y === y)
     if (idx === -1) {
-        Logger.debug('followMinePath', label, creep.name, creep.pos, 'not-on-path')
+        if (Memory.remoteHaulerDebugEnabled) {
+            console.log('followMinePath', label, creep.name, creep.pos, 'not-on-path')
+        }
         return ERR_NOT_FOUND
     }
 
     const nextIdx = idx + 1
     if (nextIdx >= path.length) {
-        Logger.debug('followMinePath', label, creep.name, creep.pos, 'path-exhausted', idx)
+        if (Memory.remoteHaulerDebugEnabled) {
+            console.log('followMinePath', label, creep.name, creep.pos, 'path-exhausted', idx)
+        }
         return ERR_NOT_FOUND // path exhausted — caller uses moveTo for the last tile
     }
 
@@ -60,16 +72,18 @@ export function followMinePath(
     const current = path[idx]
     const next = path[nextIdx]
     const result = creep.move(current.direction)
-    Logger.debug(
-        'followMinePath',
-        label,
-        creep.name,
-        creep.pos,
-        `idx=${idx}→${nextIdx}`,
-        `dir=${current.direction}`,
-        `next=(${next.x},${next.y},${next.roomName})`,
-        `result=${result}`,
-    )
+    if (Memory.remoteHaulerDebugEnabled) {
+        console.log(
+            'followMinePath',
+            label,
+            creep.name,
+            creep.pos,
+            `idx=${idx}→${nextIdx}`,
+            `dir=${current.direction}`,
+            `next=(${next.x},${next.y},${next.roomName})`,
+            `result=${result}`,
+        )
+    }
     return result
 }
 

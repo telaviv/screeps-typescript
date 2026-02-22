@@ -25,7 +25,14 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
         completeRequest(creep)
         return true
     }
-    moveToRoom(creep, task.destination)
+    const err = moveToRoom(creep, task.destination, { maxOps: 2000 })
+    if (err === ERR_NO_PATH) {
+        const blocked = Memory.pathBlockedRooms ?? {}
+        blocked[task.destination] = Game.time
+        Memory.pathBlockedRooms = blocked
+        completeRequest(creep)
+        return true
+    }
     return false
 }
 

@@ -159,7 +159,9 @@ const clearCreepMemory = wrap(() => {
  */
 const runMyRoom = wrap((room: Room) => {
     recordRoomStats(room)
-    ensureSlidingWindow(room)
+    if (Game.time % 11 === 0) {
+        ensureSlidingWindow(room)
+    }
     const buildManager = getBuildManager(room)
     if (!buildManager) {
         return
@@ -207,7 +209,9 @@ const runMine = wrap((mineName: string) => {
     if (!room) {
         return
     }
-    ensureSlidingWindow(room)
+    if (Game.time % 11 === 0) {
+        ensureSlidingWindow(room)
+    }
     const buildManager = getBuildManager(room)
     if (!buildManager) {
         return

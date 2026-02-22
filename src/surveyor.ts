@@ -336,13 +336,47 @@ function calculateConstructionFeaturesV3(roomName: string): ConstructionFeatures
 
 /**
  * Converts a FlatRoomPosition[] to MinePathEntry[] with pre-computed dx/dy/direction.
- * For same-room consecutive steps dx/dy are ±1.
- * For cross-room boundary steps the direction is derived from the room exit axis
- * (entrance x/y = 0 or 49 determines the axis; sign determined by step order).
+ *
+ * PathFinder sometimes omits the border tile when a cross-room step starts from a
+ * non-border position (e.g. a diagonal approach to the room exit). We insert the
+ * missing border tile so that followMinePath always has an exact position match for
+ * every step the creep physically occupies.
  */
 function pathToMinePathEntries(path: FlatRoomPosition[]): MinePathEntry[] {
-    return path.map((pos, i) => {
+    // Expand path to insert any missing room-border tiles before cross-room jumps.
+    const expanded: FlatRoomPosition[] = []
+    for (let i = 0; i < path.length; i++) {
+        const pos = path[i]
         const next = path[i + 1]
+        expanded.push(pos)
+
+        if (next && pos.roomName !== next.roomName) {
+            const atBorder = pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49
+            if (!atBorder) {
+                // The path skips the border tile — compute it via getDirectionTo so we
+                // handle diagonal exits correctly, then insert it.
+                const dir = new RoomPosition(pos.x, pos.y, pos.roomName).getDirectionTo(
+                    new RoomPosition(next.x, next.y, next.roomName),
+                )
+                const ddx =
+                    dir === RIGHT || dir === TOP_RIGHT || dir === BOTTOM_RIGHT
+                        ? 1
+                        : dir === LEFT || dir === TOP_LEFT || dir === BOTTOM_LEFT
+                        ? -1
+                        : 0
+                const ddy =
+                    dir === BOTTOM || dir === BOTTOM_RIGHT || dir === BOTTOM_LEFT
+                        ? 1
+                        : dir === TOP || dir === TOP_RIGHT || dir === TOP_LEFT
+                        ? -1
+                        : 0
+                expanded.push({ roomName: pos.roomName, x: pos.x + ddx, y: pos.y + ddy })
+            }
+        }
+    }
+
+    return expanded.map((pos, i) => {
+        const next = expanded[i + 1]
         if (!next) {
             return { roomName: pos.roomName, x: pos.x, y: pos.y, dx: 0, dy: 0, direction: TOP }
         }
@@ -352,9 +386,7 @@ function pathToMinePathEntries(path: FlatRoomPosition[]): MinePathEntry[] {
             dx = next.x - pos.x
             dy = next.y - pos.y
         } else {
-            // Cross-room step: coordinate deltas are unreliable across room boundaries
-            // (e.g. going south gives dy = 0 - 49 = -49, sign = -1, but direction is BOTTOM).
-            // Derive exit direction purely from which edge the current tile sits on.
+            // Cross-room: pos is now guaranteed to be at the border tile.
             dx = pos.x === 49 ? 1 : pos.x === 0 ? -1 : 0
             dy = pos.y === 49 ? 1 : pos.y === 0 ? -1 : 0
         }

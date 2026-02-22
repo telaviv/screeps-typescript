@@ -46,7 +46,7 @@ export class SlidingWindowManager {
         if (time === null) {
             time = Game.time
         }
-        if (this.window.time !== time - 1) {
+        if (time - this.window.time > this.window.maxSize) {
             this.window.elements = {}
         }
         this.window.time = time

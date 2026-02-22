@@ -28,6 +28,12 @@ import {
 } from 'utils/mine-travel'
 import { profile, wrap } from 'utils/profiling'
 
+declare global {
+    interface Memory {
+        remoteHaulerDebugEnabled?: boolean
+    }
+}
+
 const ROLE = 'remote-hauler'
 
 export interface RemoteHauler extends ResourceCreep {
@@ -104,7 +110,7 @@ export class RemoteHaulerCreep {
         // If stationary points are missing for the remote room, mark and bail
         const points = getStationaryPointsMine(this.memory.remote)
         if (!points) {
-            Logger.debug(
+            console.log(
                 'remote-hauler:run:no-stationary-points (would suicide)',
                 this.creep.name,
                 this.creep.pos,
@@ -119,27 +125,30 @@ export class RemoteHaulerCreep {
         const isRemote = this.creep.room.name === this.memory.remote
         const target = this.memory.target
 
-        Logger.info(
-            'remote-hauler:debug',
-            this.creep.name,
-            this.creep.pos,
-            `isHome=${isHome}`,
-            `isRemote=${isRemote}`,
-            `freeCapacity=${freeCapacity}`,
-            `target=${target}`,
-            `allPickupsFree=${this.allPickupsFree()}`,
-            `allPickupsComplete=${this.allPickupsComplete()}`,
-        )
+        if (Memory.remoteHaulerDebugEnabled) {
+            console.log(
+                'remote-hauler:debug',
+                this.creep.name,
+                this.creep.pos,
+                `isHome=${isHome}`,
+                `isRemote=${isRemote}`,
+                `freeCapacity=${freeCapacity}`,
+                `target=${target}`,
+                `allPickupsFree=${this.allPickupsFree()}`,
+                `allPickupsComplete=${this.allPickupsComplete()}`,
+            )
+        }
 
         if (isHome && this.allPickupsFree()) {
             if (this.creep.ticksToLive && this.creep.ticksToLive < 75) {
-                Logger.error(
-                    'remote-hauler:run:ttl-low (would suicide)',
+                Logger.warning(
+                    'remote-hauler:run:ttl-low:suicide',
                     this.creep.name,
                     this.creep.pos,
                     `ttl=${this.creep.ticksToLive}`,
                 )
-                this.creep.say(`ttl:${this.creep.ticksToLive}`)
+                this.creep.suicide()
+                return
             }
             this.goToRemote()
             return
@@ -392,12 +401,14 @@ export class RemoteHaulerCreep {
             }
         }
 
-        Logger.debug(
-            'remote-hauler:moveToTarget:fallback',
-            this.creep.name,
-            this.creep.pos,
-            this.targetPos,
-        )
+        if (Memory.remoteHaulerDebugEnabled) {
+            console.log(
+                'remote-hauler:moveToTarget:fallback',
+                this.creep.name,
+                this.creep.pos,
+                this.targetPos,
+            )
+        }
         moveWithinRoom(this.creep, { pos: this.targetPos, range: 1 })
     }
 
@@ -406,12 +417,14 @@ export class RemoteHaulerCreep {
         const roomName = this.creep.room.name
         const firstInRoom = path.find((s) => s.roomName === roomName)
         if (firstInRoom) {
-            Logger.debug(
-                'remote-hauler:moveTowardPath',
-                this.creep.name,
-                this.creep.pos,
-                `→(${firstInRoom.x},${firstInRoom.y},${firstInRoom.roomName})`,
-            )
+            if (Memory.remoteHaulerDebugEnabled) {
+                console.log(
+                    'remote-hauler:moveTowardPath',
+                    this.creep.name,
+                    this.creep.pos,
+                    `→(${firstInRoom.x},${firstInRoom.y},${firstInRoom.roomName})`,
+                )
+            }
             moveWithinRoom(this.creep, {
                 pos: new RoomPosition(firstInRoom.x, firstInRoom.y, roomName),
                 range: 0,
@@ -431,11 +444,13 @@ export class RemoteHaulerCreep {
                     const result = followMinePath(this.creep, fullPath, 'goToRemote')
                     if (result === OK || result === ERR_TIRED) return
                     // Not on path — walk to the nearest road tile in this room
-                    Logger.debug(
-                        'remote-hauler:goToRemote:fallback',
-                        this.creep.name,
-                        this.creep.pos,
-                    )
+                    if (Memory.remoteHaulerDebugEnabled) {
+                        console.log(
+                            'remote-hauler:goToRemote:fallback',
+                            this.creep.name,
+                            this.creep.pos,
+                        )
+                    }
                     this.moveTowardPath(fullPath)
                     return
                 }
@@ -461,7 +476,13 @@ export class RemoteHaulerCreep {
                     const result = followMinePath(this.creep, reversed, 'goToHome')
                     if (result === OK || result === ERR_TIRED) return
                     // Not on path — walk to the nearest road tile in this room
-                    Logger.debug('remote-hauler:goToHome:fallback', this.creep.name, this.creep.pos)
+                    if (Memory.remoteHaulerDebugEnabled) {
+                        console.log(
+                            'remote-hauler:goToHome:fallback',
+                            this.creep.name,
+                            this.creep.pos,
+                        )
+                    }
                     this.moveTowardPath(reversed)
                     return
                 }

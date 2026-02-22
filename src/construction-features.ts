@@ -6,9 +6,9 @@ import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
 /** Minimum version of construction features v3 considered valid */
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.17'
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.18'
 /** Current version of construction features v3 data structure */
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.17'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.18'
 
 /** Current version of construction features data structure */
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
@@ -216,7 +216,9 @@ function getConstructionFeaturesV3FromMemory(
 function getStationaryPointsFromMemory(
     roomMemory: RoomMemory | undefined,
 ): StationaryPoints | null {
-    const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(roomMemory)
+    // Use '0.0.0' so stationary points (source/container positions) remain readable
+    // from any cached version while newer path data is being regenerated in the background.
+    const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(roomMemory, '0.0.0')
     if (constructionFeaturesV3 && constructionFeaturesV3.type !== 'none') {
         return constructionFeaturesV3.points ?? null
     }
@@ -233,6 +235,15 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
         return false
     }
     const roomName = typeof room === 'string' ? room : room.name
+
+    // Mine rooms are updated through their base room's survey path (setMineConstructionFeaturesV3).
+    // Never trigger a direct update for them — doing so calls calculateConstructionFeaturesV3New
+    // which tries to place a bunker, fails, and writes { type: 'mine' } without points.
+    const anyFeaturesV3 = getConstructionFeaturesV3FromMemory(memory, '0.0.0')
+    if (anyFeaturesV3 && anyFeaturesV3.type === 'mine') {
+        return false
+    }
+
     const featuresV3 = getConstructionFeaturesV3FromMemory(memory, CONSTRUCTION_FEATURES_V3_VERSION)
     if (!featuresV3) {
         Logger.warning('constructionFeaturesV3NeedsUpdate: no featuresV3', roomName)

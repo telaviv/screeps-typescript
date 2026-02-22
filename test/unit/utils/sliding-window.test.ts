@@ -37,11 +37,21 @@ describe('SlidingWindowManager', () => {
         expect(slidingWindowManager.average()).to.equal(10)
         expect(slidingWindowManager.window.elements).to.deep.equal({ 10: [100] })
     })
-    it('should delete the elements when the time is not consecutive', () => {
+    it('should retain elements when the time gap is within maxSize', () => {
         const slidingWindowManager = SlidingWindowManager.create(4, 0)
 
         slidingWindowManager.add(10, 1)
         slidingWindowManager.add(20, 3)
+
+        expect(slidingWindowManager.sum()).to.equal(30)
+        expect(slidingWindowManager.average()).to.equal(15)
+        expect(slidingWindowManager.window.elements).to.deep.equal({ 1: [10, 20] })
+    })
+    it('should delete the elements when the time gap exceeds maxSize', () => {
+        const slidingWindowManager = SlidingWindowManager.create(4, 0)
+
+        slidingWindowManager.add(10, 1)
+        slidingWindowManager.add(20, 6)
 
         expect(slidingWindowManager.sum()).to.equal(20)
         expect(slidingWindowManager.average()).to.equal(20)
