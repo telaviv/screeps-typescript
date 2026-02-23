@@ -55,7 +55,7 @@ export const moveToCartographer = wrap(
             const start = Game.cpu.getUsed()
             const result = moveToCartographerUnwrapped(creep, target, opts)
             const cpu = Game.cpu.getUsed() - start
-            if (cpu > 1) {
+            if (cpu > 2) {
                 const pos = creep.pos
                 console.log(
                     '[cartographer]',
@@ -402,6 +402,43 @@ export const moveTo = (
 
     return err
 }
+
+/** Moves within current room to the nearest of multiple targets, using per-room cost matrix */
+export const moveWithinRoomToNearest = wrap(
+    (creep: Creep, targets: MoveTarget[], opts: MoveOpts = {}): MoveToReturnCode => {
+        // Inline deadlock check for performance
+        // eslint-disable-next-line no-underscore-dangle
+        if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
+            return moveToRandomNearbyPosition(creep)
+        }
+
+        const previousPos = creep.pos
+        const moveCount = creep.getActiveBodyparts(MOVE)
+        const totalCount = creep.body.length
+        const roadPreferred = moveCount / totalCount < 0.5
+        const roomName = creep.room.name
+        const matrix = MatrixCacheManager.getRoomMatrix(roomName, roadPreferred)
+        const nRoomCallback = (rn: string): CostMatrix | boolean =>
+            rn === roomName ? matrix : false
+        const nRouteCallback = (_from: string, toRoom: string): number | undefined =>
+            toRoom === roomName ? undefined : Infinity
+        const err = moveTo(creep, targets, {
+            roomCallback: nRoomCallback,
+            routeCallback: nRouteCallback,
+            ...opts,
+        })
+
+        if (err !== OK && err !== ERR_TIRED) {
+            updatePositionTracking(creep, previousPos)
+        } else {
+            // eslint-disable-next-line no-underscore-dangle
+            creep.memory._dlWait = 0
+        }
+
+        return err
+    },
+    'creep:moveWithinRoomToNearest',
+)
 
 /** Moves within current room using per-room cost matrix (respects roads based on MOVE ratio) */
 export const moveWithinRoom = wrap(

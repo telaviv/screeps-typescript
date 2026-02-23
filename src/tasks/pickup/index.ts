@@ -48,7 +48,7 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     return false
 }, 'pickup:makeRequest')
 
-export function run(task: PickupTask, creep: ResourceCreep): boolean {
+export const run = wrap((task: PickupTask, creep: ResourceCreep): boolean => {
     const resource = getResource(task)
     if (resource.room && creep.room.name !== resource.room.name) {
         moveToRoom(creep, resource.room.name)
@@ -66,7 +66,7 @@ export function run(task: PickupTask, creep: ResourceCreep): boolean {
         Logger.warning('task:pickup:run:failed', creep.name, task, err)
     }
     return false
-}
+}, 'task:pickup:run')
 
 export function addPickupTask(creep: ResourceCreep, resource: Resource): PickupTask | null {
     const pickupTarget = PickupTarget.get(resource.id)

@@ -70,7 +70,7 @@ export const makeRequest = wrap(
     'transfer:makeRequest',
 )
 
-export function run(task: TransferTask, creep: ResourceCreep): boolean {
+export const run = wrap((task: TransferTask, creep: ResourceCreep): boolean => {
     const structure = getStructure(task)
     if (structure.room && creep.room.name !== structure.room.name) {
         moveToRoom(creep, structure.pos.roomName)
@@ -86,7 +86,7 @@ export function run(task: TransferTask, creep: ResourceCreep): boolean {
         Logger.warning('task:transfer:run:failed', creep.name, err)
     }
     return false
-}
+}, 'task:transfer:run')
 
 const addTransferTask = wrap((creep: ResourceCreep, structure: AnyStoreStructure) => {
     const transferStructure = TransferStructure.get(structure.id)

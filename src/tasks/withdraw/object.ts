@@ -2,6 +2,7 @@ import { includes, groupBy } from 'lodash'
 
 import { WithdrawTask, Withdrawable } from './types'
 import { mprofile, profile } from 'utils/profiling'
+import * as TimeCache from 'utils/time-cache'
 import autoIncrement from 'utils/autoincrement'
 import { getAllTasks } from 'tasks/utils'
 import { getConstructionFeatures } from 'construction-features'
@@ -81,36 +82,41 @@ export class WithdrawObject {
         room: Room,
         opts?: { excludeVirtualStorage?: boolean; excludeContainers?: boolean },
     ): WithdrawObject[] {
-        const structures = room.find<StructureContainer | StructureStorage>(FIND_STRUCTURES, {
-            filter: (r) => {
-                const types: (STRUCTURE_CONTAINER | STRUCTURE_STORAGE)[] = [STRUCTURE_STORAGE]
-                if (!opts?.excludeContainers) {
-                    types.push(STRUCTURE_CONTAINER)
-                }
-                if (!includes(types, r.structureType)) {
-                    return false
-                }
-                if (opts?.excludeVirtualStorage) {
-                    const features = getConstructionFeatures(room)
-                    if (features) {
-                        const storagePos = features[STRUCTURE_STORAGE]
-                        if (storagePos) {
-                            if (r.pos.x === storagePos[0].x && r.pos.y === storagePos[0].y) {
-                                return false
+        const cacheKey = `getTargetsInRoom:${room.name}:${opts?.excludeVirtualStorage ?? false}:${
+            opts?.excludeContainers ?? false
+        }`
+        return TimeCache.get(cacheKey, () => {
+            const structures = room.find<StructureContainer | StructureStorage>(FIND_STRUCTURES, {
+                filter: (r) => {
+                    const types: (STRUCTURE_CONTAINER | STRUCTURE_STORAGE)[] = [STRUCTURE_STORAGE]
+                    if (!opts?.excludeContainers) {
+                        types.push(STRUCTURE_CONTAINER)
+                    }
+                    if (!includes(types, r.structureType)) {
+                        return false
+                    }
+                    if (opts?.excludeVirtualStorage) {
+                        const features = getConstructionFeatures(room)
+                        if (features) {
+                            const storagePos = features[STRUCTURE_STORAGE]
+                            if (storagePos) {
+                                if (r.pos.x === storagePos[0].x && r.pos.y === storagePos[0].y) {
+                                    return false
+                                }
                             }
                         }
                     }
-                }
-                return true
-            },
-        })
-        const tombstones = room.find(FIND_TOMBSTONES)
-        const ruins = room.find(FIND_RUINS)
+                    return true
+                },
+            })
+            const tombstones = room.find(FIND_TOMBSTONES)
+            const ruins = room.find(FIND_RUINS)
 
-        const structureTargets = structures.map((s) => WithdrawObject.get(s.id))
-        const tombstoneTargets = tombstones.map((t) => WithdrawObject.get(t.id))
-        const ruinTargets = ruins.map((t) => WithdrawObject.get(t.id))
-        return structureTargets.concat(tombstoneTargets, ruinTargets)
+            const structureTargets = structures.map((s) => WithdrawObject.get(s.id))
+            const tombstoneTargets = tombstones.map((t) => WithdrawObject.get(t.id))
+            const ruinTargets = ruins.map((t) => WithdrawObject.get(t.id))
+            return structureTargets.concat(tombstoneTargets, ruinTargets)
+        })
     }
 
     @profile

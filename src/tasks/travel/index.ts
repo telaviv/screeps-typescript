@@ -13,7 +13,7 @@ export const makeRequest = wrap((creep: ResourceCreep, destination: string): boo
 }, 'travel:makeRequest')
 
 /** Completes when creep reaches room center and construction features exist */
-export function run(task: TravelTask, creep: ResourceCreep): boolean {
+export const run = wrap((task: TravelTask, creep: ResourceCreep): boolean => {
     if (
         creep.room.name === task.destination &&
         creep.pos.inRangeTo(25, 25, 23) &&
@@ -34,7 +34,7 @@ export function run(task: TravelTask, creep: ResourceCreep): boolean {
         return true
     }
     return false
-}
+}, 'task:travel:run')
 
 function addTravelTask(creep: ResourceCreep, destination: string): TravelTask {
     const task = createTravelTask(creep.name, destination)

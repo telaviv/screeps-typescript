@@ -68,8 +68,8 @@ export function getLimitedCapacity(room: Room): number {
  * Combines energy restriction with the mine lower-capacity condition: any mine that
  * needs attention triggers limited capacity if it has low reservation (≤1000 ticks) and
  * still has claimer spots available (skipped below RCL 3 where claimers can't be spawned),
- * or has fewer than 1 hauler per source. Mine logic is only checked when roads are built,
- * matching the gate used in the spawn strategy.
+ * or has fewer than 1 hauler per source. Mine logic is only checked when roads are built
+ * for both the base room and the mine's own room, matching the gate used in the spawn strategy.
  */
 export function shouldOperateAtLimitedCapacity(room: Room, roomQuery: RoomQuery): boolean {
     if (isEnergyRestricted(room)) return true
@@ -77,6 +77,8 @@ export function shouldOperateAtLimitedCapacity(room: Room, roomQuery: RoomQuery)
         const canAffordClaimer = (room.controller?.level ?? 0) >= 3
         for (const mm of roomQuery.getMineManagers()) {
             if (!mm.needsAttention() || !mm.room) continue
+            const mineQuery = new RoomQuery(mm.room)
+            if (!mineQuery.allRoadsBuilt()) continue
             const hasHaulerPerSource = mm.getHaulers().length >= mm.sourceCount()
             const claimerSpotAvailable = mm.hasClaimSpotAvailable()
             const reservationTicks = mm.controllerReservationTicksLeft()

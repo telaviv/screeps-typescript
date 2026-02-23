@@ -28,7 +28,7 @@ export const makeRequest = wrap((creep: ResourceCreep): boolean => {
     return false
 }, 'mining:makeRequest')
 
-export function run(task: MiningTask, creep: ResourceCreep): boolean {
+export const run = wrap((task: MiningTask, creep: ResourceCreep): boolean => {
     const source = Game.getObjectById<Source>(task.source)
     if (!source) {
         Logger.error('task:mining:run:sourceNotFound', task.source)
@@ -50,7 +50,7 @@ export function run(task: MiningTask, creep: ResourceCreep): boolean {
         Logger.warning(`task:mining:run:harvest:failed ${creep.name}: ${err}`)
     }
     return false
-}
+}, 'task:mining:run')
 
 function addMiningTask(
     creep: ResourceCreep,

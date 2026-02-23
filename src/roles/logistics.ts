@@ -35,7 +35,7 @@ import {
     isFragileWall,
 } from 'utils/room'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
-import { moveToRoom, moveWithinRoom } from 'utils/travel'
+import { isMineTravel, moveToRoom, moveToRoomForMineTravel, moveWithinRoom } from 'utils/travel'
 import { mprofile, profile } from 'utils/profiling'
 import EnergySinkManager from 'managers/energy-sink-manager'
 import RoomQuery from 'spawn/room-query'
@@ -43,11 +43,12 @@ import { addEnergyTask } from 'tasks/usage-utils'
 import { findTaskByType } from 'tasks/utils'
 import { getBuildManager } from 'managers/build-manager'
 import { pruneStaleMoveFromPositions } from 'construction-movement'
-import { getConstructionFeaturesV3 } from 'construction-features'
+import { getConstructionFeaturesV3, getMinePaths } from 'construction-features'
 import { isMiningTask } from 'tasks/mining/utils'
 import { spawnCreep } from 'utils/spawn'
 import { wander } from 'utils/creep'
 import { addMineralWithdrawTask } from 'tasks/mineral-withdraw'
+import { followMinePath } from 'utils/mine-travel'
 
 export const ROLE = 'logistics'
 /** Ticks of idle time before a worker logistics creep suicides */
@@ -759,6 +760,27 @@ class RoleLogistics {
             this.assignWorkerPreference()
             return
         }
+
+        if (isMineTravel(this.creep.room.name, this.creep.memory.home)) {
+            const mineRoom = this.creep.memory.home
+            const minePaths = getMinePaths(mineRoom)
+            if (minePaths) {
+                const pathKey = Object.keys(minePaths).find((k) =>
+                    k.startsWith(`storage:source-${mineRoom}-`),
+                )
+                if (pathKey) {
+                    const result = followMinePath(
+                        this.creep,
+                        minePaths[pathKey],
+                        'logistics:travel',
+                    )
+                    if (result === OK || result === ERR_TIRED) return
+                }
+            }
+            moveToRoomForMineTravel(this.creep, this.creep.memory.home)
+            return
+        }
+
         const err = moveToRoom(this.creep, this.creep.memory.home)
         if (!(err === OK || err === ERR_TIRED)) {
             Logger.warning(

@@ -122,6 +122,8 @@ export function printMatrix(matrix: CostMatrix): void {
 export class MatrixCacheManager {
     private roomName: string
 
+    private static deserializedCache: Map<string, { time: number; matrix: CostMatrix }> = new Map()
+
     /**
      * @param roomName - Name of the room to manage matrices for
      */
@@ -401,9 +403,16 @@ export class MatrixCacheManager {
     public getCostMatrix(tags: MatrixTag[]): CostMatrix {
         this.ensureCache(tags)
         const key = tagsToKey(tags)
-        return PathFinder.CostMatrix.deserialize(
+        const deserializedKey = `${this.roomName}:${key}`
+        const cached = MatrixCacheManager.deserializedCache.get(deserializedKey)
+        if (cached && cached.time === Game.time) {
+            return cached.matrix
+        }
+        const matrix = PathFinder.CostMatrix.deserialize(
             JSON.parse(this.matrixCache[key].matrix) as number[],
         )
+        MatrixCacheManager.deserializedCache.set(deserializedKey, { time: Game.time, matrix })
+        return matrix
     }
 
     /**

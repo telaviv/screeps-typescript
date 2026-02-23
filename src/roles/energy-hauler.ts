@@ -62,7 +62,10 @@ export class EnergyHaulerCreep {
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
             return
-        } else if (this.creep.store.getUsedCapacity() < 50) {
+        }
+
+        const startedEmpty = this.creep.store.getUsedCapacity() < 50
+        if (startedEmpty) {
             this.collectEnergy()
         } else {
             this.deliverEnergy()
@@ -71,9 +74,11 @@ export class EnergyHaulerCreep {
         if (this.creep.memory.tasks.length > 0) {
             this.runTask()
             return
-        } else if (this.creep.store.getUsedCapacity() > 0) {
+        }
+
+        if (this.creep.store.getUsedCapacity() > 0) {
             this.deliverEnergy()
-        } else {
+        } else if (!startedEmpty) {
             this.collectEnergy()
         }
 

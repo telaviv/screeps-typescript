@@ -4,6 +4,7 @@ import { ResourceCreep } from '../types'
 import { SignTask } from './types'
 import { isSignTask } from './utils'
 import { makeTask } from 'tasks/utils'
+import { wrap } from 'utils/profiling'
 
 declare global {
     interface RoomMemory {
@@ -30,7 +31,7 @@ export function makeRequest(creep: ResourceCreep): boolean {
     return true
 }
 
-export function run(task: SignTask, creep: ResourceCreep): boolean {
+export const run = wrap((task: SignTask, creep: ResourceCreep): boolean => {
     const room = Game.rooms[task.roomName]
     if (!room || !room.controller) {
         Logger.warning('task:sign::run:failure:no-room', creep.name, task.roomName)
@@ -50,7 +51,7 @@ export function run(task: SignTask, creep: ResourceCreep): boolean {
         return true
     }
     return false
-}
+}, 'task:sign:run')
 
 export function completeRequest(creep: ResourceCreep): void {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {

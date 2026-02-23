@@ -10,7 +10,7 @@ import { findClosestByRange } from 'utils/room-position'
 import { getConstructionFeatures } from 'construction-features'
 import { getHome } from 'roles/utils'
 import { isWithdrawTask } from './utils'
-import { moveTo } from 'utils/travel'
+import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import { wrap } from 'utils/profiling'
 
 const TOTAL_KEY = 'withdraw-total-resources'
@@ -92,13 +92,17 @@ export const makeRequest = wrap((creep: ResourceCreep, opts?: RequestOpts): bool
     return false
 }, 'withdraw:makeRequest')
 
-export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
+export const run = wrap((task: WithdrawTask, creep: ResourceCreep): boolean => {
     const storeable = getWithdrawable(task)
+    if (storeable.room && creep.room.name !== storeable.room.name) {
+        moveToRoom(creep, storeable.pos.roomName)
+        return false
+    }
     const creepCapacity = getFreeCapacity(creep, task.resourceType)
     const amount = Math.min(task.amount, creepCapacity)
     const err = creep.withdraw(storeable, task.resourceType, amount)
     if (err === ERR_NOT_IN_RANGE) {
-        moveTo(creep, storeable)
+        moveWithinRoom(creep, { pos: storeable.pos, range: 1 })
     } else if (err === OK) {
         Logger.info('withdraw:complete', creep.name, task.amount)
         completeRequest(creep)
@@ -108,7 +112,7 @@ export function run(task: WithdrawTask, creep: ResourceCreep): boolean {
         Logger.info('withdraw:run:failed', creep.name, err)
     }
     return false
-}
+}, 'task:withdraw:run')
 
 export function completeRequest(creep: ResourceCreep): void {
     if (!creep.memory.tasks || creep.memory.tasks.length === 0) {
