@@ -166,6 +166,8 @@ export class RemoteHaulerCreep {
         } else {
             this.moveToTarget()
         }
+
+        this.repairRoadUnderfoot()
     }
 
     private shouldTransform(): boolean {
@@ -177,7 +179,6 @@ export class RemoteHaulerCreep {
         const hasWorkParts = this.creep.getActiveBodyparts(WORK) > 0
         const currentTask = hasNoEnergy(this.creep) ? TASK_COLLECTING : TASK_HAULING
         const preference = hasWorkParts ? PREFERENCE_WORKER : TASK_HAULING
-
         Logger.info(
             'remote-hauler:transform',
             this.creep.name,
@@ -363,6 +364,17 @@ export class RemoteHaulerCreep {
         return picked[picked.length - 1][0] as Id<Source>
     }
 
+    private repairRoadUnderfoot(): void {
+        if (this.creep.getActiveBodyparts(WORK) === 0) return
+        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return
+        const road = this.creep.pos
+            .lookFor(LOOK_STRUCTURES)
+            .find((s) => s.structureType === STRUCTURE_ROAD) as StructureRoad | undefined
+        if (road && road.hits < road.hitsMax) {
+            this.creep.repair(road)
+        }
+    }
+
     @profile
     moveToTarget(): void {
         if (!this.targetPos) {
@@ -517,8 +529,10 @@ const roleRemoteHauler = {
         for (const id of sourceIds) {
             pickupTracker[id as Id<Source>] = false
         }
-        const blueprint = opts.roadsBuilt ? [CARRY, CARRY, MOVE] : [CARRY, MOVE]
-        const err = spawn.spawnCreep(fromBodyPlan(opts.capacity, blueprint), name, {
+        const body = opts.roadsBuilt
+            ? fromBodyPlan(opts.capacity, [CARRY, CARRY, MOVE], { fixed: [WORK, MOVE] })
+            : fromBodyPlan(opts.capacity, [CARRY, MOVE])
+        const err = spawn.spawnCreep(body, name, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,

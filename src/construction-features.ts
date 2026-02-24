@@ -6,9 +6,9 @@ import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
 /** Minimum version of construction features v3 considered valid */
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.18'
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.22'
 /** Current version of construction features v3 data structure */
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.18'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.22'
 
 /** Current version of construction features data structure */
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'
@@ -135,7 +135,10 @@ export interface StationaryPointsBase {
 export interface StationaryPointsMine {
     type: 'mine'
     version: string
+    /** Stationary point per source: the tile the miner permanently occupies (adjacent to source) */
     sources: { [id: string]: Position }
+    /** Pickup point per source: the tile the hauler stands on to withdraw from the container */
+    pickup?: { [id: string]: Position }
 }
 
 /** Configuration for link positions and energy transfer routes */
@@ -163,6 +166,20 @@ declare global {
 export function getConstructionFeaturesV3(room: Room | string): ConstructionFeaturesV3 | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
     return getConstructionFeaturesV3FromMemory(memory)
+}
+
+/**
+ * Gets construction features v3 for a room, ignoring version requirements.
+ * Useful for checking the room type (mine/base/none) even when features are stale/outdated.
+ * Do NOT use this to read path data or positions — those may be from an old schema.
+ * @param room - The room or room name to get features for
+ */
+export function getConstructionFeaturesV3Type(
+    room: Room | string,
+): ConstructionFeaturesV3['type'] | null {
+    const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
+    const features = getConstructionFeaturesV3FromMemory(memory, '0.0.0')
+    return features?.type ?? null
 }
 
 /**
@@ -241,6 +258,14 @@ export function constructionFeaturesV3NeedsUpdate(room: Room | string): boolean 
     // which tries to place a bunker, fails, and writes { type: 'mine' } without points.
     const anyFeaturesV3 = getConstructionFeaturesV3FromMemory(memory, '0.0.0')
     if (anyFeaturesV3 && anyFeaturesV3.type === 'mine') {
+        return false
+    }
+    // Also protect mine rooms whose features were cleared: if any base room lists this room as an
+    // assigned mine, the base room's surveyor will write features — don't let the fallback stub run.
+    const isAssignedMine = Object.values(Memory.rooms).some((r) =>
+        r.mines?.some((m) => m.name === roomName),
+    )
+    if (isAssignedMine) {
         return false
     }
 
@@ -323,11 +348,14 @@ export function getCalculatedLinks(room: Room): Links | null {
 
 /**
  * Gets stationary points for a room (harvester positions, etc.).
+ * Uses version '0.0.0' for the outer features so stationary point data remains readable
+ * while features are being recalculated (e.g. after a version bump). The inner
+ * points.version field is the authoritative schema guard for stationary point data.
  * @param room - The room or room name
  */
 export function getStationaryPoints(room: Room | string): StationaryPoints | null {
     const memory = typeof room === 'string' ? Memory.rooms[room] : room.memory
-    const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(memory)
+    const constructionFeaturesV3 = getConstructionFeaturesV3FromMemory(memory, '0.0.0')
     if (
         constructionFeaturesV3 &&
         constructionFeaturesV3.type !== 'none' &&

@@ -94,7 +94,7 @@ export class EnergyHaulerCreep {
         const sortedSpawns = sortBy(spawns, (spawn) => spawn.pos.getRangeTo(this.creep))
         const closestSpawn = sortedSpawns[0]
         if (!this.creep.pos.isNearTo(closestSpawn)) {
-            moveWithinRoom(this.creep, { pos: closestSpawn.pos, range: 1 })
+            moveWithinRoom(this.creep, { pos: closestSpawn.pos, range: 1 }, { reusePath: 20 })
         } else if (this.canAutoRenew()) {
             this.autoRenewCreep(closestSpawn)
         }

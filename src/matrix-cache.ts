@@ -401,13 +401,13 @@ export class MatrixCacheManager {
      */
     @profile
     public getCostMatrix(tags: MatrixTag[]): CostMatrix {
-        this.ensureCache(tags)
         const key = tagsToKey(tags)
         const deserializedKey = `${this.roomName}:${key}`
         const cached = MatrixCacheManager.deserializedCache.get(deserializedKey)
         if (cached && cached.time === Game.time) {
             return cached.matrix
         }
+        this.ensureCache(tags)
         const matrix = PathFinder.CostMatrix.deserialize(
             JSON.parse(this.matrixCache[key].matrix) as number[],
         )

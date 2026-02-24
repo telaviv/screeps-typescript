@@ -315,25 +315,21 @@ const runTaskRunnerCleanup = wrap(() => TaskRunner.cleanup(), 'main:taskRunnerCl
 const initialize = wrap(() => {
     if (!global.USERNAME) {
         global.USERNAME = findUsername()
+        // One-time per global reset: MatrixCacheManager subscriptions are idempotent
+        // and don't need to be re-registered each tick.
+        MatrixCacheManager.addSubscriptions()
     }
 
     clearCreepMemory()
     runScoutManager()
-    addSubscriptions()
+    // ScoutManager subscriptions run every tick to pick up rooms that newly gained features.
+    ScoutManager.addSubscriptions()
     runEmpire()
     if (Game.time % 11 === 0) {
         survey()
     }
     runTaskRunnerCleanup()
 }, 'main:initialize')
-
-/**
- * Registers event subscriptions for the matrix cache manager.
- */
-const addSubscriptions = wrap(() => {
-    MatrixCacheManager.addSubscriptions()
-    ScoutManager.addSubscriptions()
-}, 'main:addSubscriptions')
 
 /**
  * Iterates over all visible rooms and executes room-level logic.

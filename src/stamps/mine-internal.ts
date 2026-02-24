@@ -13,7 +13,10 @@ import * as Logger from '../utils/logger'
  */
 export interface MineInternalResult {
     features: ConstructionFeatures
-    points: { [id: Id<Source>]: Position }
+    /** Stationary point per source: tile the miner permanently occupies (adjacent to source) */
+    stationary: { [id: Id<Source>]: Position }
+    /** Pickup point per source: tile the hauler stands on to withdraw from the container */
+    pickup: { [id: Id<Source>]: Position }
 }
 
 /**
@@ -52,7 +55,8 @@ export function calculateMineInternal(
     // Build features map
     const roads: Position[] = []
     const containers: Position[] = []
-    const points: { [id: Id<Source>]: Position } = {}
+    const stationary: { [id: Id<Source>]: Position } = {}
+    const pickup: { [id: Id<Source>]: Position } = {}
 
     // Path to each source
     const sourceEntries = Object.entries(scout.sourcePositions) as [
@@ -60,10 +64,12 @@ export function calculateMineInternal(
         { x: number; y: number },
     ][]
     for (const [sourceId, sourcePos] of sourceEntries) {
+        // Block previously computed containers: stationary miners will occupy those tiles
+        const getCostWithObstacles: CostCallback = withObstacles(getCost, obstacles)
         const sourcePath = findPath(
             { x: entrancePosition.x, y: entrancePosition.y },
             { x: sourcePos.x, y: sourcePos.y },
-            getCost,
+            getCostWithObstacles,
             { range: 1 },
         )
 
@@ -72,18 +78,23 @@ export function calculateMineInternal(
             return null
         }
 
-        // Add roads (excluding the container position)
+        // Add roads (excluding the stationary point / container position)
         for (let i = 0; i < sourcePath.length - 1; i++) {
             roads.push(sourcePath[i])
         }
 
-        // Container is the last position in the path (adjacent to source)
-        const containerPos = sourcePath[sourcePath.length - 1]
-        containers.push(containerPos)
-        points[sourceId] = containerPos
+        // Stationary point: last position in path (adjacent to source) — miner parks here
+        const stationaryPos = sourcePath[sourcePath.length - 1]
+        containers.push(stationaryPos)
+        stationary[sourceId] = stationaryPos
 
-        // Block this container for future paths
-        obstacles.add(`${containerPos.x},${containerPos.y}`)
+        // Pickup point: tile before stationary — hauler stands here to withdraw
+        if (sourcePath.length >= 2) {
+            pickup[sourceId] = sourcePath[sourcePath.length - 2]
+        }
+
+        // Block this stationary point for future paths
+        obstacles.add(`${stationaryPos.x},${stationaryPos.y}`)
     }
 
     // Path to controller if it exists
@@ -122,6 +133,7 @@ export function calculateMineInternal(
             [STRUCTURE_ROAD]: uniqueRoads,
             [STRUCTURE_CONTAINER]: containers,
         },
-        points,
+        stationary,
+        pickup,
     }
 }

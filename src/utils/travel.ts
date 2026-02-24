@@ -471,6 +471,7 @@ export const moveWithinRoom = wrap(
             return Infinity
         }
         const err = moveTo(creep, target, {
+            reusePath: 10,
             roomCallback: nRoomCallback,
             routeCallback: nRouteCallback,
             ...opts,

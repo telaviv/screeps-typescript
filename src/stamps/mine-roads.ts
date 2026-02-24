@@ -7,6 +7,7 @@ import {
     findPath,
     withMultiRoomObstacles,
     withMultiRoomPreferredPaths,
+    withObstacles,
     withPreferred,
 } from '../libs/pathfinding'
 import { FlatRoomPosition, Position } from '../types'
@@ -186,13 +187,19 @@ function calculateSourcePaths(
 
     // Remaining sources: route from entrance within mine room, share the base segment
     if (sourceEntries.length > 1) {
-        const mineBaseCost: CostCallback = createTerrainCostCallback(
+        const mineTerrainCost: CostCallback = createTerrainCostCallback(
             Game.map.getRoomTerrain(mineName),
         )
+
+        // Track stationary (miner) positions computed so far — they must be treated as
+        // impassable since a creep will permanently occupy that tile.
+        const stationaryObstacles = new Set<string>()
+        stationaryObstacles.add(`${nearestContainer.x},${nearestContainer.y}`)
 
         for (const [sourceId, sourcePos] of sourceEntries) {
             if (sourceId === nearestSourceId) continue
 
+            const mineBaseCost = withObstacles(mineTerrainCost, stationaryObstacles)
             const mineInternalPath = findPath(
                 { x: entrancePosition.x, y: entrancePosition.y },
                 { x: sourcePos.x, y: sourcePos.y },
@@ -211,6 +218,10 @@ function calculateSourcePaths(
                 { x: entrancePosition.x, y: entrancePosition.y, roomName: mineName },
                 ...mineInternalPath.map((p) => ({ x: p.x, y: p.y, roomName: mineName })),
             ]
+
+            // Add this source's container to obstacles for subsequent source paths
+            const newContainer = mineInternalPath[mineInternalPath.length - 1]
+            stationaryObstacles.add(`${newContainer.x},${newContainer.y}`)
         }
     }
 
@@ -242,8 +253,11 @@ function calculateSourceToSourcePath(
         return null
     }
 
-    const container1 = mineSegment1[mineSegment1.length - 1]
-    const container2 = mineSegment2[mineSegment2.length - 1]
+    // pickup1 / pickup2: the hauler's standing tile for each source (one step before the
+    // stationary point). All minePaths must start and end at pickup points so that
+    // followMinePath's findIndex lookup succeeds at path transitions.
+    const pickup1 = mineSegment1[mineSegment1.length - 2] ?? mineSegment1[mineSegment1.length - 1]
+    const pickup2 = mineSegment2[mineSegment2.length - 2] ?? mineSegment2[mineSegment2.length - 1]
 
     const mineRoadPreferred = new Map<string, number>()
     for (const pos of [...mineSegment1, ...mineSegment2]) {
@@ -251,19 +265,21 @@ function calculateSourceToSourcePath(
     }
 
     const mineBaseCost: CostCallback = createTerrainCostCallback(Game.map.getRoomTerrain(mineName))
-    const s2sPath = findPath(
-        { x: container1.x, y: container1.y },
-        { x: container2.x, y: container2.y },
+    // findPath excludes the start node, so start from pickup1 and prepend it manually.
+    // This guarantees s2sPath[0] === pickup1 and s2sPath[-1] === pickup2 exactly.
+    const s2sRest = findPath(
+        { x: pickup1.x, y: pickup1.y },
+        { x: pickup2.x, y: pickup2.y },
         withPreferred(mineBaseCost, mineRoadPreferred),
-        { range: 1 },
+        { range: 0 },
     )
 
-    if (!s2sPath) {
+    if (!s2sRest) {
         Logger.warning('calculateSourceToSourcePath:no-path', mineName)
         return null
     }
 
-    return s2sPath.map((p) => ({ x: p.x, y: p.y, roomName: mineName }))
+    return [pickup1, ...s2sRest].map((p) => ({ x: p.x, y: p.y, roomName: mineName }))
 }
 
 /**

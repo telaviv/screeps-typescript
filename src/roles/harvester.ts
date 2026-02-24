@@ -9,10 +9,11 @@ import { byPartCount, fromBodyPlan, planCost } from 'utils/parts'
 import { hasNoEnergy, isFullOfEnergy } from 'utils/energy-harvesting'
 import { FlatRoomPosition } from 'types'
 import { getContainerAt } from 'utils/room-position'
-import { getStationaryPoints } from 'construction-features'
+import { getMinePaths, getStationaryPoints } from 'construction-features'
 import { isPickupTask } from 'tasks/pickup/utils'
 import { isWithdrawTask } from 'tasks/withdraw/utils'
-import { moveToRoom } from 'utils/travel'
+import { deltaToDirection, followMinePath, getSourcePathKey } from 'utils/mine-travel'
+import { isMineTravel, moveToRoom, moveWithinRoom } from 'utils/travel'
 import { moveToStationaryPoint } from 'utils/creep'
 import { profile } from 'utils/profiling'
 import { spawnCreep } from 'utils/spawn'
@@ -161,9 +162,39 @@ export class HarvesterCreep {
 
     /** Moves the creep to its designated harvest position */
     private moveToHarvestPos(): void {
+        const mineRoom = this.harvestPos.roomName
+        const home = this.creep.memory.home
+        if (home && mineRoom !== home && isMineTravel(home, mineRoom)) {
+            const minePaths = getMinePaths(mineRoom)
+            const fullPath = minePaths?.[getSourcePathKey(mineRoom, this.creep.memory.source)]
+            if (fullPath && fullPath.length > 0) {
+                const result = followMinePath(this.creep, fullPath, 'harvester:moveToHarvestPos')
+                if (result === OK || result === ERR_TIRED) return
+                // If the creep is not in the mine room yet, walk toward the path in this room
+                if (this.creep.room.name !== mineRoom) {
+                    const roomName = this.creep.room.name
+                    const firstInRoom = fullPath.find((s) => s.roomName === roomName)
+                    if (firstInRoom) {
+                        moveWithinRoom(this.creep, {
+                            pos: new RoomPosition(firstInRoom.x, firstInRoom.y, roomName),
+                            range: 0,
+                        })
+                    }
+                    return
+                }
+                // In the mine room: if exactly one step away, move directly without pathfinding.
+                const dx = this.harvestPos.x - this.creep.pos.x
+                const dy = this.harvestPos.y - this.creep.pos.y
+                if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) {
+                    this.creep.move(deltaToDirection(dx as -1 | 0 | 1, dy as -1 | 0 | 1))
+                    return
+                }
+            }
+        }
+
         let err
-        if (this.creep.room.name !== this.harvestPos.roomName) {
-            err = moveToRoom(this.creep, this.harvestPos.roomName)
+        if (this.creep.room.name !== mineRoom) {
+            err = moveToRoom(this.creep, mineRoom)
         } else {
             err = moveToStationaryPoint(this.harvestPos, this.creep)
         }

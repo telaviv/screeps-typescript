@@ -3,6 +3,7 @@ import {
     ConstructionMovement,
     getConstructionFeatures,
     getConstructionFeaturesV3,
+    getConstructionFeaturesV3Type,
 } from 'construction-features'
 import { HostileRecorder } from 'hostiles'
 import SourcesManager from './sources-manager'
@@ -11,7 +12,7 @@ import { ClaimerMemory } from 'roles/claim'
 import { HealerMemory } from 'roles/healer'
 import { RemoteHaulerMemory } from 'roles/remote-hauler'
 import { getCreeps, getLogisticsCreeps } from 'utils/creep'
-import { getNeighbors, getNonObstacleNeighbors } from 'utils/room-position'
+import { getNonObstacleNeighbors } from 'utils/room-position'
 import { findMyRooms, getHostileCreeps, getInjuredCreeps, getMyConstructionSites } from 'utils/room'
 import { World } from 'utils/world'
 
@@ -63,10 +64,12 @@ declare global {
  * @returns True if the room can be used as a mine
  */
 export function canMine(roomName: string, claimCandidates?: string[]): boolean {
-    const features = getConstructionFeaturesV3(roomName)
+    // Use type-only check (ignores version) so rooms with stale features can still be assigned.
+    // Once assigned, the base room's surveyor will recalculate and write fresh features.
+    const featureType = getConstructionFeaturesV3Type(roomName)
 
     // Must have construction features calculated as 'mine' or 'base' type
-    if (!features || (features.type !== 'mine' && features.type !== 'base')) {
+    if (!featureType || (featureType !== 'mine' && featureType !== 'base')) {
         return false
     }
 
@@ -88,7 +91,7 @@ export function canMine(roomName: string, claimCandidates?: string[]): boolean {
     // For 'base' type rooms, only allow mining if:
     // 1. We're at GCL cap (can't claim more rooms), OR
     // 2. Room is not a valid claim candidate
-    if (features.type === 'base') {
+    if (featureType === 'base') {
         const myRoomsCount = findMyRooms().length
 
         // At GCL cap - can't claim anyway, so mining is fine
@@ -351,32 +354,8 @@ export class MineManager {
             )
             return false
         }
-        const scout = Memory.rooms[this.roomName].scout
-        if (!scout || !scout.controllerPosition) {
-            Logger.error(
-                'mine-manager:hasCapacityToReserve:no-scout-or-controller-position',
-                this.roomName,
-            )
-            return false
-        }
-        const controllerPos = new RoomPosition(
-            scout.controllerPosition.x,
-            scout.controllerPosition.y,
-            this.roomName,
-        )
-        const neighbors = getNeighbors(controllerPos)
-        const terrain = new Room.Terrain(this.roomName)
-        const totalSpots = neighbors.filter(
-            (pos) => terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL,
-        ).length
-        Logger.info(
-            'mine-manager:hasCapacityToReserve',
-            this.roomName,
-            mostClaims,
-            totalSpots,
-            mostClaims * totalSpots >= 3,
-        )
-        return mostClaims * totalSpots >= 3
+        Logger.info('mine-manager:hasCapacityToReserve', this.roomName, mostClaims)
+        return true
     }
 
     hasVision(): boolean {

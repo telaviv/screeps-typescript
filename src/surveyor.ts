@@ -429,7 +429,23 @@ function setMineConstructionFeaturesV3(
         return
     }
 
-    const { features, points } = ret
+    const { features, stationary, pickup } = ret
+
+    if (sourceToSourcePath && sourceToSourcePath.length > 1) {
+        const existingRoadKeys = new Set(
+            (features[STRUCTURE_ROAD] ?? []).map((p: Position) => `${p.x},${p.y}`),
+        )
+        for (const pos of sourceToSourcePath.slice(1, -1)) {
+            const key = `${pos.x},${pos.y}`
+            if (!existingRoadKeys.has(key)) {
+                existingRoadKeys.add(key)
+                features[STRUCTURE_ROAD] = [
+                    ...(features[STRUCTURE_ROAD] ?? []),
+                    { x: pos.x, y: pos.y },
+                ]
+            }
+        }
+    }
 
     // Assemble minePaths lookup table
     const minePaths: Record<string, MinePathEntry[]> = {}
@@ -457,7 +473,7 @@ function setMineConstructionFeaturesV3(
         version: CONSTRUCTION_FEATURES_V3_VERSION,
         type: 'mine',
         features,
-        points: { version: STATIONARY_POINTS_VERSION, type: 'mine', sources: points },
+        points: { version: STATIONARY_POINTS_VERSION, type: 'mine', sources: stationary, pickup },
         minee: {
             miner,
             entrancePosition: flatPos,

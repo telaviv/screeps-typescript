@@ -183,7 +183,7 @@ export class RebalancerCreep {
         if (this.creep.pos.inRangeTo(container, 2)) {
             return
         }
-        moveWithinRoom(this.creep, { pos: containers[0].pos, range: 2 })
+        moveWithinRoom(this.creep, { pos: containers[0].pos, range: 2 }, { reusePath: 20 })
     }
 }
 
