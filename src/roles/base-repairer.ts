@@ -1,6 +1,6 @@
 import * as Logger from 'utils/logger'
 import { profile } from 'utils/profiling'
-import { moveWithinRoom } from 'utils/travel'
+import { moveToParkingSpot, moveWithinRoom } from 'utils/travel'
 import { MatrixCacheManager } from 'matrix-cache'
 import { LogisticsCreep, LogisticsPreference, PREFERENCE_WORKER } from './logistics-constants'
 import { hasNoEnergy } from 'utils/energy-harvesting'
@@ -172,8 +172,7 @@ class RoleBaseRepairer {
         const repairResult = this.creep.repair(structure)
 
         if (repairResult === ERR_NOT_IN_RANGE) {
-            // TODO: Use custom cost matrix for movement within base defense bounds
-            moveWithinRoom(this.creep, { pos: structure.pos, range: 3 })
+            moveToParkingSpot(this.creep, { pos: structure.pos, range: 3 })
         } else if (repairResult !== OK) {
             Logger.warning('base-repairer:repair:failure', this.creep.name, repairResult)
             this.creep.memory.currentTarget = undefined

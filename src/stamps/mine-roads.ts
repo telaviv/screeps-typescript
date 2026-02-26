@@ -150,24 +150,14 @@ function calculateSourcePaths(
 
     // With the 99-wide combined grid, the room border tile is shared and always decoded as the
     // mine (goal) side. So nearestMineSegment[0] is always the mine edge tile (x=0/49 or y=0/49).
+    //
+    // The pathfinder may take a diagonal step across the border (e.g. base (22,1) → mine (23,49)).
+    // Screeps teleports preserve the coordinate parallel to the border axis, so the mine entrance
+    // x (for N/S crossings) or y (for E/W crossings) is authoritative — the base exit must use
+    // the same parallel coordinate. Using lastBaseTile's coordinate was wrong when the diagonal
+    // went toward the road rather than away from it.
     const rawEntrancePosition = nearestMineSegment[0]
-    const lastBaseTile = baseSegment[baseSegment.length - 1]
-
-    // Correct diagonal border crossings: the pathfinder may cross the border diagonally, but
-    // Screeps teleports preserve the coordinate parallel to the border.
-    // We detect the crossing axis from the mine edge tile and fix using lastBaseTile's coordinate.
-    const entrancePosition: FlatRoomPosition =
-        rawEntrancePosition.x === 0 || rawEntrancePosition.x === 49
-            ? {
-                  roomName: rawEntrancePosition.roomName,
-                  x: rawEntrancePosition.x,
-                  y: lastBaseTile.y,
-              }
-            : {
-                  roomName: rawEntrancePosition.roomName,
-                  x: lastBaseTile.x,
-                  y: rawEntrancePosition.y,
-              }
+    const entrancePosition: FlatRoomPosition = rawEntrancePosition
 
     // Derive the base-side exit tile from the corrected mine entrance
     const exitPosition: FlatRoomPosition =

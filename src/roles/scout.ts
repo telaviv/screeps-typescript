@@ -57,13 +57,18 @@ const roleScout = {
         destination: string,
         permanent = false,
         opts: SpawnOptions = {},
+        waypoints?: string[],
     ): number {
         const name = `${ROLE}:${Game.time}`
+        const tasks = [
+            createTravelTask(name, destination, permanent),
+            ...(waypoints ?? []).map((room) => createTravelTask(name, room)),
+        ]
         return spawn.spawnCreep([MOVE], name, {
             memory: {
                 role: ROLE,
                 home: spawn.room.name,
-                tasks: [createTravelTask(name, destination, permanent)],
+                tasks,
                 idleTimestamp: null,
             } as ScoutMemory,
             ...opts,

@@ -415,6 +415,15 @@ const linkStrategy = wrap((spawn: StructureSpawn): void => {
 const createMineWorkers = wrap(
     (spawn: StructureSpawn, capacity: number, mineManager: MineManager): void => {
         if (!mineManager.room) {
+            // If hostiles were recently recorded, send an attacker — not a scout that will just die
+            if (mineManager.needsProtection()) {
+                const currentDefenders = mineManager.getDefenders()
+                if (currentDefenders.length < ATTACKERS_COUNT) {
+                    roleAttacker.create(spawn, mineManager.name, capacity)
+                }
+                return
+            }
+
             // Check if there's already a scout on the way to this mine
             const scouts = getScouts(true) // Get permanent scouts
             const scoutAlreadyTraveling = scouts.some((scout) =>

@@ -34,6 +34,5 @@ export const MAX_SAVIOR_DISTANCE = 5
 export const MAX_CLAIM_DISTANCE = 5
 /** Minimum distance buffer from enemy rooms when selecting claim targets */
 export const ENEMY_DISTANCE_BUFFER = 1
-/** Number of ticks a creep must be stuck before triggering deadlock resolution */
-// export const DEADLOCK_THRESHOLD = 10
-export const DEADLOCK_THRESHOLD = Infinity
+/** Number of ticks a creep must be stuck on a road graph path before repathing via cartographer */
+export const ROAD_STUCK_THRESHOLD = 5

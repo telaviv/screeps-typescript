@@ -59,7 +59,7 @@ export class HostileRecorder {
         }
         if (
             !this.hostiles[HOSTILE_WINDOW] ||
-            this.hostiles[HOSTILE_WINDOW].time + HOSTILE_WINDOW > Game.time
+            this.hostiles[HOSTILE_WINDOW].time + HOSTILE_WINDOW < Game.time
         ) {
             this.hostiles = { [HOSTILE_WINDOW]: { time: Game.time, parts: [] } }
         }

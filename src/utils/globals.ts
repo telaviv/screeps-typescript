@@ -29,6 +29,7 @@ import type { Links } from 'construction-features'
 import ErrorMapper from './ErrorMapper'
 import Empire from 'empire'
 import roleWrecker from 'roles/wrecker'
+import { ATTACKERS_COUNT } from 'spawn/strategy/constants'
 
 function killAllCreeps(roomName: string) {
     Object.values(Game.creeps).forEach((creep) => {
@@ -745,6 +746,20 @@ function debugMineWorkerSpawn(mineName: string, baseRoomName: string) {
     if (!mineManager.hasVision()) {
         console.log(`❌ No vision of mine room`)
 
+        // Check if recorded hostiles require an attacker instead of a scout
+        const needsProtectionNoVision = mineManager.needsProtection()
+        console.log(`Needs protection (from recorded data): ${needsProtectionNoVision}`)
+        if (needsProtectionNoVision) {
+            const currentDefenders = mineManager.getDefenders()
+            console.log(`Defenders already assigned: ${currentDefenders.length}`)
+            if (currentDefenders.length < 2) {
+                console.log(`✅ Should spawn attacker (recorded hostiles, no vision)`)
+            } else {
+                console.log(`⏳ Enough defenders already assigned, waiting for them to arrive`)
+            }
+            return
+        }
+
         const scouts = getCreeps('scout', baseRoom)
         const scoutsToMine = scouts.filter((s) =>
             s.memory.tasks.some(
@@ -787,7 +802,7 @@ function debugMineWorkerSpawn(mineName: string, baseRoomName: string) {
     console.log(`Needs protection: ${needsProtection}`)
     console.log(`Defenders: ${defenders.length}`)
 
-    if (needsProtection && defenders.length < 2) {
+    if (needsProtection && defenders.length < ATTACKERS_COUNT) {
         console.log(`✅ Should spawn attacker (line 407-410)`)
         return
     }
@@ -828,8 +843,15 @@ function debugMineWorkerSpawn(mineName: string, baseRoomName: string) {
     console.log(`\n--- Step 5: Initial Worker Check ---`)
     const hasEnoughConstructionParts = mineManager.hasEnoughConstructionParts()
     const workers = mineManager.getWorkers()
+    const constructionFinished = mineManager.constructionFinished()
+    const constructionSites = mineManager.room
+        ? mineManager.room.find(FIND_MY_CONSTRUCTION_SITES)
+        : []
+    const workParts = workers.reduce((acc, c) => acc + c.getActiveBodyparts(WORK), 0)
+    console.log(`Construction finished: ${constructionFinished}`)
+    console.log(`Construction sites: ${constructionSites.length}`)
     console.log(`Has enough construction parts: ${hasEnoughConstructionParts}`)
-    console.log(`Workers: ${workers.length}`)
+    console.log(`Workers: ${workers.length} (${workParts} WORK parts, need 15, max 4)`)
 
     if (!hasEnoughConstructionParts && workers.length === 0) {
         console.log(`✅ Should spawn worker (no construction parts, no workers) (line 439-445)`)
@@ -860,6 +882,39 @@ function debugMineWorkerSpawn(mineName: string, baseRoomName: string) {
 
     if (!hasEnoughHaulers) {
         console.log(`✅ Should spawn hauler (line 465-471)`)
+        return
+    }
+
+    // Check repairers
+    console.log(`\n--- Step 9: Repairer Check ---`)
+    const needsRepairs = mineManager.needsRepairs()
+    console.log(`Needs repairs: ${needsRepairs}`)
+    if (needsRepairs) {
+        console.log(`✅ Should spawn repairer (logistics bot with TASK_REPAIRING)`)
+        return
+    }
+
+    // Check movement diff / dismantler
+    console.log(`\n--- Step 10: Movement Diff Check ---`)
+    const hasMovementDiff = mineManager.hasMovementDiff()
+    const workerCount = mineManager.getWorkers().length
+    console.log(`Has movement diff: ${hasMovementDiff}`)
+    console.log(`Current workers: ${workerCount}`)
+    if (hasMovementDiff && workerCount < 4) {
+        console.log(`✅ Should spawn dismantler (logistics worker for movement diff)`)
+        return
+    }
+
+    // Check reservers (fallback)
+    console.log(`\n--- Step 11: Reserver Check (fallback) ---`)
+    const hasCapacity = mineManager.hasCapacityToReserve()
+    const hasEnoughReservers = mineManager.hasEnoughReservers()
+    const hasClaimSpot = mineManager.hasClaimSpotAvailable()
+    console.log(`Has capacity to reserve: ${hasCapacity}`)
+    console.log(`Has enough reservers: ${hasEnoughReservers}`)
+    console.log(`Has claim spot available: ${hasClaimSpot}`)
+    if (hasCapacity && !hasEnoughReservers && hasClaimSpot) {
+        console.log(`✅ Should spawn claimer/reserver`)
         return
     }
 
@@ -1861,6 +1916,8 @@ export default function assignGlobals(): void {
     global.debugMineral = debugMineral
     global.enableDebugCartographer = enableDebugCartographer
     global.disableDebugCartographer = disableDebugCartographer
+    global.enableDebugAstar = enableDebugAstar
+    global.disableDebugAstar = disableDebugAstar
     global.enableDebugCreepRun = enableDebugCreepRun
     global.disableDebugCreepRun = disableDebugCreepRun
     global.enableDebugRemoteHauler = enableDebugRemoteHauler
@@ -1877,6 +1934,18 @@ function enableDebugCartographer(): void {
 function disableDebugCartographer(): void {
     Memory.cartographerDebugEnabled = false
     console.log('Cartographer debug disabled.')
+}
+
+function enableDebugAstar(): void {
+    Memory.astarDebugEnabled = true
+    console.log(
+        'A* debug enabled: moveWithinRoom and moveWithinRoomToNearest will log CPU per call.',
+    )
+}
+
+function disableDebugAstar(): void {
+    Memory.astarDebugEnabled = false
+    console.log('A* debug disabled.')
 }
 
 function enableDebugRemoteHauler(): void {
@@ -1940,6 +2009,8 @@ declare global {
             debugMineral: (roomName: string) => void
             enableDebugCartographer: () => void
             disableDebugCartographer: () => void
+            enableDebugAstar: () => void
+            disableDebugAstar: () => void
             enableDebugCreepRun: () => void
             disableDebugCreepRun: () => void
             enableDebugRemoteHauler: () => void

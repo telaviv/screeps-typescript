@@ -5,29 +5,35 @@ import {
     generatePath as generatePathCartographer,
 } from 'screeps-cartographer'
 
-import { DEADLOCK_THRESHOLD } from '../constants'
+import { ROAD_STUCK_THRESHOLD } from '../constants'
 import { getConstructionFeaturesV3 } from 'construction-features'
 import { MatrixCacheManager } from 'matrix-cache'
 import BuildManager from 'managers/build-manager'
+import { RoadGraph } from 'types'
 import { MoveToReturnCode } from './creep'
 import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
-import { moveToRandomNearbyPosition, updatePositionTracking } from './deadlock'
+import { trackPosition } from './deadlock'
 import * as Logger from './logger'
+import { astar } from './road-graph'
+
+const astarProfiled = wrap(astar, 'travel:astar')
 
 declare global {
     interface Memory {
         cartographerDebugEnabled?: boolean
+        astarDebugEnabled?: boolean
     }
 }
 
 const MAX_ROOM_RANGE = 20
+const ASTAR_DEBUG_CPU_THRESHOLD = 0
 
 type MoveToTarget = _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[]
 
 function formatTargetForLog(target: MoveToTarget): string {
     if (Array.isArray(target)) {
-        return JSON.stringify(target.map((t) => formatTargetForLog(t)))
+        return `[${target.map((t) => formatTargetForLog(t)).join(',')}]`
     }
     if (typeof (target as RoomPosition).roomName === 'string') {
         const p = target as RoomPosition
@@ -134,14 +140,7 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
         return ERR_TIRED
     }
 
-    // Inline deadlock check for performance
-    // eslint-disable-next-line no-underscore-dangle
-    if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
-        return moveToRandomNearbyPosition(creep)
-    }
-
-    // Store position before move attempt
-    const previousPos = creep.pos
+    trackPosition(creep)
 
     const moveToCartographerStartCPU = Game.cpu.getUsed()
     const err = moveToCartographer(
@@ -164,15 +163,6 @@ export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts =
         roomName,
         err,
     )
-
-    // Only track deadlock if move was attempted (not already at target)
-    if (err !== OK && err !== ERR_TIRED) {
-        updatePositionTracking(creep, previousPos)
-    } else {
-        // Reset counter on successful move
-        // eslint-disable-next-line no-underscore-dangle
-        creep.memory._dlWait = 0
-    }
 
     Logger.info(
         `moveToRoom: ${Game.cpu.getUsed() - startCPU}`,
@@ -267,39 +257,28 @@ export const moveToRoomForMineTravel = wrap(
             if (creep.fatigue > 0) {
                 return ERR_TIRED
             }
-            const fallbackPos = creep.pos
-            const fallbackHomeRoom = creep.room.name
-            const fallbackErr = moveToCartographer(
+            trackPosition(creep)
+            const homeRoom = creep.room.name
+            return moveToCartographer(
                 creep,
                 { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
                 {
                     swampCost: 5,
                     plainCost: 2,
                     roomCallback: (room: string) =>
-                        room === fallbackHomeRoom || room === roomName ? true : false,
-                    routeCallback: moveToRoomRouteCallback(roomName, fallbackHomeRoom),
+                        room === homeRoom || room === roomName ? true : false,
+                    routeCallback: moveToRoomRouteCallback(roomName, homeRoom),
                     ...opts,
                 },
             )
-            if (fallbackErr !== OK && fallbackErr !== ERR_TIRED) {
-                updatePositionTracking(creep, fallbackPos)
-            } else {
-                // eslint-disable-next-line no-underscore-dangle
-                creep.memory._dlWait = 0
-            }
-            return fallbackErr
         }
 
         if (creep.fatigue > 0) {
             return ERR_TIRED
         }
 
-        // eslint-disable-next-line no-underscore-dangle
-        if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
-            return moveToRandomNearbyPosition(creep)
-        }
+        trackPosition(creep)
 
-        const previousPos = creep.pos
         const target = { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE }
 
         let err = moveToCartographer(creep, target, {
@@ -321,13 +300,6 @@ export const moveToRoomForMineTravel = wrap(
                 routeCallback: moveToRoomRouteCallback(roomName, homeRoom),
                 ...opts,
             })
-        }
-
-        if (err !== OK && err !== ERR_TIRED) {
-            updatePositionTracking(creep, previousPos)
-        } else {
-            // eslint-disable-next-line no-underscore-dangle
-            creep.memory._dlWait = 0
         }
 
         return err
@@ -361,15 +333,6 @@ export const moveTo = (
         return ERR_TIRED
     }
 
-    // Inline deadlock check for performance
-    // eslint-disable-next-line no-underscore-dangle
-    if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
-        return moveToRandomNearbyPosition(creep)
-    }
-
-    // Store position before move attempt
-    const previousPos = creep.pos
-
     let err = moveToCartographer(creep, target, { roomCallback, routeCallback, ...opts })
     if (err === ERR_NO_PATH) {
         if (Array.isArray(target)) {
@@ -390,52 +353,84 @@ export const moveTo = (
         }
     }
 
-    // Only track deadlock if move was attempted (not already at target)
-    // If err is OK or ERR_TIRED, the creep either moved or couldn't due to fatigue (not stuck)
-    if (err !== OK && err !== ERR_TIRED) {
-        updatePositionTracking(creep, previousPos)
-    } else {
-        // Reset counter on successful move
-        // eslint-disable-next-line no-underscore-dangle
-        creep.memory._dlWait = 0
-    }
-
     return err
+}
+
+function moveAlongRoadPath(
+    creep: Creep,
+    path: string[],
+    graph: RoadGraph,
+    roomName: string,
+): MoveToReturnCode {
+    const firstNode = graph.nodes[path[0]]
+    const atFirst = creep.pos.x === firstNode.x && creep.pos.y === firstNode.y
+    if (atFirst && path.length === 1) return OK
+    const nextKey = atFirst ? path[1] : path[0]
+    const next = graph.nodes[nextKey]
+    const dir = creep.pos.getDirectionTo(new RoomPosition(next.x, next.y, roomName))
+    return creep.move(dir) as MoveToReturnCode
 }
 
 /** Moves within current room to the nearest of multiple targets, using per-room cost matrix */
 export const moveWithinRoomToNearest = wrap(
     (creep: Creep, targets: MoveTarget[], opts: MoveOpts = {}): MoveToReturnCode => {
-        // Inline deadlock check for performance
-        // eslint-disable-next-line no-underscore-dangle
-        if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
-            return moveToRandomNearbyPosition(creep)
+        trackPosition(creep)
+
+        const roomName = creep.room.name
+        const graph = Memory.rooms[roomName]?.roadGraph
+        if (graph && BuildManager.allRoadsBuilt(creep.room)) {
+            const startKey = `${creep.pos.x},${creep.pos.y}`
+            if (graph.nodes[startKey]) {
+                let bestPath: string[] | null = null
+                const astarStart = Memory.astarDebugEnabled ? Game.cpu.getUsed() : 0
+                for (const t of targets) {
+                    const tRange = (t as { range?: number }).range ?? 1
+                    if (tRange !== 1) continue
+                    const obstacleKey = `${t.pos.x},${t.pos.y}`
+                    const obstacleEntry = graph.obstacles[obstacleKey]
+                    if (!obstacleEntry) continue
+                    const path = astarProfiled(graph, startKey, new Set(obstacleEntry.roads))
+                    if (path && (!bestPath || path.length < bestPath.length)) {
+                        bestPath = path
+                    }
+                }
+                if (Memory.astarDebugEnabled) {
+                    const astarCpu = Game.cpu.getUsed() - astarStart
+                    if (astarCpu > ASTAR_DEBUG_CPU_THRESHOLD) {
+                        console.log(
+                            '[astar:moveWithinRoomToNearest]',
+                            'creep:',
+                            creep.name,
+                            'pos:',
+                            `${roomName}:(${creep.pos.x},${creep.pos.y})`,
+                            'targets:',
+                            targets.length,
+                            'bestPathLen:',
+                            bestPath ? bestPath.length : 'null',
+                            'cpu:',
+                            astarCpu.toFixed(4),
+                        )
+                    }
+                }
+                if (bestPath) {
+                    return moveAlongRoadPath(creep, bestPath, graph, roomName)
+                }
+            }
         }
 
-        const previousPos = creep.pos
         const moveCount = creep.getActiveBodyparts(MOVE)
         const totalCount = creep.body.length
         const roadPreferred = moveCount / totalCount < 0.5
-        const roomName = creep.room.name
         const matrix = MatrixCacheManager.getRoomMatrix(roomName, roadPreferred)
         const nRoomCallback = (rn: string): CostMatrix | boolean =>
             rn === roomName ? matrix : false
         const nRouteCallback = (_from: string, toRoom: string): number | undefined =>
             toRoom === roomName ? undefined : Infinity
-        const err = moveTo(creep, targets, {
+        return moveTo(creep, targets, {
             roomCallback: nRoomCallback,
             routeCallback: nRouteCallback,
             ...opts,
         })
-
-        if (err !== OK && err !== ERR_TIRED) {
-            updatePositionTracking(creep, previousPos)
-        } else {
-            // eslint-disable-next-line no-underscore-dangle
-            creep.memory._dlWait = 0
-        }
-
-        return err
     },
     'creep:moveWithinRoomToNearest',
 )
@@ -445,14 +440,65 @@ export const moveWithinRoom = wrap(
     (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
         // const startCPU = Game.cpu.getUsed()
 
-        // Inline deadlock check for performance
-        // eslint-disable-next-line no-underscore-dangle
-        if ((creep.memory._dlWait ?? 0) >= DEADLOCK_THRESHOLD) {
-            return moveToRandomNearbyPosition(creep)
-        }
+        trackPosition(creep)
 
-        // Store position before move attempt
-        const previousPos = creep.pos
+        const range = target.range ?? 1
+        if (range === 1) {
+            const roomName = creep.room.name
+            const graph = Memory.rooms[roomName]?.roadGraph
+            if (graph && Game.rooms[roomName] && BuildManager.allRoadsBuilt(Game.rooms[roomName])) {
+                const startKey = `${creep.pos.x},${creep.pos.y}`
+                if (graph.nodes[startKey]) {
+                    const obstacleKey = `${target.pos.x},${target.pos.y}`
+                    const obstacleEntry = graph.obstacles[obstacleKey]
+                    if (obstacleEntry) {
+                        const astarStart = Memory.astarDebugEnabled ? Game.cpu.getUsed() : 0
+                        const path = astarProfiled(graph, startKey, new Set(obstacleEntry.roads))
+                        if (Memory.astarDebugEnabled) {
+                            const astarCpu = Game.cpu.getUsed() - astarStart
+                            if (astarCpu > ASTAR_DEBUG_CPU_THRESHOLD) {
+                                console.log(
+                                    '[astar:moveWithinRoom]',
+                                    'creep:',
+                                    creep.name,
+                                    'pos:',
+                                    `${roomName}:(${creep.pos.x},${creep.pos.y})`,
+                                    'target:',
+                                    `${roomName}:(${target.pos.x},${target.pos.y})`,
+                                    'pathLen:',
+                                    path ? path.length : 'null',
+                                    'cpu:',
+                                    astarCpu.toFixed(4),
+                                )
+                            }
+                        }
+                        if (path) {
+                            // eslint-disable-next-line no-underscore-dangle
+                            if ((creep.memory._dlWait ?? 0) >= ROAD_STUCK_THRESHOLD) {
+                                // Stuck on road graph — go directly to target via cartographer
+                                return moveToCartographer(creep, target)
+                                // // Stuck on road graph — pass up to 5 lookahead waypoints to
+                                // // cartographer so it can route around whatever is blocking
+                                // const lookahead = path.slice(1, 6)
+                                // if (lookahead.length === 0) {
+                                //     return moveAlongRoadPath(creep, path, graph, roomName)
+                                // }
+                                // const waypoints: MoveTarget[] = lookahead.map((key) => ({
+                                //     pos: new RoomPosition(
+                                //         graph.nodes[key].x,
+                                //         graph.nodes[key].y,
+                                //         roomName,
+                                //     ),
+                                //     range: 0,
+                                // }))
+                                // return moveToCartographer(creep, waypoints)
+                            }
+                            return moveAlongRoadPath(creep, path, graph, roomName)
+                        }
+                    }
+                }
+            }
+        }
 
         const moveCount = creep.getActiveBodyparts(MOVE)
         const totalCount = creep.body.length
@@ -470,26 +516,73 @@ export const moveWithinRoom = wrap(
             }
             return Infinity
         }
-        const err = moveTo(creep, target, {
-            reusePath: 10,
+        // When stuck, force a fresh path calculation to route around blockers
+        // eslint-disable-next-line no-underscore-dangle
+        const reusePath = (creep.memory._dlWait ?? 0) >= ROAD_STUCK_THRESHOLD ? 0 : 10
+        return moveTo(creep, target, {
+            reusePath,
             roomCallback: nRoomCallback,
             routeCallback: nRouteCallback,
             ...opts,
         })
-
-        // Only track deadlock if move was attempted (not already at target)
-        if (err !== OK && err !== ERR_TIRED) {
-            updatePositionTracking(creep, previousPos)
-        } else {
-            // Reset counter on successful move
-            // eslint-disable-next-line no-underscore-dangle
-            creep.memory._dlWait = 0
-        }
-
         // Logger.error(`moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
-        return err
     },
     'creep:moveWithinRoom',
+)
+
+/**
+ * Moves a creep to a parking spot near the target, preferring non-road tiles.
+ * Clones the room matrix and marks all roads within target.range as impassable so the
+ * pathfinder steers the creep onto plain/swamp tiles instead of blocking traffic.
+ * Falls back to the unmodified matrix when no accessible non-road tile exists in range.
+ */
+export const moveToParkingSpot = wrap(
+    (creep: Creep, target: MoveTarget, opts: MoveOpts = {}): MoveToReturnCode => {
+        if (creep.fatigue > 0) return ERR_TIRED
+        trackPosition(creep)
+
+        const roomName = creep.room.name
+        const range = target.range ?? 1
+        const roadPreferred = creep.getActiveBodyparts(MOVE) / creep.body.length < 0.5
+
+        const baseMatrix = MatrixCacheManager.getRoomMatrix(roomName, roadPreferred)
+        const matrix = baseMatrix.clone()
+
+        const roads = target.pos.findInRange(FIND_STRUCTURES, range, {
+            filter: (s: Structure) => s.structureType === STRUCTURE_ROAD,
+        })
+        for (const road of roads) {
+            matrix.set(road.pos.x, road.pos.y, 255)
+        }
+
+        const terrain = new Room.Terrain(roomName)
+        let hasAccessible = false
+        for (let dx = -range; dx <= range && !hasAccessible; dx++) {
+            for (let dy = -range; dy <= range; dy++) {
+                const x = target.pos.x + dx
+                const y = target.pos.y + dy
+                if (x < 1 || x > 48 || y < 1 || y > 48) continue
+                if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue
+                if (matrix.get(x, y) < 255) {
+                    hasAccessible = true
+                    break
+                }
+            }
+        }
+
+        const activeMatrix = hasAccessible ? matrix : baseMatrix
+        const nRoomCallback = (rn: string): CostMatrix | boolean =>
+            rn === roomName ? activeMatrix : false
+        const nRouteCallback = (_from: string, toRoom: string): number | undefined =>
+            toRoom === roomName ? undefined : Infinity
+
+        return moveTo(creep, target, {
+            roomCallback: nRoomCallback,
+            routeCallback: nRouteCallback,
+            ...opts,
+        })
+    },
+    'travel:moveToParkingSpot',
 )
 
 /** Follows another creep, staying adjacent and moving in sync */

@@ -21,6 +21,7 @@ import { assignMines } from './mine-manager'
 import { createTravelTask } from 'tasks/travel'
 import { getNeighbors } from 'utils/room-position'
 import { getScouts } from 'utils/creep'
+import { isScout, Scout } from 'roles/scout'
 import { isTravelTask } from 'tasks/travel/utils'
 import { subscribe } from 'pub-sub/pub-sub'
 
@@ -133,6 +134,12 @@ declare global {
                 removeDenial: (roomName: string) => void
                 /** List all manually denied rooms */
                 listDenied: () => void
+                /** Show why each nearby room is being skipped (why scout.next returns null) */
+                why: () => void
+                /** Clear all path-blocked rooms */
+                clearBlocked: () => void
+                /** Show all tasks for all scout creeps */
+                tasks: () => void
             }
         }
     }
@@ -155,9 +162,9 @@ global.scout = {
             console.log('no scout currently')
         }
     },
-    /** Immediately adds a scout task for a room */
-    now: (destination: string, start: string): void => {
-        new RoomManager(Game.rooms[start]).addScoutRoomTask(destination)
+    /** Immediately adds a scout task for a room, optionally with waypoints that bypass the denylist */
+    now: (destination: string, start: string, waypoints?: string[]): void => {
+        new RoomManager(Game.rooms[start]).addScoutRoomTask(destination, waypoints)
     },
     /** Clear the closest room cache */
     clearCache: (): void => {
@@ -217,6 +224,67 @@ global.scout = {
         } else {
             console.log(`Manually denied rooms (${deniedRooms.length}):`)
             deniedRooms.forEach((room) => console.log(`  - ${room}`))
+        }
+    },
+    /** Show why each nearby room is being skipped (diagnose why scout.next returns null) */
+    why: (): void => {
+        const scoutManager = ScoutManager.create()
+        const world = new World()
+        const ownedRooms = Object.values(Game.rooms)
+            .filter((r) => r.controller?.my)
+            .map((r) => r.name)
+        const closestRooms = world.getClosestRooms(ownedRooms, MAX_SCOUT_DISTANCE)
+        const pathBlockedRooms = Memory.pathBlockedRooms ?? {}
+        console.log(`Checking ${closestRooms.length} rooms within distance ${MAX_SCOUT_DISTANCE}`)
+        let needsScouting = 0
+        for (const { roomName, distance } of closestRooms) {
+            const roomType = getRoomType(roomName)
+            if (roomType !== RoomType.ROOM) continue
+            const hasFeatures = !!(featureRoomCache ?? {})[roomName]
+            const hasValidScout = scoutManager.hasValidScoutData(roomName)
+            const isManuallyDenied = Memory.rooms[roomName]?.scout?.manuallyDenied ?? false
+            const blockedAt = pathBlockedRooms[roomName]
+            const isPathBlocked = blockedAt !== undefined && Game.time - blockedAt < PATH_BLOCK_TTL
+            if (hasFeatures && hasValidScout && !isManuallyDenied && !isPathBlocked) continue
+            needsScouting++
+            const reasons: string[] = []
+            if (!hasFeatures) reasons.push('no-features')
+            if (!hasValidScout) reasons.push('no-scout-data')
+            if (isManuallyDenied) reasons.push('manually-denied')
+            if (isPathBlocked)
+                reasons.push(`path-blocked(age:${Game.time - blockedAt}/${PATH_BLOCK_TTL})`)
+            const status = isManuallyDenied || isPathBlocked ? 'SKIP' : 'NEEDS-SCOUT'
+            console.log(`  [${status}] ${roomName} d=${distance}: ${reasons.join(', ')}`)
+        }
+        if (needsScouting === 0) {
+            console.log('All nearby rooms have features + valid scout data — nothing to do.')
+            console.log(`Path-blocked rooms: ${Object.keys(pathBlockedRooms).join(', ') || 'none'}`)
+        }
+    },
+    /** Clear all path-blocked rooms so scouts can retry them */
+    clearBlocked: (): void => {
+        const count = Object.keys(Memory.pathBlockedRooms ?? {}).length
+        Memory.pathBlockedRooms = {}
+        console.log(`Cleared ${count} path-blocked rooms`)
+    },
+    /** Show all tasks for all scout creeps */
+    tasks: (): void => {
+        const scouts: Scout[] = Object.values(Game.creeps).filter(isScout)
+        if (scouts.length === 0) {
+            console.log('No scout creeps found')
+            return
+        }
+        console.log(`=== Scout Tasks (${scouts.length} scout(s)) ===`)
+        for (const scout of scouts) {
+            const tasks = scout.memory.tasks
+            if (tasks.length === 0) {
+                console.log(`  ${scout.name} [${scout.pos}]: idle (no tasks)`)
+            } else {
+                console.log(`  ${scout.name} [${scout.pos}]: ${tasks.length} task(s)`)
+                tasks.forEach((task: unknown, i: number) => {
+                    console.log(`    [${i}] ${JSON.stringify(task)}`)
+                })
+            }
         }
     },
 }
@@ -344,9 +412,9 @@ class ScoutManager {
         ) {
             return
         }
-        if (scouts.length > 0) {
-            const task = createTravelTask(scouts[0].name, roomToScout)
-            scouts[0].memory.tasks.push(task)
+        const idleScout = scouts.find((s) => s.memory.tasks.length === 0)
+        if (idleScout) {
+            idleScout.memory.tasks.push(createTravelTask(idleScout.name, roomToScout))
             return
         }
         if (RoomManager.getAllScoutTasks().some((task) => task.data.room === roomToScout)) {
@@ -467,7 +535,7 @@ class ScoutManager {
      * Checks if a room has valid, non-expired scout data.
      * @param roomName - Room to check
      */
-    private hasValidScoutData(roomName: string): boolean {
+    hasValidScoutData(roomName: string): boolean {
         const memory = Memory.rooms[roomName]
         return Boolean(
             memory &&
@@ -483,7 +551,11 @@ class ScoutManager {
     clearExpiredScoutData(): void {
         for (const name of Object.keys(Memory.rooms)) {
             if (!this.hasValidScoutData(name)) {
-                delete Memory.rooms[name]
+                // Only remove the scout key — deleting the whole entry would also wipe
+                // constructionFeaturesV3, roadGraph, and pending room tasks, and would leave
+                // featureRoomCache stale (the CONSTRUCTION_FEATURES_UPDATES event is never
+                // published here), causing findNextRoomToScout to incorrectly return null.
+                delete Memory.rooms[name].scout
             }
         }
         const pathBlockedRooms = Memory.pathBlockedRooms

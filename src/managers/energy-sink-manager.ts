@@ -4,6 +4,7 @@ import includes from 'lodash/includes'
 
 import { LogisticsCreep } from 'roles/logistics-constants'
 import { getTowers } from 'utils/room'
+import { mprofile } from 'utils/profiling'
 
 /** Minimum health ratio threshold for repairs (66%) */
 const MIN_REPAIR_THRESHOLD = 0.66
@@ -17,6 +18,7 @@ export default class EnergySinkManager {
      * Checks if any non-wall structures need repair.
      * @param room - The room to check
      */
+    @mprofile('EnergySinkManager:canRepairNonWalls')
     static canRepairNonWalls(room: Room): boolean {
         const targets = room.find(FIND_STRUCTURES, {
             filter: createRepairableFilter(MIN_REPAIR_THRESHOLD),
@@ -30,6 +32,7 @@ export default class EnergySinkManager {
      * @param repairThreshold - Health ratio threshold (default 0.66)
      * @returns Closest repairable structure or null
      */
+    @mprofile('EnergySinkManager:findRepairTarget')
     static findRepairTarget(
         creep: LogisticsCreep,
         repairThreshold = MIN_REPAIR_THRESHOLD,

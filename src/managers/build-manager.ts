@@ -3,6 +3,8 @@ import pokemon from 'pokemon'
 
 import * as Logger from 'utils/logger'
 import * as TimeCache from 'utils/time-cache'
+import { SubscriptionEvent } from 'pub-sub/constants'
+import { subscribe } from 'pub-sub/pub-sub'
 import {
     ConstructionFeatures,
     ConstructionFeaturesV3Base,
@@ -302,6 +304,7 @@ export default class BuildManager {
     }
 
     /** Checks if the room has non-wall construction sites */
+    @profile
     hasNonWallConstructionSites(): boolean {
         return getConstructionSites(this.room).some(
             (site) => site.structureType !== STRUCTURE_RAMPART,
@@ -694,6 +697,39 @@ export default class BuildManager {
  * Gets a BuildManager for a room.
  * @param room - The room to get manager for
  */
-export function getBuildManager(room: Room): BuildManager | null {
+export const getBuildManager = wrap((room: Room): BuildManager | null => {
     return BuildManager.get(room)
+}, 'getBuildManager')
+
+const DIRTY_BUILD_ROOMS = new Set<string>()
+const ENSURE_CONSTRUCTION_INTERVAL = 13
+
+/**
+ * Registers pub-sub subscriptions for build events on all known rooms.
+ * Safe to call every tick — the pub-sub system deduplicates by subscriber ID.
+ */
+export function addBuildSubscriptions(): void {
+    for (const roomName of Object.keys(Memory.rooms)) {
+        subscribe(SubscriptionEvent.CONSTRUCTION_BUILD, roomName, 'build-manager', () => {
+            DIRTY_BUILD_ROOMS.add(roomName)
+        })
+    }
+}
+
+/**
+ * Returns true if ensureConstructionSites should run for this room this tick.
+ * Fires when the room is dirty (a build event was detected) or when the
+ * spawn-ID-derived stagger tick aligns with Game.time.
+ */
+export function shouldRunEnsureConstructionSites(room: Room): boolean {
+    if (DIRTY_BUILD_ROOMS.has(room.name)) return true
+    const spawns = room.find(FIND_MY_SPAWNS).sort((a, b) => a.name.localeCompare(b.name))
+    const offset =
+        spawns.length > 0 ? spawns[0].id.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0) : 0
+    return (Game.time + offset) % ENSURE_CONSTRUCTION_INTERVAL === 0
+}
+
+/** Clears the dirty flag for a room after ensureConstructionSites has run. */
+export function clearDirtyBuild(roomName: string): void {
+    DIRTY_BUILD_ROOMS.delete(roomName)
 }

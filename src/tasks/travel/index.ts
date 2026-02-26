@@ -12,24 +12,80 @@ export const makeRequest = wrap((creep: ResourceCreep, destination: string): boo
     return true
 }, 'travel:makeRequest')
 
+const DIRECTION_OFFSETS: Record<DirectionConstant, [number, number]> = {
+    [TOP]: [0, -1],
+    [TOP_RIGHT]: [1, -1],
+    [RIGHT]: [1, 0],
+    [BOTTOM_RIGHT]: [1, 1],
+    [BOTTOM]: [0, 1],
+    [BOTTOM_LEFT]: [-1, 1],
+    [LEFT]: [-1, 0],
+    [TOP_LEFT]: [-1, -1],
+}
+
+function stepOffRoad(creep: ResourceCreep): void {
+    const onRoad = creep.pos
+        .lookFor(LOOK_STRUCTURES)
+        .some((s) => s.structureType === STRUCTURE_ROAD)
+    if (!onRoad) {
+        return
+    }
+    const terrain = creep.room.getTerrain()
+    for (const dir of [
+        TOP,
+        TOP_RIGHT,
+        RIGHT,
+        BOTTOM_RIGHT,
+        BOTTOM,
+        BOTTOM_LEFT,
+        LEFT,
+        TOP_LEFT,
+    ] as DirectionConstant[]) {
+        const [dx, dy] = DIRECTION_OFFSETS[dir]
+        const x = creep.pos.x + dx
+        const y = creep.pos.y + dy
+        if (x < 1 || x > 48 || y < 1 || y > 48) {
+            continue
+        }
+        if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+            continue
+        }
+        const hasRoad = creep.room
+            .lookForAt(LOOK_STRUCTURES, x, y)
+            .some((s) => s.structureType === STRUCTURE_ROAD)
+        if (!hasRoad) {
+            creep.move(dir)
+            return
+        }
+    }
+}
+
 /** Completes when creep reaches room center and construction features exist */
 export const run = wrap((task: TravelTask, creep: ResourceCreep): boolean => {
-    if (
-        creep.room.name === task.destination &&
-        creep.pos.inRangeTo(25, 25, 23) &&
-        getConstructionFeaturesV3(creep.room)
-    ) {
+    if (creep.room.name === task.destination && creep.pos.inRangeTo(25, 25, 23)) {
+        if (getConstructionFeaturesV3(creep.room)) {
+            if (task.permanent) {
+                stepOffRoad(creep)
+                return false
+            }
+            completeRequest(creep)
+            return true
+        }
+        // In the destination room and in range but no construction features yet.
+        // Permanent scouts stay put — calling moveToRoom risks ERR_NO_PATH completing the task.
         if (task.permanent) {
             return false
         }
-        completeRequest(creep)
-        return true
     }
-    const err = moveToRoom(creep, task.destination, { maxOps: 2000 })
+    const err = moveToRoom(creep, task.destination, { maxOps: 2000, reusePath: 100 })
     if (err === ERR_NO_PATH) {
         const blocked = Memory.pathBlockedRooms ?? {}
         blocked[task.destination] = Game.time
         Memory.pathBlockedRooms = blocked
+        // Never complete a permanent task on ERR_NO_PATH — the scout should keep trying.
+        if (task.permanent) {
+            return false
+        }
         completeRequest(creep)
         return true
     }

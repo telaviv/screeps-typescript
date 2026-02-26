@@ -6,9 +6,9 @@ import { FlatRoomPosition, Position } from 'types'
 import { Mine } from 'managers/mine-manager'
 
 /** Minimum version of construction features v3 considered valid */
-export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.22'
+export const MIN_CONSTRUCTION_FEATURES_V3_VERSION = '1.0.24'
 /** Current version of construction features v3 data structure */
-export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.22'
+export const CONSTRUCTION_FEATURES_V3_VERSION = '1.0.24'
 
 /** Current version of construction features data structure */
 export const CONSTRUCTION_FEATURES_VERSION = '1.0.2'

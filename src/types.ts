@@ -15,6 +15,7 @@ declare global {
             state: null | 'repair'
             repairTargets?: FlatRoomPosition[]
         }
+        roadGraph?: RoadGraph
     }
 }
 
@@ -53,4 +54,21 @@ export function isNonObstacle(x: unknown): x is NonObstacle {
         return false
     }
     return ['road', 'constructionSite', 'rampart', 'container'].includes(x)
+}
+
+export interface RoadGraphNode {
+    x: number
+    y: number
+    structures: BuildableStructureConstant[]
+    neighbors: string[]
+}
+
+export interface RoadGraphObstacleEntry {
+    type: BuildableStructureConstant
+    roads: string[]
+}
+
+export interface RoadGraph {
+    nodes: { [key: string]: RoadGraphNode }
+    obstacles: { [posKey: string]: RoadGraphObstacleEntry }
 }

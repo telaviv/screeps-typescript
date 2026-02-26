@@ -114,8 +114,8 @@ declare global {
     interface CreepMemory {
         role: string
         home: string | undefined
-        _dlPos?: string // Deadlock detection: serialized position from last tick
-        _dlWait?: number // Deadlock detection: number of ticks waiting at same position
+        _dlPos?: string // Stuck detection: serialized position from last tick
+        _dlWait?: number // Stuck detection: consecutive ticks at the same position
     }
 
     // Syntax for adding proprties to `global` (ex "global.log")

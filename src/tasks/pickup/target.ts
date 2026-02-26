@@ -1,7 +1,12 @@
+import groupBy from 'lodash/groupBy'
+
 import { PickupTask } from './types'
 import autoIncrement from 'utils/autoincrement'
 import { getAllTasks } from 'tasks/utils'
 import { isPickupTask } from './utils'
+
+const TASK_CACHE: Map<Id<Resource>, PickupTask[]> = new Map()
+const OBJECT_CACHE: Map<Id<Resource>, PickupTarget> = new Map()
 
 /**
  * Tracks a dropped resource and all pending pickup tasks targeting it.
@@ -10,30 +15,47 @@ import { isPickupTask } from './utils'
 export class PickupTarget {
     public readonly resource: Resource
     public readonly tasks: PickupTask[]
+    private static cacheTime: null | number = null
 
     public constructor(resource: Resource, tasks: PickupTask[]) {
         this.resource = resource
         this.tasks = tasks
     }
 
+    private static ensureCache(): void {
+        if (PickupTarget.cacheTime === Game.time) {
+            return
+        }
+
+        const pickupTasks = Array.from(getAllTasks()).filter(isPickupTask)
+        const groupedTasks = groupBy(pickupTasks, 'resourceId')
+        TASK_CACHE.clear()
+        OBJECT_CACHE.clear()
+        for (const [resourceId, tasks] of Object.entries(groupedTasks)) {
+            TASK_CACHE.set(resourceId as Id<Resource>, tasks)
+        }
+        PickupTarget.cacheTime = Game.time
+    }
+
     /** Creates a PickupTarget by finding all tasks targeting this resource */
     public static create(id: Id<Resource>): PickupTarget {
-        const tasks: PickupTask[] = []
+        PickupTarget.ensureCache()
+        const tasks: PickupTask[] = TASK_CACHE.get(id) ?? []
+        TASK_CACHE.set(id, tasks)
         const resource = Game.getObjectById<Resource>(id)
         if (resource === null) {
             throw new Error(`resource id ${id} doesn't exist`)
-        }
-
-        for (const task of getAllTasks()) {
-            if (isPickupTask(task) && task.resourceId === id) {
-                tasks.push(task)
-            }
         }
         return new PickupTarget(resource, tasks)
     }
 
     public static get(id: Id<Resource>): PickupTarget {
-        return PickupTarget.create(id)
+        if (OBJECT_CACHE.has(id)) {
+            return OBJECT_CACHE.get(id) as PickupTarget
+        }
+        const obj = PickupTarget.create(id)
+        OBJECT_CACHE.set(id, obj)
+        return obj
     }
 
     public static findInRoom(room: Room, resource: ResourceConstant): PickupTarget[] {

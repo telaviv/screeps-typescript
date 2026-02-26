@@ -1,4 +1,5 @@
 import * as Logger from 'utils/logger'
+import { ATTACKERS_COUNT } from 'spawn/strategy/constants'
 import {
     ConstructionMovement,
     getConstructionFeatures,
@@ -374,7 +375,7 @@ export class MineManager {
                 (!this.controllerReserved() ||
                     (this.controllerReservationTicksLeft() < MIN_RESERVATION_TICKS &&
                         !this.hasEnoughReservers()))) ||
-            (this.needsProtection() && !this.hasDefenders()) ||
+            (this.needsProtection() && !this.hasEnoughDefenders()) ||
             !this.hasEnoughConstructionParts() ||
             !this.hasEnoughHarvesters() ||
             !this.hasEnoughHaulers() ||
@@ -468,6 +469,10 @@ export class MineManager {
         return this.getDefenders().length > 0
     }
 
+    hasEnoughDefenders(): boolean {
+        return this.getDefenders().length >= ATTACKERS_COUNT
+    }
+
     getDefenders(): Creep[] {
         const mineeClaimers = getCreeps('attack', this.minee).filter(
             (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
@@ -482,15 +487,17 @@ export class MineManager {
     }
 
     public needsProtection(): boolean {
+        // Check recorded hostile data first — works even without vision
+        if (Memory.rooms[this.roomName]?.hostiles) {
+            const dangerLevel = new HostileRecorder(this.roomName).dangerLevel()
+            if (dangerLevel > 0) {
+                return true
+            }
+        }
         if (!this.room) {
             return false
         }
-        const hostileRecorder = new HostileRecorder(this.room.name)
-        const dangerLevel = hostileRecorder.dangerLevel()
-        if ((dangerLevel > 0 && dangerLevel < 10) || this.hasHostiles()) {
-            return true
-        }
-        return false
+        return this.hasHostiles()
     }
 
     public needsRepairs(): boolean {

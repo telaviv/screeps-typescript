@@ -41,6 +41,8 @@ interface ScoutRoomTask extends RoomTask {
     data: {
         /** Name of the room to scout */
         room: string
+        /** Optional rooms to visit after the destination */
+        waypoints?: string[]
     }
     timestamp: number
 }
@@ -129,13 +131,15 @@ export class RoomManager {
     /**
      * Adds a scout task.
      * @param room The name of the room to scout.
+     * @param waypoints Optional rooms to visit after the destination.
      */
-    public addScoutRoomTask(room: string): void {
+    public addScoutRoomTask(room: string, waypoints?: string[]): void {
         const task: ScoutRoomTask = {
             id: autoIncrement(),
             type: 'scout',
             data: {
                 room,
+                waypoints,
             },
             timestamp: Game.time,
         }
@@ -204,7 +208,7 @@ export class RoomManager {
             Logger.error('no spawn in starting room')
             return false
         }
-        const err = roleScout.create(spawns[0], destination)
+        const err = roleScout.create(spawns[0], destination, false, {}, scoutTask.data.waypoints)
         Logger.info('RoomManager:scoutRoom:create', err)
         if (err === OK) {
             this.roomTasks = this.roomTasks.filter((task) => task.id !== scoutTask.id)

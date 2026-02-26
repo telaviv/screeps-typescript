@@ -58,6 +58,7 @@ const roleHealer = {
 
         const targets = getInjuredCreeps(creep.room)
         if (targets.length === 0) {
+            wander(creep)
             return
         }
 

@@ -21,6 +21,7 @@ import {
     MinerInformation,
 } from 'construction-features'
 import { deltaToDirection } from 'utils/mine-travel'
+import { buildRoadGraph } from 'utils/road-graph'
 import {
     findSpawnlessRooms,
     findSpawnRooms,
@@ -69,6 +70,7 @@ declare global {
             setConstructionFeaturesV3(roomName: string): void
             clearConstructionFeatures(roomName: string): void
             clearAllConstructionFeatures(): void
+            rebuildRoadGraph(roomName: string): void
         }
     }
 }
@@ -76,6 +78,7 @@ declare global {
 global.setConstructionFeaturesV3 = setConstructionFeaturesV3
 global.clearConstructionFeatures = clearConstructionFeatures
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
+global.rebuildRoadGraph = rebuildRoadGraph
 
 /**
  * Checks if all construction features have been calculated for a room.
@@ -121,8 +124,41 @@ export function setConstructionFeaturesV3(roomName: string): void {
     // on rooms with no controller or 1 source etc ....
     const roomMemory = Memory.rooms[roomName]
     Logger.warning('setConstructionFeaturesV3:setting', roomName)
-    roomMemory.constructionFeaturesV3 = calculateConstructionFeaturesV3(roomName)
+    const featuresV3 = calculateConstructionFeaturesV3(roomName)
+    roomMemory.constructionFeaturesV3 = featuresV3
+    if (featuresV3.type === 'base' && featuresV3.features) {
+        roomMemory.roadGraph = buildRoadGraph(featuresV3.features)
+    }
     publishConstructionFeatureChange(roomName)
+}
+
+/**
+ * Rebuilds the road graph for a room from its current construction features.
+ * Use from the Screeps console to force a rebuild without recalculating all features.
+ */
+function rebuildRoadGraph(roomName: string): void {
+    const memory = Memory.rooms[roomName]
+    if (!memory?.constructionFeaturesV3) {
+        Logger.warning('rebuildRoadGraph: no constructionFeaturesV3 for room', roomName)
+        return
+    }
+    const featuresV3 = memory.constructionFeaturesV3
+    if (featuresV3.type !== 'base' && featuresV3.type !== 'mine') {
+        Logger.warning('rebuildRoadGraph: room has no features to build from', roomName)
+        return
+    }
+    const features = featuresV3.features
+    if (!features) {
+        Logger.warning('rebuildRoadGraph: no features for room', roomName)
+        return
+    }
+    memory.roadGraph = buildRoadGraph(features)
+    Logger.warning(
+        'rebuildRoadGraph: built graph with',
+        Object.keys(memory.roadGraph.nodes).length,
+        'nodes for',
+        roomName,
+    )
 }
 
 /**
@@ -353,24 +389,28 @@ function pathToMinePathEntries(path: FlatRoomPosition[]): MinePathEntry[] {
         if (next && pos.roomName !== next.roomName) {
             const atBorder = pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49
             if (!atBorder) {
-                // The path skips the border tile — compute it via getDirectionTo so we
-                // handle diagonal exits correctly, then insert it.
-                const dir = new RoomPosition(pos.x, pos.y, pos.roomName).getDirectionTo(
-                    new RoomPosition(next.x, next.y, next.roomName),
-                )
-                const ddx =
-                    dir === RIGHT || dir === TOP_RIGHT || dir === BOTTOM_RIGHT
-                        ? 1
-                        : dir === LEFT || dir === TOP_LEFT || dir === BOTTOM_LEFT
-                        ? -1
-                        : 0
-                const ddy =
-                    dir === BOTTOM || dir === BOTTOM_RIGHT || dir === BOTTOM_LEFT
-                        ? 1
-                        : dir === TOP || dir === TOP_RIGHT || dir === TOP_LEFT
-                        ? -1
-                        : 0
-                expanded.push({ roomName: pos.roomName, x: pos.x + ddx, y: pos.y + ddy })
+                // The path skips the border tile (diagonal cross-room step).
+                // Derive the base-side exit tile from the mine entrance's parallel coordinate:
+                // Screeps teleports preserve the coord parallel to the crossing axis, so the
+                // mine entrance position is authoritative for the non-border axis.
+                //   N/S crossing (next.y === 0 or 49): x is preserved → use next.x
+                //   E/W crossing (next.x === 0 or 49): y is preserved → use next.y
+                let bx: number
+                let by: number
+                if (next.y === 49) {
+                    bx = next.x
+                    by = 0 // mine south-border(y=49) ↔ base north-border(y=0)
+                } else if (next.y === 0) {
+                    bx = next.x
+                    by = 49 // mine north-border(y=0) ↔ base south-border(y=49)
+                } else if (next.x === 0) {
+                    bx = 49 // mine west-border(x=0) ↔ base east-border(x=49)
+                    by = next.y
+                } else {
+                    bx = 0 // mine east-border(x=49) ↔ base west-border(x=0)
+                    by = next.y
+                }
+                expanded.push({ roomName: pos.roomName, x: bx, y: by })
             }
         }
     }
@@ -482,6 +522,9 @@ function setMineConstructionFeaturesV3(
         minePaths,
     }
     Memory.rooms[mineName].constructionFeaturesV3 = constructionFeaturesV3
+    if (features) {
+        Memory.rooms[mineName].roadGraph = buildRoadGraph(features)
+    }
     publishConstructionFeatureChange(mineName)
 }
 

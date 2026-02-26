@@ -8,6 +8,7 @@ import * as Logger from 'utils/logger'
 import { isBuildableStructureConstant } from '../constants'
 import { isObstacle } from 'types'
 import { randomElement } from 'utils/utilities'
+import { wrap } from 'utils/profiling'
 
 export const EXTENSION_COUNTS = [0, 0, 5, 10, 20, 30, 40, 50, 60]
 export const TOWER_COUNTS = [0, 0, 0, 1, 1, 2, 2, 3, 6]
@@ -73,23 +74,23 @@ export function getSpawnSites(room: Room): ConstructionSite<STRUCTURE_SPAWN>[] {
     })
 }
 
-export function getExtensions(room: Room): StructureExtension[] {
+export const getExtensions = wrap((room: Room): StructureExtension[] => {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_EXTENSION },
     })
-}
+}, 'room:getExtensions')
 
-export function getTowers(room: Room): StructureTower[] {
+export const getTowers = wrap((room: Room): StructureTower[] => {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_TOWER },
     })
-}
+}, 'room:getTowers')
 
-export function getSpawns(room: Room): StructureSpawn[] {
+export const getSpawns = wrap((room: Room): StructureSpawn[] => {
     return room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_SPAWN },
     })
-}
+}, 'room:getSpawns')
 
 export function getContainers(room: Room): StructureContainer[] {
     return room.find(FIND_STRUCTURES, {
@@ -345,12 +346,12 @@ function isWeakWall(structure: Structure): boolean {
     return structure.hits < Math.min(structure.hitsMax, STRONG_WALL_HITS)
 }
 
-export function getConstructionSites(
-    room: Room,
-    opts?: FilterOptions<FIND_CONSTRUCTION_SITES>,
-): ConstructionSite[] {
-    return room.find(FIND_CONSTRUCTION_SITES, opts)
-}
+export const getConstructionSites = wrap(
+    (room: Room, opts?: FilterOptions<FIND_CONSTRUCTION_SITES>): ConstructionSite[] => {
+        return room.find(FIND_CONSTRUCTION_SITES, opts)
+    },
+    'room:getConstructionSites',
+)
 
 export function getMyConstructionSites(room: Room): ConstructionSite[] {
     return room.find(FIND_MY_CONSTRUCTION_SITES)
