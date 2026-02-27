@@ -1877,6 +1877,26 @@ function debugMineral(roomName: string): void {
     }
 }
 
+function memoryTree(obj: unknown, depth: number, indent: string): void {
+    if (depth === 0 || typeof obj !== 'object' || obj === null) return
+    const entries = Object.entries(obj as Record<string, unknown>)
+        .map(([k, v]) => ({ key: k, size: (JSON.stringify(v) ?? '').length, value: v }))
+        .filter(({ size }) => size > 0)
+        .sort((a, b) => b.size - a.size)
+    for (const { key, size, value } of entries) {
+        console.log(`${indent}${key}: ${(size / 1024).toFixed(1)} kb`)
+        memoryTree(value, depth - 1, indent + '  ')
+    }
+}
+
+const memoryDebug = {
+    debug: (depth = 3) => {
+        const total = JSON.stringify(Memory).length
+        console.log(`Memory: ${(total / 1024).toFixed(1)} kb`)
+        memoryTree(Memory, depth, '  ')
+    },
+}
+
 export default function assignGlobals(): void {
     if (!Memory.logLevel) {
         Memory.logLevel = 'warning'
@@ -1922,6 +1942,7 @@ export default function assignGlobals(): void {
     global.disableDebugCreepRun = disableDebugCreepRun
     global.enableDebugRemoteHauler = enableDebugRemoteHauler
     global.disableDebugRemoteHauler = disableDebugRemoteHauler
+    global.memory = memoryDebug
 }
 
 function enableDebugCartographer(): void {
@@ -2015,6 +2036,9 @@ declare global {
             disableDebugCreepRun: () => void
             enableDebugRemoteHauler: () => void
             disableDebugRemoteHauler: () => void
+            memory: {
+                debug: (depth?: number) => void
+            }
         }
     }
 }

@@ -85,27 +85,55 @@ export function isAtEdge(creep: Creep): boolean {
     return creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49
 }
 
+const DIRECTION_OFFSETS: Record<DirectionConstant, [number, number]> = {
+    [TOP]: [0, -1],
+    [TOP_RIGHT]: [1, -1],
+    [RIGHT]: [1, 0],
+    [BOTTOM_RIGHT]: [1, 1],
+    [BOTTOM]: [0, 1],
+    [BOTTOM_LEFT]: [-1, 1],
+    [LEFT]: [-1, 0],
+    [TOP_LEFT]: [-1, -1],
+}
+
+const OBSTACLE_STRUCTURE_TYPES = new Set<string>([
+    STRUCTURE_WALL,
+    STRUCTURE_SPAWN,
+    STRUCTURE_EXTENSION,
+    STRUCTURE_TOWER,
+    STRUCTURE_STORAGE,
+    STRUCTURE_TERMINAL,
+    STRUCTURE_LAB,
+    STRUCTURE_NUKER,
+    STRUCTURE_OBSERVER,
+    STRUCTURE_POWER_SPAWN,
+    STRUCTURE_FACTORY,
+    STRUCTURE_LINK,
+])
+
 export function wander(creep: Creep): MoveToReturnCode {
-    const set = new Set([TOP, BOTTOM, LEFT, RIGHT, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT])
-    if (creep.pos.x === 1) {
-        set.delete(LEFT)
-        set.delete(TOP_LEFT)
-        set.delete(BOTTOM_LEFT)
-    } else if (creep.pos.x === 48) {
-        set.delete(RIGHT)
-        set.delete(TOP_RIGHT)
-        set.delete(BOTTOM_RIGHT)
-    }
-    if (creep.pos.y === 1) {
-        set.delete(TOP)
-        set.delete(TOP_LEFT)
-        set.delete(TOP_RIGHT)
-    } else if (creep.pos.y === 48) {
-        set.delete(BOTTOM)
-        set.delete(BOTTOM_LEFT)
-        set.delete(BOTTOM_RIGHT)
-    }
-    return creep.move(randomElement([...set]))
+    const allDirs: DirectionConstant[] = [
+        TOP,
+        BOTTOM,
+        LEFT,
+        RIGHT,
+        TOP_LEFT,
+        TOP_RIGHT,
+        BOTTOM_LEFT,
+        BOTTOM_RIGHT,
+    ]
+    const terrain = creep.room.getTerrain()
+    const passable = allDirs.filter((dir) => {
+        const [dx, dy] = DIRECTION_OFFSETS[dir]
+        const nx = creep.pos.x + dx
+        const ny = creep.pos.y + dy
+        if (nx < 1 || nx > 48 || ny < 1 || ny > 48) return false
+        if (terrain.get(nx, ny) === TERRAIN_MASK_WALL) return false
+        const structures = creep.room.lookForAt(LOOK_STRUCTURES, nx, ny)
+        return !structures.some((s) => OBSTACLE_STRUCTURE_TYPES.has(s.structureType))
+    })
+    if (passable.length === 0) return ERR_NO_PATH
+    return creep.move(randomElement(passable))
 }
 
 export function recycle(creep: Creep): void {

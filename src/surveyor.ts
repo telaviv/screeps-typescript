@@ -21,6 +21,7 @@ import {
     MinerInformation,
 } from 'construction-features'
 import { deltaToDirection } from 'utils/mine-travel'
+import BuildManager from 'managers/build-manager'
 import { buildRoadGraph } from 'utils/road-graph'
 import {
     findSpawnlessRooms,
@@ -71,6 +72,7 @@ declare global {
             clearConstructionFeatures(roomName: string): void
             clearAllConstructionFeatures(): void
             rebuildRoadGraph(roomName: string): void
+            gcRoadGraphs(): void
         }
     }
 }
@@ -79,6 +81,7 @@ global.setConstructionFeaturesV3 = setConstructionFeaturesV3
 global.clearConstructionFeatures = clearConstructionFeatures
 global.clearAllConstructionFeatures = clearAllConstructionFeatures
 global.rebuildRoadGraph = rebuildRoadGraph
+global.gcRoadGraphs = gcRoadGraphs
 
 /**
  * Checks if all construction features have been calculated for a room.
@@ -126,9 +129,9 @@ export function setConstructionFeaturesV3(roomName: string): void {
     Logger.warning('setConstructionFeaturesV3:setting', roomName)
     const featuresV3 = calculateConstructionFeaturesV3(roomName)
     roomMemory.constructionFeaturesV3 = featuresV3
-    if (featuresV3.type === 'base' && featuresV3.features) {
-        roomMemory.roadGraph = buildRoadGraph(featuresV3.features)
-    }
+    // Features just changed — any existing graph is stale. updateRoadGraphs() will
+    // rebuild it once all roads are confirmed built.
+    delete roomMemory.roadGraph
     publishConstructionFeatureChange(roomName)
 }
 
@@ -522,9 +525,9 @@ function setMineConstructionFeaturesV3(
         minePaths,
     }
     Memory.rooms[mineName].constructionFeaturesV3 = constructionFeaturesV3
-    if (features) {
-        Memory.rooms[mineName].roadGraph = buildRoadGraph(features)
-    }
+    // Features just changed — any existing graph is stale. updateRoadGraphs() will
+    // rebuild it once all roads are confirmed built.
+    delete Memory.rooms[mineName].roadGraph
     publishConstructionFeatureChange(mineName)
 }
 
@@ -832,11 +835,73 @@ function calculateRoomMovement() {
 }
 
 /**
+ * Lazily builds road graphs for rooms where all roads are now complete, and garbage-collects
+ * graphs for rooms where roads are no longer all present (e.g. a road was destroyed).
+ * Runs each survey tick for all currently visible rooms that have construction features.
+ */
+const updateRoadGraphs = Profiling.wrap(() => {
+    for (const room of Object.values(Game.rooms)) {
+        const memory = Memory.rooms[room.name]
+        if (!memory) continue
+
+        const features = memory.constructionFeaturesV3
+        if (!features || features.type === 'none' || !features.features) continue
+
+        const allBuilt = BuildManager.allRoadsBuilt(room)
+
+        if (memory.roadGraph && !allBuilt) {
+            Logger.warning('updateRoadGraphs:gc', room.name, '(road removed)')
+            delete memory.roadGraph
+        } else if (!memory.roadGraph && allBuilt) {
+            Logger.warning('updateRoadGraphs:build', room.name)
+            memory.roadGraph = buildRoadGraph(features.features)
+        }
+    }
+}, 'updateRoadGraphs')
+
+/**
+ * Manual console command to garbage-collect road graphs for rooms where roads are no longer
+ * all built. Only operates on currently visible rooms; logs a warning for rooms not visible.
+ */
+function gcRoadGraphs(): void {
+    let deleted = 0
+
+    for (const [roomName, memory] of Object.entries(Memory.rooms)) {
+        if (!memory.roadGraph) continue
+
+        const room = Game.rooms[roomName]
+        if (!room) {
+            delete memory.roadGraph
+            deleted++
+            Logger.warning('gcRoadGraphs:deleted-not-visible', roomName)
+            continue
+        }
+
+        const features = memory.constructionFeaturesV3
+        if (!features || features.type === 'none' || !features.features) {
+            delete memory.roadGraph
+            deleted++
+            Logger.warning('gcRoadGraphs:deleted-no-features', roomName)
+            continue
+        }
+
+        if (!BuildManager.allRoadsBuilt(room)) {
+            delete memory.roadGraph
+            deleted++
+            Logger.warning('gcRoadGraphs:deleted', roomName)
+        }
+    }
+
+    console.log(`gcRoadGraphs: deleted ${deleted} graph(s)`)
+}
+
+/**
  * Main survey function that runs all room analysis tasks.
  * Assigns features, calculates movement, and clears invalid structures.
  */
 const survey = Profiling.wrap(() => {
     assignRoomFeatures()
+    updateRoadGraphs()
     calculateRoomMovement()
     clearRooms()
 }, 'survey')

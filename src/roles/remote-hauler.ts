@@ -18,7 +18,13 @@ import {
     TASK_COLLECTING,
     TASK_HAULING,
 } from './logistics-constants'
-import { isMineTravel, moveToRoom, moveToRoomForMineTravel, moveWithinRoom } from 'utils/travel'
+import {
+    isMineTravel,
+    moveToRoom,
+    moveToRoomForMineTravel,
+    moveTowardMinePath,
+    moveWithinRoom,
+} from 'utils/travel'
 import {
     followMinePath,
     getSourcePathKey,
@@ -426,22 +432,7 @@ export class RemoteHaulerCreep {
 
     /** Moves toward the nearest step of `path` that lies in the creep's current room. */
     moveTowardPath(path: MinePathEntry[]): void {
-        const roomName = this.creep.room.name
-        const firstInRoom = path.find((s) => s.roomName === roomName)
-        if (firstInRoom) {
-            if (Memory.remoteHaulerDebugEnabled) {
-                console.log(
-                    'remote-hauler:moveTowardPath',
-                    this.creep.name,
-                    this.creep.pos,
-                    `→(${firstInRoom.x},${firstInRoom.y},${firstInRoom.roomName})`,
-                )
-            }
-            moveWithinRoom(this.creep, {
-                pos: new RoomPosition(firstInRoom.x, firstInRoom.y, roomName),
-                range: 0,
-            })
-        }
+        moveTowardMinePath(this.creep, path)
     }
 
     @profile

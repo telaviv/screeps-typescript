@@ -6,7 +6,7 @@ import {
 } from 'screeps-cartographer'
 
 import { ROAD_STUCK_THRESHOLD } from '../constants'
-import { getConstructionFeaturesV3 } from 'construction-features'
+import { MinePathEntry, getConstructionFeaturesV3, getMinePaths } from 'construction-features'
 import { MatrixCacheManager } from 'matrix-cache'
 import BuildManager from 'managers/build-manager'
 import { RoadGraph } from 'types'
@@ -15,6 +15,7 @@ import { safeRoomCallback } from './world'
 import { wrap } from './profiling'
 import { trackPosition } from './deadlock'
 import * as Logger from './logger'
+import { followMinePath, reverseMinePath } from './mine-travel'
 import { astar } from './road-graph'
 
 const astarProfiled = wrap(astar, 'travel:astar')
@@ -130,49 +131,100 @@ const moveToRoomRoomCallback =
         return roomCallback(roomName)
     }
 
+/**
+ * Returns a minePath spanning currentRoom and targetRoom, or null if none exists.
+ * Stored paths go base→mine; reverses the path when travelling mine→base.
+ */
+function findMinePathForRooms(currentRoom: string, targetRoom: string): MinePathEntry[] | null {
+    const currentFeatures = getConstructionFeaturesV3(currentRoom)
+    const targetFeatures = getConstructionFeaturesV3(targetRoom)
+    const mineRoom =
+        targetFeatures?.type === 'mine'
+            ? targetRoom
+            : currentFeatures?.type === 'mine'
+            ? currentRoom
+            : null
+    if (!mineRoom) return null
+
+    const minePaths = getMinePaths(mineRoom)
+    if (!minePaths) return null
+
+    for (const rawPath of Object.values(minePaths)) {
+        if (
+            rawPath.some((e) => e.roomName === currentRoom) &&
+            rawPath.some((e) => e.roomName === targetRoom)
+        ) {
+            return mineRoom === targetRoom ? rawPath : reverseMinePath(rawPath)
+        }
+    }
+    return null
+}
+
 /** Moves creep to center of a room, avoiding unsafe rooms */
-export const moveToRoom = wrap((creep: Creep, roomName: string, opts: MoveOpts = {}): ReturnType<
-    typeof moveToCartographer
-> => {
-    const startCPU = Game.cpu.getUsed()
-    Logger.info('moveToRoom:starting', creep.name, creep.room.name, roomName, startCPU)
-    if (creep.fatigue > 0) {
-        return ERR_TIRED
-    }
+export const moveToRoom = wrap(
+    (
+        creep: Creep,
+        roomName: string,
+        opts: MoveOpts & { skipMinePath?: boolean } = {},
+    ): ReturnType<typeof moveToCartographer> => {
+        const { skipMinePath, ...cartographerOpts } = opts
+        const startCPU = Game.cpu.getUsed()
+        Logger.info('moveToRoom:starting', creep.name, creep.room.name, roomName, startCPU)
+        if (creep.fatigue > 0) {
+            return ERR_TIRED
+        }
 
-    trackPosition(creep)
+        trackPosition(creep)
 
-    const moveToCartographerStartCPU = Game.cpu.getUsed()
-    const err = moveToCartographer(
-        creep,
-        { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
-        {
-            roomCallback: moveToRoomRoomCallback(roomName, creep.room.name),
-            routeCallback: moveToRoomRouteCallback(roomName, creep.room.name),
-            ...opts,
-        },
-    )
-    if (err === ERR_NO_PATH) {
-        Logger.error('moveToCartographer:no-path', creep.name, creep.room.name, roomName)
-    }
-    const moveToCartographerEndCPU = Game.cpu.getUsed()
-    Logger.info(
-        `moveToCartographer: ${moveToCartographerEndCPU - moveToCartographerStartCPU}`,
-        creep.name,
-        creep.room.name,
-        roomName,
-        err,
-    )
+        if (!skipMinePath) {
+            const minePath = findMinePathForRooms(creep.room.name, roomName)
+            if (minePath) {
+                // eslint-disable-next-line no-underscore-dangle
+                const isDeadlocked = (creep.memory._dlWait ?? 0) > 1
+                if (!isDeadlocked) {
+                    const result = followMinePath(creep, minePath, 'moveToRoom')
+                    if (result !== ERR_NOT_FOUND) {
+                        return result as CreepMoveReturnCode
+                    }
+                    return moveTowardMinePath(creep, minePath) as CreepMoveReturnCode
+                }
+                return moveTowardMinePathAvoidingStuck(creep, minePath) as CreepMoveReturnCode
+            }
+        }
 
-    Logger.info(
-        `moveToRoom: ${Game.cpu.getUsed() - startCPU}`,
-        creep.name,
-        creep.room.name,
-        roomName,
-        err,
-    )
-    return err
-}, 'travel:moveToRoom')
+        const moveToCartographerStartCPU = Game.cpu.getUsed()
+        const err = moveToCartographer(
+            creep,
+            { pos: new RoomPosition(25, 25, roomName), range: MAX_ROOM_RANGE },
+            {
+                roomCallback: moveToRoomRoomCallback(roomName, creep.room.name),
+                routeCallback: moveToRoomRouteCallback(roomName, creep.room.name),
+                ...cartographerOpts,
+            },
+        )
+        if (err === ERR_NO_PATH) {
+            Logger.error('moveToCartographer:no-path', creep.name, creep.room.name, roomName)
+        }
+        const moveToCartographerEndCPU = Game.cpu.getUsed()
+        Logger.info(
+            `moveToCartographer: ${moveToCartographerEndCPU - moveToCartographerStartCPU}`,
+            creep.name,
+            creep.room.name,
+            roomName,
+            err,
+        )
+
+        Logger.info(
+            `moveToRoom: ${Game.cpu.getUsed() - startCPU}`,
+            creep.name,
+            creep.room.name,
+            roomName,
+            err,
+        )
+        return err
+    },
+    'travel:moveToRoom',
+)
 
 /**
  * Returns true when currentRoom and targetRoom are a base/mine pair with matching
@@ -340,7 +392,15 @@ export const moveTo = (
         }
         const pos = hasRoomPosition(target) ? target.pos : target
         if (creep.room.name === pos.roomName) {
-            return moveToRoom(creep, pos.roomName, opts)
+            // Terrain-only retry scoped to the current room.
+            // Calling moveToRoom here would re-enter mine-path logic and cause infinite recursion.
+            return moveToCartographer(creep, target, {
+                swampCost: 5,
+                plainCost: 2,
+                roomCallback: (r) => (r === creep.room.name ? true : false),
+                routeCallback: (_from, toRoom) =>
+                    toRoom === creep.room.name ? undefined : Infinity,
+            })
         } else {
             err = moveToCartographer(creep, target, {
                 swampCost: 5,
@@ -369,6 +429,95 @@ function moveAlongRoadPath(
     const next = graph.nodes[nextKey]
     const dir = creep.pos.getDirectionTo(new RoomPosition(next.x, next.y, roomName))
     return creep.move(dir) as MoveToReturnCode
+}
+
+/**
+ * Moves a creep toward the nearest step of a mine path in its current room.
+ * Uses the road graph A* when the creep is already on a road node; otherwise
+ * falls back to cartographer via moveWithinRoom.
+ */
+export function moveTowardMinePath(creep: Creep, path: MinePathEntry[]): MoveToReturnCode {
+    const roomName = creep.room.name
+    const stepsInRoom = path.filter((e) => e.roomName === roomName)
+    if (stepsInRoom.length === 0) return ERR_NOT_FOUND as MoveToReturnCode
+
+    const graph = Memory.rooms[roomName]?.roadGraph
+    const startKey = `${creep.pos.x},${creep.pos.y}`
+
+    if (
+        graph &&
+        Game.rooms[roomName] &&
+        BuildManager.allRoadsBuilt(Game.rooms[roomName]) &&
+        graph.nodes[startKey]
+    ) {
+        const targetKeys = new Set(
+            stepsInRoom.filter((e) => graph.nodes[`${e.x},${e.y}`]).map((e) => `${e.x},${e.y}`),
+        )
+        if (targetKeys.size > 0) {
+            const astarPath = astarProfiled(graph, startKey, targetKeys)
+            if (astarPath) {
+                return moveAlongRoadPath(creep, astarPath, graph, roomName)
+            }
+        }
+    }
+
+    // Not on road graph or no A* path — use cartographer
+    const firstInRoom = stepsInRoom[0]
+    return moveWithinRoom(creep, {
+        pos: new RoomPosition(firstInRoom.x, firstInRoom.y, roomName),
+        range: 0,
+    })
+}
+
+/**
+ * Like moveTowardMinePath, but treats any creep with _dlWait > 1 (other than self) as a
+ * blocked road node so the A* routes around them.
+ */
+function moveTowardMinePathAvoidingStuck(creep: Creep, path: MinePathEntry[]): MoveToReturnCode {
+    const roomName = creep.room.name
+    const stepsInRoom = path.filter((e) => e.roomName === roomName)
+    if (stepsInRoom.length === 0) return ERR_NOT_FOUND as MoveToReturnCode
+
+    const graph = Memory.rooms[roomName]?.roadGraph
+    const startKey = `${creep.pos.x},${creep.pos.y}`
+
+    if (
+        graph &&
+        Game.rooms[roomName] &&
+        BuildManager.allRoadsBuilt(Game.rooms[roomName]) &&
+        graph.nodes[startKey]
+    ) {
+        const targetKeys = new Set(
+            stepsInRoom.filter((e) => graph.nodes[`${e.x},${e.y}`]).map((e) => `${e.x},${e.y}`),
+        )
+        if (targetKeys.size > 0) {
+            const blockedNodes = new Set<string>()
+            for (const c of Object.values(Game.creeps)) {
+                // eslint-disable-next-line no-underscore-dangle
+                if (
+                    c.name !== creep.name &&
+                    (c.memory._dlWait ?? 0) > 1 &&
+                    c.room.name === roomName
+                ) {
+                    const key = `${c.pos.x},${c.pos.y}`
+                    if (graph.nodes[key] && !targetKeys.has(key)) {
+                        blockedNodes.add(key)
+                    }
+                }
+            }
+            const astarPath = astarProfiled(graph, startKey, targetKeys, blockedNodes)
+            if (astarPath) {
+                return moveAlongRoadPath(creep, astarPath, graph, roomName)
+            }
+        }
+    }
+
+    // Not on road graph or no A* path — use cartographer
+    const firstInRoom = stepsInRoom[0]
+    return moveWithinRoom(creep, {
+        pos: new RoomPosition(firstInRoom.x, firstInRoom.y, roomName),
+        range: 0,
+    })
 }
 
 /** Moves within current room to the nearest of multiple targets, using per-room cost matrix */
@@ -519,12 +668,14 @@ export const moveWithinRoom = wrap(
         // When stuck, force a fresh path calculation to route around blockers
         // eslint-disable-next-line no-underscore-dangle
         const reusePath = (creep.memory._dlWait ?? 0) >= ROAD_STUCK_THRESHOLD ? 0 : 10
-        return moveTo(creep, target, {
+        // Call moveToCartographer directly instead of moveTo to avoid re-entering mine-path
+        // logic (moveTo's same-room ERR_NO_PATH branch can recurse back through moveToRoom).
+        return moveToCartographer(creep, target, {
             reusePath,
             roomCallback: nRoomCallback,
             routeCallback: nRouteCallback,
             ...opts,
-        })
+        }) as MoveToReturnCode
         // Logger.error(`moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
     },
     'creep:moveWithinRoom',

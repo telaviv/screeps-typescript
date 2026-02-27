@@ -398,7 +398,7 @@ class RoleLogistics {
         const target = this.creep.pos.findClosestByRange(targets)
         if (target) {
             if (this.creep.build(target) === ERR_NOT_IN_RANGE) {
-                moveWithinRoom(this.creep, { pos: target.pos, range: 3 })
+                moveToParkingSpot(this.creep, { pos: target.pos, range: 3 })
             }
         } else if (isFullOfEnergy(this.creep)) {
             Logger.info(

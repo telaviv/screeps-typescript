@@ -84,6 +84,7 @@ export function astar(
     graph: RoadGraph,
     startKey: string,
     targetKeys: Set<string>,
+    blockedNodes?: Set<string>,
 ): string[] | null {
     if (targetKeys.size === 0) return null
     if (!graph.nodes[startKey]) return null
@@ -138,6 +139,7 @@ export function astar(
 
         for (const neighborKey of curNode.neighbors) {
             if (visited.has(neighborKey)) continue
+            if (blockedNodes?.has(neighborKey) && !targetKeys.has(neighborKey)) continue
             const newDist = distances[curKey] + 1
             if (distances[neighborKey] === undefined || newDist < distances[neighborKey]) {
                 distances[neighborKey] = newDist

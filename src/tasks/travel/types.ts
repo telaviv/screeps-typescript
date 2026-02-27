@@ -5,4 +5,5 @@ export interface TravelTask extends Task<'travel'> {
     creep: string
     destination: string
     permanent: boolean
+    ignoreDenylist?: boolean
 }

@@ -683,6 +683,10 @@ class ScoutManager {
             scoutMemory.respawnBlocks = undefined
         }
 
+        if (Memory.pathBlockedRooms?.[room.name]) {
+            delete Memory.pathBlockedRooms[room.name]
+        }
+
         room.memory.scout = scoutMemory
     }
 

@@ -77,7 +77,14 @@ export const run = wrap((task: TravelTask, creep: ResourceCreep): boolean => {
             return false
         }
     }
-    const err = moveToRoom(creep, task.destination, { maxOps: 2000, reusePath: 100 })
+    const err = moveToRoom(creep, task.destination, {
+        maxOps: 2000,
+        reusePath: 100,
+        ...(task.ignoreDenylist && {
+            routeCallback: () => undefined,
+            roomCallback: () => true as CostMatrix | boolean,
+        }),
+    })
     if (err === ERR_NO_PATH) {
         const blocked = Memory.pathBlockedRooms ?? {}
         blocked[task.destination] = Game.time
@@ -103,6 +110,7 @@ export function createTravelTask(
     creepName: string,
     destination: string,
     permanent = false,
+    ignoreDenylist = false,
 ): TravelTask {
     return {
         type: 'travel',
@@ -111,6 +119,7 @@ export function createTravelTask(
         destination,
         timestamp: Game.time,
         permanent,
+        ignoreDenylist: ignoreDenylist || undefined,
         complete: false,
     }
 }
