@@ -34,6 +34,10 @@ export const addMineralWithdrawTask = wrap((creep: ResourceCreep): MineralWithdr
     const withdrawObject = MineralWithdrawObject.get(container.id, mineralManager.id)
     const mineralType = mineralManager.mineralType
 
+    if (creep.store.getFreeCapacity(mineralType) <= 0) {
+        return null
+    }
+
     // Don't create task if container has less than 250 minerals
     if (withdrawObject.resourcesAvailable(mineralType) < 250) {
         return null
