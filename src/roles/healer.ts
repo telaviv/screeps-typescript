@@ -105,7 +105,7 @@ const roleHealer = {
         let body: BodyPartConstant[] = [HEAL, MOVE]
         if (large) {
             body = fromBodyPlan(spawn.room.energyCapacityAvailable, [HEAL, MOVE], {
-                padding: [TOUGH, MOVE],
+                padding: { plan: [TOUGH, MOVE] },
             })
         }
         return spawn.spawnCreep(body, `${ROLE}:${Game.time}`, {

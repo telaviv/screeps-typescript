@@ -11,15 +11,21 @@ import { constant, times } from 'lodash'
  * @returns An array of body part constants representing the final body plan for the creep.
  */
 
+interface PaddingOpts {
+    plan: BodyPartConstant[]
+    /** Max padding copies = cap * main plan copies. Uncapped if omitted. */
+    cap?: number
+}
+
 interface FromBodyPlanOpts {
     fixed?: BodyPartConstant[]
     maxCopies?: number
-    padding?: BodyPartConstant[]
+    padding?: PaddingOpts
 }
 export function fromBodyPlan(
     capacity: number,
     plan: BodyPartConstant[],
-    { fixed = [], maxCopies = 50, padding = [] }: FromBodyPlanOpts = {},
+    { fixed = [], maxCopies = 50, padding }: FromBodyPlanOpts = {},
 ): BodyPartConstant[] {
     const fixedCost = fixed.reduce((total, p) => total + BODYPART_COST[p], 0)
     const unitCost = plan.reduce((total, p) => total + BODYPART_COST[p], 0)
@@ -33,14 +39,16 @@ export function fromBodyPlan(
         capacityLeft -= unitCost
         partsLeft -= plan.length
     }
-    if (padding.length > 0) {
-        const paddingCost = padding.reduce((total, p) => total + BODYPART_COST[p], 0)
+    if (padding) {
+        const paddingCost = padding.plan.reduce((total, p) => total + BODYPART_COST[p], 0)
+        const maxFromCap = padding.cap !== undefined ? padding.cap * copies : Infinity
         const paddingCopies = Math.min(
             Math.floor(capacityLeft / paddingCost),
-            partsLeft / padding.length,
+            Math.floor(partsLeft / padding.plan.length),
+            maxFromCap,
         )
         for (let i = 0; i < paddingCopies; i++) {
-            parts = [...padding, ...parts]
+            parts = [...padding.plan, ...parts]
         }
     }
     if (planCost(parts) > capacity) {

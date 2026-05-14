@@ -1,4 +1,4 @@
-import semverGte from 'semver/functions/gte'
+import { gte as semverGte } from 'semver'
 
 import * as Logger from 'utils/logger'
 import { ConstructionFeaturesV3, getConstructionFeaturesV3 } from 'construction-features'
@@ -613,7 +613,7 @@ class ScoutManager {
 
             // Check for hostile ramparts
             const hasHostileRampart = structures.some(
-                (s) => s.structureType === STRUCTURE_RAMPART && !(s as StructureRampart).my,
+                (s) => s.structureType === STRUCTURE_RAMPART && !s.my,
             )
 
             if (hasHostileRampart) {

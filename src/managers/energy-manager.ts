@@ -39,10 +39,7 @@ export default class EnergyManager {
      */
     public forceSourceAssignment(role: string): Id<Source> {
         const sourceCounts = this.getSourceCounts(role)
-        return minBy(Array.from(sourceCounts.keys()), (id) =>
-            // eslint-disable-next-line @typescript-eslint/indent
-            sourceCounts.get(id),
-        ) as Id<Source>
+        return minBy(Array.from(sourceCounts.keys()), (id) => sourceCounts.get(id)) as Id<Source>
     }
 
     /**

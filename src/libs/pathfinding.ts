@@ -148,7 +148,7 @@ export function findPath(
  * @param terrain RoomTerrain object
  * @returns Cost callback function
  */
-export function createTerrainCostCallback(terrain: RoomTerrain): CostCallback {
+export function createTerrainCostCallback(terrain: Pick<RoomTerrain, 'get'>): CostCallback {
     return (x: number, y: number): number => {
         const terrainType = terrain.get(x, y)
         if (terrainType === TERRAIN_MASK_WALL) {

@@ -43,7 +43,7 @@ import { calculateSingleMineRoads } from '../src/stamps/single-mine-roads'
 import { parseRoomName, getRoomNameFromCoords } from '../src/libs/pathfinding'
 
 // Mock RoomTerrain for standalone use
-class MockRoomTerrain implements RoomTerrain {
+class MockRoomTerrain {
     private terrain: number[][]
 
     constructor(terrain: number[][]) {
@@ -505,6 +505,7 @@ async function main() {
             const roads = calculateBunkerRoads(
                 mockTerrain,
                 result.buildings,
+                stationaryPoints.storageLink,
                 sources,
                 controller,
                 minerals[0],

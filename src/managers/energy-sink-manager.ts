@@ -43,7 +43,7 @@ export default class EnergySinkManager {
         if (targets.length === 0) {
             return null
         }
-        return creep.pos.findClosestByRange(targets) as Structure
+        return creep.pos.findClosestByRange(targets)
     }
 }
 

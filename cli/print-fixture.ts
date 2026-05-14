@@ -19,7 +19,7 @@ interface RoomFixture {
 }
 
 // Mock RoomTerrain for visualization
-class MockRoomTerrain implements RoomTerrain {
+class MockRoomTerrain {
     private terrain: number[][]
 
     constructor(terrain: number[][]) {

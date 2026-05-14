@@ -1,5 +1,3 @@
-/* eslint "@typescript-eslint/no-extra-semi": "off" */
-
 /** Base array size for hierarchical storage (10^n structure) */
 const ARRAY_SIZE = 10
 
@@ -77,10 +75,7 @@ export class SlidingWindowManager {
         for (const key of Object.keys(this.window.elements)) {
             const magnitude = Number(key)
             if (this.window.elements[magnitude]) {
-                sum += (this.window.elements[magnitude] as number[]).reduce(
-                    (acc, val) => acc + val,
-                    0,
-                )
+                sum += this.window.elements[magnitude].reduce((acc, val) => acc + val, 0)
             }
         }
         return sum
@@ -108,7 +103,7 @@ export class SlidingWindowManager {
         for (const key of Object.keys(this.window.elements)) {
             const magnitude = Number(key)
             if (this.window.elements[magnitude]) {
-                count += (this.window.elements[magnitude] as number[]).length * magnitude
+                count += this.window.elements[magnitude].length * magnitude
             }
         }
         return count

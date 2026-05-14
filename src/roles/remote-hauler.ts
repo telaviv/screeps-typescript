@@ -10,7 +10,7 @@ import {
 } from 'construction-features'
 import { getVirtualStorage } from '../utils/virtual-storage'
 import { hasNoEnergy } from 'utils/energy-harvesting'
-import { hasNoSpawns } from 'utils/room'
+import { hasNoSpawns, getSpawns } from 'utils/room'
 import {
     LogisticsCreep,
     LogisticsMemory,
@@ -32,7 +32,9 @@ import {
     isSourceToSourceReversed,
     reverseMinePath,
 } from 'utils/mine-travel'
+import { getRenewInformation } from 'utils/creep'
 import { profile, wrap } from 'utils/profiling'
+import { sortBy } from 'lodash'
 
 declare global {
     interface Memory {
@@ -53,6 +55,8 @@ export interface RemoteHaulerMemory extends ResourceCreepMemory {
     remote: string
     target: Id<Source> | null
     pickupTracker: Record<Id<Source>, boolean>
+    autoRenew: boolean
+    creationCapacity: number
 }
 
 function isRemoteHaulerMemory(
@@ -76,6 +80,10 @@ export class RemoteHaulerCreep {
         return this.creep.memory as RemoteHaulerMemory
     }
 
+    get autoRenew(): boolean {
+        return this.memory.autoRenew ?? false
+    }
+
     get target(): Id<Source> | null {
         return this.memory.target
     }
@@ -94,6 +102,36 @@ export class RemoteHaulerCreep {
             return null
         }
         return this.getPositionFromSourceId(this.target)
+    }
+
+    canAutoRenew(): boolean {
+        const { cost, ticks } = getRenewInformation(this.creep)
+        const spawns = getSpawns(this.creep.room)
+        return (
+            spawns.length > 0 &&
+            spawns[0].spawning === null &&
+            this.creep.room.energyAvailable >= cost &&
+            CREEP_LIFE_TIME - (this.creep.ticksToLive ?? 0) > ticks
+        )
+    }
+
+    autoRenewCreep(spawn: StructureSpawn): void {
+        spawn.renewCreep(this.creep)
+        this.creep.say('🚚⏳')
+    }
+
+    tryAutoRenew(): void {
+        const spawns = getSpawns(this.creep.room)
+        if (spawns.length === 0) {
+            this.creep.suicide()
+            return
+        }
+        const closestSpawn = sortBy(spawns, (spawn) => spawn.pos.getRangeTo(this.creep))[0]
+        if (!this.creep.pos.isNearTo(closestSpawn)) {
+            moveWithinRoom(this.creep, { pos: closestSpawn.pos, range: 1 }, { reusePath: 20 })
+        } else if (this.canAutoRenew()) {
+            this.autoRenewCreep(closestSpawn)
+        }
     }
 
     @profile
@@ -147,13 +185,17 @@ export class RemoteHaulerCreep {
 
         if (isHome && this.allPickupsFree()) {
             if (this.creep.ticksToLive && this.creep.ticksToLive < 75) {
-                Logger.warning(
-                    'remote-hauler:run:ttl-low:suicide',
-                    this.creep.name,
-                    this.creep.pos,
-                    `ttl=${this.creep.ticksToLive}`,
-                )
-                this.creep.suicide()
+                if (this.autoRenew) {
+                    this.tryAutoRenew()
+                } else {
+                    Logger.warning(
+                        'remote-hauler:run:ttl-low:suicide',
+                        this.creep.name,
+                        this.creep.pos,
+                        `ttl=${this.creep.ticksToLive}`,
+                    )
+                    this.creep.suicide()
+                }
                 return
             }
             this.goToRemote()
@@ -375,7 +417,7 @@ export class RemoteHaulerCreep {
         if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return
         const road = this.creep.pos
             .lookFor(LOOK_STRUCTURES)
-            .find((s) => s.structureType === STRUCTURE_ROAD) as StructureRoad | undefined
+            .find((s) => s.structureType === STRUCTURE_ROAD)
         if (road && road.hits < road.hitsMax) {
             this.creep.repair(road)
         }
@@ -437,31 +479,7 @@ export class RemoteHaulerCreep {
 
     @profile
     goToRemote(): void {
-        if (isMineTravel(this.memory.home, this.memory.remote)) {
-            const sourceId = Object.keys(this.memory.pickupTracker)[0] as Id<Source> | undefined
-            if (sourceId) {
-                const fullPath = getMinePaths(this.memory.remote)?.[
-                    getSourcePathKey(this.memory.remote, sourceId)
-                ]
-                if (fullPath && fullPath.length > 0) {
-                    const result = followMinePath(this.creep, fullPath, 'goToRemote')
-                    if (result === OK || result === ERR_TIRED) return
-                    // Not on path — walk to the nearest road tile in this room
-                    if (Memory.remoteHaulerDebugEnabled) {
-                        console.log(
-                            'remote-hauler:goToRemote:fallback',
-                            this.creep.name,
-                            this.creep.pos,
-                        )
-                    }
-                    this.moveTowardPath(fullPath)
-                    return
-                }
-            }
-            moveToRoomForMineTravel(this.creep, this.memory.remote)
-        } else {
-            moveToRoom(this.creep, this.memory.remote)
-        }
+        moveToRoom(this.creep, this.memory.remote)
     }
 
     @profile
@@ -532,9 +550,20 @@ const roleRemoteHauler = {
                 remote: opts.remote,
                 target: null,
                 pickupTracker,
+                autoRenew: true,
+                creationCapacity: opts.capacity,
             } as RemoteHaulerMemory,
         })
         return err
+    },
+
+    shouldCancelAutoRenew(creep: RemoteHauler, capacity: number): boolean {
+        const mem = creep.memory as RemoteHaulerMemory
+        return mem.autoRenew && mem.creationCapacity < capacity
+    },
+
+    cancelAutoRenew(creep: RemoteHauler): void {
+        ;(creep.memory as RemoteHaulerMemory).autoRenew = false
     },
 }
 

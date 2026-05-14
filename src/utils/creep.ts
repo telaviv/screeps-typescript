@@ -54,6 +54,7 @@ declare global {
         home: string | undefined
         _dlPos?: string // Stuck detection: serialized position from last tick
         _dlWait?: number // Stuck detection: consecutive ticks at the same position
+        _dlCooldown?: number // Stuck detection: ticks remaining in avoidance mode after deadlock
     }
 }
 

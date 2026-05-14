@@ -22,7 +22,7 @@ export default {
         sourcemap: true,
     },
     onwarn: function (warning) {
-        const ignoredCircular = ['immutable']
+        const ignoredCircular = ['immutable', 'semver']
         if (
             warning.code === 'CIRCULAR_DEPENDENCY' &&
             ignoredCircular.some((d) => warning.importer.includes(d))

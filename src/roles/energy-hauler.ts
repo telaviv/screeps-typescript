@@ -8,7 +8,7 @@ import { ResourceCreep, ResourceCreepMemory } from 'tasks/types'
 import { getSpawns, getTowers } from 'utils/room'
 import { LogisticsCreep } from './logistics-constants'
 import { fromBodyPlan } from 'utils/parts'
-import { getRenewInformation } from 'utils/creep'
+import { getRenewInformation, wander } from 'utils/creep'
 import { getVirtualControllerLink, getVirtualStorage } from '../utils/virtual-storage'
 import { isWithdrawTask } from 'tasks/withdraw/utils'
 import { moveWithinRoom } from 'utils/travel'
@@ -55,7 +55,11 @@ export class EnergyHaulerCreep {
 
     @profile
     run(): void {
-        if (this.creep.spawning || this.nothingToDo()) {
+        if (this.creep.spawning) {
+            return
+        }
+        if (this.nothingToDo()) {
+            wander(this.creep)
             return
         }
 

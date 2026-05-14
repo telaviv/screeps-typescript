@@ -1,7 +1,7 @@
 import * as Logger from 'utils/logger'
 import * as TaskRunner from 'tasks/runner'
 import * as TimeCache from 'utils/time-cache'
-import assignGlobals, { findUsername } from 'utils/globals'
+import assignGlobals, { findUsername, tickStatsMonitor } from 'utils/globals'
 import { handleMovementEventLog } from 'construction-movement'
 import { recordGameStats, recordRoomStats } from 'utils/stats'
 import roleAttacker, { Attacker } from 'roles/attacker'
@@ -33,7 +33,12 @@ import { ScoutManager } from 'managers/scout-manager'
 import { World } from 'utils/world'
 import { assignMines } from 'managers/mine-manager'
 import { ensureSlidingWindow } from 'room-window'
-import { getBuildManager } from 'managers/build-manager'
+import {
+    addBuildSubscriptions,
+    clearDirtyBuild,
+    getBuildManager,
+    shouldRunEnsureConstructionSites,
+} from 'managers/build-manager'
 import { hasHostileCreeps } from 'utils/room'
 import migrate from 'migrations'
 import { runSpawn } from './spawn'
@@ -116,6 +121,7 @@ declare global {
         home: string | undefined
         _dlPos?: string // Stuck detection: serialized position from last tick
         _dlWait?: number // Stuck detection: consecutive ticks at the same position
+        _dlCooldown?: number // Stuck detection: ticks remaining in avoidance mode after deadlock
     }
 
     // Syntax for adding proprties to `global` (ex "global.log")
@@ -171,7 +177,10 @@ const runMyRoom = wrap((room: Room) => {
     // Update base defense state
     const defenseDepartment = new DefenseDepartment(room)
     defenseDepartment.updateBaseDefenseState()
-    buildManager.ensureConstructionSites()
+    if (shouldRunEnsureConstructionSites(room)) {
+        buildManager.ensureConstructionSites()
+        clearDirtyBuild(room.name)
+    }
     handleMovementEventLog(room)
     ensureSafeMode(room)
 
@@ -307,6 +316,7 @@ const runCreep = wrap((creepName: string) => {
 const runScoutManager = wrap(() => ScoutManager.create().run(), 'main:runScoutManager')
 const runEmpire = wrap(() => new Empire().run(), 'main:runEmpire')
 const runTaskRunnerCleanup = wrap(() => TaskRunner.cleanup(), 'main:taskRunnerCleanup')
+const runSurvey = wrap(survey, 'main:survey')
 
 /**
  * Performs per-tick initialization tasks.
@@ -318,6 +328,7 @@ const initialize = wrap(() => {
         // One-time per global reset: MatrixCacheManager subscriptions are idempotent
         // and don't need to be re-registered each tick.
         MatrixCacheManager.addSubscriptions()
+        addBuildSubscriptions()
     }
 
     clearCreepMemory()
@@ -326,7 +337,7 @@ const initialize = wrap(() => {
     ScoutManager.addSubscriptions()
     runEmpire()
     if (Game.time % 11 === 0) {
-        survey()
+        runSurvey()
     }
     runTaskRunnerCleanup()
 }, 'main:initialize')
@@ -378,6 +389,8 @@ function unwrappedLoop(): void {
     if (Game.cpu.bucket >= VISUALS_CPU_MIN) {
         visualize()
     }
+
+    tickStatsMonitor()
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change

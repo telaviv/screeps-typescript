@@ -18,7 +18,7 @@ export interface VisualizationOptions {
  * Visualizes a bunker placement result using ANSI colors in the terminal
  */
 export function visualizeBunkerPlacement(
-    terrain: RoomTerrain,
+    terrain: Pick<RoomTerrain, 'get'>,
     result: BunkerPlacementResult,
     roomName: string,
     sources: Position[] = [],

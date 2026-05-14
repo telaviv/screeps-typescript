@@ -1,4 +1,5 @@
 module.exports = {
+    ignorePatterns: ['src/**/*.spec.ts', 'src/arena/**/*'],
     env: {
         browser: true,
         es6: true,
@@ -7,7 +8,7 @@ module.exports = {
     extends: [
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
-        'plugin:@typescript-eslint/recommended-requiring-type-checking',
+        'plugin:@typescript-eslint/recommended-type-checked',
         'plugin:import/errors',
         'plugin:import/warnings',
         'plugin:import/typescript',
@@ -33,9 +34,15 @@ module.exports = {
         '@typescript-eslint/explicit-function-return-type': 'off',
         '@typescript-eslint/explicit-member-accessibility': 'off',
         '@typescript-eslint/explicit-module-boundary-types': 'error',
+        '@typescript-eslint/no-base-to-string': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-redundant-type-constituents': 'off',
+        '@typescript-eslint/no-unsafe-argument': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-enum-comparison': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none' }],
         '@typescript-eslint/no-namespace': 'off',
-        '@typescript-eslint/no-parameter-properties': 'off',
         '@typescript-eslint/no-shadow': [
             'error',
             {
@@ -46,7 +53,6 @@ module.exports = {
         '@typescript-eslint/no-use-before-define': 'off',
         '@typescript-eslint/prefer-for-of': 'error',
         '@typescript-eslint/restrict-template-expressions': 'off',
-        '@typescript-eslint/space-within-parens': ['off', 'never'],
         '@typescript-eslint/unified-signatures': 'error',
         'arrow-parens': ['off', 'as-needed'],
         camelcase: 'error',

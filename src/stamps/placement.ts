@@ -11,7 +11,7 @@ import { getStampMetadata } from './utils'
  * Input data needed to place a bunker in a room
  */
 export interface BunkerPlacementInput {
-    terrain: RoomTerrain
+    terrain: Pick<RoomTerrain, 'get'>
     roomName: string
     sources: Position[]
     controller: Position
@@ -37,7 +37,7 @@ export interface BunkerPlacementResult {
 /**
  * Get wall positions from terrain (including room edges)
  */
-function getWallPositions(terrain: RoomTerrain): Position[] {
+function getWallPositions(terrain: Pick<RoomTerrain, 'get'>): Position[] {
     const positions: Position[] = []
     for (let x = 0; x < 50; x++) {
         for (let y = 0; y < 50; y++) {
@@ -168,7 +168,7 @@ export function isValidRoomPosition(pos: Position): boolean {
  * Helper to check if stamp placement collides with walls
  */
 export function checkStampCollision(
-    terrain: RoomTerrain,
+    terrain: Pick<RoomTerrain, 'get'>,
     buildings: Map<string, Position[]>,
 ): boolean {
     for (const positions of buildings.values()) {

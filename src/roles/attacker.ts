@@ -211,7 +211,7 @@ const roleAttacker = {
             Math.min(creep.pos.y + 1, 49),
             true,
         )
-        const hostiles = lookHostiles.map((c) => c.creep)
+        const hostiles = lookHostiles.map((c) => c.creep).filter((c) => !c.my)
         const sorted = sortHostiles(creep.pos)(hostiles)
         if (sorted.length > 0) {
             return sorted[0]
@@ -335,7 +335,7 @@ export function calculateParts(
     const parts = fromBodyPlan(capacity, [ATTACK, MOVE], {
         maxCopies,
         fixed,
-        padding: [TOUGH, MOVE],
+        padding: { plan: [TOUGH, MOVE], cap: 3 },
     })
     parts.sort(
         (a, b) =>

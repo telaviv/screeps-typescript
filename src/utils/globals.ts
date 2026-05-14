@@ -1170,6 +1170,53 @@ function debugRescue(roomName: string) {
     console.log(`MAX_SAVIOR_DISTANCE constant: ${MAX_SAVIOR_DISTANCE}`)
 }
 
+const DEFAULT_STATS_MONITOR_INTERVAL = 5
+
+/**
+ * Starts printing CPU and memory usage every `interval` ticks.
+ */
+function startStatsMonitor(interval: number = DEFAULT_STATS_MONITOR_INTERVAL): void {
+    Memory.statsMonitorInterval = interval
+    console.log(
+        `Stats monitor started: printing every ${interval} tick(s). Call global.stopStatsMonitor() to stop.`,
+    )
+}
+
+/**
+ * Stops the per-tick stats monitor.
+ */
+function stopStatsMonitor(): void {
+    delete Memory.statsMonitorInterval
+    console.log('Stats monitor stopped.')
+}
+
+/**
+ * Prints CPU and memory usage. Intended to be called each tick from the main loop.
+ */
+export function tickStatsMonitor(): void {
+    const interval = Memory.statsMonitorInterval
+    if (!interval || Game.time % interval !== 0) {
+        return
+    }
+
+    const cpuUsed = Game.cpu.getUsed().toFixed(2)
+    const cpuLimit = Game.cpu.limit
+    const bucket = Game.cpu.bucket
+
+    let heapStr = 'n/a'
+    if (Game.cpu.getHeapStatistics) {
+        const heap = Game.cpu.getHeapStatistics()
+        const usedMb = (heap.used_heap_size / 1048576).toFixed(1)
+        const limitMb = (heap.heap_size_limit / 1048576).toFixed(1)
+        const pct = ((heap.used_heap_size / heap.heap_size_limit) * 100).toFixed(1)
+        heapStr = `${usedMb}MB / ${limitMb}MB (${pct}%)`
+    }
+
+    console.log(
+        `[Tick ${Game.time}] CPU: ${cpuUsed}/${cpuLimit} (bucket: ${bucket}) | Heap: ${heapStr}`,
+    )
+}
+
 /**
  * Initializes state for starting from scratch.
  * Resets firstScoutingComplete flags, enables mining and autoclaim.
@@ -1943,6 +1990,8 @@ export default function assignGlobals(): void {
     global.enableDebugRemoteHauler = enableDebugRemoteHauler
     global.disableDebugRemoteHauler = disableDebugRemoteHauler
     global.memory = memoryDebug
+    global.startStatsMonitor = startStatsMonitor
+    global.stopStatsMonitor = stopStatsMonitor
 }
 
 function enableDebugCartographer(): void {
@@ -2039,6 +2088,13 @@ declare global {
             memory: {
                 debug: (depth?: number) => void
             }
+            startStatsMonitor: (interval?: number) => void
+            stopStatsMonitor: () => void
         }
+    }
+
+    interface Memory {
+        /** If set, print CPU/memory stats every this many ticks */
+        statsMonitorInterval?: number
     }
 }

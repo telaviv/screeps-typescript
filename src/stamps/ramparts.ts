@@ -195,7 +195,7 @@ function categorizeRamparts(
  * @returns Array of positions for rampart placement in priority order
  */
 export function calculateRamparts(
-    terrain: RoomTerrain,
+    terrain: Pick<RoomTerrain, 'get'>,
     bunkerBuildings: Map<string, Position[]>,
     stationaryPoints: StationaryPointsResult,
     sources: Position[],

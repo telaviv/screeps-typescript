@@ -44,7 +44,7 @@
     },
     "homepage": "https://github.com/screepers/screeps-typescript-starter#readme",
     "engines": {
-        "node": "10.x || 12.x"
+        "node": ">=24"
     },
     "devDependencies": {
         "@rollup/plugin-commonjs": "^20.0.0",
@@ -59,16 +59,16 @@
         "@types/pathfinding": "^0.1.0",
         "@types/regression": "^2.0.6",
         "@types/screeps": "^3.2.3",
+        "@types/semver": "^7.7.1",
         "@types/sinon": "^5.0.5",
         "@types/sinon-chai": "^3.2.0",
-        "@typescript-eslint/eslint-plugin": "^5.62.0",
-        "@typescript-eslint/parser": "^5.62.0",
-        "@typescript-eslint/typescript-estree": "^4.29.1",
+        "@typescript-eslint/eslint-plugin": "^8.59.3",
+        "@typescript-eslint/parser": "^8.59.3",
         "chai": "^4.2.0",
         "chalk": "4",
         "colormap": "^2.3.2",
         "commander": "8",
-        "eslint": "8.56.0",
+        "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-import-resolver-typescript": "^2.4.0",
         "eslint-plugin-import": "^2.24.0",
@@ -83,7 +83,7 @@
         "rollup": "^2.56.2",
         "rollup-plugin-clear": "^2.0.7",
         "rollup-plugin-screeps": "^1.0.1",
-        "rollup-plugin-typescript2": "^0.31.0",
+        "rollup-plugin-typescript2": "^0.37.0",
         "screeps-api": "^1.16.1",
         "screeps-cartographer": "^1.8.10",
         "semver": "^7.6.3",
@@ -92,7 +92,7 @@
         "table": "^6.8.2",
         "ts-node": "^10.2.0",
         "tsconfig-paths": "^3.10.1",
-        "typescript": "^4.3.5",
+        "typescript": "^5.9.3",
         "typescript-algorithms": "^0.0.10"
     },
     "dependencies": {

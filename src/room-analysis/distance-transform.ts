@@ -2,7 +2,10 @@ import { getSources, getWallPositions } from 'utils/room'
 import { Position } from '../types'
 
 /** Returns distance from walls for each position - used to find open spaces */
-export function getWallTransform(roomTerrain: RoomTerrain, roomName: string): number[][] {
+export function getWallTransform(
+    roomTerrain: Pick<RoomTerrain, 'get'>,
+    roomName: string,
+): number[][] {
     const wallPositions = getWallPositions(roomTerrain, roomName)
     return distanceTransform(roomTerrain, wallPositions)
 }
@@ -29,7 +32,7 @@ export function getSumTransform(room: Room): number[][] {
 }
 
 export function sumTransformsFromPositions(
-    roomTerrain: RoomTerrain,
+    roomTerrain: Pick<RoomTerrain, 'get'>,
     positions: Position[],
 ): number[][] {
     const transforms = positions.map((pos) => distanceTransform(roomTerrain, [pos]))
@@ -57,7 +60,10 @@ function sumTransforms(transforms: number[][][]): number[][] {
  * BFS-based distance transform: calculates minimum distance from each tile to any seed position.
  * Walls are set to Infinity. Used for base placement and pathfinding heuristics.
  */
-export function distanceTransform(roomTerrain: RoomTerrain, positions: Position[]): number[][] {
+export function distanceTransform(
+    roomTerrain: Pick<RoomTerrain, 'get'>,
+    positions: Position[],
+): number[][] {
     const width = 50
     const height = 50
 

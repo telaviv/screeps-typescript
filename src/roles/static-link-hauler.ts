@@ -204,7 +204,7 @@ const roleStaticLinkHauler = {
             sourceId: link.id,
             sinkId: storage.id,
             tasks: [],
-        } as StaticLinkHaulerMemory
+        }
     },
 
     getPosition(room: Room): Position | null {

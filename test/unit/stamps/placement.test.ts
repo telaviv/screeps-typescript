@@ -11,7 +11,7 @@ import {
 import { Position } from '../../../src/types'
 
 // Mock RoomTerrain for testing
-class MockRoomTerrain implements RoomTerrain {
+class MockRoomTerrain {
     private terrain: number[][]
 
     constructor(terrain: number[][]) {

@@ -462,7 +462,7 @@ export class MineManager {
         const minerClaimers = getCreeps('claimer', this.room).filter(
             (creep: Creep) => (creep.memory as ClaimerMemory).roomName === this.roomName,
         )
-        return minerClaimers
+        return [...new Set([...mineeClaimers, ...minerClaimers])]
     }
 
     hasDefenders(): boolean {
@@ -652,7 +652,7 @@ export class MineDecider {
     private addMineToMiner(mine: string): void {
         const exits = Game.map.describeExits(mine)
         const miners = []
-        for (const room of Object.values(exits)) {
+        for (const room of Object.values(exits ?? {})) {
             if (!Game.rooms[room] || !Game.rooms[room].controller?.my) {
                 continue
             }
@@ -668,7 +668,7 @@ export class MineDecider {
             Memory.rooms[miner].mines = []
         }
         Logger.info('mine-decider:addMineToMiner', miner, mine)
-        const mines = Memory.rooms[miner].mines as Mine[]
+        const mines = Memory.rooms[miner].mines
         mines.push({ name: mine })
     }
 }

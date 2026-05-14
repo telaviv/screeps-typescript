@@ -5,7 +5,7 @@ import {
     generatePath as generatePathCartographer,
 } from 'screeps-cartographer'
 
-import { ROAD_STUCK_THRESHOLD } from '../constants'
+import { MINE_PATH_ABANDON_THRESHOLD, ROAD_STUCK_THRESHOLD } from '../constants'
 import { MinePathEntry, getConstructionFeaturesV3, getMinePaths } from 'construction-features'
 import { MatrixCacheManager } from 'matrix-cache'
 import BuildManager from 'managers/build-manager'
@@ -180,7 +180,10 @@ export const moveToRoom = wrap(
             const minePath = findMinePathForRooms(creep.room.name, roomName)
             if (minePath) {
                 // eslint-disable-next-line no-underscore-dangle
-                const isDeadlocked = (creep.memory._dlWait ?? 0) > 1
+                const dlWait = creep.memory._dlWait ?? 0
+                // eslint-disable-next-line no-underscore-dangle
+                const dlCooldown = creep.memory._dlCooldown ?? 0
+                const isDeadlocked = dlWait > 1 || dlCooldown > 0
                 if (!isDeadlocked) {
                     const result = followMinePath(creep, minePath, 'moveToRoom')
                     if (result !== ERR_NOT_FOUND) {
@@ -188,7 +191,22 @@ export const moveToRoom = wrap(
                     }
                     return moveTowardMinePath(creep, minePath) as CreepMoveReturnCode
                 }
-                return moveTowardMinePathAvoidingStuck(creep, minePath) as CreepMoveReturnCode
+                // After too long in avoidance mode, abandon mine path and let cartographer route freely
+                if (dlWait > MINE_PATH_ABANDON_THRESHOLD) {
+                    // eslint-disable-next-line no-underscore-dangle
+                    creep.memory._dlCooldown = 0
+                    // fall through to cartographer below
+                } else {
+                    // Refresh cooldown when newly stuck; decrement when coasting on prior deadlock
+                    if (dlWait > 1) {
+                        // eslint-disable-next-line no-underscore-dangle
+                        creep.memory._dlCooldown = 5
+                    } else {
+                        // eslint-disable-next-line no-underscore-dangle
+                        creep.memory._dlCooldown = dlCooldown - 1
+                    }
+                    return moveTowardMinePathAvoidingStuck(creep, minePath) as CreepMoveReturnCode
+                }
             }
         }
 
@@ -428,7 +446,7 @@ function moveAlongRoadPath(
     const nextKey = atFirst ? path[1] : path[0]
     const next = graph.nodes[nextKey]
     const dir = creep.pos.getDirectionTo(new RoomPosition(next.x, next.y, roomName))
-    return creep.move(dir) as MoveToReturnCode
+    return creep.move(dir)
 }
 
 /**
@@ -439,7 +457,7 @@ function moveAlongRoadPath(
 export function moveTowardMinePath(creep: Creep, path: MinePathEntry[]): MoveToReturnCode {
     const roomName = creep.room.name
     const stepsInRoom = path.filter((e) => e.roomName === roomName)
-    if (stepsInRoom.length === 0) return ERR_NOT_FOUND as MoveToReturnCode
+    if (stepsInRoom.length === 0) return ERR_NOT_FOUND
 
     const graph = Memory.rooms[roomName]?.roadGraph
     const startKey = `${creep.pos.x},${creep.pos.y}`
@@ -476,7 +494,7 @@ export function moveTowardMinePath(creep: Creep, path: MinePathEntry[]): MoveToR
 function moveTowardMinePathAvoidingStuck(creep: Creep, path: MinePathEntry[]): MoveToReturnCode {
     const roomName = creep.room.name
     const stepsInRoom = path.filter((e) => e.roomName === roomName)
-    if (stepsInRoom.length === 0) return ERR_NOT_FOUND as MoveToReturnCode
+    if (stepsInRoom.length === 0) return ERR_NOT_FOUND
 
     const graph = Memory.rooms[roomName]?.roadGraph
     const startKey = `${creep.pos.x},${creep.pos.y}`
@@ -675,7 +693,7 @@ export const moveWithinRoom = wrap(
             roomCallback: nRoomCallback,
             routeCallback: nRouteCallback,
             ...opts,
-        }) as MoveToReturnCode
+        })
         // Logger.error(`moveWithinRoom: ${Game.cpu.getUsed() - startCPU}`, creep.name, target, err)
     },
     'creep:moveWithinRoom',

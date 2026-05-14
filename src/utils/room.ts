@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/brace-style */
-
 import filter from 'lodash/filter'
 import includes from 'lodash/includes'
 import minBy from 'lodash/minBy'
@@ -347,7 +345,7 @@ function isWeakWall(structure: Structure): boolean {
 }
 
 export const getConstructionSites = wrap(
-    (room: Room, opts?: FilterOptions<FIND_CONSTRUCTION_SITES>): ConstructionSite[] => {
+    (room: Room, opts?: FilterOptions<ConstructionSite, ConstructionSite>): ConstructionSite[] => {
         return room.find(FIND_CONSTRUCTION_SITES, opts)
     },
     'room:getConstructionSites',
@@ -406,7 +404,10 @@ export function getWallTerrainCount(room: Room): number {
     return count
 }
 
-export function getWallPositions(terrain: RoomTerrain, roomName: string): RoomPosition[] {
+export function getWallPositions(
+    terrain: Pick<RoomTerrain, 'get'>,
+    roomName: string,
+): RoomPosition[] {
     const positions: RoomPosition[] = []
     for (let x = 0; x < 50; x++) {
         for (let y = 0; y < 50; y++) {
@@ -438,7 +439,7 @@ export function getContainerAtPosition(room: Room, pos: RoomPosition): Structure
 
 export function hasConstructionSite(
     room: Room,
-    opts?: FilterOptions<FIND_CONSTRUCTION_SITES>,
+    opts?: FilterOptions<ConstructionSite, ConstructionSite>,
 ): boolean {
     return getConstructionSites(room, opts).length > 0
 }
@@ -462,7 +463,7 @@ export function getBuildableStructuresAt(
 export function getObstacles(room: Room): Structure[] {
     return room.find(FIND_STRUCTURES, {
         filter: (structure) => isObstacle(structure.structureType),
-    }) as Structure<BuildableStructureConstant>[]
+    })
 }
 
 export function getObstacleAt(

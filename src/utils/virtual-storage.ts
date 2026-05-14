@@ -11,9 +11,9 @@ export function getVirtualStorage(roomName: string): StructureStorage | Structur
     const structures = roomPosition.lookFor(LOOK_STRUCTURES)
     for (const structure of structures) {
         if (structure.structureType === STRUCTURE_STORAGE) {
-            return structure as StructureStorage
+            return structure
         } else if (structure.structureType === STRUCTURE_CONTAINER) {
-            return structure as StructureContainer
+            return structure
         }
     }
     return null
@@ -31,9 +31,9 @@ export function getVirtualControllerLink(
     const structures = roomPosition.lookFor(LOOK_STRUCTURES)
     for (const structure of structures) {
         if (structure.structureType === STRUCTURE_LINK) {
-            return structure as StructureLink
+            return structure
         } else if (structure.structureType === STRUCTURE_CONTAINER) {
-            return structure as StructureContainer
+            return structure
         }
     }
     return null

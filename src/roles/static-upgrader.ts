@@ -178,7 +178,7 @@ const roleStaticUpgrader = {
             sourceId: virtualLink.id,
             sinkId: storage.id,
             tasks: [],
-        } as StaticUpgraderMemory
+        }
     },
 
     getPosition(room: Room): Position | null {

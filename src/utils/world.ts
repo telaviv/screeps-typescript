@@ -106,7 +106,7 @@ function describeExitsWithRespawnBlocks(roomName: string): ExitsInformation {
     const scout = Memory.rooms[roomName]?.scout
 
     if (!scout || !scout.respawnBlocks || scout?.respawnBlocks.length === 0) {
-        return exits
+        return exits ?? {}
     }
 
     // Check if respawn period has expired
@@ -114,12 +114,12 @@ function describeExitsWithRespawnBlocks(roomName: string): ExitsInformation {
         // Clean up expired respawn data
         delete scout.respawnRoomUntil
         delete scout.respawnBlocks
-        return exits
+        return exits ?? {}
     }
 
     // Filter out blocked exits
     const filteredExits = {} as ExitsInformation
-    for (const [direction, exit] of Object.entries(exits)) {
+    for (const [direction, exit] of Object.entries(exits ?? {})) {
         if (!scout.respawnBlocks.includes(direction)) {
             filteredExits[direction as keyof ExitsInformation] = exit
         }

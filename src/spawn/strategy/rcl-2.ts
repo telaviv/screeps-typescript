@@ -44,7 +44,7 @@ import roleAttacker from 'roles/attacker'
 import roleClaimer from 'roles/claim'
 import roleHealer from 'roles/healer'
 import roleRebalancer from 'roles/rebalancer'
-import roleRemoteHauler from 'roles/remote-hauler'
+import roleRemoteHauler, { RemoteHauler } from 'roles/remote-hauler'
 import roleScout from 'roles/scout'
 import roleStaticLinkHauler from 'roles/static-link-hauler'
 import roleStaticUpgrader from 'roles/static-upgrader'
@@ -516,6 +516,12 @@ const createMineWorkers = wrap(
                 capacity: effectiveCapacity,
             })
             return
+        }
+
+        for (const hauler of getCreeps('remote-hauler', spawn.room) as RemoteHauler[]) {
+            if (roleRemoteHauler.shouldCancelAutoRenew(hauler, effectiveCapacity)) {
+                roleRemoteHauler.cancelAutoRenew(hauler)
+            }
         }
 
         if (!mineManager.hasEnoughHaulers()) {

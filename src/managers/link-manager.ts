@@ -103,9 +103,7 @@ export default class LinkManager {
 
     /** Gets the sink links (energy consumers) */
     get sinks(): StructureLink[] {
-        return [this.controllerLink, this.storageLink].filter(
-            (link) => link !== null,
-        ) as StructureLink[]
+        return [this.controllerLink, this.storageLink].filter((link) => link !== null)
     }
 
     /**

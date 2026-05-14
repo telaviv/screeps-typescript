@@ -11,7 +11,7 @@ import {
 } from '../../../src/libs/pathfinding'
 
 // Mock RoomTerrain for testing
-class MockRoomTerrain implements RoomTerrain {
+class MockRoomTerrain {
     private terrain: number[][]
 
     constructor(terrain: number[][]) {

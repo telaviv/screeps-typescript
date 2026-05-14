@@ -36,3 +36,5 @@ export const MAX_CLAIM_DISTANCE = 5
 export const ENEMY_DISTANCE_BUFFER = 1
 /** Number of ticks a creep must be stuck on a road graph path before repathing via cartographer */
 export const ROAD_STUCK_THRESHOLD = 5
+/** Number of ticks a creep must be stuck in mine-path avoidance before falling back to cartographer */
+export const MINE_PATH_ABANDON_THRESHOLD = 15

@@ -612,7 +612,7 @@ export function calculateBuildingDiff(
         }
     }
     for (const structureType of Object.keys(features)) {
-        if (!isObstacle(structureType as BuildableStructureConstant)) {
+        if (!isObstacle(structureType)) {
             continue
         }
         const positions = features[structureType as BuildableStructureConstant]

@@ -4,6 +4,7 @@ import * as Logger from 'utils/logger'
 import { moveToRoom, moveWithinRoom } from 'utils/travel'
 import autoIncrement from 'utils/autoincrement'
 import { clearConstructionSites } from 'utils/room'
+import { getNonObstacleNeighbors } from 'utils/room-position'
 import { fromBodyPlanSafe } from 'utils/parts'
 import { isOwnedStructure } from './attacker'
 import { wrap } from 'utils/profiling'
@@ -35,7 +36,7 @@ const roleClaimer = {
         }
 
         if (creep.memory.roomName !== creep.room.name) {
-            moveToRoom(creep, creep.memory.roomName)
+            moveToRoom(creep, creep.memory.roomName, { skipMinePath: true })
             return
         }
 
@@ -64,6 +65,15 @@ const roleClaimer = {
 
         if (targetRoom.controller?.safeMode) {
             return
+        }
+
+        if (!creep.pos.inRangeTo(targetRoom.controller.pos, 1)) {
+            const availableSpots = getNonObstacleNeighbors(targetRoom.controller.pos).length
+            const occupants = targetRoom.controller.pos.findInRange(FIND_MY_CREEPS, 1).length
+            if (occupants >= availableSpots) {
+                moveWithinRoom(creep, { pos: targetRoom.controller.pos, range: 2 })
+                return
+            }
         }
 
         let err

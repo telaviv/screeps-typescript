@@ -24,6 +24,7 @@ export interface Rebalancer extends ResourceCreep {
 interface RebalancerMemory extends ResourceCreepMemory {
     role: 'rebalancer'
     home: string
+    tookFromStorage?: boolean
 }
 
 export function isRebalancer(creep: Creep): creep is Rebalancer {
@@ -85,6 +86,7 @@ export class RebalancerCreep {
         // Phase 1: Try to collect from non-storage sources (pickup or containers)
         let success = PickupTask.makeRequest(this.creep)
         if (success) {
+            this.creep.memory.tookFromStorage = false
             return
         }
 
@@ -93,6 +95,7 @@ export class RebalancerCreep {
             sortBy: 'amount',
         })
         if (success) {
+            this.creep.memory.tookFromStorage = false
             return
         }
 
@@ -104,6 +107,7 @@ export class RebalancerCreep {
                 sortBy: 'amount',
             })
             if (success) {
+                this.creep.memory.tookFromStorage = true
                 return
             }
         }
@@ -147,21 +151,37 @@ export class RebalancerCreep {
     rebalance(): void {
         this.creep.say('🟰🟰')
 
-        // Phase 1 behavior: deposit to storage
-        const virtualStorage = getVirtualStorage(this.creep.memory.home)
-        if (virtualStorage) {
-            const structure = TransferTask.makeRequest(this.creep, { structure: virtualStorage })
-            if (structure) {
-                return
-            }
-        }
-
         // Phase 2 behavior: deposit to other structures that need energy
         const virtualControllerLink = getVirtualControllerLink(this.creep.memory.home)
         if (virtualControllerLink && virtualControllerLink.structureType === STRUCTURE_CONTAINER) {
             const structure = TransferTask.makeRequest(this.creep, {
                 structure: virtualControllerLink,
             })
+            if (structure) {
+                this.creep.memory.tookFromStorage = false
+                return
+            }
+        }
+
+        if (this.hasAvailableTransferTasks()) {
+            const structure = TransferTask.makeRequest(this.creep)
+            if (structure) {
+                this.creep.memory.tookFromStorage = false
+                return
+            }
+        }
+
+        // If we withdrew from storage but have nowhere to deliver, wander rather than
+        // depositing back to storage and creating a pickup/deposit loop
+        if (this.creep.memory.tookFromStorage) {
+            this.moveToIdlePosition()
+            return
+        }
+
+        // Phase 1 behavior: deposit to storage
+        const virtualStorage = getVirtualStorage(this.creep.memory.home)
+        if (virtualStorage) {
+            const structure = TransferTask.makeRequest(this.creep, { structure: virtualStorage })
             if (structure) {
                 return
             }

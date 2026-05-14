@@ -22,7 +22,7 @@ import { Position } from '../types'
  * @returns Array of NEW road positions to add (does not include existing stamp roads)
  */
 export function calculateBunkerRoads(
-    terrain: RoomTerrain,
+    terrain: Pick<RoomTerrain, 'get'>,
     bunkerBuildings: Map<string, Position[]>,
     startPos: Position,
     sources: Position[],

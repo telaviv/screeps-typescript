@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
         "module": "esnext",
-        "lib": ["es2018"],
-        "target": "es2018",
+        "lib": ["ES2023"],
+        "target": "ES2023",
         "moduleResolution": "Node",
         "outDir": "dist",
         "baseUrl": "src/",
@@ -14,5 +14,5 @@
         "allowUnreachableCode": false,
         "incremental": true
     },
-    "exclude": ["node_modules"]
+    "exclude": ["node_modules", "src/**/*.spec.ts", "src/arena/**/*", "test/**/*", "cli/**/*"]
 }

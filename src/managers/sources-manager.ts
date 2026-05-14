@@ -64,6 +64,7 @@ export default class SourcesManager {
     }
 
     /** Checks if all sources have enough harvesters */
+    @profile
     public hasEnoughHarvesters(): boolean {
         for (const sourceManager of this.sourceManagers) {
             if (!sourceManager.hasEnoughHarvesters()) {
@@ -89,6 +90,7 @@ export default class SourcesManager {
     }
 
     /** Checks if all sources have a harvester at the container position */
+    @profile
     public hasAllContainerHarvesters(): boolean {
         return this.sourceManagers.every((sourceManager) => sourceManager.hasContainerHarvester())
     }

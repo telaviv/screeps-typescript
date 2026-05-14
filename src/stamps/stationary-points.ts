@@ -35,16 +35,16 @@ function getNeighbors(x: number, y: number, radius = 1): Position[] {
 /**
  * Check if a position is walkable (not a wall)
  */
-function isWalkable(terrain: RoomTerrain, x: number, y: number): boolean {
+function isWalkable(terrain: Pick<RoomTerrain, 'get'>, x: number, y: number): boolean {
     return terrain.get(x, y) !== TERRAIN_MASK_WALL
 }
 
 /**
- * Check if a position has a structure that blocks container placement
- * Roads block container placement (containers shouldn't replace roads from the stamp)
+ * Check if a position has a structure that blocks placement
+ * Roads block placement (structures shouldn't replace roads from the stamp)
  * Ramparts and containers don't block (they can coexist with other structures)
  */
-function hasBlockingStructure(
+export function hasBlockingStructure(
     bunkerBuildings: Map<string, Position[]>,
     x: number,
     y: number,
@@ -111,7 +111,7 @@ function sortByCentroidDistance(positions: Position[], centroid: Position): Posi
  * Looks for existing container or finds best walkable neighbor
  */
 function findSourceContainer(
-    terrain: RoomTerrain,
+    terrain: Pick<RoomTerrain, 'get'>,
     bunkerBuildings: Map<string, Position[]>,
     source: { id: string; x: number; y: number },
     usedPositions: Set<string>,
@@ -164,7 +164,7 @@ function findSourceContainer(
  * @returns Stationary points for creep positioning
  */
 export function calculateStationaryPoints(
-    terrain: RoomTerrain,
+    terrain: Pick<RoomTerrain, 'get'>,
     bunkerBuildings: Map<string, Position[]>,
     sources: { id: string; x: number; y: number }[],
     controller: Position,

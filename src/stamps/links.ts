@@ -1,6 +1,6 @@
 import { LINKS_VERSION } from '../construction-features'
 import { Position } from '../types'
-import { StationaryPointsResult } from './stationary-points'
+import { hasBlockingStructure, StationaryPointsResult } from './stationary-points'
 
 /**
  * Result of links calculation
@@ -77,7 +77,7 @@ function sortByAdjacentContainers(positions: Position[], containers: Position[])
  * @returns Link configuration for the room
  */
 export function calculateLinks(
-    terrain: RoomTerrain,
+    terrain: Pick<RoomTerrain, 'get'>,
     bunkerBuildings: Map<string, Position[]>,
     stationaryPoints: StationaryPointsResult,
     sources: { id: string; x: number; y: number }[],
@@ -116,8 +116,8 @@ export function calculateLinks(
             return (
                 terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL &&
                 !placedLinks.some((l) => positionsEqual(l, pos)) &&
-                // Not a container position
-                !allContainers.some((c) => positionsEqual(c, pos))
+                !allContainers.some((c) => positionsEqual(c, pos)) &&
+                !hasBlockingStructure(bunkerBuildings, pos.x, pos.y)
             )
         })
 
@@ -149,7 +149,8 @@ export function calculateLinks(
         return (
             terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL &&
             !placedLinks.some((l) => positionsEqual(l, pos)) &&
-            controllerNeighbors.some((n) => positionsEqual(n, pos))
+            controllerNeighbors.some((n) => positionsEqual(n, pos)) &&
+            !hasBlockingStructure(bunkerBuildings, pos.x, pos.y)
         )
     })
 
@@ -158,7 +159,8 @@ export function calculateLinks(
         availableControllerPositions = controllerNeighbors.filter((pos) => {
             return (
                 terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL &&
-                !placedLinks.some((l) => positionsEqual(l, pos))
+                !placedLinks.some((l) => positionsEqual(l, pos)) &&
+                !hasBlockingStructure(bunkerBuildings, pos.x, pos.y)
             )
         })
     }

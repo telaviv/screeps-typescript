@@ -82,7 +82,7 @@ export const run = wrap((task: TravelTask, creep: ResourceCreep): boolean => {
         reusePath: 100,
         ...(task.ignoreDenylist && {
             routeCallback: () => undefined,
-            roomCallback: () => true as CostMatrix | boolean,
+            roomCallback: () => true,
         }),
     })
     if (err === ERR_NO_PATH) {
